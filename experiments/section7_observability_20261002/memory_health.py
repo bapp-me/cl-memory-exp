@@ -22,8 +22,15 @@ def main():
                 continue
             before, after = read(folder / 'memory-before.json'), read(folder / 'memory-after.json')
             result = read(folder / 'commit.json')['result']
+            events = [json.loads(line) for line in (folder / 'controller-events.jsonl').read_text(encoding='utf-8').splitlines()]
+            retrieval = read(folder / 'retrieval.json')
             row = {'method': method, 'task_id': result['task_id'], 'state_hash_changed': digest(before) != digest(after),
                    'terminal_state': result['terminal_state'],
+                   'injected_utf8_bytes': retrieval['injected_utf8_bytes'],
+                   'observable_candidate_count': len(retrieval['observable_candidates']),
+                   'injected_entry_count': len(retrieval['injected_ids']),
+                   'packing_dropped_entries': len(retrieval['dropped']),
+                   'auxiliary_budget_exhausted': [event for event in events if event['event'] == 'auxiliary_budget_exhausted'],
                    'role_accounting': result.get('role_accounting'), 'semantic_memory_quality': None,
                    'semantic_unknown_reason': 'No semantic review or counterfactual performed'}
             if method == 'mem0':
@@ -52,7 +59,6 @@ def main():
                 journal = folder / 'native-operations.json'
                 row['native_operations'] = dict(Counter(op['type'] for op in read(journal)['operations'])) if journal.exists() else None
                 row['native_operation_observation'] = 'observed' if journal.exists() else 'not produced before memory exception'
-                events = [json.loads(line) for line in (folder / 'controller-events.jsonl').read_text(encoding='utf-8').splitlines()]
                 row['curator_rejection_records'] = [event.get('reason') for event in events if event['event'] == 'native_curator_reject']
             else:
                 row.update(before_entries=len(before), after_entries=len(after))
@@ -62,6 +68,9 @@ def main():
         selected = [row for row in records if row['method'] == method]
         summary.append({'method': method, 'tasks_observed': len(selected),
                         'terminal_states': dict(Counter(row['terminal_state'] for row in selected)),
+                        'auxiliary_budget_exhausted_tasks': sum(bool(row['auxiliary_budget_exhausted']) for row in selected),
+                        'budget_exhaustion_roles': dict(Counter(event['role'] for row in selected for event in row['auxiliary_budget_exhausted'])),
+                        'injection_packing_dropped_tasks': sum(row['packing_dropped_entries'] > 0 for row in selected),
                         'mem0_extraction_json_rejected': sum(row.get('extraction_json_valid') is False for row in selected),
                         'native_empty_fact_extractions': sum(row.get('extraction_json_valid') is True and row.get('extracted_facts') == 0 for row in selected),
                         'ace_curator_rejections': sum(len(row.get('curator_rejection_records', [])) for row in selected)})
