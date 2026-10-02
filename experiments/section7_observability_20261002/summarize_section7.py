@@ -63,11 +63,13 @@ def main():
                            'expected': len(expected), 'actual': len(rows)})
         effective = [row for row in rows if row['scorable'] is True]
         targets = [row for row in effective if row['task_id'].startswith('new:')]
+        all_targets = [row for row in rows if row['task_id'].startswith('new:')]
         if entry['benchmark'] == 'codeeval' and (len(effective) != 93 or len(targets) != 46):
             issues.append({'run': entry['path'], 'error': 'Wrong scoring mask denominators',
                            'full_effective': len(effective), 'target_effective': len(targets)})
         known_tokens = {key: sum((row['known_usage_subtotal'] or {}).get(key, 0) for row in rows) for key in USAGE_FIELDS}
         target_tokens = {key: sum((row['known_usage_subtotal'] or {}).get(key, 0) for row in targets) for key in USAGE_FIELDS}
+        all_target_tokens = {key: sum((row['known_usage_subtotal'] or {}).get(key, 0) for row in all_targets) for key in USAGE_FIELDS}
         roles = sorted({role for row in rows for role in (row['role_accounting'] or {})})
         all_roles = {role: {
             'logical_call_attempts': sum((row['role_accounting'] or {}).get(role, {}).get('calls', 0) for row in rows),
@@ -79,7 +81,7 @@ def main():
                    'response_timeout_tasks': sum(row['response_timed_out'] is True for row in rows),
                    'response_timeout_observation_missing_tasks': sum(row['response_timed_out'] is None for row in rows),
                    'context_budget_exceeded_tasks': sum(row['context_exceeded'] is True for row in rows),
-                   'unsubmitted_tasks': sum(row['submitted'] is False for row in rows),
+                   'unsubmitted_code_tasks': sum(row['submitted'] is False for row in rows) if entry['benchmark'] == 'codeeval' else None,
                    'terminal_states': dict(Counter(row['terminal_state'] for row in rows)),
                    'memory_failures_retained_in_scores_and_costs': sum(row['terminal_state'] == 'memory_failure' for row in rows),
                    'effective_tasks': len(effective), 'correct': sum(row['correct'] is True for row in effective),
@@ -90,6 +92,11 @@ def main():
                    'effective_complex_target_usage_subtotal': target_tokens if entry['benchmark'] == 'codeeval' else None,
                    'effective_complex_target_usage_missing_tasks': sum(row['usage'] is None for row in targets) if entry['benchmark'] == 'codeeval' else None,
                    'effective_complex_target_working_tool_calls': sum(row['working_tool_calls'] for row in targets) if entry['benchmark'] == 'codeeval' else None,
+                   'all_complex_targets_including_unscorable': len(all_targets) if entry['benchmark'] == 'codeeval' else None,
+                   'all_complex_target_usage_subtotal_including_unscorable': all_target_tokens if entry['benchmark'] == 'codeeval' else None,
+                   'all_complex_target_usage_missing_tasks': sum(row['usage'] is None for row in all_targets) if entry['benchmark'] == 'codeeval' else None,
+                   'all_complex_target_working_tool_calls': sum(row['working_tool_calls'] for row in all_targets) if entry['benchmark'] == 'codeeval' else None,
+                   'all_complex_target_solver_tool_calls_including_submit': sum(row['tool_calls'] for row in all_targets) if entry['benchmark'] == 'codeeval' else None,
                    'usage_provenance': 'unverified historical SDK counters' if entry['source_kind'] == 'legacy_descriptive_reuse' else 'returned raw HTTP usage, all roles included',
                    'working_tool_calls': sum(row['working_tool_calls'] for row in rows),
                    'submit_calls': sum(row['submit_calls'] for row in rows), 'source_kind': entry['source_kind'],
