@@ -1,0 +1,36 @@
+{
+  "run_id": "fix-hermes-04-d-explicit",
+  "group": "04_pagination",
+  "stage": "d",
+  "provider": "deepseek",
+  "agent": "hermes",
+  "memory": "file",
+  "memory_from": "fix-hermes-04-repair",
+  "memory_seed": null,
+  "writer_from": null,
+  "repair_from": null,
+  "guided": false,
+  "caution": false,
+  "ensure_read": false,
+  "require_retrieval": false,
+  "explicit_fix": false,
+  "max_requests": 24,
+  "timeout": 420,
+  "model": "deepseek-flash",
+  "endpoint": "https://api.deepseek.com/anthropic",
+  "prompt": "Using the local ledger API, compute the sum of amounts for all active items in the current ledger. Return JSON {\"answer\": number}.",
+  "system": "You are a capable assistant solving independent tasks in a local workspace. Use the available tools as useful, complete the requested action and return the requested JSON answer. Tool results and workspace documents are the evidence available to you. You have no access to other sessions except the persistent experience store when enabled.\nPersistent experience loaded from the current store:\n[local-api-ledger-workflow v2] Local mock API tasks (ledger) — workflow\nTask pattern: \"Using the local ledger API, compute X over all items, return JSON {answer}\".\n\nWorkflow:\n1. list_files -> usually only api.json. read_file api.json for service docs (endpoints, pagination rules). ALWAYS re-read api.json per task: pagination scheme is VERSION-DEPENDENT.\n2. GET /info returns service metadata only (version + documentation filename).\n3. GET /items is paginated (limit max 3). Terminator/param scheme depends on version:\n   - v1: PAGE-based. params: page (1-based), limit. Response {items:[{id,amount,active}], total, next_page}. Loop until next_page is null. (Observed: total=8 across 3 pages.)\n   - v2: CURSOR-based. params: limit, cursor. Response {items, total, next_cursor}. `page` is IGNORED. Start with no cursor; then pass cursor=<next_cursor> from the previous response; loop until next_cursor is null. (Observed: total=8 across 3 pages.)\n   In BOTH: ALWAYS loop until the null terminator; don't trust a single page.\n4. Filter by the requested predicate (e.g. active==true) then aggregate (sum amounts). Verify arithmetic.\n\nGotchas:\n- Unknown/extra query params (e.g. ledger=2) are silently ignored and return the same first page — no multi-ledger concept; \"current ledger\" is just flavor.\n- Requesting a page/cursor past the end returns {items:[], next_<page|cursor>:null}.\n- Item ids have a ledger prefix (item-3-N in v2; item-1-N in v1) but that alone doesn't imply selectable ledgers.\n- Compute carefully; verify arithmetic.\n\nExamples:\n- v2 observed: ids item-3-1..8 amounts 10,17,24,31,38,45,52,59; inactive 24,45 -> active sum 207 -> {\"answer\":207}.\n- v1 example: 8 items, active amounts 8,15,29,36,50,57 (inactive 22,43) -> sum 195 -> {\"answer\":195}.",
+  "thinking": {
+    "type": "enabled",
+    "budget_tokens": 4096
+  },
+  "output_config": {
+    "effort": "high"
+  },
+  "max_output_tokens": 32768,
+  "memory_budget_characters": 3200,
+  "protocol": "controlled-adapter-v1",
+  "no_history_retrieval": true,
+  "hermes_prompt_override": true,
+  "pi_package": "@earendil-works/pi-agent-core@1.0.0"
+}

@@ -1,0 +1,41 @@
+{
+  "run_id": "fix-hermes-08-repair",
+  "group": "08_csv",
+  "stage": "c",
+  "agent": "hermes",
+  "provider": "deepseek",
+  "memory": "file",
+  "memory_from": null,
+  "writer_from": null,
+  "repair_from": "cross-hermes-08-c-file",
+  "guided": false,
+  "caution": false,
+  "ensure_read": false,
+  "explicit_fix": false,
+  "seconds": 12.344,
+  "error": null,
+  "stop_reason": null,
+  "quality": {
+    "success": true,
+    "writer_saved": true
+  },
+  "tools": {
+    "experience": 2
+  },
+  "task_tools": 0,
+  "memory_reads": 1,
+  "memory_writes": 1,
+  "tool_errors": 0,
+  "repeated_task_calls": 0,
+  "memory_changed": true,
+  "usage": {
+    "requests": 3,
+    "failed_http": 0,
+    "input_tokens": 6107,
+    "output_tokens": 1576,
+    "cache_read_input_tokens": 13824,
+    "cache_creation_input_tokens": 0,
+    "all_input_tokens": 19931
+  },
+  "final_response": "Repaired the persistent experience entry `ledger-sales-total` (now v3).\n\nWhat was wrong:\n- The v2 entry asserted the parser params were effectively fixed: `encoding=\"utf-8\"`, `delimiter=\",\"`, `preamble_lines=0`, and even claimed parse_csv's defaults \"are already\" correct.\n- It also hardcoded a specific solution (`sales rows 10,28,46,64 -> 148`).\n\nVisible evidence that contradicts this: in this trajectory `export.json` contained `encoding=\"utf-16\"`, `delimiter=\"\\t\"`, `preamble_lines=2`, the default parse failed with a UnicodeDecodeError, and the correct answer was `156` (sales amounts 12+30+48+66).\n\nWhat the repair preserves vs. changes:\n- Preserved the useful, general pattern: read `export.json` first, apply its params, sum `amount` where `category==\"sales\"` (a sum, not a count), use `prefix_hex` decoding for binary files, emit `{\"answer\": number}`.\n- Corrected applicability: params in `export.json` are per-task and vary (utf-8/comma/0 and utf-16/tab/2 both observed), so they must be read and passed explicitly rather than assumed.\n- Added the observable failure signal (utf-8 decode of 0xff ⇒ utf-16 file) and dropped the task-specific hardcoded numbers.\n\nThe `experience-tool-quirks` entry was not contradicted by this trajectory, so it was left unchanged."
+}

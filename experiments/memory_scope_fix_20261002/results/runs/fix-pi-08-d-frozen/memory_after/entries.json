@@ -1,0 +1,12 @@
+{
+  "ledger-sales-total": {
+    "title": "CSV ledger aggregation: always read export.json parser params (v3)",
+    "content": "Task pattern: \"total amount of sales rows in ledger.csv export\".\n\nALWAYS read export.json first — it holds parser params; DO NOT assume defaults (UTF-8/comma/0 preamble). Observed variation: {\"encoding\":\"utf-16\",\"delimiter\":\"\\t\",\"preamble_lines\":2,\"file\":\"ledger.csv\"}. So call parse_csv(path=file, encoding=export.json.encoding, delimiter=export.json.delimiter, skip_lines=export.json.preamble_lines). Wrong encoding/delimiter silently yields junk or a single column.\n\nledger.csv columns = category,amount; rows alternate sales/refund. \"total amount of sales rows\" = SUM(amount) where category==\"sales\" (a sum, not a row count).\n\nExample run: sales amounts 13,31,49,67 -> 160 (4 rows). (Earlier versions saw 10,28,46,64 -> 148 with a different export; values vary per task, always recompute.)\n\nread_file on a binary/large file returns only a hex prefix + size; prefix_hex ff fe ... indicates UTF-16LE BOM — evidence to confirm encoding.\n\nAlways emit the result as {\"answer\": number}.",
+    "version": 3
+  },
+  "experience-tool-quirks": {
+    "title": "experience tool usage quirks",
+    "content": "experience `put` requires a non-empty `id` string; omitting it fails with {\"error\":\"KeyError: 'id'\"} even though the schema lists id as optional. Always pass op,id,title,content. Reusing an existing id fully replaces (bumps version). Use op:\"search\" (query, or empty) to list entries, op:\"get\" with id to read one, op:\"delete\" with id to remove.",
+    "version": 1
+  }
+}

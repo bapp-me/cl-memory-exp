@@ -1,0 +1,33 @@
+{
+  "run_id": "main-pi-02-c-file",
+  "group": "02_coverage",
+  "stage": "c",
+  "provider": "deepseek",
+  "agent": "pi",
+  "memory": "file",
+  "memory_from": "main-pi-02-w",
+  "writer_from": null,
+  "guided": false,
+  "caution": false,
+  "ensure_read": false,
+  "explicit_fix": false,
+  "max_requests": 24,
+  "timeout": 420,
+  "model": "deepseek-flash",
+  "endpoint": "https://api.deepseek.com/anthropic",
+  "prompt": "Compute the mean dollar price of all listed products. Return JSON {\"answer\": number}.",
+  "system": "You are a capable assistant solving independent tasks in a local workspace. Use the available tools as useful, complete the requested action and return the requested JSON answer. Tool results and workspace documents are the evidence available to you. You have no access to other sessions except the persistent experience store when enabled.\nPersistent experience loaded from the current store:\n[catalog-price-minor-cents-trap v1] Catalog price units trap: use price_minor (cents) as source of truth\nTask class: SQL aggregate over a products table with a price-unit trap.\n\nPattern observed:\n- Files: catalog.md plus a SQLite DB. catalog.md describes schema: price_minor (INTEGER, source price in USD cents) and display_usd (REAL, nullable display field).\n- Schema: products(id INTEGER PRIMARY KEY, price_minor INTEGER, display_usd REAL).\n- Trap: display_usd is NULL for many rows (decoy), so it can't be trusted/used for filtering or averaging. price_minor is the source of truth.\n\nCorrect approach:\n1. list_files -> read catalog.md for schema/units notes.\n2. Inspect schema: SELECT name,sql FROM sqlite_master.\n3. SELECT * FROM products to eyeball data and spot NULLs/decoys.\n4. Filter threshold must be converted to cents: \"below $60\" => price_minor < 6000.\n5. Mean in dollars: SELECT AVG(price_minor)/100.0 AS mean_usd FROM products WHERE price_minor < 6000.\n   Example answer: {\"answer\": 39.37}\n\nGeneral lessons:\n- When a doc states a \"source\" field vs a \"nullable display\" field, always compute from the source field; ignore nullable/decoy columns.\n- Convert dollar thresholds to minor units (cents) before filtering integer price columns, else you get wrong rows.\n- Verify with a raw SELECT * to confirm which rows satisfy the filter and sanity-check the count.",
+  "thinking": {
+    "type": "enabled",
+    "budget_tokens": 4096
+  },
+  "output_config": {
+    "effort": "high"
+  },
+  "max_output_tokens": 32768,
+  "memory_budget_characters": 3200,
+  "protocol": "controlled-adapter-v1",
+  "no_history_retrieval": true,
+  "hermes_prompt_override": false,
+  "pi_package": "@earendil-works/pi-agent-core@1.0.0"
+}

@@ -1,0 +1,15 @@
+[ledger-api-sum-active v1] Local mock "ledger" API: discovery + paginated sum procedure
+ENVIRONMENT (observed): local mock API service "ledger", version 1 (from api.json {"service":"ledger","version":1}). Workspace contained only api.json documenting endpoints. GET /info returns {"version":1,"documentation":"api.json"}.
+
+CHEAP APPLICABILITY CHECK: list_files (finds api.json) -> read_file api.json -> GET /info. If service=="ledger" version 1, apply below.
+
+OBSERVED ENDPOINTS/SCHEMA:
+- GET /items params: page (1-based), limit (max 3). Response JSON: {items:[{id,amount,active}...], total:<int>, next_page:<int|null>}.
+- next_page null ENDS the list; a page past the end returns {items:[], next_page:null}.
+- Unknown/extra params silently ignored (e.g. ?ledger=2 returned identical page-1 data); no multi-ledger selector documented. Item ids were prefixed "item-1-".
+
+REUSABLE PROCEDURE (sum amounts of active items): iterate page=1,2,... accumulating items where active==true; stop when next_page is null or items empty; sum amount. Same pattern works for count/filter tasks on this API.
+
+SUPPORTING EVIDENCE: one run returned 8 items over 3 pages (limit 3): page1 item-1-1=8 active, item-1-2=15 active, item-1-3=22 inactive; page2 item-1-4=29 active, item-1-5=36 active, item-1-6=43 inactive; page3 item-1-7=50 active, item-1-8=57 active, next_page null. Active sum = 8+15+29+36+50+57 = 195.
+
+CAVEATS / UNTESTED: 'total' semantics ambiguous — observed total=8 = total item count, NOT active count; do not assume it means active/total sum. Only ONE dataset observed (all active amounts increasing by 7), so do not generalize beyond it. limit values other than <=3, alternate ledgers, and other versions untested.

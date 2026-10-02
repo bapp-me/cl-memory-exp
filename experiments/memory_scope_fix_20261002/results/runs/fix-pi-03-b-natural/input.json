@@ -1,0 +1,36 @@
+{
+  "run_id": "fix-pi-03-b-natural",
+  "group": "03_join",
+  "stage": "b",
+  "provider": "deepseek",
+  "agent": "pi",
+  "memory": "file",
+  "memory_from": "main-pi-03-c-file",
+  "memory_seed": null,
+  "writer_from": null,
+  "repair_from": null,
+  "guided": false,
+  "caution": false,
+  "ensure_read": false,
+  "require_retrieval": false,
+  "explicit_fix": false,
+  "max_requests": 24,
+  "timeout": 420,
+  "model": "deepseek-flash",
+  "endpoint": "https://api.deepseek.com/anthropic",
+  "prompt": "What is the total order revenue from customers who have at least one vip- membership tag? Each order contributes its amount once. Return JSON {\"answer\": number}.",
+  "system": "You are a capable assistant solving independent tasks in a local workspace. Use the available tools as useful, complete the requested action and return the requested JSON answer. Tool results and workspace documents are the evidence available to you. You have no access to other sessions except the persistent experience store when enabled.\nPersistent experience loaded from the current store:\n[sqlite-workspace-revenue-vip-tags v1] SQLite workspace tasks: VIP/membership tag revenue queries\nWorkspace pattern (seen in \"total order revenue from customers with vip tag\" task):\n- Workspace often contains only schema.md describing rules + a SQLite DB exposed via `sql` tool. Read schema.md first; it defines semantics (e.g. \"tags starting with vip- qualify\"; \"each order contributes amount once\").\n- Discover tables/schema: `SELECT name,type FROM sqlite_master WHERE type IN ('table','view')` then `SELECT sql FROM sqlite_master WHERE name IN (...)`. Then `SELECT * FROM t LIMIT 50` to eyeball rows.\n\nKey trap: customer_tags is MANY-TO-MANY (PK customer_id,tag). A customer may hold >1 qualifying tag. Never JOIN orders directly to tags for aggregation — duplicate rows inflate the sum. Instead:\n  SELECT SUM(o.amount_usd) FROM orders o\n  WHERE o.customer_id IN (SELECT DISTINCT customer_id FROM customer_tags WHERE tag LIKE 'vip-%');\nThe DISTINCT + IN subquery ensures each order counted once.\n\nGeneral reusable advice:\n- \"At least one tag\" => EXISTS / IN(DISTINCT...) / LIKE prefix, and dedupe the qualifying-customer set.\n- \"Each order contributes once\" is a hint to guard against join fan-out.\n- Cross-check the SQL total against a manual sum of matched rows when dataset is small.\n- Return exactly the requested JSON shape, e.g. {\"answer\": 356} (number).",
+  "thinking": {
+    "type": "enabled",
+    "budget_tokens": 4096
+  },
+  "output_config": {
+    "effort": "high"
+  },
+  "max_output_tokens": 32768,
+  "memory_budget_characters": 3200,
+  "protocol": "controlled-adapter-v1",
+  "no_history_retrieval": true,
+  "hermes_prompt_override": false,
+  "pi_package": "@earendil-works/pi-agent-core@1.0.0"
+}

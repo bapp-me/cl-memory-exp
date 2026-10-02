@@ -1,0 +1,33 @@
+{
+  "run_id": "main-pi-05-b-file",
+  "group": "05_update",
+  "stage": "b",
+  "provider": "deepseek",
+  "agent": "pi",
+  "memory": "file",
+  "memory_from": "main-pi-05-w",
+  "writer_from": null,
+  "guided": false,
+  "caution": false,
+  "ensure_read": false,
+  "explicit_fix": false,
+  "max_requests": 24,
+  "timeout": 420,
+  "model": "deepseek-flash",
+  "endpoint": "https://api.deepseek.com/anthropic",
+  "prompt": "Update the current profile timezone to Asia/Tokyo while preserving the current email and digest setting. Verify the saved profile. Return JSON {\"answer\": \"updated\"}.",
+  "system": "You are a capable assistant solving independent tasks in a local workspace. Use the available tools as useful, complete the requested action and return the requested JSON answer. Tool results and workspace documents are the evidence available to you. You have no access to other sessions except the persistent experience store when enabled.\nPersistent experience loaded from the current store:\n[mock-api-profile-patch-pattern v1] Local mock API: partial-update profile tasks\nTask type: update a field of a \"current profile\" via local mock API while preserving other fields, then verify.\n\nWorkflow (worked well):\n1. list_files -> usually returns [\"api.json\"]. Read api.json to discover service, endpoints, and which methods are supported (PATCH vs PUT).\n2. GET the current resource to learn existing field values (e.g. GET /profile -> {timezone, email, digest}).\n3. Apply ONLY the changed field with PATCH (omit unchanged fields; the API docs state omitted fields are retained). Do NOT use PUT if unsupported. Do NOT send the whole object.\n4. Verify with a follow-up GET and confirm both the changed field and preserved fields are intact.\n5. Return the requested JSON, e.g. {\"answer\": \"updated\"}.\n\nKey lessons:\n- Always read the workspace api.json/doc first; it tells which verbs are allowed (PUT may be unsupported).\n- PATCH = partial update; preserve untouched fields by omitting them.\n- Always re-GET to verify saved state before answering.\n- api.json format example: {\"service\":\"profiles\",\"version\":1,\"/info\":\"GET metadata\",\"/profile\":\"GET current profile. PATCH changes specified fields only; omitted fields retained. PUT unsupported.\"}\n- Mock API call shape: {method, path, params?, body?}; response includes status + resource.",
+  "thinking": {
+    "type": "enabled",
+    "budget_tokens": 4096
+  },
+  "output_config": {
+    "effort": "high"
+  },
+  "max_output_tokens": 32768,
+  "memory_budget_characters": 3200,
+  "protocol": "controlled-adapter-v1",
+  "no_history_retrieval": true,
+  "hermes_prompt_override": false,
+  "pi_package": "@earendil-works/pi-agent-core@1.0.0"
+}

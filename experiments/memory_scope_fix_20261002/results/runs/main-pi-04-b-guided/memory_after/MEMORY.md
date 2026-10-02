@@ -1,0 +1,5 @@
+[ledger-api-sum-active v2] Local mock "ledger" API: discovery + paginated sum procedure
+ENVIRONMENT: local mock API "ledger" v1 (api.json: {service:ledger, version:1}; GET /info -> {version:1,documentation:"api.json"}). Endpoints: GET /items (page 1-based, limit max 3) -> {items:[{id,amount,active}], total, next_page}. next_page null ends list; page past end -> {items:[],next_page:null}. Extra params ignored; no multi-ledger selector.
+PROCEDURE (sum active amounts): iterate page=1,2,... accumulating items where active==true; stop when next_page null or items empty. Same pattern for count/filter.
+EVIDENCE: datasets have 8 items over 3 pages (limit 3) with ids prefixed per-ledger e.g. "item-1-", "item-2-". Observed run item-1-* active sum=195 (8,15,29,36,50,57); run item-2-* active sum=201 (9,16,30,37,51,58); inactive every 3rd (items 3 and 6). Each dataset: 6 active, 2 inactive; active amounts increase by 7.
+CAVEATS: 'total'=8 is total item count, NOT active count/sum. Do not assume dataset identity; always re-fetch all pages. limit>3, alternate ledgers, other versions untested.

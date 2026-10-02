@@ -1,0 +1,10 @@
+[ledger-sales-total v2] CSV ledger aggregation pattern
+Task pattern: "total amount of sales rows in ledger.csv export". Steps: read export.json first — it holds parser params (keys: encoding="utf-8", delimiter=",", preamble_lines=0, file). ledger.csv columns = category,amount; rows alternate sales/refund. "total amount of sales rows" = SUM(amount) for rows where category=="sales" (it is a sum, not a row count). Sales rows 10,28,46,64 -> 148 (4 rows). Use parse_csv; its defaults are already UTF-8/comma/0 preamble but pass skip_lines=preamble_lines from export.json to be safe. read_file may return only a hex prefix for binary/large files; decode prefix_hex to inspect. Always emit result as {"answer": number}.
+
+[experience-tool-quirks v1] experience tool usage quirks
+experience `put` requires a non-empty `id` string; omitting it fails with {"error":"KeyError: 'id'"} even though the schema lists id as optional. Always pass op,id,title,content. Reusing an existing id fully replaces (bumps version). Use op:"search" (query, or empty) to list entries, op:"get" with id to read one, op:"delete" with id to remove.
+
+[csv-sidecar-config-parsing v1] Parsing ledger.csv exports with sidecar config
+When a CSV export fails with UnicodeDecodeError (e.g. byte 0xff at position 0 = UTF-16 BOM), look for a sibling config file like export.json specifying encoding, delimiter, and preamble_lines to skip. ledger.csv was UTF-16, tab-delimited, 2 preamble lines.
+
+For "total amount of sales rows": filter category=="sales", SUM the amount column (not just count). ledger.csv sales amounts 12,30,48,66 -> 156.

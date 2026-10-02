@@ -1,0 +1,2 @@
+[human-scoped-diagnostic v1] Manually scoped a experience (diagnostic only)
+Observed service ledger version 1 only. For that version GET /items uses page (1-based), limit<=3 and next_page; follow next_page until null and aggregate active items. At a later task first read api.json and GET /info. Apply the page procedure only when the current documented pagination contract matches; otherwise use the currently documented contract. The source observed 8 items, which is not a constant for future ledgers.

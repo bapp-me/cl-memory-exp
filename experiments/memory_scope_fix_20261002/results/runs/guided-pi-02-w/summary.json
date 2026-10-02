@@ -1,0 +1,41 @@
+{
+  "run_id": "guided-pi-02-w",
+  "group": "02_coverage",
+  "stage": "a",
+  "agent": "pi",
+  "provider": "deepseek",
+  "memory": "file",
+  "memory_from": null,
+  "writer_from": "main-pi-02-a",
+  "repair_from": null,
+  "guided": true,
+  "caution": false,
+  "ensure_read": false,
+  "explicit_fix": false,
+  "seconds": 12.375,
+  "error": null,
+  "stop_reason": "stop",
+  "quality": {
+    "success": true,
+    "writer_saved": true
+  },
+  "tools": {
+    "experience": 2
+  },
+  "task_tools": 0,
+  "memory_reads": 0,
+  "memory_writes": 1,
+  "tool_errors": 1,
+  "repeated_task_calls": 0,
+  "memory_changed": true,
+  "usage": {
+    "requests": 3,
+    "failed_http": 0,
+    "input_tokens": 3821,
+    "output_tokens": 2400,
+    "cache_read_input_tokens": 10624,
+    "cache_creation_input_tokens": 0,
+    "all_input_tokens": 14445
+  },
+  "final_response": "Saved one reusable experience entry (`price-minor-cents-sqlite`), capturing:\n\n- **Environment/version observed:** a task workspace with `catalog.md` + a read-only SQLite DB; `products(id INTEGER PRIMARY KEY, price_minor INTEGER, display_usd REAL)`.\n- **Procedure retained:** read `catalog.md` for the source-price column; use `price_minor` (USD cents) as authoritative, convert with `/100.0`, and express dollar thresholds in cents (`< 6000`); never filter/aggregate on the nullable `display_usd`.\n- **Cheap applicability check:** `list_files` → `read_file catalog.md` → `sqlite_master` → sample rows to confirm units/nullability/boundary.\n- **Supporting observations:** the actual 9 rows and that qualifying rows 1–3 yielded 39.37.\n- **Explicit limits:** single table/9 rows only; strict `<` assumed; untested cases (non-null `display_usd` without `price_minor`, multiple tables, non-cent units); reuse the procedure, not the numeric value.\n\nKept within the 3200-character budget (1,861 chars)."
+}

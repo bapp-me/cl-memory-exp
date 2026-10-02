@@ -1,0 +1,36 @@
+{
+  "run_id": "fix-pi-05-b-explicit",
+  "group": "05_update",
+  "stage": "b",
+  "provider": "deepseek",
+  "agent": "pi",
+  "memory": "file",
+  "memory_from": "fix-pi-05-repair",
+  "memory_seed": null,
+  "writer_from": null,
+  "repair_from": null,
+  "guided": false,
+  "caution": false,
+  "ensure_read": false,
+  "require_retrieval": false,
+  "explicit_fix": false,
+  "max_requests": 24,
+  "timeout": 420,
+  "model": "deepseek-flash",
+  "endpoint": "https://api.deepseek.com/anthropic",
+  "prompt": "Update the current profile timezone to Asia/Tokyo while preserving the current email and digest setting. Verify the saved profile. Return JSON {\"answer\": \"updated\"}.",
+  "system": "You are a capable assistant solving independent tasks in a local workspace. Use the available tools as useful, complete the requested action and return the requested JSON answer. Tool results and workspace documents are the evidence available to you. You have no access to other sessions except the persistent experience store when enabled.\nPersistent experience loaded from the current store:\n[mock-api-profile-patch-pattern v2] Local mock API: partial-update profile tasks (ONLY when api.json says PATCH is supported / v1)\nAPPLICABILITY (important): Use this pattern ONLY when the workspace api.json /profile doc states PATCH is supported (e.g. version 1: \"PATCH changes specified fields only; omitted fields retained. PUT unsupported.\"). Always read api.json FIRST. On other versions (e.g. v2: \"PUT replaces profile; missing fields default... PATCH unsupported.\") this pattern is WRONG/INAPPLICABLE and its PATCH call will silently reset omitted fields to defaults -> data loss. For those, see entry \"mock-api-profile-update-by-version\" (GET then PUT the FULL object).\n\nWorkflow when PATCH is the documented verb (v1):\n1. list_files -> usually [\"api.json\"]. Read api.json to discover service, endpoints, and which methods are supported (PATCH vs PUT).\n2. GET the current resource to learn existing field values (e.g. GET /profile -> {timezone, email, digest}).\n3. Apply ONLY the changed field with PATCH (omit unchanged fields; the docs state omitted fields are retained). Do NOT use PUT if unsupported. Do NOT send the whole object.\n4. Verify with a follow-up GET and confirm both the changed field and preserved fields are intact.\n5. Return the requested JSON, e.g. {\"answer\": \"updated\"}.\n\nKey lessons:\n- Always read the workspace api.json/doc first; the version determines which verb is valid AND whether omission preserves or resets fields. Never assume PATCH.\n- (v1) PATCH = partial update; preserve untouched fields by omitting them.\n- Always re-GET to verify saved state before answering.\n- api.json format example: {\"service\":\"profiles\",\"version\":1,\"/info\":\"GET metadata\",\"/profile\":\"GET current profile. PATCH changes specified fields only; omitted fields retained. PUT unsupported.\"}\n- Mock API call shape: {method, path, params?, body?}; response includes status + resource.\n\n[mock-api-profile-update-by-version v1] Local mock profile API: verb & semantics depend on api.json version\nAlways read api.json first; the correct verb and its semantics vary by version.\n\nv1 (\"/profile\": \"...PATCH changes specified fields only; omitted fields retained. PUT unsupported.\")\n- Use PATCH with ONLY the changed field; omit unchanged fields. Re-GET to verify.\n\nv2 (\"/profile\": \"GET current profile. PUT replaces profile; missing email defaults to null, digest to false, timezone to UTC. PATCH unsupported.\")\n- PATCH is UNSUPPORTED. PUT REPLACES the whole resource.\n- DANGER: PUT with omitted fields resets them to defaults (null/false/UTC). To change one field, you MUST GET first, then PUT the FULL object including all existing fields plus the change.\n- Example: GET /profile -> {timezone:\"UTC\",email:\"person3@example.test\",digest:true}; PUT body {\"timezone\":\"Asia/Tokyo\",\"email\":\"person3@example.test\",\"digest\":true} -> preserves email/digest.\n\nKey lesson: don't reuse prior-version guidance blindly; a PATCH/partial-update habit on a v2 PUT endpoint silently destroys data. Always re-GET after writing to verify all fields.\n\nCall shape: {method, path, params?, body?}; response {status, profile}.",
+  "thinking": {
+    "type": "enabled",
+    "budget_tokens": 4096
+  },
+  "output_config": {
+    "effort": "high"
+  },
+  "max_output_tokens": 32768,
+  "memory_budget_characters": 3200,
+  "protocol": "controlled-adapter-v1",
+  "no_history_retrieval": true,
+  "hermes_prompt_override": false,
+  "pi_package": "@earendil-works/pi-agent-core@1.0.0"
+}

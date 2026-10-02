@@ -1,0 +1,35 @@
+{
+  "run_id": "main-pi-06-c-caution",
+  "group": "06_build",
+  "stage": "c",
+  "provider": "deepseek",
+  "agent": "pi",
+  "memory": "file",
+  "memory_from": "main-pi-06-w",
+  "memory_seed": null,
+  "writer_from": null,
+  "repair_from": null,
+  "guided": false,
+  "caution": true,
+  "ensure_read": false,
+  "explicit_fix": false,
+  "max_requests": 24,
+  "timeout": 420,
+  "model": "deepseek-flash",
+  "endpoint": "https://api.deepseek.com/anthropic",
+  "prompt": "Run the tests for the ui package and report the actual ui test result. Return JSON {\"answer\": \"passed\"} when ui has passed.\nCheck whether historical experience applies to the current task.",
+  "system": "You are a capable assistant solving independent tasks in a local workspace. Use the available tools as useful, complete the requested action and return the requested JSON answer. Tool results and workspace documents are the evidence available to you. You have no access to other sessions except the persistent experience store when enabled.\nPersistent experience loaded from the current store:\n[mock-pnpm-test-engine v1] Mock pnpm test engine: running package tests\nTask type: run tests for a package in a mock pnpm engine workspace and report actual result.\n\nWorkspace layout (typical):\n- README.md (engine docs)\n- package.json (root)\n- packages/<name>/package.json (has scripts.test)\n- packages/<name>/source.json (fixture: e.g. base/increment/expected)\n\nTool `build`: runs a command in local mock pnpm test engine; fixture assertions actually evaluated. Available command forms (from README): `pnpm test` and `pnpm --filter <package> test`. It resolves scripts from package.json. No network/install needed.\n\nbuild returns JSON: {\"exit_code\":N,\"executed_suites\":[...],\"passed\":bool}.\n- passed:true / exit_code:0 => suite passed.\n- Report the ACTUAL result from executed_suites; don't assume.\n\nWorkflow:\n1. list_files, read README.md to confirm command forms.\n2. read package.json files (root + packages/<name>) and source.json fixture.\n3. Run `pnpm --filter <name> test` (and optionally `pnpm test`).\n4. Return requested JSON based on actual passed value.\n\nNote: `pnpm --filter ui test` and `pnpm test` both executed suite \"ui\" and returned passed:true. Output {\"answer\":\"passed\"} when parsed result shows the target package passed.",
+  "thinking": {
+    "type": "enabled",
+    "budget_tokens": 4096
+  },
+  "output_config": {
+    "effort": "high"
+  },
+  "max_output_tokens": 32768,
+  "memory_budget_characters": 3200,
+  "protocol": "controlled-adapter-v1",
+  "no_history_retrieval": true,
+  "hermes_prompt_override": false,
+  "pi_package": "@earendil-works/pi-agent-core@1.0.0"
+}

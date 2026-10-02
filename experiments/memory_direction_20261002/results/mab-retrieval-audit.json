@@ -1,0 +1,60 @@
+{
+  "expected_chain": [
+    "146. The author of Our Mutual Friend is Charles Darwin.",
+    "322. Amala Paul is a citizen of Belgium.",
+    "335. Charles Darwin is married to Amala Paul."
+  ],
+  "source_memory_had_author_update": true,
+  "updated_memory_still_mentions_book": false,
+  "runs": [
+    {
+      "run_id": "mab-ds-q0-history-r1",
+      "tool_outputs": 16,
+      "outputs_with_new_author_fact": 1,
+      "outputs_with_old_author_fact": 1,
+      "outputs_flagging_content_truncation": 7,
+      "final_response": "```json\n{\n  \"answer\": \"Belgium\",\n  \"evidence\": {\n    \"chains\": [\n      {\n        \"hop\": \"author of Our Mutual Friend\",\n        \"facts\": [\n          \"107: The author of Our Mutual Friend is Charles Dickens.\",\n          \"146: The author of Our Mutual Friend is Charles Darwin. (newer, overrides 107)\"\n        ],\n        \"resolved\": \"Charles Darwin\"\n      },\n      {\n        \"hop\": \"spouse of Charles Darwin\",\n        \"facts\": [\n          \"164: Charles Darwin is married to Emma Darwin.\",\n          \"335: Charles Darwin is married to Amala Paul. (newer, overrides 164)\"\n        ],\n        \"resolved\": \"Amala Paul\"\n      },\n      {\n        \"hop\": \"country of citizenship of Amala Paul\",\n        \"facts\": [\n          \"294: Amala Paul is a citizen of India.\",\n          \"322: Amala Paul is a citizen of Belgium. (newer, overrides 294)\"\n        ],\n        \"resolved\": \"Belgium\"\n      }\n    ],\n    \"serial_chain\": \"146 -> 335 -> 322\",\n    \"note\": \"Fact 146 supersedes 107 (Our Mutual Friend's author is Charles Darwin, not Dickens); fact 335 supersedes 164 (Darwin's spouse is Amala Paul, not Emma Darwin); fact 322 supersedes 294 (Amala Paul's citizenship is Belgium, not India).\"\n  }\n}\n```"
+    },
+    {
+      "run_id": "mab-ds-q0-native-r1",
+      "tool_outputs": 15,
+      "outputs_with_new_author_fact": 0,
+      "outputs_with_old_author_fact": 2,
+      "outputs_flagging_content_truncation": 10,
+      "final_response": "{\"answer\": \"United Kingdom\", \"evidence\": {\"chain\": \"107: author of Our Mutual Friend = Charles Dickens → 131: Charles Dickens is married to Catherine Dickens → 87: Catherine Dickens is a citizen of United Kingdom\", \"serials\": [107, 131, 87], \"notes\": \"No newer fact in the pool (serials up to 453) overrides fact 107, fact 131, or fact 87 — the later Dickens fact (327) concerns Sketches by Boz, a different subject, so it does not conflict.\"}}"
+    },
+    {
+      "run_id": "mab-ds-q0-history-wide-r2",
+      "tool_outputs": 12,
+      "outputs_with_new_author_fact": 0,
+      "outputs_with_old_author_fact": 0,
+      "outputs_flagging_content_truncation": 7,
+      "final_response": "Based on the pool (two chunks: `@session:default/mab6k-chunk-1` and `@session:default/mab6k-chunk-2`), I resolved each hop:\n\n- **Hop 1 — author of *Our Mutual Friend***: only fact **107** (\"The author of Our Mutual Friend is Charles Dickens\") exists in the pool; no newer override.\n- **Hop 2 — spouse of that author**: fact **131** (\"Charles Dickens is married to Catherine Dickens\"); the only other \"Charles Dickens\" facts (327 *Sketches by Boz* author, 448 death place) are different relations, so no override.\n- **Hop 3 — citizenship of the spouse**: fact **87** (\"Catherine Dickens is a citizen of United Kingdom\"); no newer citizenship fact for her.\n\n```json\n{\n  \"answer\": \"United Kingdom\",\n  \"evidence\": {\n    \"serials\": [107, 131, 87],\n    \"chain\": [\n      \"Fact 107: The author of Our Mutual Friend is Charles Dickens. (no newer override)\",\n      \"Fact 131: Charles Dickens is married to Catherine Dickens. (only spouse fact; facts 327/448 concern other relations)\",\n      \"Fact 87: Catherine Dickens is a citizen of United Kingdom. (no newer override)\",\n      \"Therefore: spouse = Catherine Dickens; her country of citizenship = United Kingdom.\"\n    ]\n  }\n}\n```"
+    },
+    {
+      "run_id": "mab-ds-q0-native-wide-r2",
+      "tool_outputs": 11,
+      "outputs_with_new_author_fact": 0,
+      "outputs_with_old_author_fact": 0,
+      "outputs_flagging_content_truncation": 7,
+      "final_response": "```json\n{\n  \"answer\": \"United Kingdom\",\n  \"evidence\": [\n    \"107 — The author of Our Mutual Friend is Charles Dickens (chunk-1; no later fact about the author of Our Mutual Friend appears anywhere in the pool — chunk-2's only Dickens author fact, 327, concerns Sketches by Boz)\",\n    \"131 — Charles Dickens is married to Catherine Dickens (chunk-1; the only/newest 'married to' fact for Charles Dickens)\",\n    \"87 — Catherine Dickens is a citizen of United Kingdom (chunk-1; the only citizenship fact for Catherine Dickens in the pool)\"\n  ],\n  \"chain\": \"Our Mutual Friend → author = Charles Dickens (107) → spouse = Catherine Dickens (131) → citizenship = United Kingdom (87)\"\n}\n```"
+    },
+    {
+      "run_id": "mab-ds-q0-atomic-history-r1",
+      "tool_outputs": 21,
+      "outputs_with_new_author_fact": 3,
+      "outputs_with_old_author_fact": 3,
+      "outputs_flagging_content_truncation": 0,
+      "final_response": "Here's the chain I resolved from the pool (serials, applying \"newest wins\" at each hop):\n\n- **Hop 1 — author:** `107` (Dickens) overridden by newer `146` → Charles Darwin\n- **Hop 2 — spouse of Darwin:** `164` (Emma Darwin) overridden by newer `335` → Amala Paul\n- **Hop 3 — citizenship of Amala Paul:** `294` (India) overridden by newer `322` → Belgium\n\n```json\n{\n  \"answer\": \"Belgium\",\n  \"evidence\": {\n    \"chain\": [\n      \"107: The author of Our Mutual Friend is Charles Dickens.\",\n      \"146 (newer, overrides 107): The author of Our Mutual Friend is Charles Darwin.\",\n      \"164: Charles Darwin is married to Emma Darwin.\",\n      \"335 (newer, overrides 164): Charles Darwin is married to Amala Paul.\",\n      \"294: Amala Paul is a citizen of India.\",\n      \"322 (newer, overrides 294): Amala Paul is a citizen of Belgium.\"\n    ],\n    \"final_serials\": [146, 335, 322],\n    \"conclusion\": \"Author = Charles Darwin (146) → spouse = Amala Paul (335) → citizenship = Belgium (322).\"\n  }\n}\n```"
+    },
+    {
+      "run_id": "mab-ds-q0-atomic-native-r1",
+      "tool_outputs": 10,
+      "outputs_with_new_author_fact": 2,
+      "outputs_with_old_author_fact": 1,
+      "outputs_flagging_content_truncation": 0,
+      "final_response": "```json\n{\n  \"answer\": \"Belgium\",\n  \"evidence\": [\n    \"146: The author of Our Mutual Friend is Charles Darwin (overrides 107: Charles Dickens)\",\n    \"335: Charles Darwin is married to Amala Paul (overrides 164: Emma Darwin)\",\n    \"322: Amala Paul is a citizen of Belgium (overrides 294: India)\"\n  ],\n  \"chain\": \"Our Mutual Friend --au--> Charles Darwin [146 > 107] --spouse--> Amala Paul [335 > 164] --citizen of--> Belgium [322 > 294]\"\n}\n```"
+    }
+  ],
+  "scope": "Literal fact-string visibility audit on native session_search tool outputs. Raw database contains all facts; this does not audit full Hermes shell/filesystem fallbacks."
+}

@@ -1,0 +1,36 @@
+{
+  "run_id": "fix-pi-10-b-natural",
+  "group": "10_preference",
+  "stage": "b",
+  "provider": "deepseek",
+  "agent": "pi",
+  "memory": "file",
+  "memory_from": "main-pi-10-c-file",
+  "memory_seed": null,
+  "writer_from": null,
+  "repair_from": null,
+  "guided": false,
+  "caution": false,
+  "ensure_read": false,
+  "require_retrieval": false,
+  "explicit_fix": false,
+  "max_requests": 24,
+  "timeout": 420,
+  "model": "deepseek-flash",
+  "endpoint": "https://api.deepseek.com/anthropic",
+  "prompt": "Save the current numeric report using the applicable preferences for this project. Return JSON {\"answer\": \"saved\"}.",
+  "system": "You are a capable assistant solving independent tasks in a local workspace. Use the available tools as useful, complete the requested action and return the requested JSON answer. Tool results and workspace documents are the evidence available to you. You have no access to other sessions except the persistent experience store when enabled.\nPersistent experience loaded from the current store:\n[report-prefs-merge v1] Numeric report + preference inheritance pattern\nTask type: \"Save the current numeric report using applicable preferences\" -> return {\"answer\":\"saved\"}.\n\nWorkspace layout: README.md (rules), figures.json (holds \"value\"), preferences/default.json (team defaults), preferences/project.json (project overrides).\n\nMethod:\n1. list_files, then read ALL config/data files in parallel (README.md, figures.json, preferences/default.json, preferences/project.json).\n2. Resolve settings by MERGE with project overriding default per-key: for each key (language/layout/decimals), use project value if present else default value. Empty project.json {} => all defaults apply. Never blindly overwrite whole default with project.\n3. Get the number from figures.json \"value\" (can be a float like 131.456...; pass as-is, don't pre-round).\n4. Call render_report(language, layout, decimals, value) with resolved values. It saves report.json.\n5. Reply exactly {\"answer\":\"saved\"}.\n\nGeneral lesson: read the README first for override/merge semantics; prefer per-key inheritance over wholesale file replacement. Do parallel reads. Honor the exact required output JSON.",
+  "thinking": {
+    "type": "enabled",
+    "budget_tokens": 4096
+  },
+  "output_config": {
+    "effort": "high"
+  },
+  "max_output_tokens": 32768,
+  "memory_budget_characters": 3200,
+  "protocol": "controlled-adapter-v1",
+  "no_history_retrieval": true,
+  "hermes_prompt_override": false,
+  "pi_package": "@earendil-works/pi-agent-core@1.0.0"
+}

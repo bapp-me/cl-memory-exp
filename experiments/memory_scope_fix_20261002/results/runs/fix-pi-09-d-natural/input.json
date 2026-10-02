@@ -1,0 +1,36 @@
+{
+  "run_id": "fix-pi-09-d-natural",
+  "group": "09_timezone",
+  "stage": "d",
+  "provider": "deepseek",
+  "agent": "pi",
+  "memory": "file",
+  "memory_from": "main-pi-09-c-file",
+  "memory_seed": null,
+  "writer_from": null,
+  "repair_from": null,
+  "guided": false,
+  "caution": false,
+  "ensure_read": false,
+  "require_retrieval": false,
+  "explicit_fix": false,
+  "max_requests": 24,
+  "timeout": 420,
+  "model": "deepseek-flash",
+  "endpoint": "https://api.deepseek.com/anthropic",
+  "prompt": "Count events on reporting calendar day 2026-11-01, using the configured reporting timezone. Return JSON {\"answer\": number}.",
+  "system": "You are a capable assistant solving independent tasks in a local workspace. Use the available tools as useful, complete the requested action and return the requested JSON answer. Tool results and workspace documents are the evidence available to you. You have no access to other sessions except the persistent experience store when enabled.\nPersistent experience loaded from the current store:\n[reporting-day-event-count v1] Reporting-day event count task pattern\nTask type: \"Count events on reporting calendar day YYYY-MM-DD, using the configured reporting timezone.\"\n\nWorkspace (list_files) holds reporting.json like:\n{\"timezone\":\"UTC\",\"date\":\"2026-10-11\",\"midnight_offset\":\"+00:00\",\"next_midnight_offset\":\"+00:00\",\"storage\":\"UTC epoch seconds\",\"window\":\"inclusive start, exclusive next midnight\"}\nSQLite DB has table `events` (id INTEGER pk, ts INTEGER = UTC epoch seconds).\n\nProcedure:\n1. list_files -> read reporting.json to get timezone, midnight_offset, next_midnight_offset, window rule.\n2. PRAGMA table_info(events); MIN/MAX(ts), COUNT(*) to see range.\n3. Compute window epochs. For UTC use sqlite strftime('%s','YYYY-MM-DD 00:00:00') and strftime('%s','YYYY-MM-DD+1 00:00:00'). For non-UTC, apply midnight_offset to the date's local midnight: start = UTC epoch of local midnight; end = UTC epoch of next local midnight, using next_midnight_offset (may differ due to DST).\n4. Count: SELECT COUNT(*) FROM events WHERE ts >= start AND ts < end  (half-open: event exactly at next midnight EXCLUDED; event at start midnight INCLUDED).\n5. Verify: list rows with datetime(ts,'unixepoch') to eyeball inclusion.\n\nPitfall: ts stored in UTC epoch seconds regardless of reporting tz; do NOT treat the date string as UTC unless timezone is UTC. Respect DST offsets.\n\nReturn exactly JSON {\"answer\": <number>}.",
+  "thinking": {
+    "type": "enabled",
+    "budget_tokens": 4096
+  },
+  "output_config": {
+    "effort": "high"
+  },
+  "max_output_tokens": 32768,
+  "memory_budget_characters": 3200,
+  "protocol": "controlled-adapter-v1",
+  "no_history_retrieval": true,
+  "hermes_prompt_override": false,
+  "pi_package": "@earendil-works/pi-agent-core@1.0.0"
+}

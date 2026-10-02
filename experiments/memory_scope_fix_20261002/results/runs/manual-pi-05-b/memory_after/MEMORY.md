@@ -1,0 +1,2 @@
+[human-scoped-diagnostic v1] Manually scoped a experience (diagnostic only)
+Observed profiles API version 1 only. Its PATCH /profile changes supplied fields and retains omitted fields; PUT unsupported in that observed version. For this version GET, PATCH changed fields, then GET to verify. Re-read api.json on each task and select the currently documented method and preservation semantics. Do not generalize omission-preserves-fields to other update methods or versions. Preserve the current resource values when the task requires it.

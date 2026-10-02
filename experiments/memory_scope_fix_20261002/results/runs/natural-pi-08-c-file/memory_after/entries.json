@@ -1,0 +1,12 @@
+{
+  "ledger-sales-total": {
+    "title": "ledger.csv sales total",
+    "content": "ledger.csv columns: category,amount. Rows alternate sales/refund. Sales amounts: 10,28,46,64 -> sum 148 (4 rows). export.json gives parser params: utf-8, comma, 0 preamble. \"total amount of sales rows\" = sum of amount column for category=sales.",
+    "version": 1
+  },
+  "ledger-sales-total v1": {
+    "title": "ledger.csv sales total (export.json driven)",
+    "content": "ledger.csv sales total task.\nALWAYS read export.json next to the CSV first: it holds encoding, delimiter, preamble_lines.\nThis variant: encoding=utf-16 (UTF-16LE with BOM), delimiter=TAB (\\t), preamble_lines=2.\nParsing with default comma delimiter produced a single garbage \"category\\tamount\" key -> wrong. Must use tab delimiter.\nData (after 2 skipped preamble lines; header row category/amount): sales 12,30,48,66 sum=156; refunds 21,39,57,75.\n\"total amount of sales rows\" = sum of amount where category=sales = 156.\nLesson: never assume comma/utf-8; check export.json (or sibling config) for parser params.",
+    "version": 1
+  }
+}

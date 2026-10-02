@@ -1,0 +1,93 @@
+{
+  "run_id": "v2-ds-b9-none-r3",
+  "exit_code": 0,
+  "timed_out": false,
+  "seconds": 44.672,
+  "result": {
+    "duration_api_ms": 42305,
+    "stop_reason": "end_turn",
+    "session_id": "16b0976d-aef4-4a9a-a53f-0535703cf2a4",
+    "total_cost_usd": 0.316511,
+    "usage": {
+      "input_tokens": 12059,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 72832,
+      "output_tokens": 8792,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard",
+      "fallback_credit": null
+    },
+    "modelUsage": {
+      "deepseek-flash": {
+        "inputTokens": 12059,
+        "outputTokens": 8792,
+        "cacheReadInputTokens": 72832,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.316511,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "deepseek-flash",
+        "provider": "firstParty",
+        "costBasis": "unknown"
+      }
+    },
+    "permission_denials": [],
+    "terminal_reason": "completed",
+    "fast_mode_state": "off",
+    "fast_mode_disabled_reason": "sdk_opt_in_required",
+    "subagent_stats": {
+      "spawned": 0,
+      "requested": {
+        "background": 0,
+        "foreground": 0,
+        "unset": 0
+      },
+      "started_in_background": 0,
+      "max_depth": 0,
+      "spawned_by_subagents": 0,
+      "completed": 0,
+      "failed": 0,
+      "killed": {
+        "parent": 0,
+        "user": 0,
+        "system": 0
+      },
+      "refused": {
+        "depth_limit": 0,
+        "concurrency_limit": 0,
+        "budget": 0
+      },
+      "by_type": {}
+    },
+    "is_error": false,
+    "num_turns": 18,
+    "subtype": "success",
+    "api_error_status": null,
+    "result": "## Summary\n\n**Schema discovery:** Three table groups, each a product dataset:\n- `items_g1` (+ `fdbk_g1`, `taxn_g1`, `attrs_g1`, `fdbk_stats_g1`) — dominated by **Office Products** (13,933/20,000)\n- `items_g2` (+ `fdbk_g2`, `taxn_g2`) — dominated by **electronics** categories (Computers 5,247; All Electronics 4,562; Camera & Photo 2,789; Cell Phones 1,775; Home Audio…) → **electronics dataset**\n- `items_g3` (+ `fdbk_g3`, `attrs_g3`) — dominated by **Musical Instruments** (17,162/20,000)\n\n**Price units:** In g1 and g3 the `prc` column is already in dollars (e.g., a French horn = 5369.0). In the electronics dataset (`items_g2`), `prc` is stored in **cents** as an integer (e.g., 7499 → $74.99), and `prc_usd = prc/100` exactly for every row where it exists. Crucially, `prc_usd` is a **clipped** column — it is `NULL` for every price ≥ 50000 cents ($500), so averaging it would silently drop all 224 high-priced items and bias the result. The true listed price must come from `prc`.\n\n**Answer:** average listed price = AVG(prc)/100 over the 6,570 electronics items that have a price = **$96.23**.\n\n```json\n{\n  \"answer\": 96.2334490106545,\n  \"sql\": \"SELECT AVG(prc) / 100.0 AS avg_listed_price_usd FROM items_g2 WHERE prc IS NOT NULL;\"\n}\n```",
+    "ttft_ms": 1195,
+    "type": "result",
+    "duration_ms": 42687,
+    "uuid": "7e059996-1b4d-4381-8663-9391905a17f4",
+    "ttft_stream_ms": 816,
+    "time_to_request_ms": 220,
+    "first_content_frame_ms": 816,
+    "queued_turn_count": 0,
+    "result_index": 0
+  },
+  "memory_files": []
+}

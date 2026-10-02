@@ -1,0 +1,3 @@
+User is learning Spanish and attends a language exchange class at a local language school every Wednesday evening (as of May 2023). Paired with a Colombian tutor named Juan: Juan helps the user with Spanish pronunciation and grammar, and the user helps Juan with English vocabulary.
+§
+User usually has dinner plans with friends on Thursday evenings, so tends not to schedule other recurring commitments that day.

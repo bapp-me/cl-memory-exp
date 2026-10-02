@@ -1,0 +1,96 @@
+{
+  "run_id": "v2-ds-a11-write-r1",
+  "exit_code": 0,
+  "timed_out": false,
+  "seconds": 31.484,
+  "result": {
+    "duration_api_ms": 27333,
+    "stop_reason": "end_turn",
+    "session_id": "6943a139-f675-4581-b14a-097549b7b36e",
+    "total_cost_usd": 0.22038,
+    "usage": {
+      "input_tokens": 9788,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 103680,
+      "output_tokens": 4784,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard",
+      "fallback_credit": null
+    },
+    "modelUsage": {
+      "deepseek-flash": {
+        "inputTokens": 9788,
+        "outputTokens": 4784,
+        "cacheReadInputTokens": 103680,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.22038,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "deepseek-flash",
+        "provider": "firstParty",
+        "costBasis": "unknown"
+      }
+    },
+    "permission_denials": [],
+    "terminal_reason": "completed",
+    "fast_mode_state": "off",
+    "fast_mode_disabled_reason": "sdk_opt_in_required",
+    "subagent_stats": {
+      "spawned": 0,
+      "requested": {
+        "background": 0,
+        "foreground": 0,
+        "unset": 0
+      },
+      "started_in_background": 0,
+      "max_depth": 0,
+      "spawned_by_subagents": 0,
+      "completed": 0,
+      "failed": 0,
+      "killed": {
+        "parent": 0,
+        "user": 0,
+        "system": 0
+      },
+      "refused": {
+        "depth_limit": 0,
+        "concurrency_limit": 0,
+        "budget": 0
+      },
+      "by_type": {}
+    },
+    "is_error": false,
+    "num_turns": 18,
+    "subtype": "success",
+    "api_error_status": null,
+    "result": "**Result:** The electronics dataset is `items_g2` / `fdbk_g2` (15,975 of its 20,000 items sit in electronics `main_cat`s, vs. office-heavy g1 and instrument-heavy g3). Reviews join via `fdbk_g2.ref_id = items_g2.ref_id` (100% coverage; the alternative `item_id` column matches only 64%), and `prc` is USD cents (`prc = prc_usd × 100` exactly), so the $40 list-price cap is `prc_usd <= 40`.\n\n```json\n{\n  \"answer\": \"10.22\",\n  \"sql\": \"SELECT ROUND(100.0 * SUM(f.rtg = 1) / COUNT(*), 2) AS pct_1star FROM fdbk_g2 f JOIN items_g2 i ON i.ref_id = f.ref_id WHERE LENGTH(f.body) > 500 AND i.prc_usd <= 40\"\n}\n```\n\n222 of the 2,172 qualifying electronics reviews are 1-star → **10.22%**.\n\nReusable findings (group→category mapping, join-key choice, cents-vs-USD price units) were written to `memory/environment.md` with evidence and inference/verification labels, and indexed in `memory/MEMORY.md`; the computed percentage is deliberately excluded from those notes.",
+    "ttft_ms": 1247,
+    "type": "result",
+    "duration_ms": 29047,
+    "uuid": "0fff502e-3608-44dc-9fa6-8473ed054722",
+    "ttft_stream_ms": 829,
+    "time_to_request_ms": 202,
+    "first_content_frame_ms": 829,
+    "queued_turn_count": 0,
+    "result_index": 0
+  },
+  "memory_files": [
+    "environment.md",
+    "MEMORY.md"
+  ]
+}

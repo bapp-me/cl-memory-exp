@@ -1,0 +1,36 @@
+{
+  "run_id": "fix-pi-08-b-natural",
+  "group": "08_csv",
+  "stage": "b",
+  "provider": "deepseek",
+  "agent": "pi",
+  "memory": "file",
+  "memory_from": "main-pi-08-c-file",
+  "memory_seed": null,
+  "writer_from": null,
+  "repair_from": null,
+  "guided": false,
+  "caution": false,
+  "ensure_read": false,
+  "require_retrieval": false,
+  "explicit_fix": false,
+  "max_requests": 24,
+  "timeout": 420,
+  "model": "deepseek-flash",
+  "endpoint": "https://api.deepseek.com/anthropic",
+  "prompt": "Compute the total amount of sales rows in the ledger.csv export. Return JSON {\"answer\": number}.",
+  "system": "You are a capable assistant solving independent tasks in a local workspace. Use the available tools as useful, complete the requested action and return the requested JSON answer. Tool results and workspace documents are the evidence available to you. You have no access to other sessions except the persistent experience store when enabled.\nPersistent experience loaded from the current store:\n[ledger-sales-total v3] CSV ledger aggregation pattern (read export.json params first)\nTask pattern: \"total amount of sales rows in ledger.csv export\".\nSteps: ALWAYS read export.json first — it holds parser params (encoding, delimiter, preamble_lines, file). Do not assume UTF-8/comma/no-preamble: seen cases with {\"encoding\":\"utf-16\",\"delimiter\":\"\\t\",\"preamble_lines\":2}.\nCall parse_csv(path, encoding=export.encoding, delimiter=export.delimiter, skip_lines=export.preamble_lines). Note: a raw tab in JSON makes the parser emit \"\\t\" which fails with TypeError \"delimiter must be a 1-character string\" — pass delimiter as the two-character escape \"\\t\" (backslash-t) so it decodes to a real tab.\nledger.csv columns = category,amount; rows alternate sales/refund. \"total amount of sales rows\" = SUM(amount) over rows where category==\"sales\" (a sum, not a row count). Example: sales 12,30,48,66 -> 156. Amounts may be strings in the raw rows; cast/round to number.\nAlways emit result as {\"answer\": number}.\n\n[experience-tool-quirks v1] experience tool usage quirks\nexperience `put` requires a non-empty `id` string; omitting it fails with {\"error\":\"KeyError: 'id'\"} even though the schema lists id as optional. Always pass op,id,title,content. Reusing an existing id fully replaces (bumps version). Use op:\"search\" (query, or empty) to list entries, op:\"get\" with id to read one, op:\"delete\" with id to remove.",
+  "thinking": {
+    "type": "enabled",
+    "budget_tokens": 4096
+  },
+  "output_config": {
+    "effort": "high"
+  },
+  "max_output_tokens": 32768,
+  "memory_budget_characters": 3200,
+  "protocol": "controlled-adapter-v1",
+  "no_history_retrieval": true,
+  "hermes_prompt_override": false,
+  "pi_package": "@earendil-works/pi-agent-core@1.0.0"
+}

@@ -1,0 +1,3 @@
+Uses the Starbucks Rewards app and is working toward Gold level — as of Jul 30, 2023 she stated she still needed 120 stars to reach Gold (she corrected an assistant's claim of 300). Drinks coffee daily, was shopping for coffee beans and considering a coffee maker. Plans a weekly grocery shopping trip and checks the store's website for weekly sales.
+§
+As of Jul 30, 2023: planning a weekend shopping trip that includes Sephora (skincare, makeup, fragrance interest); considering buying a new laptop and evaluating Best Buy's My Best Buy loyalty program; also uses Fetch Rewards. Organizes loyalty cards and rewards points with a spreadsheet, but is open to app/other alternatives.

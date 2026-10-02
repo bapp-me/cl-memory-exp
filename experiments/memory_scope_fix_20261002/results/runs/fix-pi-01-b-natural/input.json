@@ -1,0 +1,36 @@
+{
+  "run_id": "fix-pi-01-b-natural",
+  "group": "01_units",
+  "stage": "b",
+  "provider": "deepseek",
+  "agent": "pi",
+  "memory": "file",
+  "memory_from": "main-pi-01-c-file",
+  "memory_seed": null,
+  "writer_from": null,
+  "repair_from": null,
+  "guided": false,
+  "caution": false,
+  "ensure_read": false,
+  "require_retrieval": false,
+  "explicit_fix": false,
+  "max_requests": 24,
+  "timeout": 420,
+  "model": "deepseek-flash",
+  "endpoint": "https://api.deepseek.com/anthropic",
+  "prompt": "Compute the total dollar amount of paid orders whose individual dollar price is greater than 50. Return JSON {\"answer\": number}.",
+  "system": "You are a capable assistant solving independent tasks in a local workspace. Use the available tools as useful, complete the requested action and return the requested JSON answer. Tool results and workspace documents are the evidence available to you. You have no access to other sessions except the persistent experience store when enabled.\nPersistent experience loaded from the current store:\n[sqlite-orders-unit-conversion v1] SQLite orders tasks: check metadata/units before aggregate\nPattern for \"compute total dollar amount of orders ...\" workspace tasks:\n\n1. list_files first. Workspaces often contain a small metadata JSON (e.g. export.json) alongside data. ALWAYS read it before querying — it may declare fields like \"amount_unit\": \"USD cents\". That single field flips the whole computation.\n2. Data lives in a SQLite DB exposed via the sql tool (read-only, 50-row cap). Discover it with `SELECT name,type FROM sqlite_master;`, then `PRAGMA table_info(<table>);` for columns.\n3. Inspect values cheaply: `SELECT DISTINCT status FROM <table>;` to learn category labels (e.g. 'paid' vs 'cancelled'), and `SELECT * ... LIMIT 20` plus a `COUNT(*)` to confirm you saw all rows.\n\nUNIT-CONVERSION TRAP (most common failure):\n- If metadata says prices are in cents, then a threshold \"dollar price > 50\" must be applied in cents: `price > 5000`. Do NOT compare raw value > 50.\n- Sum in the stored unit, then convert to the requested unit at the end (cents sum / 100 = dollars).\n- Example: WHERE status='paid' AND price>5000 -> SUM(price)=42000 cents = $420 answer.\n\nChecklist: read metadata for units -> confirm columns -> filter on status AND the correctly-converted threshold -> SUM -> convert to requested unit -> sanity-check count and magnitude -> return {\"answer\": number}.",
+  "thinking": {
+    "type": "enabled",
+    "budget_tokens": 4096
+  },
+  "output_config": {
+    "effort": "high"
+  },
+  "max_output_tokens": 32768,
+  "memory_budget_characters": 3200,
+  "protocol": "controlled-adapter-v1",
+  "no_history_retrieval": true,
+  "hermes_prompt_override": false,
+  "pi_package": "@earendil-works/pi-agent-core@1.0.0"
+}

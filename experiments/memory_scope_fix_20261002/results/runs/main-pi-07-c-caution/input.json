@@ -1,0 +1,35 @@
+{
+  "run_id": "main-pi-07-c-caution",
+  "group": "07_config",
+  "stage": "c",
+  "provider": "deepseek",
+  "agent": "pi",
+  "memory": "file",
+  "memory_from": "main-pi-07-w",
+  "memory_seed": null,
+  "writer_from": null,
+  "repair_from": null,
+  "guided": false,
+  "caution": true,
+  "ensure_read": false,
+  "explicit_fix": false,
+  "max_requests": 24,
+  "timeout": 420,
+  "model": "deepseek-flash",
+  "endpoint": "https://api.deepseek.com/anthropic",
+  "prompt": "Set the effective application port to 8103, retaining its host. Verify runtime configuration and return JSON {\"answer\": 8103}.\nCheck whether historical experience applies to the current task.",
+  "system": "You are a capable assistant solving independent tasks in a local workspace. Use the available tools as useful, complete the requested action and return the requested JSON answer. Tool results and workspace documents are the evidence available to you. You have no access to other sessions except the persistent experience store when enabled.\nPersistent experience loaded from the current store:\n[config-override-port v1] Config override precedence: change effective app port safely\nTask pattern: \"Set effective application port to N, retaining host; verify runtime config.\"\nWorkspace: README.md, deployment.json, settings.json.\nPrecedence (from README): settings.json is base config; deployment.json \"environment\".APP_PORT, if present, OVERRIDES the file port. `config` tool shows EFFECTIVE runtime settings after overrides.\n\nWorkflow:\n1. list_files + config to see current effective values.\n2. read README.md, deployment.json, settings.json to learn precedence and current state.\n3. Decide where to edit:\n   - If deployment.json environment.APP_PORT is present, it wins -> edit that key; editing settings.json port would have NO effect.\n   - If environment empty (APP_PORT absent), edit settings.json port directly.\n4. write_file (JSON text) to update the file, retaining other keys (e.g. host) unchanged.\n5. Re-run config to VERIFY effective port/host, then return requested JSON.\n\nKey gotcha: always check deployment.json overrides before editing settings.json; verification must use `config`, not the raw file. Preserve host. Return only the requested JSON shape.",
+  "thinking": {
+    "type": "enabled",
+    "budget_tokens": 4096
+  },
+  "output_config": {
+    "effort": "high"
+  },
+  "max_output_tokens": 32768,
+  "memory_budget_characters": 3200,
+  "protocol": "controlled-adapter-v1",
+  "no_history_retrieval": true,
+  "hermes_prompt_override": false,
+  "pi_package": "@earendil-works/pi-agent-core@1.0.0"
+}

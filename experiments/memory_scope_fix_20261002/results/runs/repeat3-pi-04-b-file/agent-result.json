@@ -1,0 +1,491 @@
+{
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a capable assistant solving independent tasks in a local workspace. Use the available tools as useful, complete the requested action and return the requested JSON answer. Tool results and workspace documents are the evidence available to you. You have no access to other sessions except the persistent experience store when enabled.\nPersistent experience loaded from the current store:\n[local-api-ledger-workflow v1] Local mock API tasks (ledger) — workflow\nTask pattern: \"Using the local ledger API, compute X over all items, return JSON {answer}\".\n\nWorkflow:\n1. list_files -> usually only api.json. read_file api.json for service docs (endpoints, pagination rules).\n2. GET /info returns service metadata only (version + documentation filename).\n3. GET /items is paginated: params page (1-based), limit (max 3). Response: {items:[{id,amount,active}], total, next_page}. next_page null means end. ALWAYS loop pages until next_page is null; don't trust a single page. Here total=8 items across 3 pages (limit cap 3).\n4. Filter by the requested predicate (e.g. active==true) then aggregate (sum amounts).\n\nGotchas:\n- Unknown/extra query params (e.g. ledger=2) are silently ignored and return the same first page — no multi-ledger concept; \"current ledger\" is just flavor.\n- Requesting a page past the end returns {items:[], next_page:null}.\n- Item ids have a ledger prefix (item-1-N) but that alone doesn't imply selectable ledgers.\n- Compute carefully; verify arithmetic.\n\nExample: 8 items, active amounts 8,15,29,36,50,57 (inactive 22,43) -> sum 195 -> {\"answer\":195}.",
+      "toolsAdded": [
+        {
+          "name": "list_files",
+          "description": "List all files in the current isolated task workspace.",
+          "parameters": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "read_file",
+          "description": "Read a workspace file. Binary files return a short byte prefix and size.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "api",
+          "description": "Call the local mock API. Discover available endpoints and methods in workspace documentation. No external network.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "method": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            },
+            "required": [
+              "method",
+              "path"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "experience",
+          "description": "Persistent experience store across independent tasks. Search/get, put (create or fully replace an entry) or delete. You may curate useful experience at your discretion. Content budget 3200 characters; no automatic end-of-task write. Empty search lists entries. Changes are immediately searchable.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "enum": [
+                  "search",
+                  "get",
+                  "put",
+                  "delete"
+                ]
+              },
+              "id": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "content": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "op"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "timestamp": 0
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "Using the local ledger API, compute the sum of amounts for all active items in the current ledger. Return JSON {\"answer\": number}."
+        }
+      ],
+      "timestamp": 1790915575024
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "thinking",
+          "thinking": "Let me start by listing files and reading api.json.",
+          "thinkingSignature": "1a9d3dc3-2adf-49c4-8aa2-f19b5146a309"
+        },
+        {
+          "type": "toolCall",
+          "id": "call_00_SKmiqPElFm7HEL0i3pgX2246",
+          "name": "list_files",
+          "arguments": {}
+        }
+      ],
+      "api": "anthropic-messages",
+      "provider": "experiment",
+      "model": "deepseek-flash",
+      "usage": {
+        "input": 221,
+        "output": 33,
+        "cacheRead": 768,
+        "cacheWrite": 0,
+        "totalTokens": 1022,
+        "cost": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "total": 0
+        },
+        "cacheWrite1h": 0
+      },
+      "stopReason": "toolUse",
+      "timestamp": 1790915575029,
+      "responseId": "1a9d3dc3-2adf-49c4-8aa2-f19b5146a309",
+      "rawStopReason": "tool_use",
+      "thinkingLevel": "high"
+    },
+    {
+      "role": "toolResult",
+      "toolCallId": "call_00_SKmiqPElFm7HEL0i3pgX2246",
+      "toolName": "list_files",
+      "content": [
+        {
+          "type": "text",
+          "text": "[\"api.json\"]"
+        }
+      ],
+      "details": [
+        "api.json"
+      ],
+      "isError": false,
+      "timestamp": 1790915576040
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "thinking",
+          "thinking": "",
+          "thinkingSignature": "2d006a28-ee8a-40cd-8563-ced8df7ffd85"
+        },
+        {
+          "type": "toolCall",
+          "id": "call_00_ET_rMSl8o4NiLdRyHKmByjP5469",
+          "name": "read_file",
+          "arguments": {
+            "path": "api.json"
+          }
+        }
+      ],
+      "api": "anthropic-messages",
+      "provider": "experiment",
+      "model": "deepseek-flash",
+      "usage": {
+        "input": 142,
+        "output": 39,
+        "cacheRead": 896,
+        "cacheWrite": 0,
+        "totalTokens": 1077,
+        "cost": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "total": 0
+        },
+        "cacheWrite1h": 0
+      },
+      "stopReason": "toolUse",
+      "timestamp": 1790915576042,
+      "responseId": "2d006a28-ee8a-40cd-8563-ced8df7ffd85",
+      "rawStopReason": "tool_use",
+      "thinkingLevel": "high"
+    },
+    {
+      "role": "toolResult",
+      "toolCallId": "call_00_ET_rMSl8o4NiLdRyHKmByjP5469",
+      "toolName": "read_file",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"path\":\"api.json\",\"content\":\"{\\n  \\\"service\\\": \\\"ledger\\\",\\n  \\\"version\\\": 1,\\n  \\\"endpoints\\\": {\\n    \\\"/info\\\": \\\"GET service metadata\\\",\\n    \\\"/items\\\": \\\"GET page (1 based), limit (max 3); next_page null ends the list.\\\"\\n  }\\n}\"}"
+        }
+      ],
+      "details": {
+        "path": "api.json",
+        "content": "{\n  \"service\": \"ledger\",\n  \"version\": 1,\n  \"endpoints\": {\n    \"/info\": \"GET service metadata\",\n    \"/items\": \"GET page (1 based), limit (max 3); next_page null ends the list.\"\n  }\n}"
+      },
+      "isError": false,
+      "timestamp": 1790915577373
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "thinking",
+          "thinking": "Call /info and /items page 1.",
+          "thinkingSignature": "448af023-9372-4b54-8bcd-def3ffc1d89f"
+        },
+        {
+          "type": "toolCall",
+          "id": "call_00_gGB3L1ITKiY5vtNditth8628",
+          "name": "api",
+          "arguments": {
+            "method": "GET",
+            "path": "/info"
+          }
+        },
+        {
+          "type": "toolCall",
+          "id": "call_01_drr5P3pC9WyUyn2ohF9f7404",
+          "name": "api",
+          "arguments": {
+            "method": "GET",
+            "path": "/items",
+            "params": {
+              "page": 1,
+              "limit": 3
+            }
+          }
+        }
+      ],
+      "api": "anthropic-messages",
+      "provider": "experiment",
+      "model": "deepseek-flash",
+      "usage": {
+        "input": 143,
+        "output": 134,
+        "cacheRead": 1024,
+        "cacheWrite": 0,
+        "totalTokens": 1301,
+        "cost": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "total": 0
+        },
+        "cacheWrite1h": 0
+      },
+      "stopReason": "toolUse",
+      "timestamp": 1790915577374,
+      "responseId": "448af023-9372-4b54-8bcd-def3ffc1d89f",
+      "rawStopReason": "tool_use",
+      "thinkingLevel": "high"
+    },
+    {
+      "role": "toolResult",
+      "toolCallId": "call_00_gGB3L1ITKiY5vtNditth8628",
+      "toolName": "api",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"version\":1,\"documentation\":\"api.json\"}"
+        }
+      ],
+      "details": {
+        "version": 1,
+        "documentation": "api.json"
+      },
+      "isError": false,
+      "timestamp": 1790915578094
+    },
+    {
+      "role": "toolResult",
+      "toolCallId": "call_01_drr5P3pC9WyUyn2ohF9f7404",
+      "toolName": "api",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"items\":[{\"id\":\"item-2-1\",\"amount\":9,\"active\":true},{\"id\":\"item-2-2\",\"amount\":16,\"active\":true},{\"id\":\"item-2-3\",\"amount\":23,\"active\":false}],\"total\":8,\"next_page\":2}"
+        }
+      ],
+      "details": {
+        "items": [
+          {
+            "id": "item-2-1",
+            "amount": 9,
+            "active": true
+          },
+          {
+            "id": "item-2-2",
+            "amount": 16,
+            "active": true
+          },
+          {
+            "id": "item-2-3",
+            "amount": 23,
+            "active": false
+          }
+        ],
+        "total": 8,
+        "next_page": 2
+      },
+      "isError": false,
+      "timestamp": 1790915578101
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "thinking",
+          "thinking": "",
+          "thinkingSignature": "b88a6704-2f77-421d-994d-2f7516c6624c"
+        },
+        {
+          "type": "toolCall",
+          "id": "call_00_ET_jp8qAAnN2SwoqUAdrOtg8671",
+          "name": "api",
+          "arguments": {
+            "method": "GET",
+            "path": "/items",
+            "params": {
+              "page": 2,
+              "limit": 3
+            }
+          }
+        },
+        {
+          "type": "toolCall",
+          "id": "call_01_ET_Tcxp9jvvaW2Ju5uGqFIb7801",
+          "name": "api",
+          "arguments": {
+            "method": "GET",
+            "path": "/items",
+            "params": {
+              "page": 3,
+              "limit": 3
+            }
+          }
+        }
+      ],
+      "api": "anthropic-messages",
+      "provider": "experiment",
+      "model": "deepseek-flash",
+      "usage": {
+        "input": 241,
+        "output": 150,
+        "cacheRead": 1152,
+        "cacheWrite": 0,
+        "totalTokens": 1543,
+        "cost": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "total": 0
+        },
+        "cacheWrite1h": 0
+      },
+      "stopReason": "toolUse",
+      "timestamp": 1790915578102,
+      "responseId": "b88a6704-2f77-421d-994d-2f7516c6624c",
+      "rawStopReason": "tool_use",
+      "thinkingLevel": "high"
+    },
+    {
+      "role": "toolResult",
+      "toolCallId": "call_00_ET_jp8qAAnN2SwoqUAdrOtg8671",
+      "toolName": "api",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"items\":[{\"id\":\"item-2-4\",\"amount\":30,\"active\":true},{\"id\":\"item-2-5\",\"amount\":37,\"active\":true},{\"id\":\"item-2-6\",\"amount\":44,\"active\":false}],\"total\":8,\"next_page\":3}"
+        }
+      ],
+      "details": {
+        "items": [
+          {
+            "id": "item-2-4",
+            "amount": 30,
+            "active": true
+          },
+          {
+            "id": "item-2-5",
+            "amount": 37,
+            "active": true
+          },
+          {
+            "id": "item-2-6",
+            "amount": 44,
+            "active": false
+          }
+        ],
+        "total": 8,
+        "next_page": 3
+      },
+      "isError": false,
+      "timestamp": 1790915579332
+    },
+    {
+      "role": "toolResult",
+      "toolCallId": "call_01_ET_Tcxp9jvvaW2Ju5uGqFIb7801",
+      "toolName": "api",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"items\":[{\"id\":\"item-2-7\",\"amount\":51,\"active\":true},{\"id\":\"item-2-8\",\"amount\":58,\"active\":true}],\"total\":8,\"next_page\":null}"
+        }
+      ],
+      "details": {
+        "items": [
+          {
+            "id": "item-2-7",
+            "amount": 51,
+            "active": true
+          },
+          {
+            "id": "item-2-8",
+            "amount": 58,
+            "active": true
+          }
+        ],
+        "total": 8,
+        "next_page": null
+      },
+      "isError": false,
+      "timestamp": 1790915579338
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "thinking",
+          "thinking": "Active amounts: 9,16,30,37,51,58. Sum = 9+16=25, +30=55, +37=92, +51=143, +58=201.",
+          "thinkingSignature": "84cd607b-2f4f-43c8-8c68-c4a491a3eb8a"
+        },
+        {
+          "type": "text",
+          "text": "{\"answer\": 201}"
+        }
+      ],
+      "api": "anthropic-messages",
+      "provider": "experiment",
+      "model": "deepseek-flash",
+      "usage": {
+        "input": 261,
+        "output": 52,
+        "cacheRead": 1408,
+        "cacheWrite": 0,
+        "totalTokens": 1721,
+        "cost": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "total": 0
+        },
+        "cacheWrite1h": 0
+      },
+      "stopReason": "stop",
+      "timestamp": 1790915579339,
+      "responseId": "84cd607b-2f4f-43c8-8c68-c4a491a3eb8a",
+      "rawStopReason": "end_turn",
+      "thinkingLevel": "high"
+    }
+  ],
+  "final_response": "{\"answer\": 201}",
+  "error": null,
+  "stop_reason": "stop",
+  "turns": 5
+}

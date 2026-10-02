@@ -1,0 +1,96 @@
+{
+  "run_id": "v2-ds-b9-native-r2",
+  "exit_code": 0,
+  "timed_out": false,
+  "seconds": 32.609,
+  "result": {
+    "duration_api_ms": 29735,
+    "stop_reason": "end_turn",
+    "session_id": "0c72c730-edfc-4def-8cbc-87063cd93338",
+    "total_cost_usd": 0.202117,
+    "usage": {
+      "input_tokens": 7596,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 45824,
+      "output_tokens": 5649,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard",
+      "fallback_credit": null
+    },
+    "modelUsage": {
+      "deepseek-flash": {
+        "inputTokens": 7596,
+        "outputTokens": 5649,
+        "cacheReadInputTokens": 45824,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.202117,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "deepseek-flash",
+        "provider": "firstParty",
+        "costBasis": "unknown"
+      }
+    },
+    "permission_denials": [],
+    "terminal_reason": "completed",
+    "fast_mode_state": "off",
+    "fast_mode_disabled_reason": "sdk_opt_in_required",
+    "subagent_stats": {
+      "spawned": 0,
+      "requested": {
+        "background": 0,
+        "foreground": 0,
+        "unset": 0
+      },
+      "started_in_background": 0,
+      "max_depth": 0,
+      "spawned_by_subagents": 0,
+      "completed": 0,
+      "failed": 0,
+      "killed": {
+        "parent": 0,
+        "user": 0,
+        "system": 0
+      },
+      "refused": {
+        "depth_limit": 0,
+        "concurrency_limit": 0,
+        "budget": 0
+      },
+      "by_type": {}
+    },
+    "is_error": false,
+    "num_turns": 11,
+    "subtype": "success",
+    "api_error_status": null,
+    "result": "**Findings**\n\n- Table mapping (confirmed by `main_cat` composition): `items_g2` is the **electronics** dataset (Computers, All Electronics, Camera & Photo, Cell Phones & Accessories, Home Audio & Theater, Car Electronics, Video Games, Industrial & Scientific). `items_g1` → office products, `items_g3` → musical instruments.\n- `items_g2` has two price columns: `prc` (INTEGER) and `prc_usd` (REAL). On the 6,346 rows where both exist, `prc` = `prc_usd` × 100 exactly, so **`prc` is listed price in USD cents** and `prc_usd` is the same value in dollars.\n- `prc` is the primary/original column and is **not** derivable from `prc_usd` (224 rows such as the Leica M 35mm f/2 at 389500¢ = $3,895 have `prc` but NULL `prc_usd`; the reverse never happens). `prc_usd` tops out at $499.99, so averaging only `prc_usd` would silently drop the 224 higher-priced items and understate the mean ($52.96).\n- Consequently the complete figure uses all 6,570 items that carry a listed price: `AVG(prc)/100` — note `AVG(COALESCE(prc_usd, prc/100.0))` yields the identical value (96.2334), confirming internal consistency. 13,430 of 20,000 items have no price at all and are excluded.\n\n```json\n{\n  \"answer\": \"The average listed price of electronics products (items_g2) is $96.23 (mean of prc/100 over the 6,570 items that have a listed price; AVG(prc) = 9623.34 cents).\",\n  \"sql\": \"SELECT AVG(prc) / 100.0 AS avg_listed_price_usd, COUNT(prc) AS priced_items FROM items_g2;\"\n}\n```",
+    "ttft_ms": 1678,
+    "type": "result",
+    "duration_ms": 30178,
+    "uuid": "f12ad9e8-c3ab-414b-9ddc-3f49800ff423",
+    "ttft_stream_ms": 1128,
+    "time_to_request_ms": 225,
+    "first_content_frame_ms": 1128,
+    "queued_turn_count": 0,
+    "result_index": 0
+  },
+  "memory_files": [
+    "environment.md",
+    "MEMORY.md"
+  ]
+}

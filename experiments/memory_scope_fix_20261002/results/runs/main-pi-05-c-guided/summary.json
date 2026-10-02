@@ -1,0 +1,47 @@
+{
+  "run_id": "main-pi-05-c-guided",
+  "group": "05_update",
+  "stage": "c",
+  "agent": "pi",
+  "provider": "deepseek",
+  "memory": "file",
+  "memory_from": "guided-pi-05-w",
+  "writer_from": null,
+  "repair_from": null,
+  "guided": false,
+  "caution": false,
+  "ensure_read": false,
+  "explicit_fix": false,
+  "seconds": 8.796,
+  "error": null,
+  "stop_reason": "stop",
+  "quality": {
+    "answer": "updated",
+    "expected": "updated",
+    "answer_ok": true,
+    "state_ok": true,
+    "success": true
+  },
+  "tools": {
+    "list_files": 1,
+    "api": 4,
+    "read_file": 1,
+    "experience": 1
+  },
+  "task_tools": 6,
+  "memory_reads": 0,
+  "memory_writes": 1,
+  "tool_errors": 1,
+  "repeated_task_calls": 1,
+  "memory_changed": true,
+  "usage": {
+    "requests": 6,
+    "failed_http": 0,
+    "input_tokens": 1270,
+    "output_tokens": 1138,
+    "cache_read_input_tokens": 7552,
+    "cache_creation_input_tokens": 0,
+    "all_input_tokens": 8822
+  },
+  "final_response": "Important correction along the way: `api.json` is `profiles` **v2**, where PATCH is unsupported (405, `Allow: GET, PUT`). PUT replaces the whole profile and defaults missing fields, so a timezone-only PUT would have wiped email/digest. I therefore sent the full object.\n\n- GET /profile → `{\"timezone\":\"UTC\",\"email\":\"person3@example.test\",\"digest\":true}`\n- PATCH /profile `{\"timezone\":\"Asia/Tokyo\"}` → 405 Method not allowed\n- PUT /profile `{\"timezone\":\"Asia/Tokyo\",\"email\":\"person3@example.test\",\"digest\":true}` → 200\n- Verify GET /profile → `{\"timezone\":\"Asia/Tokyo\",\"email\":\"person3@example.test\",\"digest\":true}` ✅ timezone changed, email and digest preserved\n\nAlso updated the stored experience entry, since the previously loaded note described a different (v1) PATCH semantic that is no longer valid.\n\n```json\n{\"answer\": \"updated\"}\n```"
+}

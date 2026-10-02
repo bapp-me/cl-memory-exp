@@ -1,0 +1,41 @@
+{
+  "run_id": "fix-pi-04-repair",
+  "group": "04_pagination",
+  "stage": "c",
+  "agent": "pi",
+  "provider": "deepseek",
+  "memory": "file",
+  "memory_from": null,
+  "writer_from": null,
+  "repair_from": "main-pi-04-c-file",
+  "guided": false,
+  "caution": false,
+  "ensure_read": false,
+  "explicit_fix": false,
+  "seconds": 17.281,
+  "error": null,
+  "stop_reason": "stop",
+  "quality": {
+    "success": true,
+    "writer_saved": true
+  },
+  "tools": {
+    "experience": 5
+  },
+  "task_tools": 0,
+  "memory_reads": 4,
+  "memory_writes": 1,
+  "tool_errors": 0,
+  "repeated_task_calls": 0,
+  "memory_changed": true,
+  "usage": {
+    "requests": 4,
+    "failed_http": 0,
+    "input_tokens": 8428,
+    "output_tokens": 3380,
+    "cache_read_input_tokens": 28672,
+    "cache_creation_input_tokens": 0,
+    "all_input_tokens": 37100
+  },
+  "final_response": "Repair complete.\n\n**What proved inapplicable:** The stored entry `local-api-ledger-workflow` was loaded for this task but describes **v1 page-based** pagination (`page` param, `next_page` terminal signal). The task's `api.json` reported `\"version\": 2`, and the `/items` responses actually returned `next_cursor` tokens (`pos:3`, `pos:6`) with `page` ignored. Applying the page-based entry would have produced wrong requests.\n\n**Repair applied (id `local-api-ledger-workflow`, now v2):**\n- Added a prominent **APPLICABILITY** gate: use only when `api.json` shows `\"version\": 1`; otherwise defer to `local-api-ledger-workflow-v2`.\n- Kept all original v1 content intact (page loop, `next_page`, limit cap 3, gotchas, v1 example 195) so it stays useful in its genuine v1 context.\n- Added a short **NOTE** recording the observed failure (a v2 task wrongly approached with the page-based entry) to justify the gate.\n\n**Left unchanged:** `local-api-ledger-workflow-v2` — it matches the visible evidence (cursor tokens `pos:3`/`pos:6`, 8 items over 3 pages, active sum 10+17+31+38+52+59 = 207), so no correction was warranted.\n\nBoth entries now carry explicit version-based applicability conditions, and the store holds 2 entries."
+}

@@ -1,0 +1,34 @@
+{
+  "run_id": "main-pi-06-b-guided",
+  "group": "06_build",
+  "stage": "b",
+  "provider": "deepseek",
+  "agent": "pi",
+  "memory": "file",
+  "memory_from": "guided-pi-06-w",
+  "writer_from": null,
+  "repair_from": null,
+  "guided": false,
+  "caution": false,
+  "ensure_read": false,
+  "explicit_fix": false,
+  "max_requests": 24,
+  "timeout": 420,
+  "model": "deepseek-flash",
+  "endpoint": "https://api.deepseek.com/anthropic",
+  "prompt": "Run the tests for the ui package and report the actual ui test result. Return JSON {\"answer\": \"passed\"} when ui has passed.",
+  "system": "You are a capable assistant solving independent tasks in a local workspace. Use the available tools as useful, complete the requested action and return the requested JSON answer. Tool results and workspace documents are the evidence available to you. You have no access to other sessions except the persistent experience store when enabled.\nPersistent experience loaded from the current store:\n[mock-pnpm-test-engine v1] Local mock pnpm test engine (build tool) — behavior & usage\nEnvironment: isolated workspace with a \"Local mock build engine\" exposed via the `build` tool (command form), described in README.md as: \"accepts pnpm test and pnpm --filter <package> test, resolving scripts from package.json. It checks the selected package source fixture and reports the actual executed suites. No network or installation is needed.\" Version observed: task timestamp 1790914536, packageManager pnpm@10 (root package.json).\n\nObserved workspace layout: README.md, package.json (root), packages/ui/package.json, packages/ui/source.json.\n\nObserved command output format (JSON): {\"exit_code\": 0, \"executed_suites\": [\"ui\"], \"passed\": true}. So the engine reports per-suite execution and a boolean `passed`.\n\nApplicability check (cheap): `list_files` then `read_file README.md` and the target package's package.json to confirm the test script exists before running.\n\nCommands verified: `pnpm --filter ui test` and root `pnpm test` both returned exit_code 0, executed_suites [\"ui\"], passed true. Script in both root and packages/ui/package.json was \"test-engine ui\".\n\nFixture semantics: packages/ui/source.json = {base:5, increment:4, expected:9}; fixture assertions are evaluated against this file, so changing source.json could change pass/fail (untested here).\n\nUntested / not generalized: behavior for packages other than \"ui\"; whether root `pnpm test` runs multiple suites when more packages exist (here only one). Report actual engine output; return {\"answer\":\"passed\"} only when the engine reports passed=true for ui.",
+  "thinking": {
+    "type": "enabled",
+    "budget_tokens": 4096
+  },
+  "output_config": {
+    "effort": "high"
+  },
+  "max_output_tokens": 32768,
+  "memory_budget_characters": 3200,
+  "protocol": "controlled-adapter-v1",
+  "no_history_retrieval": true,
+  "hermes_prompt_override": false,
+  "pi_package": "@earendil-works/pi-agent-core@1.0.0"
+}

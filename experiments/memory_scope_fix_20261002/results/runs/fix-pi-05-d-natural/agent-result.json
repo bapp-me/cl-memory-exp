@@ -1,0 +1,463 @@
+{
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a capable assistant solving independent tasks in a local workspace. Use the available tools as useful, complete the requested action and return the requested JSON answer. Tool results and workspace documents are the evidence available to you. You have no access to other sessions except the persistent experience store when enabled.\nPersistent experience loaded from the current store:\n[mock-api-profile-patch-pattern v1] Local mock API: partial-update profile tasks\nTask type: update a field of a \"current profile\" via local mock API while preserving other fields, then verify.\n\nWorkflow (worked well):\n1. list_files -> usually returns [\"api.json\"]. Read api.json to discover service, endpoints, and which methods are supported (PATCH vs PUT).\n2. GET the current resource to learn existing field values (e.g. GET /profile -> {timezone, email, digest}).\n3. Apply ONLY the changed field with PATCH (omit unchanged fields; the API docs state omitted fields are retained). Do NOT use PUT if unsupported. Do NOT send the whole object.\n4. Verify with a follow-up GET and confirm both the changed field and preserved fields are intact.\n5. Return the requested JSON, e.g. {\"answer\": \"updated\"}.\n\nKey lessons:\n- Always read the workspace api.json/doc first; it tells which verbs are allowed (PUT may be unsupported).\n- PATCH = partial update; preserve untouched fields by omitting them.\n- Always re-GET to verify saved state before answering.\n- api.json format example: {\"service\":\"profiles\",\"version\":1,\"/info\":\"GET metadata\",\"/profile\":\"GET current profile. PATCH changes specified fields only; omitted fields retained. PUT unsupported.\"}\n- Mock API call shape: {method, path, params?, body?}; response includes status + resource.\n\n[mock-api-profile-update-by-version v1] Local mock profile API: verb & semantics depend on api.json version\nAlways read api.json first; the correct verb and its semantics vary by version.\n\nv1 (\"/profile\": \"...PATCH changes specified fields only; omitted fields retained. PUT unsupported.\")\n- Use PATCH with ONLY the changed field; omit unchanged fields. Re-GET to verify.\n\nv2 (\"/profile\": \"GET current profile. PUT replaces profile; missing email defaults to null, digest to false, timezone to UTC. PATCH unsupported.\")\n- PATCH is UNSUPPORTED. PUT REPLACES the whole resource.\n- DANGER: PUT with omitted fields resets them to defaults (null/false/UTC). To change one field, you MUST GET first, then PUT the FULL object including all existing fields plus the change.\n- Example: GET /profile -> {timezone:\"UTC\",email:\"person3@example.test\",digest:true}; PUT body {\"timezone\":\"Asia/Tokyo\",\"email\":\"person3@example.test\",\"digest\":true} -> preserves email/digest.\n\nKey lesson: don't reuse prior-version guidance blindly; a PATCH/partial-update habit on a v2 PUT endpoint silently destroys data. Always re-GET after writing to verify all fields.\n\nCall shape: {method, path, params?, body?}; response {status, profile}.",
+      "toolsAdded": [
+        {
+          "name": "list_files",
+          "description": "List all files in the current isolated task workspace.",
+          "parameters": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "read_file",
+          "description": "Read a workspace file. Binary files return a short byte prefix and size.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "api",
+          "description": "Call the local mock API. Discover available endpoints and methods in workspace documentation. No external network.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "method": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "body": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            },
+            "required": [
+              "method",
+              "path"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "experience",
+          "description": "Persistent experience store across independent tasks. Search/get, put (create or fully replace an entry) or delete. You may curate useful experience at your discretion. Content budget 3200 characters; no automatic end-of-task write. Empty search lists entries. Changes are immediately searchable.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "enum": [
+                  "search",
+                  "get",
+                  "put",
+                  "delete"
+                ]
+              },
+              "id": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "content": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "op"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "timestamp": 0
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "Update the current profile timezone to Asia/Tokyo while preserving the current email and digest setting. Verify the saved profile. Return JSON {\"answer\": \"updated\"}."
+        }
+      ],
+      "timestamp": 1790915289907
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "thinking",
+          "thinking": "",
+          "thinkingSignature": "e7d79a2a-8072-4674-bb60-39e06b46597c"
+        },
+        {
+          "type": "text",
+          "text": "I'll start by inspecting the workspace to discover the API contract."
+        },
+        {
+          "type": "toolCall",
+          "id": "call_00_ET_BfipgO3y1As4mypA80G28507",
+          "name": "list_files",
+          "arguments": {}
+        }
+      ],
+      "api": "anthropic-messages",
+      "provider": "experiment",
+      "model": "deepseek-flash",
+      "usage": {
+        "input": 1032,
+        "output": 34,
+        "cacheRead": 256,
+        "cacheWrite": 0,
+        "totalTokens": 1322,
+        "cost": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "total": 0
+        },
+        "cacheWrite1h": 0
+      },
+      "stopReason": "toolUse",
+      "timestamp": 1790915289911,
+      "responseId": "e7d79a2a-8072-4674-bb60-39e06b46597c",
+      "rawStopReason": "tool_use",
+      "thinkingLevel": "high"
+    },
+    {
+      "role": "toolResult",
+      "toolCallId": "call_00_ET_BfipgO3y1As4mypA80G28507",
+      "toolName": "list_files",
+      "content": [
+        {
+          "type": "text",
+          "text": "[\"api.json\"]"
+        }
+      ],
+      "details": [
+        "api.json"
+      ],
+      "isError": false,
+      "timestamp": 1790915291012
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "thinking",
+          "thinking": "",
+          "thinkingSignature": "2aa2b50e-e72a-4a29-a598-579f0a85e265"
+        },
+        {
+          "type": "toolCall",
+          "id": "call_00_ET_YN44221eXPG0lA19IzUj8834",
+          "name": "read_file",
+          "arguments": {
+            "path": "api.json"
+          }
+        }
+      ],
+      "api": "anthropic-messages",
+      "provider": "experiment",
+      "model": "deepseek-flash",
+      "usage": {
+        "input": 186,
+        "output": 39,
+        "cacheRead": 1152,
+        "cacheWrite": 0,
+        "totalTokens": 1377,
+        "cost": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "total": 0
+        },
+        "cacheWrite1h": 0
+      },
+      "stopReason": "toolUse",
+      "timestamp": 1790915291014,
+      "responseId": "2aa2b50e-e72a-4a29-a598-579f0a85e265",
+      "rawStopReason": "tool_use",
+      "thinkingLevel": "high"
+    },
+    {
+      "role": "toolResult",
+      "toolCallId": "call_00_ET_YN44221eXPG0lA19IzUj8834",
+      "toolName": "read_file",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"path\":\"api.json\",\"content\":\"{\\n  \\\"service\\\": \\\"profiles\\\",\\n  \\\"version\\\": 2,\\n  \\\"/info\\\": \\\"GET metadata\\\",\\n  \\\"/profile\\\": \\\"GET current profile. PUT replaces profile; missing email defaults to null, digest to false, timezone to UTC. PATCH unsupported.\\\"\\n}\"}"
+        }
+      ],
+      "details": {
+        "path": "api.json",
+        "content": "{\n  \"service\": \"profiles\",\n  \"version\": 2,\n  \"/info\": \"GET metadata\",\n  \"/profile\": \"GET current profile. PUT replaces profile; missing email defaults to null, digest to false, timezone to UTC. PATCH unsupported.\"\n}"
+      },
+      "isError": false,
+      "timestamp": 1790915291846
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "thinking",
+          "thinking": "Version 2: PUT replaces. So GET first, then PUT full object.\n\nNote this task differs: the workspace has v2. Let's GET.",
+          "thinkingSignature": "e9f69c41-abb1-426e-a0ef-564140fa0d1e"
+        },
+        {
+          "type": "text",
+          "text": "This is v2 — PATCH is unsupported and PUT replaces the whole resource (omitted fields reset to defaults). I'll GET first."
+        },
+        {
+          "type": "toolCall",
+          "id": "call_00_nxzV8f7s0ulThVd3I5UY7839",
+          "name": "api",
+          "arguments": {
+            "method": "GET",
+            "path": "/profile"
+          }
+        }
+      ],
+      "api": "anthropic-messages",
+      "provider": "experiment",
+      "model": "deepseek-flash",
+      "usage": {
+        "input": 185,
+        "output": 113,
+        "cacheRead": 1280,
+        "cacheWrite": 0,
+        "totalTokens": 1578,
+        "cost": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "total": 0
+        },
+        "cacheWrite1h": 0
+      },
+      "stopReason": "toolUse",
+      "timestamp": 1790915291848,
+      "responseId": "e9f69c41-abb1-426e-a0ef-564140fa0d1e",
+      "rawStopReason": "tool_use",
+      "thinkingLevel": "high"
+    },
+    {
+      "role": "toolResult",
+      "toolCallId": "call_00_nxzV8f7s0ulThVd3I5UY7839",
+      "toolName": "api",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"timezone\":\"UTC\",\"email\":\"person4@example.test\",\"digest\":true}"
+        }
+      ],
+      "details": {
+        "timezone": "UTC",
+        "email": "person4@example.test",
+        "digest": true
+      },
+      "isError": false,
+      "timestamp": 1790915292679
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "thinking",
+          "thinking": "Now PUT full object with timezone changed.",
+          "thinkingSignature": "2244385c-7654-4d83-8575-a8339ddaca99"
+        },
+        {
+          "type": "text",
+          "text": "Now I'll PUT the full object, changing only timezone (keeping email and digest)."
+        },
+        {
+          "type": "toolCall",
+          "id": "call_00_cB1EA3KHYkzbGOECcFnl0733",
+          "name": "api",
+          "arguments": {
+            "method": "PUT",
+            "path": "/profile",
+            "body": {
+              "timezone": "Asia/Tokyo",
+              "email": "person4@example.test",
+              "digest": true
+            }
+          }
+        }
+      ],
+      "api": "anthropic-messages",
+      "provider": "experiment",
+      "model": "deepseek-flash",
+      "usage": {
+        "input": 200,
+        "output": 120,
+        "cacheRead": 1408,
+        "cacheWrite": 0,
+        "totalTokens": 1728,
+        "cost": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "total": 0
+        },
+        "cacheWrite1h": 0
+      },
+      "stopReason": "toolUse",
+      "timestamp": 1790915292681,
+      "responseId": "2244385c-7654-4d83-8575-a8339ddaca99",
+      "rawStopReason": "tool_use",
+      "thinkingLevel": "high"
+    },
+    {
+      "role": "toolResult",
+      "toolCallId": "call_00_cB1EA3KHYkzbGOECcFnl0733",
+      "toolName": "api",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"status\":200,\"profile\":{\"timezone\":\"Asia/Tokyo\",\"email\":\"person4@example.test\",\"digest\":true}}"
+        }
+      ],
+      "details": {
+        "status": 200,
+        "profile": {
+          "timezone": "Asia/Tokyo",
+          "email": "person4@example.test",
+          "digest": true
+        }
+      },
+      "isError": false,
+      "timestamp": 1790915293490
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "thinking",
+          "thinking": "",
+          "thinkingSignature": "5d6ff653-6ebb-448a-953a-2aee44ad39c7"
+        },
+        {
+          "type": "toolCall",
+          "id": "call_00_ET_5Cd7JoF5mjgHolbUAFgD4612",
+          "name": "api",
+          "arguments": {
+            "method": "GET",
+            "path": "/profile"
+          }
+        }
+      ],
+      "api": "anthropic-messages",
+      "provider": "experiment",
+      "model": "deepseek-flash",
+      "usage": {
+        "input": 231,
+        "output": 54,
+        "cacheRead": 1536,
+        "cacheWrite": 0,
+        "totalTokens": 1821,
+        "cost": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "total": 0
+        },
+        "cacheWrite1h": 0
+      },
+      "stopReason": "toolUse",
+      "timestamp": 1790915293492,
+      "responseId": "5d6ff653-6ebb-448a-953a-2aee44ad39c7",
+      "rawStopReason": "tool_use",
+      "thinkingLevel": "high"
+    },
+    {
+      "role": "toolResult",
+      "toolCallId": "call_00_ET_5Cd7JoF5mjgHolbUAFgD4612",
+      "toolName": "api",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"timezone\":\"Asia/Tokyo\",\"email\":\"person4@example.test\",\"digest\":true}"
+        }
+      ],
+      "details": {
+        "timezone": "Asia/Tokyo",
+        "email": "person4@example.test",
+        "digest": true
+      },
+      "isError": false,
+      "timestamp": 1790915294592
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "thinking",
+          "thinking": "Verified. Return JSON.\n\nAlso consider updating experience store — v2 entry already exists matching. No new info needed. I'll just answer.",
+          "thinkingSignature": "b0d55929-4269-431e-a0cd-33e070788df1"
+        },
+        {
+          "type": "text",
+          "text": "Verified via re-GET: timezone is now `Asia/Tokyo` while email (`person4@example.test`) and digest (`true`) are preserved.\n\n{\"answer\": \"updated\"}"
+        }
+      ],
+      "api": "anthropic-messages",
+      "provider": "experiment",
+      "model": "deepseek-flash",
+      "usage": {
+        "input": 190,
+        "output": 68,
+        "cacheRead": 1664,
+        "cacheWrite": 0,
+        "totalTokens": 1922,
+        "cost": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "total": 0
+        },
+        "cacheWrite1h": 0
+      },
+      "stopReason": "stop",
+      "timestamp": 1790915294594,
+      "responseId": "b0d55929-4269-431e-a0cd-33e070788df1",
+      "rawStopReason": "end_turn",
+      "thinkingLevel": "high"
+    }
+  ],
+  "final_response": "Verified via re-GET: timezone is now `Asia/Tokyo` while email (`person4@example.test`) and digest (`true`) are preserved.\n\n{\"answer\": \"updated\"}",
+  "error": null,
+  "stop_reason": "stop",
+  "turns": 6
+}

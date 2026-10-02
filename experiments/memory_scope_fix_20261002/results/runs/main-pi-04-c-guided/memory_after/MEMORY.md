@@ -1,0 +1,9 @@
+[ledger-api-sum-active v2] Local mock "ledger" API: discovery + active-sum procedure (v1 page / v2 cursor)
+ENV: local mock API "ledger". Workspace has only api.json. GET /info returns {version, documentation}. CHECK VERSION — pagination scheme differs:
+- v1: params page(1-based), limit(max 3); response {items, total, next_page}; next_page null ends list. page past end -> empty items.
+- v2: params limit(max 3), and CURSOR token (next_cursor); "page is ignored". Response {items:[{id,amount,active}], total, next_cursor}. Start with no cursor, then pass back next_cursor value (e.g. "pos:3") as cursor param. next_cursor null ends list.
+Item ids prefixed "item-N-K". total = TOTAL item count (all pages), NOT active count; do not use it as an active filter.
+
+PROCEDURE (sum amounts of active items): GET /items?limit=3, accumulate amount where active==true, follow pagination (next_cursor for v2; next_page for v1) until null/empty. Same pattern for count/filter tasks. Other limits/ledgers untested.
+
+EVIDENCE v2 run: 8 items / 3 requests: p1 10u,17u,24x; p2 31u,38u,45x; p3 52u,59u, next_cursor null. Active sum=10+17+31+38+52+59=207. (u=active,x=inactive). Only ONE dataset observed; amounts may vary per task, always recompute.

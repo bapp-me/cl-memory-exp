@@ -1,0 +1,96 @@
+{
+  "run_id": "v2-glm-b9-own-coverage-r1",
+  "exit_code": 0,
+  "timed_out": false,
+  "seconds": 59.657,
+  "result": {
+    "duration_api_ms": 56563,
+    "stop_reason": "end_turn",
+    "session_id": "922dd588-848d-4e51-9036-bff700b3de61",
+    "total_cost_usd": 0.107194,
+    "usage": {
+      "input_tokens": 8561,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 33728,
+      "output_tokens": 1901,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "server_tool_use": {
+        "web_search_requests": 0,
+        "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "",
+      "iterations": [],
+      "speed": "standard",
+      "fallback_credit": null
+    },
+    "modelUsage": {
+      "glm-5.3-flash": {
+        "inputTokens": 8561,
+        "outputTokens": 1901,
+        "cacheReadInputTokens": 33728,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.107194,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "thinkingTokens": 0,
+        "canonicalModel": "glm-5.3-flash",
+        "provider": "firstParty",
+        "costBasis": "unknown"
+      }
+    },
+    "permission_denials": [],
+    "terminal_reason": "completed",
+    "fast_mode_state": "off",
+    "fast_mode_disabled_reason": "sdk_opt_in_required",
+    "subagent_stats": {
+      "spawned": 0,
+      "requested": {
+        "background": 0,
+        "foreground": 0,
+        "unset": 0
+      },
+      "started_in_background": 0,
+      "max_depth": 0,
+      "spawned_by_subagents": 0,
+      "completed": 0,
+      "failed": 0,
+      "killed": {
+        "parent": 0,
+        "user": 0,
+        "system": 0
+      },
+      "refused": {
+        "depth_limit": 0,
+        "concurrency_limit": 0,
+        "budget": 0
+      },
+      "by_type": {}
+    },
+    "is_error": false,
+    "num_turns": 8,
+    "subtype": "success",
+    "api_error_status": null,
+    "result": "## Answer\n\n**The average listed price of electronics products is $96.23.**\n\nKey verification steps:\n1. **Schema**: `items_g2` / `fdbk_g2` / `taxn_g2` form the electronics dataset (confirmed by memory and the electronics-dominant `main_cat` values).\n2. **Units**: `items_g2.prc` is integer **cents**; on all 6,346 rows where both columns are populated, `prc_usd * 100 / prc = 1.0` exactly.\n3. **Coverage trap**: `prc_usd` is populated only up to $499.99 — the 224 rows priced ≥ $500 have `prc` but a NULL `prc_usd`. Averaging `prc_usd` would give a biased $52.96 by silently dropping all high-ticket items. Averaging `prc` over all 6,570 priced rows gives the correct figure.\n\n```json\n{\n  \"answer\": 96.23,\n  \"sql\": \"SELECT COUNT(*) AS n_with_price, ROUND(AVG(prc)/100.0, 2) AS avg_listed_price_usd FROM items_g2 WHERE prc IS NOT NULL\"\n}\n```",
+    "ttft_ms": 2985,
+    "type": "result",
+    "duration_ms": 57078,
+    "uuid": "76ff7eeb-b0e8-41a6-9b86-fcfa2544e310",
+    "ttft_stream_ms": 2982,
+    "time_to_request_ms": 208,
+    "first_content_frame_ms": 2983,
+    "queued_turn_count": 0,
+    "result_index": 0
+  },
+  "memory_files": [
+    "environment.md",
+    "MEMORY.md"
+  ]
+}

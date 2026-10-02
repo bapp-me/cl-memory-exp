@@ -1,0 +1,47 @@
+{
+  "run_id": "main-pi-05-c-caution",
+  "group": "05_update",
+  "stage": "c",
+  "agent": "pi",
+  "provider": "deepseek",
+  "memory": "file",
+  "memory_from": "main-pi-05-w",
+  "writer_from": null,
+  "repair_from": null,
+  "guided": false,
+  "caution": true,
+  "ensure_read": false,
+  "explicit_fix": false,
+  "seconds": 10.906,
+  "error": null,
+  "stop_reason": "stop",
+  "quality": {
+    "answer": "updated",
+    "expected": "updated",
+    "answer_ok": true,
+    "state_ok": true,
+    "success": true
+  },
+  "tools": {
+    "list_files": 1,
+    "experience": 2,
+    "read_file": 1,
+    "api": 4
+  },
+  "task_tools": 6,
+  "memory_reads": 1,
+  "memory_writes": 1,
+  "tool_errors": 0,
+  "repeated_task_calls": 1,
+  "memory_changed": true,
+  "usage": {
+    "requests": 7,
+    "failed_http": 0,
+    "input_tokens": 1646,
+    "output_tokens": 1446,
+    "cache_read_input_tokens": 11392,
+    "cache_creation_input_tokens": 0,
+    "all_input_tokens": 13038
+  },
+  "final_response": "The update is complete and verified.\n\n**What I did:**\n1. Read `api.json` — to my surprise it was **version 2**, whose doc says `PATCH` is *unsupported* and `PUT` **replaces** the profile (missing fields default to `null`/`false`/`UTC`). The loaded experience entry was based on a v1 doc where PATCH was the partial-update verb, so it did **not** directly apply here.\n2. `GET /profile` → `{\"timezone\":\"UTC\",\"email\":\"person3@example.test\",\"digest\":true}`\n3. `PUT /profile` with the **full object**, changing only the timezone: `{\"timezone\":\"Asia/Tokyo\",\"email\":\"person3@example.test\",\"digest\":true}` — sending only `{timezone}` would have wiped email and digest back to defaults.\n4. Verified via follow-up `GET /profile` → `{\"timezone\":\"Asia/Tokyo\",\"email\":\"person3@example.test\",\"digest\":true}` ✅ changed field applied, email and digest preserved.\n\nI also updated the experience store so the entry no longer misleads future tasks into blindly using PATCH.\n\n```json\n{\"answer\": \"updated\"}\n```"
+}

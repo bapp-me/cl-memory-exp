@@ -1,0 +1,252 @@
+[
+  {
+    "group": "01_units",
+    "title": "SQL 金额单位",
+    "a_experience": "旧导出 price 为美分，发现换算和状态筛选",
+    "b_reuse": "同版本新订单",
+    "c_boundary": "新导出 price 已为美元",
+    "visible_evidence": "export.json 的 amount_unit 与样本值",
+    "quality": "SQL 汇总金额及最终数值",
+    "source": "synthetic, deterministic make_tasks.py; inspired by general environment conventions, not a public benchmark score",
+    "d": "new independent values under the c regime",
+    "stages": {
+      "a": {
+        "sha256": "549f5e99338c93b2490586df1291cbab96298524044fbc3799a67a04b92c2c40"
+      },
+      "b": {
+        "sha256": "a03043b27af6b594eaf79fffc821342464a4eb5f0a7f178f1c4d9478e310a263"
+      },
+      "c": {
+        "sha256": "136e6805577b8dfe1ab64604ca0976d6b1ff21615f5459d20ac2a2c0739520a1"
+      },
+      "d": {
+        "sha256": "e0e8c77383127c521afa6081e65731941520eb036f9436a72c5d113d03c27d7c"
+      }
+    }
+  },
+  {
+    "group": "02_coverage",
+    "title": "SQL 非空覆盖",
+    "a_experience": "低价子集 display_usd 与完整 price_minor 等价",
+    "b_reuse": "另一低价上限仍在覆盖内",
+    "c_boundary": "全量目标包含 display_usd 缺失的高价行",
+    "visible_evidence": "schema、非空计数及缺失行",
+    "quality": "独立 price_minor 汇总",
+    "source": "synthetic, deterministic make_tasks.py; inspired by general environment conventions, not a public benchmark score",
+    "d": "new independent values under the c regime",
+    "stages": {
+      "a": {
+        "sha256": "3a29f234b73a9b8e98050fb5af80ac18eb285e6c4c20f48f114743a7f209800f"
+      },
+      "b": {
+        "sha256": "b3b1172a385d14f39f80c97ebce1f842cfa1762dec3f6e5163aaa74d1828cadf"
+      },
+      "c": {
+        "sha256": "cc38bc8d76d883386c052449c060fb04e071421ac515953846657135a431dd65"
+      },
+      "d": {
+        "sha256": "50abe3adf1da28f7bf374b885ec1a53ae1cff9e09b027fbfb7e09bdde1aceaf4"
+      }
+    }
+  },
+  {
+    "group": "03_join",
+    "title": "SQL 关联基数",
+    "a_experience": "客户标签表在源快照一客户一行",
+    "b_reuse": "同样基数的新订单",
+    "c_boundary": "目标快照一客户多条匹配标签，join 会重复金额",
+    "visible_evidence": "复合主键、原始行及计数",
+    "quality": "按客户存在匹配标签汇总订单",
+    "source": "synthetic, deterministic make_tasks.py; inspired by general environment conventions, not a public benchmark score",
+    "d": "new independent values under the c regime",
+    "stages": {
+      "a": {
+        "sha256": "d0cd41cab78b7acafc4c59c00a0fe549c1c90289c0bfdb51c4018193faaed033"
+      },
+      "b": {
+        "sha256": "db458cbade7b3e87fd8ff21cf8322e12e2aba40d6032eed0dd6c3a0662c723c2"
+      },
+      "c": {
+        "sha256": "cdda21c67c8963db9182ebb4f58419fc705e679fec1b71d34e8a027c4378f6d5"
+      },
+      "d": {
+        "sha256": "1947672281f0036d4cc7b3dc986fcd8eb21e6384e0dbad1121fc7ff1f074ea56"
+      }
+    }
+  },
+  {
+    "group": "04_pagination",
+    "title": "API 分页协议",
+    "a_experience": "page 分页和终止条件",
+    "b_reuse": "v1 新账本",
+    "c_boundary": "v2 cursor 分页，page 参数忽略",
+    "visible_evidence": "/info、api.json、响应 next_cursor",
+    "quality": "完整账本金额和可见记录 ID",
+    "source": "synthetic, deterministic make_tasks.py; inspired by general environment conventions, not a public benchmark score",
+    "d": "new independent values under the c regime",
+    "stages": {
+      "a": {
+        "sha256": "3723cadf9a32c8a8c78589ee4e758af2f9a6c670161b53259bf54c8938a05344"
+      },
+      "b": {
+        "sha256": "13c5fae3442f8bfe4bb8573f67efaee26669bb650494c1b1c424ba94251c90b0"
+      },
+      "c": {
+        "sha256": "edc46341df3e659bceb38547279f0e5d503f9d0cda80bfcbc42ade9110ffac7f"
+      },
+      "d": {
+        "sha256": "f41bd48a95704896f249298a099ba9e5a1a4201c435d59cec1393b25363ed560"
+      }
+    }
+  },
+  {
+    "group": "05_update",
+    "title": "API 更新语义",
+    "a_experience": "v1 PATCH 部分更新保留其余字段",
+    "b_reuse": "v1 新用户",
+    "c_boundary": "v2 PUT 替换，缺失字段重置默认值",
+    "visible_evidence": "/info、api.json、405、GET 返回",
+    "quality": "落地 profile 所有字段",
+    "source": "synthetic, deterministic make_tasks.py; inspired by general environment conventions, not a public benchmark score",
+    "d": "new independent values under the c regime",
+    "stages": {
+      "a": {
+        "sha256": "b6a48e6cc02871d784cc14b9a814dd81be80f9ea9445133022ed5e125f04d6cf"
+      },
+      "b": {
+        "sha256": "b2fb9fbdca22231090b951ef50c2616be25fd1c8cfe85d358c25a2052415ddf8"
+      },
+      "c": {
+        "sha256": "d139fb9f9df8124b185f46ed1b3c01258e06fdf8557f6c1f69c5bc3f8250b6ee"
+      },
+      "d": {
+        "sha256": "62dc156010b26d3d90449db20a033ea9a7e8080176e21b98c5ce7fff3c662af4"
+      }
+    }
+  },
+  {
+    "group": "06_build",
+    "title": "代码构建工作区",
+    "a_experience": "单包 test 运行目标包",
+    "b_reuse": "同样布局新源码",
+    "c_boundary": "monorepo 根 test 只测 core，必须指定 ui",
+    "visible_evidence": "package.json、packages/ui/package.json、命令输出",
+    "quality": "模拟测试引擎真实执行目标包检查并记录套件",
+    "source": "synthetic, deterministic make_tasks.py; inspired by general environment conventions, not a public benchmark score",
+    "d": "new independent values under the c regime",
+    "stages": {
+      "a": {
+        "sha256": "f8dc9adcd6b52166e10841bdc2d767bcf1a02a83856fa12e0f048441731b43d4"
+      },
+      "b": {
+        "sha256": "a3a7f42de1282142e75bacd5865e4d9b84143212bc130c4a45a6c8223d39c244"
+      },
+      "c": {
+        "sha256": "01a9e3b80e8cd57c70f74c01d061aa634c8f28547218bf60a2902d3445b6cf3e"
+      },
+      "d": {
+        "sha256": "2a645d4eb799ca4a448e9785351c62f37bb314585491332e594d6cca0588e1f3"
+      }
+    }
+  },
+  {
+    "group": "07_config",
+    "title": "配置优先级",
+    "a_experience": "settings.json 为实际配置入口",
+    "b_reuse": "无额外覆盖的新实例",
+    "c_boundary": "运行环境 APP_PORT 覆盖文件",
+    "visible_evidence": "deployment.json、settings.json、运行时 config 输出",
+    "quality": "更新后实际有效端口与既有主机名",
+    "source": "synthetic, deterministic make_tasks.py; inspired by general environment conventions, not a public benchmark score",
+    "d": "new independent values under the c regime",
+    "stages": {
+      "a": {
+        "sha256": "764852437fc580672088b4ff2a4e2cc34229acd8e32499951893044c31d2df48"
+      },
+      "b": {
+        "sha256": "59c2c13c92195cbaa3370d35bd2598e498649952fd1c616ff748541c3718fd96"
+      },
+      "c": {
+        "sha256": "73729ab057e321170a6a69254c95f6c9bceefa87ddbb77cbc3b13c811e52d068"
+      },
+      "d": {
+        "sha256": "0ff5ba356b992a2858f6c03a75667e8c5a83839bbc99d949f5284b28bc9b65dd"
+      }
+    }
+  },
+  {
+    "group": "08_csv",
+    "title": "文件编码与表结构",
+    "a_experience": "UTF-8、逗号、一行表头",
+    "b_reuse": "同导出器新账目",
+    "c_boundary": "UTF-16、制表符、两行前言",
+    "visible_evidence": "export.json、前缀字节、解码/解析结果",
+    "quality": "实际 csv 模块解析后的分类金额",
+    "source": "synthetic, deterministic make_tasks.py; inspired by general environment conventions, not a public benchmark score",
+    "d": "new independent values under the c regime",
+    "stages": {
+      "a": {
+        "sha256": "b6fc358f0c92b2cc99802b873c72230922b880dbc63cb82b55cda56db61dbb3e"
+      },
+      "b": {
+        "sha256": "5284444e838ff26ef38cef8cea4c688ae9fab155c7b443f7aa44cdef545a287b"
+      },
+      "c": {
+        "sha256": "fde7052bd2f92d68982865df05565bde77efe71ea214ad9fbb0751cb950103fc"
+      },
+      "d": {
+        "sha256": "32aa19bb5f360ec0b40319b7ebaded8118d0dd75ee82b791feccd6c9afb44a1f"
+      }
+    }
+  },
+  {
+    "group": "09_timezone",
+    "title": "时间窗口与夏令时",
+    "a_experience": "UTC 日界半开区间",
+    "b_reuse": "UTC 另一日期",
+    "c_boundary": "纽约夏令时结束日为 25 小时",
+    "visible_evidence": "reporting.json 给定时区及两端 UTC offset、events",
+    "quality": "固定 UTC 事件按明确日界计数",
+    "source": "synthetic, deterministic make_tasks.py; inspired by general environment conventions, not a public benchmark score",
+    "d": "new independent values under the c regime",
+    "stages": {
+      "a": {
+        "sha256": "4e13584058b7edeed566613460e321b607fde9bb65463b175008ae67a02fefea"
+      },
+      "b": {
+        "sha256": "e445c78ba8f081f1c5edef167a4df727697bccc3fe39fca2fa949695efa154f5"
+      },
+      "c": {
+        "sha256": "b7681e7cfba33f549d051fc1ca127fd3efee7bb205c6b5560b28a2769489378f"
+      },
+      "d": {
+        "sha256": "7fa558369b7c3882db22542336e35a808c994b60b724a667465624fb0890ff2c"
+      }
+    }
+  },
+  {
+    "group": "10_preference",
+    "title": "项目偏好覆盖",
+    "a_experience": "团队默认英语、compact、2 位小数",
+    "b_reuse": "没有项目覆盖的另一报告",
+    "c_boundary": "当前项目新偏好覆盖团队默认",
+    "visible_evidence": "preferences/default.json、project.json 的优先级与日期",
+    "quality": "保存的报告语言、布局、精度与数值",
+    "source": "synthetic, deterministic make_tasks.py; inspired by general environment conventions, not a public benchmark score",
+    "d": "new independent values under the c regime",
+    "stages": {
+      "a": {
+        "sha256": "ae6f3dd16ec4e6fc148d7904dcb590831308321643f6b8dbcaed5909da7426ae"
+      },
+      "b": {
+        "sha256": "a82e47d1e473167258fa9ab9dc57d8129b12dd8a03e8f52c498e669565e099d8"
+      },
+      "c": {
+        "sha256": "f3e2e3951a71071d061fc955090dd5c50f26581ea916583674fd2e00165ad890"
+      },
+      "d": {
+        "sha256": "61551e9fb33b1cf93212a8081e67834af41d00f0dc76bb7edc63ab60bb0d1299"
+      }
+    }
+  }
+]

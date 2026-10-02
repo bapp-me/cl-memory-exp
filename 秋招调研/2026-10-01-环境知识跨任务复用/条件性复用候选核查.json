@@ -1,0 +1,129 @@
+{
+  "checked_at_utc": "2026-10-01T14:35:10.308622+00:00",
+  "source": {
+    "url": "https://raw.githubusercontent.com/pgasawa/continual-learning-bench/5f8c50eb1e84b2eda2ef4faff757dfc812a0ea26/data/database_exploration/questions.json",
+    "commit": "5f8c50eb1e84b2eda2ef4faff757dfc812a0ea26",
+    "sha256": "f98e515c14b74f4d30c29401fb79cca9ceeb15fe9ee2432b10265a4a649d1771",
+    "bytes": 30820,
+    "question_count": 30
+  },
+  "candidate": {
+    "source_a": 11,
+    "applicable_target_b": 12,
+    "inapplicable_target_c": 2,
+    "fact": "items_g2.prc is stored in cents; do not generalize this to items_g1.prc, which is stored in dollars.",
+    "b_source_condition": "i.prc > 5000",
+    "c_source_condition": "i.prc > 50",
+    "c_counterfactual_condition_to_test": "i.prc > 5000",
+    "reverse_b_to_a": "Structurally applicable, execution benefit untested.",
+    "status": "Structural candidate from source SQL, not observed transfer effects.",
+    "selected_source_records": [
+      {
+        "question_id": 11,
+        "question": "Among electronics reviews with a review body longer than 500 characters, considering only products whose list price is at most $40, what percentage are 1-star? Round to 2 decimal places.",
+        "sql": "SELECT ROUND(100.0 *\n                    SUM(CASE WHEN f.rtg = 1.0 THEN 1 ELSE 0 END) / COUNT(*), 2)\n                FROM fdbk_g2 f\n                JOIN items_g2 i ON f.ref_id = i.ref_id\n                WHERE f.body IS NOT NULL AND LENGTH(f.body) > 500\n                AND i.prc IS NOT NULL AND i.prc > 0 AND i.prc <= 4000",
+        "answer": 10.22,
+        "answer_type": "float",
+        "difficulty": "hard",
+        "category": "g2_review_length",
+        "tables_involved": [
+          "fdbk_g2",
+          "items_g2"
+        ],
+        "tolerance": 0.01,
+        "knowledge_dependencies": [
+          "SCHEMA_MAP",
+          "GROUP_ID",
+          "FK_JOINS",
+          "PRICE_FMT"
+        ],
+        "notes": "Joins reviews to items; electronics list prices in cents ($40 = 4000). LENGTH on body, conditional percentage."
+      },
+      {
+        "question_id": 12,
+        "question": "How many electronics products priced above $50 have at least 5 reviews and an average review rating below 3.0?",
+        "sql": "SELECT COUNT(*) FROM (\n                    SELECT i.ref_id\n                    FROM items_g2 i\n                    JOIN fdbk_g2 f ON i.ref_id = f.ref_id\n                    WHERE i.prc > 5000 AND i.prc IS NOT NULL\n                    GROUP BY i.ref_id\n                    HAVING COUNT(*) >= 5 AND AVG(f.rtg) < 3.0\n                )",
+        "answer": 8,
+        "answer_type": "integer",
+        "difficulty": "hard",
+        "category": "g2_join_price_review",
+        "tables_involved": [
+          "items_g2",
+          "fdbk_g2"
+        ],
+        "tolerance": 0.0,
+        "knowledge_dependencies": [
+          "SCHEMA_MAP",
+          "PRICE_FMT",
+          "FK_JOINS",
+          "GROUP_ID"
+        ],
+        "notes": "Requires JOIN + GROUP BY + HAVING with two conditions (count threshold AND avg rating threshold), plus cents-to-dollars. Can't be one-shotted without understanding the aggregation pattern."
+      },
+      {
+        "question_id": 2,
+        "question": "What is the average review rating given to office products that cost more than $50?",
+        "sql": "SELECT ROUND(AVG(f.rtg), 2)\n                FROM fdbk_g1 f\n                JOIN items_g1 i ON f.ref_id = i.ref_id\n                WHERE i.prc > 50",
+        "answer": 4.11,
+        "answer_type": "float",
+        "difficulty": "hard",
+        "category": "g1_join_price_review",
+        "tables_involved": [
+          "items_g1",
+          "fdbk_g1"
+        ],
+        "tolerance": 0.01,
+        "knowledge_dependencies": [
+          "SCHEMA_MAP",
+          "PRICE_FMT",
+          "FK_JOINS",
+          "GROUP_ID"
+        ],
+        "notes": "Requires JOIN between items and reviews. Agent must discover price column and FK."
+      }
+    ]
+  },
+  "checks": {
+    "model_calls": 0,
+    "environment_runs": 0,
+    "gold_recomputed": false,
+    "counterfactual_sql_executed": false,
+    "experience_formed_by_agent": false,
+    "positive_transfer_measured": false,
+    "negative_transfer_measured": false
+  },
+  "limitations": [
+    "Source SQL and notes establish intended unit differences, not independently validated database contents.",
+    "Source tasks have different aggregation complexity; effects require within-task paired comparisons.",
+    "Group/table names provide scope cues, so simple scope checks may solve this candidate.",
+    "Source fact may be reusable without causing measurable benefit; incorrect reuse may be avoided by a strong agent.",
+    "No source runtime artifact was inspected in this audit to prove that task 11 reveals units without gold feedback."
+  ],
+  "related_primary_sources": [
+    {
+      "title": "BASM",
+      "url": "https://arxiv.org/html/2608.22339v1",
+      "use": "Applicable/inapplicable/repair decision buckets; procedural skill rather than environmental fact benchmark."
+    },
+    {
+      "title": "AgentMemoryBench",
+      "url": "https://github.com/solomoon313/AgentMemoryBench",
+      "use": "Transfer and Repair modes; erroneous reward feedback differs from correct but out-of-scope experience."
+    },
+    {
+      "title": "PersistBench",
+      "url": "https://github.com/ivaxi0s/PersistBench",
+      "use": "Positive and negative memory-use controls; memories/query input."
+    },
+    {
+      "title": "MGBench",
+      "url": "https://github.com/ostinatocc/MGBench",
+      "use": "Admission and scope governance, not end-to-end issue-solving performance."
+    },
+    {
+      "title": "Budget-constrained Web agents study",
+      "url": "https://arxiv.org/html/2606.15017",
+      "use": "Appendix F Table 11 selected single-run failures, not incidence or independent replication."
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+{
+  "files": {
+    "schema.md": "Order amount is USD. customer_tags lists customer memberships. Tags starting with vip- qualify for the VIP segment. Schema constraints and rows can be inspected with sql."
+  },
+  "kind": "03_join",
+  "data": {
+    "sql": {
+      "schema": [
+        "CREATE TABLE orders(id INTEGER PRIMARY KEY,customer_id INTEGER,amount_usd REAL)",
+        "CREATE TABLE customer_tags(customer_id INTEGER,tag TEXT,PRIMARY KEY(customer_id,tag))"
+      ],
+      "rows": {
+        "orders": [
+          [
+            1,
+            2,
+            16
+          ],
+          [
+            2,
+            3,
+            29
+          ],
+          [
+            3,
+            4,
+            42
+          ],
+          [
+            4,
+            1,
+            55
+          ],
+          [
+            5,
+            2,
+            68
+          ],
+          [
+            6,
+            3,
+            81
+          ],
+          [
+            7,
+            4,
+            94
+          ],
+          [
+            8,
+            1,
+            107
+          ],
+          [
+            9,
+            2,
+            120
+          ]
+        ],
+        "customer_tags": [
+          [
+            1,
+            "vip-main"
+          ],
+          [
+            2,
+            "vip-main"
+          ],
+          [
+            3,
+            "standard"
+          ],
+          [
+            4,
+            "standard"
+          ],
+          [
+            1,
+            "vip-renewal"
+          ],
+          [
+            2,
+            "vip-event"
+          ]
+        ]
+      }
+    }
+  },
+  "tools": [
+    "list_files",
+    "read_file",
+    "sql"
+  ],
+  "prompt": "What is the total order revenue from customers who have at least one vip- membership tag? Each order contributes its amount once. Return JSON {\"answer\": number}."
+}

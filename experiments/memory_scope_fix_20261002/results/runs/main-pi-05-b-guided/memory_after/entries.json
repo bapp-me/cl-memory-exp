@@ -1,0 +1,7 @@
+{
+  "profiles-api-partial-update": {
+    "title": "Profiles mock API: partial field update + verify",
+    "content": "Service \"profiles\" v1 mock API (local workspace, no external network). Doc: api.json {\"service\":\"profiles\",\"version\":1}.\nEndpoints:\n- GET /profile -> {\"timezone\",\"email\",\"digest\"}.\n- PATCH /profile -> partial update: only body fields change; omitted fields retained. PUT unsupported.\nProcedure for \"change one field, preserve others\": GET /profile to record current values -> PATCH /profile with ONLY the target field -> GET /profile to verify change AND untouched fields unchanged. Return requested JSON.\nEvidence: PATCH {\"timezone\":\"Asia/Tokyo\"} -> status 200, body {\"status\":200,\"profile\":{...}}. Follow-up GET matched. Confirmed twice with different seeded emails (person1@example.test, person2@example.test) -> email is per-task seeded, so always read it fresh, do not hardcode; digest true in both.\nUntested: invalid values, PUT/POST/DELETE, error status codes, /info shape.",
+    "version": 2
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "run_id": "guided-pi-01-w",
+  "group": "01_units",
+  "stage": "a",
+  "agent": "pi",
+  "provider": "deepseek",
+  "memory": "file",
+  "memory_from": null,
+  "writer_from": "cal-pi-01-a",
+  "repair_from": null,
+  "guided": true,
+  "caution": false,
+  "ensure_read": false,
+  "explicit_fix": false,
+  "seconds": 9.797,
+  "error": null,
+  "stop_reason": "stop",
+  "quality": {
+    "success": true,
+    "writer_saved": true
+  },
+  "tools": {
+    "experience": 2
+  },
+  "task_tools": 0,
+  "memory_reads": 0,
+  "memory_writes": 1,
+  "tool_errors": 1,
+  "repeated_task_calls": 0,
+  "memory_changed": true,
+  "usage": {
+    "requests": 3,
+    "failed_http": 0,
+    "input_tokens": 4984,
+    "output_tokens": 1593,
+    "cache_read_input_tokens": 11776,
+    "cache_creation_input_tokens": 0,
+    "all_input_tokens": 16760
+  },
+  "final_response": "Saved the reusable experience.\n\nEntry `sql-money-unit-thresholds` (v1, 1769 chars) captures:\n\n- **Environment**: local workspace, tools `list_files`/`read_file`/`sql` (read-only SQLite, 50-row cap, PRAGMAs available), dataset `orders` export_version 1.\n- **Working procedure**: list files → read `export.json` (metadata only) → inspect `sqlite_master` → `PRAGMA table_info` → sample rows + `DISTINCT status` + `COUNT(*)` → aggregate.\n- **Critical gotcha**: `export.json` declared `amount_unit: \"USD cents\"`, so the \"$50\" threshold maps to `price > 5000`, not `price > 50`; convert the threshold to the stored unit.\n- **Supporting observation**: 4 paid rows >5000 cents (7100, 8800, 12200, 13900) = 42000 cents = $420.\n- **Untested/caveats**: only one dataset and `{paid, cancelled}` statuses observed; other units/status formats unknown; use aggregate queries to avoid the tool's 50-row truncation.\n- **Cheap applicability check**: read `amount_unit`, run `DISTINCT status` and `COUNT(*)` first."
+}

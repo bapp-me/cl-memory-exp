@@ -1,0 +1,12 @@
+{
+  "ledger-sales-total": {
+    "title": "CSV ledger sales total (read export.json parser params first)",
+    "content": "Task: \"total amount of sales rows in ledger.csv export\" -> {\"answer\": number}; SUM of amount over category=='sales', not a count.\n\nApplicability: only when an export.json governs ledger.csv in the workspace. Parser params VARY per export - never assume utf-8/comma/no-preamble.\n\nSteps:\n1. read_file export.json -> file, encoding, delimiter, preamble_lines.\n2. parse_csv(path=export.file, encoding=export.encoding, delimiter=<the delimiter>, skip_lines=export.preamble_lines).\n   - delimiter must be EXACTLY 1 character (write \\t in tool-call JSON for a tab). Multi-char fails with TypeError 'delimiter must be a 1-character string'.\n   - skip_lines must equal preamble_lines or preamble/header rows leak in.\n3. Rows have columns category,amount (amounts are strings, e.g. \"13\"); rows alternate sales/refund. Sum amount where category=='sales'.\n\nObserved runs: config {\"encoding\":\"utf-16\",\"delimiter\":\"\\t\",\"preamble_lines\":2,\"file\":\"ledger.csv\"} parsed cleanly. Sales 12,30,48,66 -> 156; another run sales 13,31,49,67 -> 160. Always emit {\"answer\": number}.",
+    "version": 5
+  },
+  "experience-tool-quirks": {
+    "title": "experience tool usage quirks",
+    "content": "experience `put` requires a non-empty `id` string; omitting it fails with {\"error\":\"KeyError: 'id'\"} even though the schema lists id as optional. Always pass op,id,title,content. Reusing an existing id fully replaces (bumps version). Use op:\"search\" (query, or empty) to list entries, op:\"get\" with id to read one, op:\"delete\" with id to remove.",
+    "version": 1
+  }
+}

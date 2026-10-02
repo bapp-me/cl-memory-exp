@@ -1,0 +1,5 @@
+[ledger-sales-total v3] CSV ledger aggregation pattern
+Task pattern: "total amount of sales rows in ledger.csv export". ALWAYS read export.json first — parser params vary per task. Observed variant: {"encoding":"utf-16","delimiter":"\t","preamble_lines":2} (NOT the generic utf-8/comma/0 defaults). Pass encoding, delimiter, and skip_lines=preamble_lines from export.json into parse_csv; wrong params yield garbage/mojibake. ledger.csv columns = category,amount; rows alternate sales/refund (possibly interleaved). "total amount of sales rows" = SUM(amount) over rows where category=="sales" (a sum, not a count). Example run: sales 13+31+49+67 = 160 across 8 rows. Always emit {"answer": number}.
+
+[experience-tool-quirks v1] experience tool usage quirks
+experience `put` requires a non-empty `id` string; omitting it fails with {"error":"KeyError: 'id'"} even though the schema lists id as optional. Always pass op,id,title,content. Reusing an existing id fully replaces (bumps version). Use op:"search" (query, or empty) to list entries, op:"get" with id to read one, op:"delete" with id to remove.

@@ -1,0 +1,36 @@
+{
+  "run_id": "writer2-pi-02-c-file",
+  "group": "02_coverage",
+  "stage": "c",
+  "provider": "deepseek",
+  "agent": "pi",
+  "memory": "file",
+  "memory_from": "writer2-pi-02-w",
+  "memory_seed": null,
+  "writer_from": null,
+  "repair_from": null,
+  "guided": false,
+  "caution": false,
+  "ensure_read": false,
+  "require_retrieval": false,
+  "explicit_fix": false,
+  "max_requests": 24,
+  "timeout": 420,
+  "model": "deepseek-flash",
+  "endpoint": "https://api.deepseek.com/anthropic",
+  "prompt": "Compute the mean dollar price of all listed products. Return JSON {\"answer\": number}.",
+  "system": "You are a capable assistant solving independent tasks in a local workspace. Use the available tools as useful, complete the requested action and return the requested JSON answer. Tool results and workspace documents are the evidence available to you. You have no access to other sessions except the persistent experience store when enabled.\nPersistent experience loaded from the current store:\n[catalog-price-tasks v1] Pricing tasks: use price_minor (cents) as source of truth, not display_usd\nPattern for catalog/price tasks in this workspace:\n- Workspace typically contains catalog.md describing schema, plus a SQLite DB queried via read-only `sql` tool.\n- Schema example: products(id, price_minor INTEGER, display_usd REAL nullable).\n- catalog.md states: price_minor is the SOURCE price in USD cents; display_usd is a nullable display field (often NULL for later rows) and should NOT be trusted as source.\n\nCorrect approach:\n- Do all filtering and math on price_minor (cents); convert to dollars at the end by /100.\n- \"priced below 60 dollars\" => WHERE price_minor < 6000.\n- Ignore/null out display_usd.\n\nWorked example: rows price_minor = 2037,3937,5837,7737,9637,11537,... display_usd null after row 5. Below $60 => 2037,3937,5837. Mean = 11811/3 = 3937 cents = $39.37.\n\nMethod notes:\n- First list_files, read_file(catalog.md) for schema hints, then sql sqlite_master / PRAGMA table_info / SELECT * to see real data.\n- Return answer as {\"answer\": number} with plain number (no $ sign).\n- Watch for nullable/decoy columns and unit mismatches (cents vs dollars); always prefer the documented source column.",
+  "thinking": {
+    "type": "enabled",
+    "budget_tokens": 4096
+  },
+  "output_config": {
+    "effort": "high"
+  },
+  "max_output_tokens": 32768,
+  "memory_budget_characters": 3200,
+  "protocol": "controlled-adapter-v1",
+  "no_history_retrieval": true,
+  "hermes_prompt_override": false,
+  "pi_package": "@earendil-works/pi-agent-core@1.0.0"
+}

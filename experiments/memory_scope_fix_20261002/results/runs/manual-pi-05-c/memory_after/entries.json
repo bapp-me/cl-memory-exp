@@ -1,0 +1,7 @@
+{
+  "human-scoped-diagnostic": {
+    "title": "profiles service: pick update method from api.json version",
+    "content": "Always re-read workspace api.json per task; the profiles service changes version and semantics.\n- v1: PATCH /profile changes only supplied fields, retains omitted fields. PUT unsupported. Flow: GET, PATCH changed field, GET verify.\n- v2: PUT /profile replaces the whole profile; missing email -> null, digest -> false, timezone -> UTC. PATCH unsupported. Flow: GET current profile, PUT all fields (changed value + preserved current email/digest), then GET verify.\nRule: never generalize omission-preserves-fields across methods/versions; preserve required existing values by sending them explicitly when the documented method replaces the resource.",
+    "version": 2
+  }
+}

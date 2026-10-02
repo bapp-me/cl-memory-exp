@@ -1,0 +1,1 @@
+As of Jul 2023: uses the Starbucks Rewards app and is working toward Gold level; drinks coffee daily and was shopping for coffee beans/considering a coffee maker. Plans a weekly grocery shopping trip and checks the store's website for weekly sales.

@@ -1,0 +1,1736 @@
+[
+  {
+    "run_id": "diag-hermes-capture-01",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "clbench-derived-hermes-v1",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "diag-hermes-capture-02",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "clbench-derived-hermes-v1",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "diag-native-capture-01",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v1",
+    "memory_from": "v1-ds-a11-write-r1",
+    "source_task_explicit_write": false,
+    "before_source": "reconstructed from immutable source run; not a recorded before snapshot",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "ds-a11-write-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": null,
+    "memory_from": null,
+    "source_task_explicit_write": true,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "MEMORY.md",
+        "diff": "--- before/MEMORY.md\n\n+++ after/MEMORY.md\n\n@@ -0,0 +1,3 @@\n\n+# Memory Index\n+\n+- [environment.md](./environment.md) — Reusable DB facts: three disjoint 20k-item datasets (g1=Office, g2=Electronics, g3=Musical Instruments); review→item join key is `ref_id` (not `item_id`); `LENGTH(body)` counts characters; g2 price: `prc` is CENTS, `prc_usd` = prc/100 (USD), partial non-null coverage; no literal \"list price\" field. Includes scope and evidence, verified vs. inferred."
+      },
+      {
+        "file": "environment.md",
+        "diff": "--- before/environment.md\n\n+++ after/environment.md\n\n@@ -0,0 +1,40 @@\n\n+# Environment / Dataset Notes\n+\n+Scope: read-only SQLite catalog+review database accessed only via the read-only SQL query tool.\n+Platform: win32, working dir `ds-a11-write-r1`. Date: 2026-10-02.\n+\n+## Structure (verified by querying sqlite_master)\n+The DB contains THREE disjoint datasets, each with exactly 20,000 items and separate review tables:\n+\n+| group | items table | reviews table | extra | dominant / root category |\n+|-------|-------------|---------------|-------|--------------------------|\n+| g1 | items_g1 | fdbk_g1 | taxn_g1, attrs_g1, fdbk_stats_g1 | Office Products (`taxn_g1` root, 17,825 rows) |\n+| g2 | items_g2 | fdbk_g2 | taxn_g2 | Electronics (`taxn_g2` cat_lvl=0 = \"Electronics\", 18,421 items) |\n+| g3 | items_g3 | fdbk_g3 | taxn_g3, attrs_g3 | Musical Instruments |\n+\n+- Verified `ref_id` sets are disjoint across g1/g2/g3 (0 overlap in every pairwise check).\n+- Therefore a question naming a category (e.g. \"electronics\") selects one group; do not union groups.\n+\n+## Key/tables for reviews (verified)\n+- `fdbk_g2` columns: id, item_id, ref_id, uid, rtg, ttl, body, ts, hlp_ct, vrf.\n+- Join reviews to items on **`ref_id`** (the declared FK; all 77,022 g2 reviews match an items_g2.ref_id).\n+  `item_id` is NOT a reliable join key: only 49,393/77,022 reviews have item_id present in items_g2.ref_id.\n+- Review text length: use SQLite `LENGTH(body)` (character count). \"longer than 500\" => `LENGTH(body) > 500` (strict).\n+- Item category: `items_g2.main_cat` (browse node, e.g. \"All Electronics\", \"Computers\") AND\n+  `taxn_g2(cat_lvl, cat_nm)` hierarchy whose level-0 name is \"Electronics\". `taxn_g2` has exactly one row per level per item (no duplicate roots).\n+\n+## Price fields (verified)\n+- g2 has BOTH `prc` (INTEGER) and `prc_usd` (REAL). Where both present, `prc_usd == prc/100` exactly\n+  (0 mismatches), i.e. `prc` is in CENTS and `prc_usd` is the USD amount.\n+- Non-null coverage in items_g2: prc 6,570; prc_usd 6,346; 224 rows have prc but NULL prc_usd; 0 rows have prc_usd but NULL prc.\n+- g1/g3 have only `prc` (REAL/INTEGER) already in dollar-like ranges (g1 avg ~47.6, g3 avg ~123.4).\n+- No column or `attrs` key literally named \"list price\" exists (checked attrs_g1/attrs_g3 keys). Inference: \"list price\" maps to the item price column (`prc_usd` for g2, equivalently `prc`).\n+\n+## Other (verified)\n+- `attrs_g1`/`attrs_g3` hold spec key/value pairs (Brand, Item Weight, Date First Available, ...); no price attr observed in the top keys.\n+- `fdbk_stats_g1` = per-item aggregates (avg_rtg, review_ct, pct_5star, avg_hlp) for g1 only; not a source of raw review rows.\n+- `rtg` is REAL; 1-star values are stored as `1.0`, so `rtg = 1` works.\n+\n+## Inferences (not verified)\n+- The mapping \"electronics => g2\" is inferred from the taxonomy root name \"Electronics\" plus g2's category mix; exact intended scope (all of g2 vs. root-Electronics items vs. main_cat='All Electronics') affects the denominator.\n+- \"list price\" is inferred to be the item price field; the DB exposes no separate list-price field."
+      }
+    ],
+    "write_calls": [
+      {
+        "type": "tool_use",
+        "id": "call_00_ZmBnmK1JSthPxTdAbK4x2504",
+        "name": "Write",
+        "input": {
+          "file_path": "D:\\campus_re\\experiments\\memory_direction_20261002\\workspaces\\ds-a11-write-r1\\memory\\environment.md",
+          "content": "# Environment / Dataset Notes\n\nScope: read-only SQLite catalog+review database accessed only via the read-only SQL query tool.\nPlatform: win32, working dir `ds-a11-write-r1`. Date: 2026-10-02.\n\n## Structure (verified by querying sqlite_master)\nThe DB contains THREE disjoint datasets, each with exactly 20,000 items and separate review tables:\n\n| group | items table | reviews table | extra | dominant / root category |\n|-------|-------------|---------------|-------|--------------------------|\n| g1 | items_g1 | fdbk_g1 | taxn_g1, attrs_g1, fdbk_stats_g1 | Office Products (`taxn_g1` root, 17,825 rows) |\n| g2 | items_g2 | fdbk_g2 | taxn_g2 | Electronics (`taxn_g2` cat_lvl=0 = \"Electronics\", 18,421 items) |\n| g3 | items_g3 | fdbk_g3 | taxn_g3, attrs_g3 | Musical Instruments |\n\n- Verified `ref_id` sets are disjoint across g1/g2/g3 (0 overlap in every pairwise check).\n- Therefore a question naming a category (e.g. \"electronics\") selects one group; do not union groups.\n\n## Key/tables for reviews (verified)\n- `fdbk_g2` columns: id, item_id, ref_id, uid, rtg, ttl, body, ts, hlp_ct, vrf.\n- Join reviews to items on **`ref_id`** (the declared FK; all 77,022 g2 reviews match an items_g2.ref_id).\n  `item_id` is NOT a reliable join key: only 49,393/77,022 reviews have item_id present in items_g2.ref_id.\n- Review text length: use SQLite `LENGTH(body)` (character count). \"longer than 500\" => `LENGTH(body) > 500` (strict).\n- Item category: `items_g2.main_cat` (browse node, e.g. \"All Electronics\", \"Computers\") AND\n  `taxn_g2(cat_lvl, cat_nm)` hierarchy whose level-0 name is \"Electronics\". `taxn_g2` has exactly one row per level per item (no duplicate roots).\n\n## Price fields (verified)\n- g2 has BOTH `prc` (INTEGER) and `prc_usd` (REAL). Where both present, `prc_usd == prc/100` exactly\n  (0 mismatches), i.e. `prc` is in CENTS and `prc_usd` is the USD amount.\n- Non-null coverage in items_g2: prc 6,570; prc_usd 6,346; 224 rows have prc but NULL prc_usd; 0 rows have prc_usd but NULL prc.\n- g1/g3 have only `prc` (REAL/INTEGER) already in dollar-like ranges (g1 avg ~47.6, g3 avg ~123.4).\n- No column or `attrs` key literally named \"list price\" exists (checked attrs_g1/attrs_g3 keys). Inference: \"list price\" maps to the item price column (`prc_usd` for g2, equivalently `prc`).\n\n## Other (verified)\n- `attrs_g1`/`attrs_g3` hold spec key/value pairs (Brand, Item Weight, Date First Available, ...); no price attr observed in the top keys.\n- `fdbk_stats_g1` = per-item aggregates (avg_rtg, review_ct, pct_5star, avg_hlp) for g1 only; not a source of raw review rows.\n- `rtg` is REAL; 1-star values are stored as `1.0`, so `rtg = 1` works.\n\n## Inferences (not verified)\n- The mapping \"electronics => g2\" is inferred from the taxonomy root name \"Electronics\" plus g2's category mix; exact intended scope (all of g2 vs. root-Electronics items vs. main_cat='All Electronics') affects the denominator.\n- \"list price\" is inferred to be the item price field; the DB exposes no separate list-price field.\n"
+        }
+      },
+      {
+        "type": "tool_use",
+        "id": "call_01_v5Vjn97H4vaUrC5woxMI6077",
+        "name": "Write",
+        "input": {
+          "file_path": "D:\\campus_re\\experiments\\memory_direction_20261002\\workspaces\\ds-a11-write-r1\\memory\\MEMORY.md",
+          "content": "# Memory Index\n\n- [environment.md](./environment.md) — Reusable DB facts: three disjoint 20k-item datasets (g1=Office, g2=Electronics, g3=Musical Instruments); review→item join key is `ref_id` (not `item_id`); `LENGTH(body)` counts characters; g2 price: `prc` is CENTS, `prc_usd` = prc/100 (USD), partial non-null coverage; no literal \"list price\" field. Includes scope and evidence, verified vs. inferred.\n"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "ds-b12-native-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": null,
+    "memory_from": "ds-a11-write-r1",
+    "source_task_explicit_write": false,
+    "before_source": "reconstructed from immutable source run; not a recorded before snapshot",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "ds-b12-none-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": null,
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "ds-smoke-01",
+    "agent": "Claude Code 2.1.286",
+    "protocol": null,
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "ds-smoke-02",
+    "agent": "Claude Code 2.1.286",
+    "protocol": null,
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "ds-smoke-03",
+    "agent": "Claude Code 2.1.286",
+    "protocol": null,
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "glm-a11-write-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": null,
+    "memory_from": null,
+    "source_task_explicit_write": true,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "MEMORY.md",
+        "diff": "--- before/MEMORY.md\n\n+++ after/MEMORY.md\n\n@@ -0,0 +1,3 @@\n\n+# Memory Index\n+\n+- [environment.md](environment.md) — Schema of the 3-group product/review SQLite database (items_g1/g2/g3, fdbk_g1/g2/g3, taxn_g1, attrs_g1, fdbk_stats_g1); verified price units (g2.prc is cents, use prc_usd), rating value domain, \"Electronics\" category names, duplicate-review-row counts, and NULL-coverage notes. Inference vs. verification labeled inside."
+      },
+      {
+        "file": "environment.md",
+        "diff": "--- before/environment.md\n\n+++ after/environment.md\n\n@@ -0,0 +1,28 @@\n\n+# Environment Notes — Product Catalog & Review Database\n+\n+## Scope\n+- Read-only SQLite database accessed via the SQL query tool. Workspace: `D:\\campus_re\\experiments\\memory_direction_20261002\\workspaces\\glm-a11-write-r1`.\n+- Product catalog + review data, split into three parallel table groups (g1, g2, g3), each holding 20,000 products.\n+\n+## Schema (verified via sqlite_master, 2026-10-02)\n+- `items_g1(ref_id PK, ttl, avg_rtg, avg_rtg_30d, rtg_ct, prc, str_nm, main_cat, desc_txt, feat_lst)`\n+- `fdbk_g1(id PK AI, item_id, ref_id FK->items_g1.ref_id, uid, rtg, ttl, body, ts INTEGER, hlp_ct, vrf INTEGER)`\n+- `items_g2(ref_id PK, ttl, avg_rtg, prc INTEGER, prc_usd REAL, str_nm, main_cat, feat_lst, img_ct)`\n+- `fdbk_g2(..., ts INTEGER, vrf TEXT)` — note: `vrf` is TEXT here, unlike g1/g3.\n+- `items_g3(ref_id PK, ttl, avg_rtg, rtg_ct, prc, str_nm, main_cat, desc_txt)` — no feat_lst.\n+- `fdbk_g3(..., ts TEXT)` — timestamp is TEXT here, INTEGER in g1/g2.\n+- Auxiliary: `taxn_g1(ref_id, cat_lvl, cat_nm)`, `attrs_g1(ref_id, attr_key, attr_val)`, `fdbk_stats_g1(ref_id PK, avg_rtg, review_ct, pct_5star, avg_hlp)`. No taxn/attrs tables exist for g2/g3.\n+\n+## Verified facts (observed directly)\n+- **Price units:** `items_g1.prc` and `items_g3.prc` are in USD (min 0.18 / max 13914.85 and 0.05 / 5369.0). `items_g2.prc` is in CENTS (min 9, max 2,688,800); `items_g2.prc_usd` is the USD equivalent (min 0.09, max 499.99). Use `prc_usd` for g2 price filters.\n+- **Rating values:** `fdbk_g1.rtg` takes only 1.0–5.0 in whole-star steps.\n+- **Review volume:** `fdbk_g2` has 20,000 items in g2's items table; g1/g3 also 20,000 each (per COUNT(*) on items).\n+- **Categories containing \"Electronics\" in main_cat:** g1: \"All Electronics\" (1308 products); g2: \"All Electronics\" (4562), \"Car Electronics\" (346); g3: \"All Electronics\" (534), \"Car Electronics\" (8).\n+- **Duplicate review rows exist:** exact duplicates on (ref_id, uid, ts, body) — 3,236 groups in fdbk_g1, 276 in fdbk_g2, 2,805 in fdbk_g3. In the \"electronics, price ≤ $40, body > 500 chars\" slice this was only 17 of 1,379 rows.\n+\n+## Inferences (not verified)\n+- \"Electronics\" questions were interpreted as `main_cat = 'All Electronics'` (dominant electronics category); \"Car Electronics\" was NOT included. This is an interpretation choice, not a database fact.\n+- Whether duplicates should be deduplicated before percentage computations is ambiguous; row-level counting was used and the effect in the observed slice was negligible.\n+\n+## NULL/quality notes\n+- `items_g2.prc` is populated for 6,570 of 20,000 rows; `prc_usd` for 6,346. g1: `prc` populated for 7,867; g3: 7,949. `main_cat` is NULL for ~741 (g1) / ~1,304 (g2) rows."
+      }
+    ],
+    "write_calls": [
+      {
+        "type": "tool_use",
+        "id": "call_1cbf179333d14743a32d0891",
+        "name": "Write",
+        "input": {
+          "file_path": "D:\\campus_re\\experiments\\memory_direction_20261002\\workspaces\\glm-a11-write-r1\\memory\\environment.md",
+          "content": "# Environment Notes — Product Catalog & Review Database\n\n## Scope\n- Read-only SQLite database accessed via the SQL query tool. Workspace: `D:\\campus_re\\experiments\\memory_direction_20261002\\workspaces\\glm-a11-write-r1`.\n- Product catalog + review data, split into three parallel table groups (g1, g2, g3), each holding 20,000 products.\n\n## Schema (verified via sqlite_master, 2026-10-02)\n- `items_g1(ref_id PK, ttl, avg_rtg, avg_rtg_30d, rtg_ct, prc, str_nm, main_cat, desc_txt, feat_lst)`\n- `fdbk_g1(id PK AI, item_id, ref_id FK->items_g1.ref_id, uid, rtg, ttl, body, ts INTEGER, hlp_ct, vrf INTEGER)`\n- `items_g2(ref_id PK, ttl, avg_rtg, prc INTEGER, prc_usd REAL, str_nm, main_cat, feat_lst, img_ct)`\n- `fdbk_g2(..., ts INTEGER, vrf TEXT)` — note: `vrf` is TEXT here, unlike g1/g3.\n- `items_g3(ref_id PK, ttl, avg_rtg, rtg_ct, prc, str_nm, main_cat, desc_txt)` — no feat_lst.\n- `fdbk_g3(..., ts TEXT)` — timestamp is TEXT here, INTEGER in g1/g2.\n- Auxiliary: `taxn_g1(ref_id, cat_lvl, cat_nm)`, `attrs_g1(ref_id, attr_key, attr_val)`, `fdbk_stats_g1(ref_id PK, avg_rtg, review_ct, pct_5star, avg_hlp)`. No taxn/attrs tables exist for g2/g3.\n\n## Verified facts (observed directly)\n- **Price units:** `items_g1.prc` and `items_g3.prc` are in USD (min 0.18 / max 13914.85 and 0.05 / 5369.0). `items_g2.prc` is in CENTS (min 9, max 2,688,800); `items_g2.prc_usd` is the USD equivalent (min 0.09, max 499.99). Use `prc_usd` for g2 price filters.\n- **Rating values:** `fdbk_g1.rtg` takes only 1.0–5.0 in whole-star steps.\n- **Review volume:** `fdbk_g2` has 20,000 items in g2's items table; g1/g3 also 20,000 each (per COUNT(*) on items).\n- **Categories containing \"Electronics\" in main_cat:** g1: \"All Electronics\" (1308 products); g2: \"All Electronics\" (4562), \"Car Electronics\" (346); g3: \"All Electronics\" (534), \"Car Electronics\" (8).\n- **Duplicate review rows exist:** exact duplicates on (ref_id, uid, ts, body) — 3,236 groups in fdbk_g1, 276 in fdbk_g2, 2,805 in fdbk_g3. In the \"electronics, price ≤ $40, body > 500 chars\" slice this was only 17 of 1,379 rows.\n\n## Inferences (not verified)\n- \"Electronics\" questions were interpreted as `main_cat = 'All Electronics'` (dominant electronics category); \"Car Electronics\" was NOT included. This is an interpretation choice, not a database fact.\n- Whether duplicates should be deduplicated before percentage computations is ambiguous; row-level counting was used and the effect in the observed slice was negligible.\n\n## NULL/quality notes\n- `items_g2.prc` is populated for 6,570 of 20,000 rows; `prc_usd` for 6,346. g1: `prc` populated for 7,867; g3: 7,949. `main_cat` is NULL for ~741 (g1) / ~1,304 (g2) rows.\n"
+        }
+      },
+      {
+        "type": "tool_use",
+        "id": "call_9c1ef9a99fbb492e8c089a56",
+        "name": "Write",
+        "input": {
+          "file_path": "D:\\campus_re\\experiments\\memory_direction_20261002\\workspaces\\glm-a11-write-r1\\memory\\MEMORY.md",
+          "content": "# Memory Index\n\n- [environment.md](environment.md) — Schema of the 3-group product/review SQLite database (items_g1/g2/g3, fdbk_g1/g2/g3, taxn_g1, attrs_g1, fdbk_stats_g1); verified price units (g2.prc is cents, use prc_usd), rating value domain, \"Electronics\" category names, duplicate-review-row counts, and NULL-coverage notes. Inference vs. verification labeled inside.\n"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "glm-smoke-01",
+    "agent": "Claude Code 2.1.286",
+    "protocol": null,
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "h1-ds-a11-write-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "clbench-derived-hermes-v1",
+    "memory_from": null,
+    "source_task_explicit_write": true,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "MEMORY.md",
+        "diff": "--- before/MEMORY.md\n\n+++ after/MEMORY.md\n\n@@ -0,0 +1 @@\n\n+SQLite multi-dataset QA (Amazon-style, obfuscated schema; e.g. D:\\campus_re): DB holds 3 datasets by suffix — g1=office products (items_g1/fdbk_g1/attrs_g1/taxn_g1; main_cat 'Office Products' ~13,933 of 20,000), g2=electronics (items_g2/fdbk_g2/taxn_g2, NO attrs table; cats Computers/Camera&Photo/Cell Phones/All Electronics), g3=musical instruments (items_g3/fdbk_g3/attrs_g3; 'Musical Instruments' ~17,162 of 20,000). Verified column mapping: ref_id = product key & join key (fdbk.ref_id → items.ref_id; do NOT join on fdbk.item_id, it often differs); rtg = star rating (REAL, distinct 1.0–5.0); body = review text; LENGTH(body) = character count; g2 price = prc (integer CENTS) plus prc_usd (=prc/100, USD) — use prc_usd<=N or equivalently prc<=N*100; verified consistent, and the 224 g2 items with prc but NULL prc_usd are all >=$500 so price-filter equivalence holds. No literal 'list_price' column exists in any table (attrs keys contain no 'price'); prose \"list price\" maps to the price column. Verified counts: fdbk_g2 = 77,022 reviews, all ref_id join successfully; items_g2 = 20,000 rows."
+      }
+    ],
+    "write_calls": [
+      {
+        "id": "call_00_3aA8IKZVcaZhWbH6rYcN8623",
+        "call_id": "call_00_3aA8IKZVcaZhWbH6rYcN8623",
+        "response_item_id": "fc_00_3aA8IKZVcaZhWbH6rYcN8623",
+        "type": "function",
+        "function": {
+          "name": "memory",
+          "arguments": "{\"action\": \"add\", \"content\": \"SQLite multi-dataset QA (Amazon-style, obfuscated schema; e.g. D:\\\\campus_re): DB holds 3 datasets by suffix \\u2014 g1=office products (items_g1/fdbk_g1/attrs_g1/taxn_g1; main_cat 'Office Products' ~13,933 of 20,000), g2=electronics (items_g2/fdbk_g2/taxn_g2, NO attrs table; cats Computers/Camera&Photo/Cell Phones/All Electronics), g3=musical instruments (items_g3/fdbk_g3/attrs_g3; 'Musical Instruments' ~17,162 of 20,000). Verified column mapping: ref_id = product key & join key (fdbk.ref_id \\u2192 items.ref_id; do NOT join on fdbk.item_id, it often differs); rtg = star rating (REAL, distinct 1.0\\u20135.0); body = review text; LENGTH(body) = character count; g2 price = prc (integer CENTS) plus prc_usd (=prc/100, USD) \\u2014 use prc_usd<=N or equivalently prc<=N*100; verified consistent, and the 224 g2 items with prc but NULL prc_usd are all >=$500 so price-filter equivalence holds. No literal 'list_price' column exists in any table (attrs keys contain no 'price'); prose \\\"list price\\\" maps to the price column. Verified counts: fdbk_g2 = 77,022 reviews, all ref_id join successfully; items_g2 = 20,000 rows.\", \"target\": \"memory\"}"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "h1-ds-b12-native-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "clbench-derived-hermes-v1",
+    "memory_from": "h1-ds-a11-write-r1",
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "h1-ds-b9-native-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "clbench-derived-hermes-v1",
+    "memory_from": "h1-ds-a11-write-r1",
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "h1-ds-b9-none-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "clbench-derived-hermes-v1",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "h1-ds-smoke-01",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "clbench-derived-hermes-v1",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "h2-mab-q0-files-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "mab-ds-write2-wide-r1",
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "lm-ds-coffee-query-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "lm-ds-coffee-write2-r1",
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "lm-ds-coffee-write1-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": null,
+    "source_task_explicit_write": true,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "MEMORY.md",
+        "diff": "--- before/MEMORY.md\n\n+++ after/MEMORY.md\n\n@@ -0,0 +1,5 @@\n\n+Coffee enthusiast; brews with a French press and prefers a ratio of 1 tablespoon coffee per 6 oz water.\n+§\n+Interested in citrus-infused coffee; chose Kenyan coffee beans and Earl Grey tea as pairings (recommended by assistant, Feb 2023).\n+§\n+Signed up for a coffee subscription service in Jan 2023; received first shipment of beans on 2023/02/10. Enjoys trying new roasts and flavors."
+      }
+    ],
+    "write_calls": [
+      {
+        "id": "call_00_uN9qasoopBC66ChGahOq3549",
+        "call_id": "call_00_uN9qasoopBC66ChGahOq3549",
+        "response_item_id": "fc_00_uN9qasoopBC66ChGahOq3549",
+        "type": "function",
+        "function": {
+          "name": "memory",
+          "arguments": "{\"target\": \"memory\", \"operations\": [{\"action\": \"add\", \"content\": \"Coffee enthusiast; brews with a French press and prefers a ratio of 1 tablespoon coffee per 6 oz water.\"}, {\"action\": \"add\", \"content\": \"Interested in citrus-infused coffee; chose Kenyan coffee beans and Earl Grey tea as pairings (recommended by assistant, Feb 2023).\"}, {\"action\": \"add\", \"content\": \"Signed up for a coffee subscription service in Jan 2023; received first shipment of beans on 2023/02/10. Enjoys trying new roasts and flavors.\"}]}"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "lm-ds-coffee-write2-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "lm-ds-coffee-write1-r1",
+    "source_task_explicit_write": true,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "MEMORY.md",
+        "diff": "--- before/MEMORY.md\n\n+++ after/MEMORY.md\n\n@@ -1,5 +1,7 @@\n\n-Coffee enthusiast; brews with a French press and prefers a ratio of 1 tablespoon coffee per 6 oz water.\n+Coffee enthusiast; brews with a French press. As of 2023/06/30 prefers a ratio of 1 tablespoon coffee per 5 oz water (updated from 6 oz).\n §\n Interested in citrus-infused coffee; chose Kenyan coffee beans and Earl Grey tea as pairings (recommended by assistant, Feb 2023).\n §\n Signed up for a coffee subscription service in Jan 2023; received first shipment of beans on 2023/02/10. Enjoys trying new roasts and flavors.\n+§\n+Expanding into tea (mid-2023): enjoys relaxing/floral teas (chamomile-like blends), thinking of trying a tea subscription service and considering Adagio Teas and The Tea Spot; rose tea introduced by her sister."
+      }
+    ],
+    "write_calls": [
+      {
+        "id": "call_00_DQffs3WPyeQgZfbGukCC3581",
+        "call_id": "call_00_DQffs3WPyeQgZfbGukCC3581",
+        "response_item_id": "fc_00_DQffs3WPyeQgZfbGukCC3581",
+        "type": "function",
+        "function": {
+          "name": "memory",
+          "arguments": "{\"target\": \"memory\", \"operations\": [{\"action\": \"replace\", \"old_text\": \"1 tablespoon coffee per 6 oz water\", \"content\": \"Coffee enthusiast; brews with a French press. As of 2023/06/30 prefers a ratio of 1 tablespoon coffee per 5 oz water (updated from 6 oz).\"}, {\"action\": \"add\", \"content\": \"Expanding into tea (mid-2023): enjoys relaxing/floral teas (chamomile-like blends), thinking of trying a tea subscription service and considering Adagio Teas and The Tea Spot; rose tea introduced by her sister.\"}]}"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "lm-ds-stars-query-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "lm-ds-stars-write2-r1",
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "lm-ds-stars-write1-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": null,
+    "source_task_explicit_write": true,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "MEMORY.md",
+        "diff": "--- before/MEMORY.md\n\n+++ after/MEMORY.md\n\n@@ -0,0 +1 @@\n\n+As of Jul 2023: uses the Starbucks Rewards app and is working toward Gold level; drinks coffee daily and was shopping for coffee beans/considering a coffee maker. Plans a weekly grocery shopping trip and checks the store's website for weekly sales."
+      }
+    ],
+    "write_calls": [
+      {
+        "id": "call_00_nxoT9bqqF6usyaIOW4NQ5504",
+        "call_id": "call_00_nxoT9bqqF6usyaIOW4NQ5504",
+        "response_item_id": "fc_00_nxoT9bqqF6usyaIOW4NQ5504",
+        "type": "function",
+        "function": {
+          "name": "memory",
+          "arguments": "{\"target\": \"memory\", \"action\": \"add\", \"content\": \"As of Jul 2023: uses the Starbucks Rewards app and is working toward Gold level; drinks coffee daily and was shopping for coffee beans/considering a coffee maker. Plans a weekly grocery shopping trip and checks the store's website for weekly sales.\"}"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "lm-ds-stars-write2-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "lm-ds-stars-write1-r1",
+    "source_task_explicit_write": true,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "MEMORY.md",
+        "diff": "--- before/MEMORY.md\n\n+++ after/MEMORY.md\n\n@@ -1 +1,3 @@\n\n-As of Jul 2023: uses the Starbucks Rewards app and is working toward Gold level; drinks coffee daily and was shopping for coffee beans/considering a coffee maker. Plans a weekly grocery shopping trip and checks the store's website for weekly sales.\n+Uses the Starbucks Rewards app and is working toward Gold level — as of Jul 30, 2023 she stated she still needed 120 stars to reach Gold (she corrected an assistant's claim of 300). Drinks coffee daily, was shopping for coffee beans and considering a coffee maker. Plans a weekly grocery shopping trip and checks the store's website for weekly sales.\n+§\n+As of Jul 30, 2023: planning a weekend shopping trip that includes Sephora (skincare, makeup, fragrance interest); considering buying a new laptop and evaluating Best Buy's My Best Buy loyalty program; also uses Fetch Rewards. Organizes loyalty cards and rewards points with a spreadsheet, but is open to app/other alternatives."
+      }
+    ],
+    "write_calls": [
+      {
+        "id": "call_00_41MpSN6LMlFQ2FrNkIID2700",
+        "call_id": "call_00_41MpSN6LMlFQ2FrNkIID2700",
+        "response_item_id": "fc_00_41MpSN6LMlFQ2FrNkIID2700",
+        "type": "function",
+        "function": {
+          "name": "memory",
+          "arguments": "{\"target\": \"memory\", \"operations\": [{\"action\": \"replace\", \"old_text\": \"As of Jul 2023: uses the Starbucks Rewards app\", \"content\": \"Uses the Starbucks Rewards app and is working toward Gold level \\u2014 as of Jul 30, 2023 she stated she still needed 120 stars to reach Gold (she corrected an assistant's claim of 300). Drinks coffee daily, was shopping for coffee beans and considering a coffee maker. Plans a weekly grocery shopping trip and checks the store's website for weekly sales.\"}, {\"action\": \"add\", \"content\": \"As of Jul 30, 2023: planning a weekend shopping trip that includes Sephora (skincare, makeup, fragrance interest); considering buying a new laptop and evaluating Best Buy's My Best Buy loyalty program; also uses Fetch Rewards. Organizes loyalty cards and rewards points with a spreadsheet, but is open to app/other alternatives.\"}]}"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "lm-ds-tutor-query-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "lm-ds-tutor-write2-r1",
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "lm-ds-tutor-write1-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": null,
+    "source_task_explicit_write": true,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "MEMORY.md",
+        "diff": "--- before/MEMORY.md\n\n+++ after/MEMORY.md\n\n@@ -0,0 +1,3 @@\n\n+User is learning Spanish and attends a language exchange class at a local language school every Wednesday evening (as of May 2023). Paired with a Colombian tutor named Juan: Juan helps the user with Spanish pronunciation and grammar, and the user helps Juan with English vocabulary.\n+§\n+User usually has dinner plans with friends on Thursday evenings, so tends not to schedule other recurring commitments that day."
+      }
+    ],
+    "write_calls": [
+      {
+        "id": "call_00_r8mtdSTOb0qdwn0ggxY07431",
+        "call_id": "call_00_r8mtdSTOb0qdwn0ggxY07431",
+        "response_item_id": "fc_00_r8mtdSTOb0qdwn0ggxY07431",
+        "type": "function",
+        "function": {
+          "name": "memory",
+          "arguments": "{\"target\": \"memory\", \"operations\": [{\"action\": \"add\", \"content\": \"User is learning Spanish and attends a language exchange class at a local language school every Wednesday evening (as of May 2023). Paired with a Colombian tutor named Juan: Juan helps the user with Spanish pronunciation and grammar, and the user helps Juan with English vocabulary.\"}, {\"action\": \"add\", \"content\": \"User usually has dinner plans with friends on Thursday evenings, so tends not to schedule other recurring commitments that day.\"}]}"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "lm-ds-tutor-write2-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "lm-ds-tutor-write1-r1",
+    "source_task_explicit_write": true,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "MEMORY.md",
+        "diff": "--- before/MEMORY.md\n\n+++ after/MEMORY.md\n\n@@ -1,3 +1,5 @@\n\n-User is learning Spanish and attends a language exchange class at a local language school every Wednesday evening (as of May 2023). Paired with a Colombian tutor named Juan: Juan helps the user with Spanish pronunciation and grammar, and the user helps Juan with English vocabulary.\n+User is learning Spanish and does language exchange with a Colombian tutor named Maria; as of late May 2023 the sessions were on Thursday (an earlier note had a Wednesday-evening class with a tutor named Juan).\n §\n User usually has dinner plans with friends on Thursday evenings, so tends not to schedule other recurring commitments that day.\n+§\n+User is planning a trip to Colombia (as of May 2023); planned Bogotá itinerary includes the Gold Museum (Museo del Oro), Plaza de Bolívar, and the La Candelaria neighborhood. Wants Spanish travel/shopping phrases to practice with their tutor."
+      }
+    ],
+    "write_calls": [
+      {
+        "id": "call_00_z6MbWT1I2nJhwgS2RPqs9096",
+        "call_id": "call_00_z6MbWT1I2nJhwgS2RPqs9096",
+        "response_item_id": "fc_00_z6MbWT1I2nJhwgS2RPqs9096",
+        "type": "function",
+        "function": {
+          "name": "memory",
+          "arguments": "{\"target\": \"memory\", \"operations\": [{\"action\": \"replace\", \"old_text\": \"User is learning Spanish and attends a language exchange class\", \"content\": \"User is learning Spanish and does language exchange with a Colombian tutor named Maria; as of late May 2023 the sessions were on Thursday (an earlier note had a Wednesday-evening class with a tutor named Juan).\"}, {\"action\": \"add\", \"content\": \"User is planning a trip to Colombia (as of May 2023); planned Bogot\\u00e1 itinerary includes the Gold Museum (Museo del Oro), Plaza de Bol\\u00edvar, and the La Candelaria neighborhood. Wants Spanish travel/shopping phrases to practice with their tutor.\"}]}"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "mab-ds-q0-atomic-dates-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "mab-ds-write2-wide-r1",
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-q0-atomic-history-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-q0-atomic-native-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "mab-ds-write2-wide-r1",
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-q0-files-r2",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "mab-ds-write2-wide-r1",
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-q0-fullcurate-files-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "mab-ds-write2-files-r1",
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "MEMORY.md",
+        "diff": "--- before/MEMORY.md\n\n+++ after/MEMORY.md\n\n@@ -1 +1 @@\n\n-POOL s0-454; raw in session_search; stored=newest per subj+rel (serials dropped). Kyd born Leeds;WizardEarthsea author PiusXII;LisaLeslie pos goaltender;Chanel founder AndyWarhol;Slovakia fb cricket;AladdinSane perf YvesMontand;duBarry cit GreatBritain;quarterback sp MuayThai;Witcher author T.S.Eliot;wideReceiver sp rugby;BloodOnTheTracks perf LouReed;cricket created Australia;pesapallo created Philippines;pointGuard sp cricket;UK headOfState Mnangagwa;Methodism founder JosephGoebbels;Canadair founded Tucson;France cap Harare;Italy cap Duluth;Modi cit Australia;T.S.Eliot speaks French;DanaIntl music AusHipHop;Elvis m CharlesTheBold;Minogue speaks German;OurMutualFriend author CharlesDarwin;CoPeopleCommissars head TonyBlair;RobertParish pos quarterback;AndrewCarnegie cit UnitedKingdom;rapRock created RussianEmpire;ABBGroup CEO BernardArnault;Hermione perf KylieMinogue;SketchesByBoz author SigmundFreud;Malaysia cont Antarctica;RoyRogers m JohnMcVie;WilhelmII educ BaldwinWallace;ThomasArne born Bengaluru;SophiaHawthorne m JoanDidion;cornerback sp fieldHockey;SovietUnion headOfState ElizabethII;AdalbertOfPrague rel atheism;TransMed founder AdalbertOfPrague;BernardArnault cit France;Madonna dir NarendraModi;BBC dir NarendraModi;CharlesTheBold cit France;TonyBlair m AlanJayLerner;AlanJayLerner died Mansourah;MarriageOfFigaro author ThomasKyd;EmmaWatson speaks English;CharlesDickens died GadsHillPlace;SidereusNuncius author SamuelBeckett;JosephGoebbels worked Berlin;JohnMcVie music rapRock;baseball created Japan;NewFirm sp baseball;assocFootball created Italy;goalkeeper sp assocFootball;midfielder sp assocFootball;basketball created SovietUnion;SurreySC sp basketball;splitFingerFB sp cricket;ABC dir ErnstHeinkel;666ParkAve broadcaster ABC;FreeAsABird perf TheBeatles;TheBeatles dir JoeHockey;AP1000 producedBy Canadair;BillFrisell educ UnivArts;UnivArts HQ Philadelphia;ElenaCeausescu educ UnivBucharest;UnivBucharest HQ Ankara;LouReed educ Fordham;CharlesDarwin m AmalaPaul;USA gov DonaldTrump;France cont Europe;placekicker sp rugby;BlairWalsh pos placekicker;CongolesePL chair StephenMcNeil;StephenMcNeil field journalist;MosheKahlon field soldier\n+POOL s0-454; raw in session_search; stored=newest per subj+rel (serials dropped). Kyd born Leeds;WizardEarthsea author PiusXII;LisaLeslie pos goaltender;Chanel founder AndyWarhol;Slovakia fb cricket;AladdinSane perf YvesMontand;duBarry cit GreatBritain;quarterback sp MuayThai;Witcher author T.S.Eliot;wideReceiver sp rugby;BloodOnTheTracks perf LouReed;cricket created Australia;pesapallo created Philippines;pointGuard sp cricket;UK headOfState Mnangagwa;Methodism founder JosephGoebbels;Canadair founded Tucson;France cap Harare;Italy cap Duluth;Modi cit Australia;T.S.Eliot speaks French;DanaIntl music AusHipHop;Elvis m CharlesTheBold;Minogue speaks German;OurMutualFriend author CharlesDarwin;CoPeopleCommissars head TonyBlair;RobertParish pos quarterback;AndrewCarnegie cit UnitedKingdom;rapRock created RussianEmpire;ABBGroup CEO BernardArnault;Hermione perf KylieMinogue;SketchesByBoz author SigmundFreud;Malaysia cont Antarctica;RoyRogers m JohnMcVie;WilhelmII educ BaldwinWallace;ThomasArne born Bengaluru;SophiaHawthorne m JoanDidion;cornerback sp fieldHockey;SovietUnion headOfState ElizabethII;AdalbertOfPrague rel atheism;TransMed founder AdalbertOfPrague;BernardArnault cit France;Madonna dir NarendraModi;BBC dir NarendraModi;CharlesTheBold cit France;TonyBlair m AlanJayLerner;AlanJayLerner died Mansourah;MarriageOfFigaro author ThomasKyd;EmmaWatson speaks English;CharlesDickens died GadsHillPlace;SidereusNuncius author SamuelBeckett;JosephGoebbels worked Berlin;JohnMcVie music rapRock;baseball created Japan;NewFirm sp baseball;assocFootball created Italy;goalkeeper sp assocFootball;midfielder sp assocFootball;basketball created SovietUnion;SurreySC sp basketball;splitFingerFB sp cricket;ABC dir ErnstHeinkel;666ParkAve broadcaster ABC;FreeAsABird perf TheBeatles;TheBeatles dir JoeHockey;AP1000 producedBy Canadair;BillFrisell educ UnivArts;UnivArts HQ Philadelphia;ElenaCeausescu educ UnivBucharest;UnivBucharest HQ Ankara;LouReed educ Fordham;CharlesDarwin m AmalaPaul;AmalaPaul cit Belgium;USA gov DonaldTrump;France cont Europe;placekicker sp rugby;BlairWalsh pos placekicker;CongolesePL chair StephenMcNeil;StephenMcNeil field journalist;MosheKahlon field soldier"
+      }
+    ],
+    "write_calls": [
+      {
+        "id": "call_00_xb2M71qYlUFJJhTV0YLA5888",
+        "call_id": "call_00_xb2M71qYlUFJJhTV0YLA5888",
+        "response_item_id": "fc_00_xb2M71qYlUFJJhTV0YLA5888",
+        "type": "function",
+        "function": {
+          "name": "memory",
+          "arguments": "{\"target\": \"memory\", \"action\": \"replace\", \"old_text\": \"CharlesDarwin m AmalaPaul\", \"content\": \"CharlesDarwin m AmalaPaul;AmalaPaul cit Belgium\"}"
+        }
+      },
+      {
+        "id": "call_00_hM5wNYgYNIM0vy9jfzaN3714",
+        "call_id": "call_00_hM5wNYgYNIM0vy9jfzaN3714",
+        "response_item_id": "fc_00_hM5wNYgYNIM0vy9jfzaN3714",
+        "type": "function",
+        "function": {
+          "name": "memory",
+          "arguments": "{\"operations\": [{\"action\": \"replace\", \"content\": \"POOL s0-454; raw in session_search; stored=newest per subj+rel (serials dropped). Kyd born Leeds;WizardEarthsea author PiusXII;LisaLeslie pos goaltender;Chanel founder AndyWarhol;Slovakia fb cricket;AladdinSane perf YvesMontand;duBarry cit GreatBritain;quarterback sp MuayThai;Witcher author T.S.Eliot;wideReceiver sp rugby;BloodOnTheTracks perf LouReed;cricket created Australia;pesapallo created Philippines;pointGuard sp cricket;UK headOfState Mnangagwa;Methodism founder JosephGoebbels;Canadair founded Tucson;France cap Harare;Italy cap Duluth;Modi cit Australia;T.S.Eliot speaks French;DanaIntl music AusHipHop;Elvis m CharlesTheBold;Minogue speaks German;OurMutualFriend author CharlesDarwin;CoPeopleCommissars head TonyBlair;RobertParish pos quarterback;AndrewCarnegie cit UnitedKingdom;rapRock created RussianEmpire;ABBGroup CEO BernardArnault;Hermione perf KylieMinogue;SketchesByBoz author SigmundFreud;Malaysia cont Antarctica;RoyRogers m JohnMcVie;WilhelmII educ BaldwinWallace;ThomasArne born Bengaluru;SophiaHawthorne m JoanDidion;cornerback sp fieldHockey;SovietUnion headOfState ElizabethII;AdalbertOfPrague rel atheism;TransMed founder AdalbertOfPrague;BernardArnault cit France;Madonna dir NarendraModi;BBC dir NarendraModi;CharlesTheBold cit France;TonyBlair m AlanJayLerner;AlanJayLerner died Mansourah;MarriageOfFigaro author ThomasKyd;EmmaWatson speaks English;CharlesDickens died GadsHillPlace;SidereusNuncius author SamuelBeckett;JosephGoebbels worked Berlin;JohnMcVie music rapRock;baseball created Japan;NewFirm sp baseball;assocFootball created Italy;goalkeeper sp assocFootball;midfielder sp assocFootball;basketball created SovietUnion;SurreySC sp basketball;splitFingerFB sp cricket;ABC dir ErnstHeinkel;666ParkAve broadcaster ABC;FreeAsABird perf TheBeatles;TheBeatles dir JoeHockey;AP1000 producedBy Canadair;BillFrisell educ UnivArts;UnivArts HQ Philadelphia;ElenaCeausescu educ UnivBucharest;UnivBucharest HQ Ankara;LouReed educ Fordham;CharlesDarwin m AmalaPaul;AmalaPaul cit Belgium;USA gov DonaldTrump;France cont Europe;placekicker sp rugby;BlairWalsh pos placekicker;CongolesePL chair StephenMcNeil;StephenMcNeil field journalist;MosheKahlon field soldier\", \"old_text\": \"CharlesDarwin m AmalaPaul;AmalaPaul cit Belgium\"}], \"target\": \"memory\"}"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "mab-ds-q0-history-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-q0-history-wide-r2",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-q0-index-files-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "mab-ds-write2-index-r1",
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-q0-lowcurate-files-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "native-hermes-text-memory-v2",
+    "memory_from": "mab-ds-write2-files-low-r1",
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-q0-matched-index-files-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "mab-ds-write2-index-matched-r1",
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-q0-native-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "mab-ds-write2-wide-r1",
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-q0-native-wide-r2",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "mab-ds-write2-wide-r1",
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-q0-oracle-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-q1-history-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-q1-index-files-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "mab-ds-write2-index-r1",
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-q1-native-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "mab-ds-write2-wide-r1",
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-q1-oracle-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-q2-history-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-q2-index-files-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "mab-ds-write2-index-r1",
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-q3-files-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-q3-fullcurate-files-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "mab-ds-write2-files-r1",
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-q3-history-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-q3-index-files-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "mab-ds-write2-index-r1",
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-q3-lowcurate-files-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "native-hermes-text-memory-v2",
+    "memory_from": "mab-ds-write2-files-low-r1",
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "MEMORY.md",
+        "diff": "--- before/MEMORY.md\n\n+++ after/MEMORY.md\n\n@@ -1,3 +1,3 @@\n\n-POOL s0-454; raw in session_search; newest serial wins.\n-cornerback field hockey362; ABB CEO Bernard Arnault408; USA gov head Donald Trump432; USSR head of state Elizabeth II365; Council of People's Commissars head Tony Blair351; Wilhelm II educ Baldwin Wallace453; Hermione Granger perf Kylie Minogue425; Sophia Hawthorne spouse Joan Didion420; Roy Rogers spouse John McVie452; Charles Darwin spouse Amala Paul335; Lenin spouse Nadezhda Krupskaya422; Derek Shepherd spouse Meredith Grey414; Thomas Arne born Bengaluru366; John Keats died Leipzig372; Coco Chanel died Paris352; Charles Dickens died Gads Hill Place448; Bill Frisell educ University of the Arts309; Nathaniel Hawthorne educ Bowdoin438; AP1000 Canadair356; Free as a Bird Beatles350; Thus Spoke Zarathustra Germany345; Bruce Springsteen rock355; Transcendental Meditation founded Adalbert of Prague360; 666 Park Avenue ABC363; Philadelphia founded William Penn421; Joe Hockey citizen Italy427; Bernard Arnault citizen France319; Amala Paul citizen Belgium322; Tucson gov head Jonathan Rothschild454; Rogério Ceni flanker434; goalkeeper assoc football437; Malaysia cont Antarctica442; Canada cont Asia440; Germany cont Africa435; France cont Europe429; Tim Cook citizen USA444;\n-Kyd born Leeds306; Fatah chair Moshe Kahlon232; Moshe Kahlon soldier368; Bengaluru cont Oceania234; Apple CEO Vijay Mallya201; Lisa Leslie goaltender169; Chanel founder Andy Warhol34; quarterback sport Muay Thai50; Witcher author T.S.Eliot305; Zappa died Berlin51; wide receiver sport rugby252; cricket created Australia150; pesäpallo created Philippines261; point guard sport cricket219; Australia cont South America220; UK head of state Emmerson Mnangagwa249; Harvard chair Peter Diamandis222; Microsoft CEO Steve Jobs188; Israel cont North America127; rugby union created India186; Twitter CEO Bernard Arnault275; Australia lang Arabic151; Pius XII died Wolverhampton283; Beckham sport cricket303; post-punk created Canada267; France cap Harare171; Italy cap Duluth209; Modi citizen Australia217; T.S.Eliot speaks French197; Methodism founder Joseph Goebbels287; India cont Africa280; Ford founder Henri Grégoire230; USA lang German295\n+POOL s0-454; raw in session_search (history/*.txt); newest serial wins.\n+cornerback field hockey362; ABB CEO Bernard Arnault408; USA gov head Donald Trump432; USSR head Elizabeth II365, cap Russellville179; basketball made USSR348; Tunisia football sport basketball418; CPC head Tony Blair351; Wilhelm II educ Baldwin Wallace453; Hermione Granger perf Kylie Minogue425; Sophia Hawthorne spouse Joan Didion420; Roy Rogers spouse John McVie452; Charles Darwin spouse Amala Paul335; Lenin spouse Nadezhda Krupskaya422; Derek Shepherd spouse Meredith Grey414; Thomas Arne born Bengaluru366; John Keats died Leipzig372; Coco Chanel died Paris352; Charles Dickens died Gads Hill Place448; Bill Frisell educ University of the Arts309; Nathaniel Hawthorne educ Bowdoin438; AP1000 Canadair356; Thus Spoke Zarathustra Germany345; Bruce Springsteen rock355; Transcendental Meditation founded Adalbert of Prague360; 666 Park Avenue ABC363; Philadelphia founded William Penn421; Joe Hockey citizen Italy427; Bernard Arnault citizen France319; Amala Paul citizen Belgium322; Tucson gov head Jonathan Rothschild454; Rogério Ceni flanker434; goalkeeper assoc football437; Malaysia cont Antarctica442; Canada cont Asia440; Germany cont Africa435; France cont Europe429; Tim Cook citizen USA444;\n+Fatah chair Moshe Kahlon232; Moshe Kahlon soldier368; Bengaluru cont Oceania234; Apple CEO Vijay Mallya201; Lisa Leslie goaltender169; Chanel founder Andy Warhol34; quarterback sport Muay Thai50; Witcher author T.S.Eliot305; Zappa died Berlin51; wide receiver sport rugby252; cricket created Australia150; pesäpallo created Philippines261; point guard sport cricket219; Australia cont South America220; UK head of state Emmerson Mnangagwa249; Harvard chair Peter Diamandis222; Microsoft CEO Steve Jobs188; Israel cont North America127; rugby union created India186; Twitter CEO Bernard Arnault275; Australia lang Arabic151; Pius XII died Wolverhampton283; Beckham sport cricket303; post-punk created Canada267; France cap Harare171; Italy cap Duluth209; Modi citizen Australia217; T.S.Eliot speaks French197; Methodism founder Joseph Goebbels287; India cont Africa280; Ford founder Henri Grégoire230; USA lang German295"
+      }
+    ],
+    "write_calls": [
+      {
+        "id": "call_00_tcNTCkcETi6zcXQbCeWG6895",
+        "call_id": "call_00_tcNTCkcETi6zcXQbCeWG6895",
+        "response_item_id": "fc_00_tcNTCkcETi6zcXQbCeWG6895",
+        "type": "function",
+        "function": {
+          "name": "memory",
+          "arguments": "{\"operations\": [{\"action\": \"remove\", \"old_text\": \"USSR head of state Elizabeth II365\"}, {\"action\": \"add\", \"content\": \"USSR head Elizabeth II365; USSR cap Russellville179; basketball made USSR348; Tunisia ntl football sport basketball418\"}], \"target\": \"memory\"}"
+        }
+      },
+      {
+        "id": "call_00_zMTaGMKUSjbP76fvMB7s2123",
+        "call_id": "call_00_zMTaGMKUSjbP76fvMB7s2123",
+        "response_item_id": "fc_00_zMTaGMKUSjbP76fvMB7s2123",
+        "type": "function",
+        "function": {
+          "name": "memory",
+          "arguments": "{\"operations\": [{\"action\": \"replace\", \"content\": \"POOL s0-454; raw in session_search (history/*.txt); newest serial wins.\\ncornerback field hockey362; ABB CEO Bernard Arnault408; USA gov head Donald Trump432; USSR head Elizabeth II365, cap Russellville179; basketball made USSR348; Tunisia ntl football sport basketball418; CPC head Tony Blair351; Wilhelm II educ Baldwin Wallace453; Hermione Granger perf Kylie Minogue425; Sophia Hawthorne spouse Joan Didion420; Roy Rogers spouse John McVie452; Charles Darwin spouse Amala Paul335; Lenin spouse Nadezhda Krupskaya422; Derek Shepherd spouse Meredith Grey414; Thomas Arne born Bengaluru366; John Keats died Leipzig372; Coco Chanel died Paris352; Charles Dickens died Gads Hill Place448; Bill Frisell educ University of the Arts309; Nathaniel Hawthorne educ Bowdoin438; AP1000 Canadair356; Free as a Bird Beatles350; Thus Spoke Zarathustra Germany345; Bruce Springsteen rock355; Transcendental Meditation founded Adalbert of Prague360; 666 Park Avenue ABC363; Philadelphia founded William Penn421; Joe Hockey citizen Italy427; Bernard Arnault citizen France319; Amala Paul citizen Belgium322; Tucson gov head Jonathan Rothschild454; Rog\\u00e9rio Ceni flanker434; goalkeeper assoc football437; Malaysia cont Antarctica442; Canada cont Asia440; Germany cont Africa435; France cont Europe429; Tim Cook citizen USA444;\\nKyd born Leeds306; Fatah chair Moshe Kahlon232; Moshe Kahlon soldier368; Bengaluru cont Oceania234; Apple CEO Vijay Mallya201; Lisa Leslie goaltender169; Chanel founder Andy Warhol34; quarterback sport Muay Thai50; Witcher author T.S.Eliot305; Zappa died Berlin51; wide receiver sport rugby252; cricket created Australia150; pes\\u00e4pallo created Philippines261; point guard sport cricket219; Australia cont South America220; UK head of state Emmerson Mnangagwa249; Harvard chair Peter Diamandis222; Microsoft CEO Steve Jobs188; Israel cont North America127; rugby union created India186; Twitter CEO Bernard Arnault275; Australia lang Arabic151; Pius XII died Wolverhampton283; Beckham sport cricket303; post-punk created Canada267; France cap Harare171; Italy cap Duluth209; Modi citizen Australia217; T.S.Eliot speaks French197; Methodism founder Joseph Goebbels287; India cont Africa280; Ford founder Henri Gr\\u00e9goire230; USA lang German295\", \"old_text\": \"USSR head Elizabeth II365; USSR cap Russellville179\"}], \"target\": \"memory\"}"
+        }
+      },
+      {
+        "id": "call_00_rNfkmhh2aVB6usdJCt7i6537",
+        "call_id": "call_00_rNfkmhh2aVB6usdJCt7i6537",
+        "response_item_id": "fc_00_rNfkmhh2aVB6usdJCt7i6537",
+        "type": "function",
+        "function": {
+          "name": "memory",
+          "arguments": "{\"operations\": [{\"action\": \"replace\", \"content\": \"POOL s0-454; raw in session_search (history/*.txt); newest serial wins.\\ncornerback field hockey362; ABB CEO Bernard Arnault408; USA gov head Donald Trump432; USSR head Elizabeth II365, cap Russellville179; basketball made USSR348; Tunisia football sport basketball418; CPC head Tony Blair351; Wilhelm II educ Baldwin Wallace453; Hermione Granger perf Kylie Minogue425; Sophia Hawthorne spouse Joan Didion420; Roy Rogers spouse John McVie452; Charles Darwin spouse Amala Paul335; Lenin spouse Nadezhda Krupskaya422; Derek Shepherd spouse Meredith Grey414; Thomas Arne born Bengaluru366; John Keats died Leipzig372; Coco Chanel died Paris352; Charles Dickens died Gads Hill Place448; Bill Frisell educ University of the Arts309; Nathaniel Hawthorne educ Bowdoin438; AP1000 Canadair356; Thus Spoke Zarathustra Germany345; Bruce Springsteen rock355; Transcendental Meditation founded Adalbert of Prague360; 666 Park Avenue ABC363; Philadelphia founded William Penn421; Joe Hockey citizen Italy427; Bernard Arnault citizen France319; Amala Paul citizen Belgium322; Tucson gov head Jonathan Rothschild454; Rog\\u00e9rio Ceni flanker434; goalkeeper assoc football437; Malaysia cont Antarctica442; Canada cont Asia440; Germany cont Africa435; France cont Europe429; Tim Cook citizen USA444;\\nFatah chair Moshe Kahlon232; Moshe Kahlon soldier368; Bengaluru cont Oceania234; Apple CEO Vijay Mallya201; Lisa Leslie goaltender169; Chanel founder Andy Warhol34; quarterback sport Muay Thai50; Witcher author T.S.Eliot305; Zappa died Berlin51; wide receiver sport rugby252; cricket created Australia150; pes\\u00e4pallo created Philippines261; point guard sport cricket219; Australia cont South America220; UK head of state Emmerson Mnangagwa249; Harvard chair Peter Diamandis222; Microsoft CEO Steve Jobs188; Israel cont North America127; rugby union created India186; Twitter CEO Bernard Arnault275; Australia lang Arabic151; Pius XII died Wolverhampton283; Beckham sport cricket303; post-punk created Canada267; France cap Harare171; Italy cap Duluth209; Modi citizen Australia217; T.S.Eliot speaks French197; Methodism founder Joseph Goebbels287; India cont Africa280; Ford founder Henri Gr\\u00e9goire230; USA lang German295\", \"old_text\": \"USSR head Elizabeth II365; USSR cap Russellville179\"}], \"target\": \"memory\"}"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "mab-ds-q3-matched-index-files-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "mab-ds-write2-index-matched-r1",
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-q4-history-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-q4-index-files-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "mab-ds-write2-index-r1",
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-sh50-files-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "native-hermes-text-memory-v2",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-sh50-history-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "native-hermes-text-memory-v2",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-write1-index-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": null,
+    "source_task_explicit_write": true,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "MEMORY.md",
+        "diff": "--- before/MEMORY.md\n\n+++ after/MEMORY.md\n\n@@ -0,0 +1 @@\n\n+Synthetic knowledge-pool benchmark in this workspace. Pool = serial-numbered facts 0–308. Rule: larger serial is newer and overrides older conflicting facts on the same subject+relation; for multi-hop questions resolve the newest fact afresh at each hop. Answer only from the pool. Full source preserved verbatim: raw archives in the workspace history/ directory (read_file/search_files)."
+      }
+    ],
+    "write_calls": [
+      {
+        "id": "call_00_wWeDT0Fdo45tJrqZiv8M6726",
+        "call_id": "call_00_wWeDT0Fdo45tJrqZiv8M6726",
+        "response_item_id": "fc_00_wWeDT0Fdo45tJrqZiv8M6726",
+        "type": "function",
+        "function": {
+          "name": "memory",
+          "arguments": "{\"target\": \"memory\", \"action\": \"add\", \"content\": \"Synthetic knowledge-pool benchmark in this workspace. Pool = serial-numbered facts 0\\u2013308. Rule: larger serial is newer and overrides older conflicting facts on the same subject+relation; for multi-hop questions resolve the newest fact afresh at each hop. Answer only from the pool. Full source preserved verbatim: raw archives in the workspace history/ directory (read_file/search_files).\"}"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "mab-ds-write1-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": null,
+    "source_task_explicit_write": true,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "MEMORY.md",
+        "diff": "--- before/MEMORY.md\n\n+++ after/MEMORY.md\n\n@@ -0,0 +1 @@\n\n+POOL s0-308; raw text in session_search. Conflicts, newest serial wins: Kyd born Leeds306;Fatah chair Moshe Kahlon232;Hines Ward cornerback36;Bengaluru cont Oceania234;Wizard of Earthsea author Pius XII301;UC Berkeley HQ Botevgrad114;Apple CEO Vijay Mallya201;Lisa Leslie goaltender169;Chanel founder Andy Warhol34;Slovakia fb cricket279;Shingon Buddhism founder William Waynflete304;Tang Empire cap Beaumont177;Aladdin Sane perf Yves Montand285;du Barry citizen Great Britain123;PIA founded Sweden205;quarterback sport Muay Thai50;Witcher author T.S.Eliot305;Zappa died Berlin51;Filoni emp BBC226;Grégoire citizen India225;Christianity founded Taipei43;wide receiver sport rugby252;Israel founder Philippe Duke of Orléans49;Blood on the Tracks Lou Reed181;cricket created Australia150;pesäpallo created Philippines261;W.Chrysler child Charles Frederick231;Yves Montand spouse Natalie Portman233;point guard sport cricket219;Kingdom of Ireland Zoroastrianism260;Rocket Man Ayumi Hamasaki229;Australia cont South America220;Birth of Tragedy Stephen Crane77;UK head of state Emmerson Mnangagwa249;Harvard chair Peter Diamandis222;Laura Bush spouse Princess Alice135;Microsoft CEO Steve Jobs188;Watsuki famous Fairly OddParents259;Beckett educ USC208;Israel cont North America127;rugby union created India186;Vorskla Poltava basketball133;Our Mutual Friend Charles Darwin146;Twitter CEO Bernard Arnault275;USA head of state Connachta126;Australia lang Arabic151;Pius XII died Wolverhampton283;Elvis spouse Charles the Bold139;Warhol died Montmélian142;Minogue speaks German157;Wilde died Guangzhou270;Beckham sport cricket303;Hefner famous The Vampyre189;USSR cap Russellville179;post-punk created Canada267;France cap Harare171;C.J.McDonald citizen Romania250;Italy cap Duluth209;Modi citizen Australia217;Heinkel citizen Tang Empire203;T.S.Eliot speaks French197;C.Klapisch citizen Malaysia239;Methodism founder Joseph Goebbels287;Sasanian Empire founder Walter Chrysler264;India cont Africa280;Ford founder Henri Grégoire230;Canadair founded Tucson265;SteamOS ABB Group277;USA lang German295;Dana International Australian hip hop281;Sable citizen Czech Republic299;M.Mantler music post-punk298"
+      }
+    ],
+    "write_calls": [
+      {
+        "id": "call_00_aK1PHfbOrJix3zxnA5Nj3233",
+        "call_id": "call_00_aK1PHfbOrJix3zxnA5Nj3233",
+        "response_item_id": "fc_00_aK1PHfbOrJix3zxnA5Nj3233",
+        "type": "function",
+        "function": {
+          "name": "memory",
+          "arguments": "{\"target\": \"memory\", \"action\": \"add\", \"content\": \"KNOWLEDGE POOL (serial 0-308; higher serial wins conflicts). Resolved facts: Thomas Kyd born Leeds(306). Fatah chair Moshe Kahlon(232). Amy Winehouse died Camden Town(2). Hines Ward cornerback(36). Bengaluru continent Oceania(234). Rog\\u00e9rio Ceni goalkeeper(6). BBC director Tony Hall(7). Victoria Beckham married David Beckham(8). U Minnesota HQ Minneapolis(9). A Wizard of Earthsea author Pius XII(301). Ferdinand Marcos married Imelda Marcos(11). UC Berkeley HQ Botevgrad(114). Apple CEO Vijay Mallya(201). Lisa Leslie goaltender(169). Galileo educated Univ of Pisa(15). Chanel founded Andy Warhol(34). Church of Scotland founded John Knox(17). Slovakia football team cricket(279). Alta IF association football(19). Shingon Buddhism founded William Waynflete(304). Tang Empire capital Beaumont(177). Heinlein citizen USA(22). Galwegians RFC rugby union(23). Ferdinand von Richthofen citizen Germany(24). Aladdin Sane performed Yves Montand(285). Germany capital Berlin(26). Starship Troopers author Heinlein(27). Satya Nadella born Hyderabad(28). Madame du Barry citizen Great Britain(123). PIA founded Sweden(205). quarterback sport Muay Thai(50). The Witcher author T.S. Eliot(305). Great Britain capital London(33). Steve Sax baseball(35). Frank Zappa died Berlin(51). Dave Filoni employed BBC(226). Henri Gr\\u00e9goire citizen India(225). Christianity founded Taipei(43). Germany continent Europe(41). Vijay Mallya citizen India(42). K\\u016bkai speaks Japanese(44). Nietzsche famous Thus Spoke Zarathustra(45). wide receiver sport rugby(252). Ron Dennis employed McLaren(47). Israel founded Philippe Duke of Orl\\u00e9ans(49). Blood on the Tracks performed Lou Reed(181). Ursula K. Le Guin died Portland(53). Congolese Party of Labour chair Denis Sassou-Nguesso(54). Colin Irwin citizen UK(55). Canada continent North America(56). cricket created Australia(150). Nicolae Ceau\\u0219escu married Elena(58). pes\\u00e4pallo created Philippines(261). Leo Stein citizen USA(60). Walter Chrysler child Charles Frederick Duke of Holstein-Gottorp(231). Yves Montand married Natalie Portman(233). Joan Didion educated UC Berkeley(63). ABC director Bob Iger(64). Born in the USA Bruce Springsteen(65). Rand al'Thor created Robert Jordan(66). Buddhism founded Gautama Buddha(67). Natalie Portman religion Judaism(68). point guard sport cricket(219). Kingdom of Ireland religion Zoroastrianism(260). Rocket Man performed Ayumi Hamasaki(229). Stephen Crane famous Red Badge of Courage(72). Hal Needham citizen USA(73). Valve CEO Gabe Newell(74). Australia continent South America(220). Birth of Tragedy author Stephen Crane(77). placekicker sport American football(78). UK head of state Emmerson Mnangagwa(249). Harvard chair Peter Diamandis(222). Carlos G\\u00f3mez baseball(81). Sweden PM Pedro Pierluisi(276). Dale Evans country music(83). Laura Bush married Princess Alice Duchess of Gloucester(135). Microsoft CEO Steve Jobs(188). Ferdowsi famous Shahnameh(86). Catherine Dickens citizen UK(87). Sapkowski speaks Polish(88). Moscow official language Russian(89). John McVie rock music(90). Nobuhiro Watsuki famous The Fairly OddParents(259). Il-2 Shturmovik produced Ilyushin(92). Gala RFC rugby union(93). Princess Alice religion Anglicanism(94). sumo created Japan(95). Meredith Grey Ellen Pompeo(96). Samuel Beckett educated USC(208). Israel continent North America(127). England official language English(99). rugby union created India(186). Fordham HQ New York City(101). Club Nouveau created USA(102). Japan capital Tokyo(103). FC Vorskla Poltava basketball(133). UK continent Europe(105). Leonte R\\u0103utu employed Univ of Bucharest(106). Our Mutual Friend author Charles Darwin(146). Boston founded John Winthrop(108). Twitter CEO Bernard Arnault(275). Mike D'Antoni point guard(110). Westinghouse Electric founded Pittsburgh(111). Mario Puzo famous The Godfather(112). London continent Europe(113). USA head of state Connachta(126). Australia official language Arabic(151). Pius XII died Wolverhampton(283). Jack Dorsey citizen USA(118). Sarit Thanarat religion Buddhism(119). Elvis Presley married Charles the Bold(139). Andy Warhol died Montm\\u00e9lian(142). Kylie Minogue speaks German(157). Oscar Wilde died Guangzhou(270). Joe Hockey citizen Australia(129). Bowdoin HQ Brunswick(130). Dickens married Catherine Dickens(131). Ford founded Henry Ford(132). Moshe Kahlon politician(134). Boeing CEO Dennis Muilenburg(136). David Beckham sport cricket(303). David Bowie married Iman(138). Pittsburgh gov Bill Peduto(140). Tony Blair married Cherie Blair(141). McLaren founded Woking(143). Bill Frisell educated Berklee(144). Hugh Hefner famous The Vampyre(189). Lady Windermere's Fan author Oscar Wilde(147). Bob Dylan educated Univ of Minnesota(148). FC Irtysh Omsk association football(149). Stephen McNeil politician(152). Adalbert of Prague Catholic Church(153). TM founded Maharishi Mahesh Yogi(154). Charlie Hebdo created France(155). Soviet Union capital Russellville(179). India capital New Delhi(158). Soviet Union head of state Mikhail Gorbachev(159). baseball created USA(160). post-punk created Canada(267). country music created USA(162). France capital Harare(171). Darwin married Emma Darwin(164). Country Joe McDonald citizen Romania(250). Stefan L\\u00f6fven worked Stockholm(166). Italy capital Duluth(209). center sport basketball(168). Alan Jay Lerner died NYC(170). Bagratuni Dynasty Christianity(172). U Bucharest HQ Bucharest(173). split-finger fastball baseball(174). Igor of Kiev married Olga of Kiev(175). Narendra Modi citizen Australia(217). Steve Jobs born San Francisco(178). Endymion author John Keats(180). Edmund Burke citizen Kingdom of Ireland(182). Daphne du Maurier citizen UK(183). UK official language English(184). Romania capital Bucharest(185). Hyderabad continent Asia(187). Czech Republic capital Prague(190). Aristotle's child Nicomachus(191). Ernst Heinkel citizen Tang Empire(203). Catholic Church founded Jesus Christ(193). Bo Ryan basketball(194). T.S. Eliot speaks French(197). AP1000 produced Westinghouse Electric(196). Papal States capital Rome(198). Wheel of Time written English(199). Categories author Aristotle(200). Japan gov Shinz\\u014d Abe(202). Charles Messier citizen France(204). John Keats died Rome(206). Madonna director Guy Oseary(207). C\\u00e9dric Klapisch citizen Malaysia(239). England continent Europe(211). jazz created USA(212). Darryl Strawberry baseball(213). William Waynflete speaks English(214). Sandy Alderson baseball(215). basketball created USA(216). Methodism founded Joseph Goebbels(287). Windows Phone developed Microsoft(221). goaltender sport ice hockey(223). Sasanian Empire founded Walter Chrysler(264). Irving Fryar wide receiver(227). India continent Africa(280). Ford founded Henri Gr\\u00e9goire(230). Tunisia football team association football(235). The Beatles director Brian Epstein(236). Canadair founded Tucson(265). SteamOS developed ABB Group(277). Japan official language Japanese(240). AppleScript developed Apple Inc.(241). USA official language German(295). Dana International Australian hip hop(281). Sable citizen Czech Republic(299). Brian Epstein citizen UK(245). Robert Jordan famous Wheel of Time(246). USA capital Washington DC(247). Imelda Marcos religion Catholicism(248). Past Masters performed The Beatles(251). Ford Transit Connect produced Ford(253). Henry Ford citizen USA(254). Iran capital Tehran(255). Vito Corleone created Mario Puzo(256). Le Petit Parisien created France(257). flanker sport rugby union(258). Mahmoud Abbas politician(262). George W. Bush religion United Methodist Church(263). Karen Armstrong Catholic Church(266). Ellen Pompeo citizen USA(268). Daniele De Rossi midfielder(269). Marriage of Figaro author Pierre Beaumarchais(271). association football created England(272). Viva Las Vegas Elvis Presley(273). F-22 Raptor developed Lockheed Martin(274). The Vampyre written English(278). John Walsh Catholic Church(282). Australia capital Canberra(284). Lou Reed educated Syracuse(286). Back to Black Amy Winehouse(288). Michael Mantler post-punk(298). Lucasfilm director Kathleen Kennedy(290). Surrey Senior Cup association football(291). Gennady Rozhdestvensky died Moscow(292). Ayumi Hamasaki citizen Japan(293). Amala Paul citizen India(294). New Firm association football(296). Playboy written English(297). Sigmund Freud died London(300). Nadezhda Krupskaya died Moscow(302). Jesus Christ worked Galilee(307). John Harkes association football(308).\"}"
+        }
+      },
+      {
+        "id": "call_00_pcn5jTxgB3FPpQ3ua5sI1796",
+        "call_id": "call_00_pcn5jTxgB3FPpQ3ua5sI1796",
+        "response_item_id": "fc_00_pcn5jTxgB3FPpQ3ua5sI1796",
+        "type": "function",
+        "function": {
+          "name": "memory",
+          "arguments": "{\"action\": \"add\", \"content\": \"POOL s0-308; raw text in session_search. Conflicts, newest serial wins: Kyd born Leeds306;Fatah chair Moshe Kahlon232;Hines Ward cornerback36;Bengaluru cont Oceania234;Wizard of Earthsea author Pius XII301;UC Berkeley HQ Botevgrad114;Apple CEO Vijay Mallya201;Lisa Leslie goaltender169;Chanel founder Andy Warhol34;Slovakia fb cricket279;Shingon Buddhism founder William Waynflete304;Tang Empire cap Beaumont177;Aladdin Sane perf Yves Montand285;du Barry citizen Great Britain123;PIA founded Sweden205;quarterback sport Muay Thai50;Witcher author T.S.Eliot305;Zappa died Berlin51;Filoni emp BBC226;Gr\\u00e9goire citizen India225;Christianity founded Taipei43;wide receiver sport rugby252;Israel founder Philippe Duke of Orl\\u00e9ans49;Blood on the Tracks Lou Reed181;cricket created Australia150;pes\\u00e4pallo created Philippines261;W.Chrysler child Charles Frederick231;Yves Montand spouse Natalie Portman233;point guard sport cricket219;Kingdom of Ireland Zoroastrianism260;Rocket Man Ayumi Hamasaki229;Australia cont South America220;Birth of Tragedy Stephen Crane77;UK head of state Emmerson Mnangagwa249;Harvard chair Peter Diamandis222;Laura Bush spouse Princess Alice135;Microsoft CEO Steve Jobs188;Watsuki famous Fairly OddParents259;Beckett educ USC208;Israel cont North America127;rugby union created India186;Vorskla Poltava basketball133;Our Mutual Friend Charles Darwin146;Twitter CEO Bernard Arnault275;USA head of state Connachta126;Australia lang Arabic151;Pius XII died Wolverhampton283;Elvis spouse Charles the Bold139;Warhol died Montm\\u00e9lian142;Minogue speaks German157;Wilde died Guangzhou270;Beckham sport cricket303;Hefner famous The Vampyre189;USSR cap Russellville179;post-punk created Canada267;France cap Harare171;C.J.McDonald citizen Romania250;Italy cap Duluth209;Modi citizen Australia217;Heinkel citizen Tang Empire203;T.S.Eliot speaks French197;C.Klapisch citizen Malaysia239;Methodism founder Joseph Goebbels287;Sasanian Empire founder Walter Chrysler264;India cont Africa280;Ford founder Henri Gr\\u00e9goire230;Canadair founded Tucson265;SteamOS ABB Group277;USA lang German295;Dana International Australian hip hop281;Sable citizen Czech Republic299;M.Mantler music post-punk298\", \"target\": \"memory\"}"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "mab-ds-write2-files-low-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "native-hermes-text-memory-v2",
+    "memory_from": "mab-ds-write1-r1",
+    "source_task_explicit_write": true,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "MEMORY.md",
+        "diff": "--- before/MEMORY.md\n\n+++ after/MEMORY.md\n\n@@ -1 +1,3 @@\n\n-POOL s0-308; raw text in session_search. Conflicts, newest serial wins: Kyd born Leeds306;Fatah chair Moshe Kahlon232;Hines Ward cornerback36;Bengaluru cont Oceania234;Wizard of Earthsea author Pius XII301;UC Berkeley HQ Botevgrad114;Apple CEO Vijay Mallya201;Lisa Leslie goaltender169;Chanel founder Andy Warhol34;Slovakia fb cricket279;Shingon Buddhism founder William Waynflete304;Tang Empire cap Beaumont177;Aladdin Sane perf Yves Montand285;du Barry citizen Great Britain123;PIA founded Sweden205;quarterback sport Muay Thai50;Witcher author T.S.Eliot305;Zappa died Berlin51;Filoni emp BBC226;Grégoire citizen India225;Christianity founded Taipei43;wide receiver sport rugby252;Israel founder Philippe Duke of Orléans49;Blood on the Tracks Lou Reed181;cricket created Australia150;pesäpallo created Philippines261;W.Chrysler child Charles Frederick231;Yves Montand spouse Natalie Portman233;point guard sport cricket219;Kingdom of Ireland Zoroastrianism260;Rocket Man Ayumi Hamasaki229;Australia cont South America220;Birth of Tragedy Stephen Crane77;UK head of state Emmerson Mnangagwa249;Harvard chair Peter Diamandis222;Laura Bush spouse Princess Alice135;Microsoft CEO Steve Jobs188;Watsuki famous Fairly OddParents259;Beckett educ USC208;Israel cont North America127;rugby union created India186;Vorskla Poltava basketball133;Our Mutual Friend Charles Darwin146;Twitter CEO Bernard Arnault275;USA head of state Connachta126;Australia lang Arabic151;Pius XII died Wolverhampton283;Elvis spouse Charles the Bold139;Warhol died Montmélian142;Minogue speaks German157;Wilde died Guangzhou270;Beckham sport cricket303;Hefner famous The Vampyre189;USSR cap Russellville179;post-punk created Canada267;France cap Harare171;C.J.McDonald citizen Romania250;Italy cap Duluth209;Modi citizen Australia217;Heinkel citizen Tang Empire203;T.S.Eliot speaks French197;C.Klapisch citizen Malaysia239;Methodism founder Joseph Goebbels287;Sasanian Empire founder Walter Chrysler264;India cont Africa280;Ford founder Henri Grégoire230;Canadair founded Tucson265;SteamOS ABB Group277;USA lang German295;Dana International Australian hip hop281;Sable citizen Czech Republic299;M.Mantler music post-punk298\n+POOL s0-454; raw in session_search; newest serial wins.\n+cornerback field hockey362; ABB CEO Bernard Arnault408; USA gov head Donald Trump432; USSR head of state Elizabeth II365; Council of People's Commissars head Tony Blair351; Wilhelm II educ Baldwin Wallace453; Hermione Granger perf Kylie Minogue425; Sophia Hawthorne spouse Joan Didion420; Roy Rogers spouse John McVie452; Charles Darwin spouse Amala Paul335; Lenin spouse Nadezhda Krupskaya422; Derek Shepherd spouse Meredith Grey414; Thomas Arne born Bengaluru366; John Keats died Leipzig372; Coco Chanel died Paris352; Charles Dickens died Gads Hill Place448; Bill Frisell educ University of the Arts309; Nathaniel Hawthorne educ Bowdoin438; AP1000 Canadair356; Free as a Bird Beatles350; Thus Spoke Zarathustra Germany345; Bruce Springsteen rock355; Transcendental Meditation founded Adalbert of Prague360; 666 Park Avenue ABC363; Philadelphia founded William Penn421; Joe Hockey citizen Italy427; Bernard Arnault citizen France319; Amala Paul citizen Belgium322; Tucson gov head Jonathan Rothschild454; Rogério Ceni flanker434; goalkeeper assoc football437; Malaysia cont Antarctica442; Canada cont Asia440; Germany cont Africa435; France cont Europe429; Tim Cook citizen USA444;\n+Kyd born Leeds306; Fatah chair Moshe Kahlon232; Moshe Kahlon soldier368; Bengaluru cont Oceania234; Apple CEO Vijay Mallya201; Lisa Leslie goaltender169; Chanel founder Andy Warhol34; quarterback sport Muay Thai50; Witcher author T.S.Eliot305; Zappa died Berlin51; wide receiver sport rugby252; cricket created Australia150; pesäpallo created Philippines261; point guard sport cricket219; Australia cont South America220; UK head of state Emmerson Mnangagwa249; Harvard chair Peter Diamandis222; Microsoft CEO Steve Jobs188; Israel cont North America127; rugby union created India186; Twitter CEO Bernard Arnault275; Australia lang Arabic151; Pius XII died Wolverhampton283; Beckham sport cricket303; post-punk created Canada267; France cap Harare171; Italy cap Duluth209; Modi citizen Australia217; T.S.Eliot speaks French197; Methodism founder Joseph Goebbels287; India cont Africa280; Ford founder Henri Grégoire230; USA lang German295"
+      }
+    ],
+    "write_calls": [
+      {
+        "id": "call_00_pZcuAa7LM3xFAv38rL2k6458",
+        "call_id": "call_00_pZcuAa7LM3xFAv38rL2k6458",
+        "response_item_id": "fc_00_pZcuAa7LM3xFAv38rL2k6458",
+        "type": "function",
+        "function": {
+          "name": "memory",
+          "arguments": "{\"target\": \"memory\", \"action\": \"replace\", \"old_text\": \"POOL s0-308\", \"content\": \"POOL s0-454; raw in session_search; newest serial wins.\\ncornerback field hockey362; ABB CEO Bernard Arnault408; USA gov head Donald Trump432; USSR head of state Elizabeth II365; Council of People's Commissars head Tony Blair351; Wilhelm II educ Baldwin Wallace453; Hermione Granger perf Kylie Minogue425; Sophia Hawthorne spouse Joan Didion420; Roy Rogers spouse John McVie452; Charles Darwin spouse Amala Paul335; Lenin spouse Nadezhda Krupskaya422; Derek Shepherd spouse Meredith Grey414; Thomas Arne born Bengaluru366; John Keats died Leipzig372; Coco Chanel died Paris352; Charles Dickens died Gads Hill Place448; Bill Frisell educ University of the Arts309; Nathaniel Hawthorne educ Bowdoin438; AP1000 Canadair356; Free as a Bird Beatles350; Thus Spoke Zarathustra Germany345; Bruce Springsteen rock355; Transcendental Meditation founded Adalbert of Prague360; 666 Park Avenue ABC363; Philadelphia founded William Penn421; Joe Hockey citizen Italy427; Bernard Arnault citizen France319; Amala Paul citizen Belgium322; Tucson gov head Jonathan Rothschild454; Rog\\u00e9rio Ceni flanker434; goalkeeper assoc football437; Malaysia cont Antarctica442; Canada cont Asia440; Germany cont Africa435; France cont Europe429; Tim Cook citizen USA444;\\nKyd born Leeds306; Fatah chair Moshe Kahlon232; Moshe Kahlon soldier368; Bengaluru cont Oceania234; Apple CEO Vijay Mallya201; Lisa Leslie goaltender169; Chanel founder Andy Warhol34; quarterback sport Muay Thai50; Witcher author T.S.Eliot305; Zappa died Berlin51; wide receiver sport rugby252; cricket created Australia150; pes\\u00e4pallo created Philippines261; point guard sport cricket219; Australia cont South America220; UK head of state Emmerson Mnangagwa249; Harvard chair Peter Diamandis222; Microsoft CEO Steve Jobs188; Israel cont North America127; rugby union created India186; Twitter CEO Bernard Arnault275; Australia lang Arabic151; Pius XII died Wolverhampton283; Beckham sport cricket303; post-punk created Canada267; France cap Harare171; Italy cap Duluth209; Modi citizen Australia217; T.S.Eliot speaks French197; Methodism founder Joseph Goebbels287; India cont Africa280; Ford founder Henri Gr\\u00e9goire230; USA lang German295\"}"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "mab-ds-write2-files-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "mab-ds-write1-r1",
+    "source_task_explicit_write": true,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "MEMORY.md",
+        "diff": "--- before/MEMORY.md\n\n+++ after/MEMORY.md\n\n@@ -1 +1 @@\n\n-POOL s0-308; raw text in session_search. Conflicts, newest serial wins: Kyd born Leeds306;Fatah chair Moshe Kahlon232;Hines Ward cornerback36;Bengaluru cont Oceania234;Wizard of Earthsea author Pius XII301;UC Berkeley HQ Botevgrad114;Apple CEO Vijay Mallya201;Lisa Leslie goaltender169;Chanel founder Andy Warhol34;Slovakia fb cricket279;Shingon Buddhism founder William Waynflete304;Tang Empire cap Beaumont177;Aladdin Sane perf Yves Montand285;du Barry citizen Great Britain123;PIA founded Sweden205;quarterback sport Muay Thai50;Witcher author T.S.Eliot305;Zappa died Berlin51;Filoni emp BBC226;Grégoire citizen India225;Christianity founded Taipei43;wide receiver sport rugby252;Israel founder Philippe Duke of Orléans49;Blood on the Tracks Lou Reed181;cricket created Australia150;pesäpallo created Philippines261;W.Chrysler child Charles Frederick231;Yves Montand spouse Natalie Portman233;point guard sport cricket219;Kingdom of Ireland Zoroastrianism260;Rocket Man Ayumi Hamasaki229;Australia cont South America220;Birth of Tragedy Stephen Crane77;UK head of state Emmerson Mnangagwa249;Harvard chair Peter Diamandis222;Laura Bush spouse Princess Alice135;Microsoft CEO Steve Jobs188;Watsuki famous Fairly OddParents259;Beckett educ USC208;Israel cont North America127;rugby union created India186;Vorskla Poltava basketball133;Our Mutual Friend Charles Darwin146;Twitter CEO Bernard Arnault275;USA head of state Connachta126;Australia lang Arabic151;Pius XII died Wolverhampton283;Elvis spouse Charles the Bold139;Warhol died Montmélian142;Minogue speaks German157;Wilde died Guangzhou270;Beckham sport cricket303;Hefner famous The Vampyre189;USSR cap Russellville179;post-punk created Canada267;France cap Harare171;C.J.McDonald citizen Romania250;Italy cap Duluth209;Modi citizen Australia217;Heinkel citizen Tang Empire203;T.S.Eliot speaks French197;C.Klapisch citizen Malaysia239;Methodism founder Joseph Goebbels287;Sasanian Empire founder Walter Chrysler264;India cont Africa280;Ford founder Henri Grégoire230;Canadair founded Tucson265;SteamOS ABB Group277;USA lang German295;Dana International Australian hip hop281;Sable citizen Czech Republic299;M.Mantler music post-punk298\n+POOL s0-454; raw in session_search; stored=newest per subj+rel (serials dropped). Kyd born Leeds;WizardEarthsea author PiusXII;LisaLeslie pos goaltender;Chanel founder AndyWarhol;Slovakia fb cricket;AladdinSane perf YvesMontand;duBarry cit GreatBritain;quarterback sp MuayThai;Witcher author T.S.Eliot;wideReceiver sp rugby;BloodOnTheTracks perf LouReed;cricket created Australia;pesapallo created Philippines;pointGuard sp cricket;UK headOfState Mnangagwa;Methodism founder JosephGoebbels;Canadair founded Tucson;France cap Harare;Italy cap Duluth;Modi cit Australia;T.S.Eliot speaks French;DanaIntl music AusHipHop;Elvis m CharlesTheBold;Minogue speaks German;OurMutualFriend author CharlesDarwin;CoPeopleCommissars head TonyBlair;RobertParish pos quarterback;AndrewCarnegie cit UnitedKingdom;rapRock created RussianEmpire;ABBGroup CEO BernardArnault;Hermione perf KylieMinogue;SketchesByBoz author SigmundFreud;Malaysia cont Antarctica;RoyRogers m JohnMcVie;WilhelmII educ BaldwinWallace;ThomasArne born Bengaluru;SophiaHawthorne m JoanDidion;cornerback sp fieldHockey;SovietUnion headOfState ElizabethII;AdalbertOfPrague rel atheism;TransMed founder AdalbertOfPrague;BernardArnault cit France;Madonna dir NarendraModi;BBC dir NarendraModi;CharlesTheBold cit France;TonyBlair m AlanJayLerner;AlanJayLerner died Mansourah;MarriageOfFigaro author ThomasKyd;EmmaWatson speaks English;CharlesDickens died GadsHillPlace;SidereusNuncius author SamuelBeckett;JosephGoebbels worked Berlin;JohnMcVie music rapRock;baseball created Japan;NewFirm sp baseball;assocFootball created Italy;goalkeeper sp assocFootball;midfielder sp assocFootball;basketball created SovietUnion;SurreySC sp basketball;splitFingerFB sp cricket;ABC dir ErnstHeinkel;666ParkAve broadcaster ABC;FreeAsABird perf TheBeatles;TheBeatles dir JoeHockey;AP1000 producedBy Canadair;BillFrisell educ UnivArts;UnivArts HQ Philadelphia;ElenaCeausescu educ UnivBucharest;UnivBucharest HQ Ankara;LouReed educ Fordham;CharlesDarwin m AmalaPaul;USA gov DonaldTrump;France cont Europe;placekicker sp rugby;BlairWalsh pos placekicker;CongolesePL chair StephenMcNeil;StephenMcNeil field journalist;MosheKahlon field soldier"
+      }
+    ],
+    "write_calls": [
+      {
+        "id": "call_00_m2O3xOxtkalV61GU2rCQ5464",
+        "call_id": "call_00_m2O3xOxtkalV61GU2rCQ5464",
+        "response_item_id": "fc_00_m2O3xOxtkalV61GU2rCQ5464",
+        "type": "function",
+        "function": {
+          "name": "memory",
+          "arguments": "{\"target\": \"memory\", \"operations\": [{\"action\": \"replace\", \"old_text\": \"POOL s0-308; raw text in session_search\", \"content\": \"POOL s0-454; raw in session_search; stored=newest per subj+rel (serials dropped). Kyd born Leeds;WizardEarthsea author PiusXII;LisaLeslie pos goaltender;Chanel founder AndyWarhol;Slovakia fb cricket;AladdinSane perf YvesMontand;duBarry cit GreatBritain;quarterback sp MuayThai;Witcher author T.S.Eliot;wideReceiver sp rugby;BloodOnTheTracks perf LouReed;cricket created Australia;pesapallo created Philippines;pointGuard sp cricket;UK headOfState EmmersonMnangagwa;Methodism founder JosephGoebbels;Canadair founded Tucson;France cap Harare;Italy cap Duluth;Modi cit Australia;T.S.Eliot speaks French;DanaIntl music AusHipHop;Hefner fam TheVampyre;Elvis m CharlesTheBold;Minogue speaks German;OurMutualFriend author CharlesDarwin;BirthOfTragedy author StephenCrane;CoPeopleCommissars head TonyBlair;RobertParish pos quarterback;AndrewCarnegie cit UnitedKingdom;rapRock created RussianEmpire;ABBGroup CEO BernardArnault;Hermione perf KylieMinogue;SketchesByBoz author SigmundFreud;Malaysia cont Antarctica;RoyRogers m JohnMcVie;WilhelmII educ BaldwinWallace;ThomasArne born Bengaluru;SophiaHawthorne m JoanDidion;cornerback sp fieldHockey;SovietUnion headOfState ElizabethII;AdalbertOfPrague rel atheism;TransMed founder AdalbertOfPrague;BernardArnault cit France;Madonna dir NarendraModi;BBC dir NarendraModi;CharlesTheBold cit France;TonyBlair m AlanJayLerner;AlanJayLerner died Mansourah;MarriageOfFigaro author ThomasKyd;EmmaWatson speaks English;CharlesDickens died GadsHillPlace;SidereusNuncius author SamuelBeckett;JosephGoebbels worked Berlin;JohnMcVie music rapRock;baseball created Japan;NewFirm sp baseball;assocFootball created Italy;goalkeeper sp assocFootball;midfielder sp assocFootball;basketball created SovietUnion;SurreySC sp basketball;splitFingerFB sp cricket;ABC dir ErnstHeinkel;666ParkAve broadcaster ABC;FreeAsABird perf TheBeatles;TheBeatles dir JoeHockey;AP1000 producedBy Canadair;BillFrisell educ UnivArts;UnivArts HQ Philadelphia;ElenaCeausescu educ UnivBucharest;UnivBucharest HQ Ankara;LouReed educ Fordham;CharlesDarwin m AmalaPaul;USA gov DonaldTrump;France cont Europe;placekicker sp rugby;BlairWalsh pos placekicker;CongolesePL chair StephenMcNeil;StephenMcNeil field journalist;MosheKahlon field soldier\"}]}"
+        }
+      },
+      {
+        "id": "call_00_LDwRvzijlSZH50R4Mtwa7182",
+        "call_id": "call_00_LDwRvzijlSZH50R4Mtwa7182",
+        "response_item_id": "fc_00_LDwRvzijlSZH50R4Mtwa7182",
+        "type": "function",
+        "function": {
+          "name": "memory",
+          "arguments": "{\"operations\": [{\"action\": \"replace\", \"content\": \"POOL s0-454; raw in session_search; stored=newest per subj+rel (serials dropped). Kyd born Leeds;WizardEarthsea author PiusXII;LisaLeslie pos goaltender;Chanel founder AndyWarhol;Slovakia fb cricket;AladdinSane perf YvesMontand;duBarry cit GreatBritain;quarterback sp MuayThai;Witcher author T.S.Eliot;wideReceiver sp rugby;BloodOnTheTracks perf LouReed;cricket created Australia;pesapallo created Philippines;pointGuard sp cricket;UK headOfState Mnangagwa;Methodism founder JosephGoebbels;Canadair founded Tucson;France cap Harare;Italy cap Duluth;Modi cit Australia;T.S.Eliot speaks French;DanaIntl music AusHipHop;Elvis m CharlesTheBold;Minogue speaks German;OurMutualFriend author CharlesDarwin;CoPeopleCommissars head TonyBlair;RobertParish pos quarterback;AndrewCarnegie cit UnitedKingdom;rapRock created RussianEmpire;ABBGroup CEO BernardArnault;Hermione perf KylieMinogue;SketchesByBoz author SigmundFreud;Malaysia cont Antarctica;RoyRogers m JohnMcVie;WilhelmII educ BaldwinWallace;ThomasArne born Bengaluru;SophiaHawthorne m JoanDidion;cornerback sp fieldHockey;SovietUnion headOfState ElizabethII;AdalbertOfPrague rel atheism;TransMed founder AdalbertOfPrague;BernardArnault cit France;Madonna dir NarendraModi;BBC dir NarendraModi;CharlesTheBold cit France;TonyBlair m AlanJayLerner;AlanJayLerner died Mansourah;MarriageOfFigaro author ThomasKyd;EmmaWatson speaks English;CharlesDickens died GadsHillPlace;SidereusNuncius author SamuelBeckett;JosephGoebbels worked Berlin;JohnMcVie music rapRock;baseball created Japan;NewFirm sp baseball;assocFootball created Italy;goalkeeper sp assocFootball;midfielder sp assocFootball;basketball created SovietUnion;SurreySC sp basketball;splitFingerFB sp cricket;ABC dir ErnstHeinkel;666ParkAve broadcaster ABC;FreeAsABird perf TheBeatles;TheBeatles dir JoeHockey;AP1000 producedBy Canadair;BillFrisell educ UnivArts;UnivArts HQ Philadelphia;ElenaCeausescu educ UnivBucharest;UnivBucharest HQ Ankara;LouReed educ Fordham;CharlesDarwin m AmalaPaul;USA gov DonaldTrump;France cont Europe;placekicker sp rugby;BlairWalsh pos placekicker;CongolesePL chair StephenMcNeil;StephenMcNeil field journalist;MosheKahlon field soldier\", \"old_text\": \"POOL s0-308; raw text in session_search\"}], \"target\": \"memory\"}"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "mab-ds-write2-index-matched-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "mab-ds-write1-r1",
+    "source_task_explicit_write": true,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "MEMORY.md",
+        "diff": "--- before/MEMORY.md\n\n+++ after/MEMORY.md\n\n@@ -1 +1 @@\n\n-POOL s0-308; raw text in session_search. Conflicts, newest serial wins: Kyd born Leeds306;Fatah chair Moshe Kahlon232;Hines Ward cornerback36;Bengaluru cont Oceania234;Wizard of Earthsea author Pius XII301;UC Berkeley HQ Botevgrad114;Apple CEO Vijay Mallya201;Lisa Leslie goaltender169;Chanel founder Andy Warhol34;Slovakia fb cricket279;Shingon Buddhism founder William Waynflete304;Tang Empire cap Beaumont177;Aladdin Sane perf Yves Montand285;du Barry citizen Great Britain123;PIA founded Sweden205;quarterback sport Muay Thai50;Witcher author T.S.Eliot305;Zappa died Berlin51;Filoni emp BBC226;Grégoire citizen India225;Christianity founded Taipei43;wide receiver sport rugby252;Israel founder Philippe Duke of Orléans49;Blood on the Tracks Lou Reed181;cricket created Australia150;pesäpallo created Philippines261;W.Chrysler child Charles Frederick231;Yves Montand spouse Natalie Portman233;point guard sport cricket219;Kingdom of Ireland Zoroastrianism260;Rocket Man Ayumi Hamasaki229;Australia cont South America220;Birth of Tragedy Stephen Crane77;UK head of state Emmerson Mnangagwa249;Harvard chair Peter Diamandis222;Laura Bush spouse Princess Alice135;Microsoft CEO Steve Jobs188;Watsuki famous Fairly OddParents259;Beckett educ USC208;Israel cont North America127;rugby union created India186;Vorskla Poltava basketball133;Our Mutual Friend Charles Darwin146;Twitter CEO Bernard Arnault275;USA head of state Connachta126;Australia lang Arabic151;Pius XII died Wolverhampton283;Elvis spouse Charles the Bold139;Warhol died Montmélian142;Minogue speaks German157;Wilde died Guangzhou270;Beckham sport cricket303;Hefner famous The Vampyre189;USSR cap Russellville179;post-punk created Canada267;France cap Harare171;C.J.McDonald citizen Romania250;Italy cap Duluth209;Modi citizen Australia217;Heinkel citizen Tang Empire203;T.S.Eliot speaks French197;C.Klapisch citizen Malaysia239;Methodism founder Joseph Goebbels287;Sasanian Empire founder Walter Chrysler264;India cont Africa280;Ford founder Henri Grégoire230;Canadair founded Tucson265;SteamOS ABB Group277;USA lang German295;Dana International Australian hip hop281;Sable citizen Czech Republic299;M.Mantler music post-punk298\n+POOL: synthetic knowledge benchmark, covered serial range s0-454. Rule: a larger serial overrides an older conflicting fact on the same subject+relation; resolve each hop of a multi-hop question separately at the newest fact. Complete raw pool text is located via session_search and the workspace history/ directory. Navigation index only — never enumerate facts here."
+      }
+    ],
+    "write_calls": [
+      {
+        "id": "call_00_wd89AdxTuAzIYHf4ElCd2571",
+        "call_id": "call_00_wd89AdxTuAzIYHf4ElCd2571",
+        "response_item_id": "fc_00_wd89AdxTuAzIYHf4ElCd2571",
+        "type": "function",
+        "function": {
+          "name": "memory",
+          "arguments": "{\"target\": \"memory\", \"operations\": [{\"action\": \"replace\", \"old_text\": \"POOL s0-308\", \"content\": \"POOL: synthetic knowledge benchmark, covered serial range s0-454. Rule: a larger serial overrides an older conflicting fact on the same subject+relation; resolve each hop of a multi-hop question separately at the newest fact. Complete raw pool text is located via session_search and the workspace history/ directory. Navigation index only \\u2014 never enumerate facts here.\"}]}"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "mab-ds-write2-index-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "mab-ds-write1-index-r1",
+    "source_task_explicit_write": true,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "MEMORY.md",
+        "diff": "--- before/MEMORY.md\n\n+++ after/MEMORY.md\n\n@@ -1 +1 @@\n\n-Synthetic knowledge-pool benchmark in this workspace. Pool = serial-numbered facts 0–308. Rule: larger serial is newer and overrides older conflicting facts on the same subject+relation; for multi-hop questions resolve the newest fact afresh at each hop. Answer only from the pool. Full source preserved verbatim: raw archives in the workspace history/ directory (read_file/search_files).\n+Synthetic knowledge-pool benchmark in this workspace. Pool = serial-numbered facts 0–454. Rule: larger serial is newer and overrides older conflicting facts on the same subject+relation; for multi-hop questions resolve the newest fact afresh at each hop. Answer only from the pool, never real-world knowledge. Full source preserved verbatim: raw archives in the workspace history/ directory (read_file/search_files)."
+      }
+    ],
+    "write_calls": [
+      {
+        "id": "call_00_FxzXjWwUzuttow2yAH0W1741",
+        "call_id": "call_00_FxzXjWwUzuttow2yAH0W1741",
+        "response_item_id": "fc_00_FxzXjWwUzuttow2yAH0W1741",
+        "type": "function",
+        "function": {
+          "name": "memory",
+          "arguments": "{\"target\": \"memory\", \"action\": \"replace\", \"old_text\": \"Synthetic knowledge-pool benchmark\", \"content\": \"Synthetic knowledge-pool benchmark in this workspace. Pool = serial-numbered facts 0\\u2013454. Rule: larger serial is newer and overrides older conflicting facts on the same subject+relation; for multi-hop questions resolve the newest fact afresh at each hop. Answer only from the pool, never real-world knowledge. Full source preserved verbatim: raw archives in the workspace history/ directory (read_file/search_files).\"}"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "mab-ds-write2-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "mab-ds-write1-r1",
+    "source_task_explicit_write": true,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "mab-ds-write2-wide-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "mab-ds-write1-r1",
+    "source_task_explicit_write": true,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "MEMORY.md",
+        "diff": "--- before/MEMORY.md\n\n+++ after/MEMORY.md\n\n@@ -1 +1,3 @@\n\n-POOL s0-308; raw text in session_search. Conflicts, newest serial wins: Kyd born Leeds306;Fatah chair Moshe Kahlon232;Hines Ward cornerback36;Bengaluru cont Oceania234;Wizard of Earthsea author Pius XII301;UC Berkeley HQ Botevgrad114;Apple CEO Vijay Mallya201;Lisa Leslie goaltender169;Chanel founder Andy Warhol34;Slovakia fb cricket279;Shingon Buddhism founder William Waynflete304;Tang Empire cap Beaumont177;Aladdin Sane perf Yves Montand285;du Barry citizen Great Britain123;PIA founded Sweden205;quarterback sport Muay Thai50;Witcher author T.S.Eliot305;Zappa died Berlin51;Filoni emp BBC226;Grégoire citizen India225;Christianity founded Taipei43;wide receiver sport rugby252;Israel founder Philippe Duke of Orléans49;Blood on the Tracks Lou Reed181;cricket created Australia150;pesäpallo created Philippines261;W.Chrysler child Charles Frederick231;Yves Montand spouse Natalie Portman233;point guard sport cricket219;Kingdom of Ireland Zoroastrianism260;Rocket Man Ayumi Hamasaki229;Australia cont South America220;Birth of Tragedy Stephen Crane77;UK head of state Emmerson Mnangagwa249;Harvard chair Peter Diamandis222;Laura Bush spouse Princess Alice135;Microsoft CEO Steve Jobs188;Watsuki famous Fairly OddParents259;Beckett educ USC208;Israel cont North America127;rugby union created India186;Vorskla Poltava basketball133;Our Mutual Friend Charles Darwin146;Twitter CEO Bernard Arnault275;USA head of state Connachta126;Australia lang Arabic151;Pius XII died Wolverhampton283;Elvis spouse Charles the Bold139;Warhol died Montmélian142;Minogue speaks German157;Wilde died Guangzhou270;Beckham sport cricket303;Hefner famous The Vampyre189;USSR cap Russellville179;post-punk created Canada267;France cap Harare171;C.J.McDonald citizen Romania250;Italy cap Duluth209;Modi citizen Australia217;Heinkel citizen Tang Empire203;T.S.Eliot speaks French197;C.Klapisch citizen Malaysia239;Methodism founder Joseph Goebbels287;Sasanian Empire founder Walter Chrysler264;India cont Africa280;Ford founder Henri Grégoire230;Canadair founded Tucson265;SteamOS ABB Group277;USA lang German295;Dana International Australian hip hop281;Sable citizen Czech Republic299;M.Mantler music post-punk298\n+POOL s0-454;raw in session_search;largest serial wins/subj+rel. Codes: cit ctz, sp sport, ct cont, lg lang, rel religion, fdr founder, au author/creator, pf performed, ci created-in, hq, ce CEO, dir director, po position, hs head-of-state, hg head-of-gov, b born, d died.\n+OLD: TangEmpire capBeaumont177;USSRcap Russellville179;Francecap Harare171;Italycap Duluth209;Bengaluru ctOceania234;Australia ctSAmerica220;Israel ctNAmerica127;India ctAfrica280;Australia lgArabic151;USA lgGerman295;TSEliot lgFrench197;UKhs EmmersonMnangagwa249;USAhs Connachta126;Apple ceVijayMallya201;Microsoft ceSteveJobs188;Twitter ceBernardArnault275;quarterback spMuayThai50;wideReceiver spRugby252;pointGuard spCricket219;HinesWard cornerback36;LisaLeslie goaltender169;Beckham spCricket303;YMontand spouseNPortman233;LauraBush spousePrincessAlice135;Elvis spouseCharlesBold139;Earthsea auPiusXII301;Witcher auTSEliot305;Christianity fdrTaipei43;Methodism fdrJosephGoebbels287;Sasanian fdrWalterChrysler264;Ford fdrHenriGregoire230;ShingonBuddhism fdrWWaynflete304;PIA fdrSweden205;post-punk ciCanada267;cricket ciAustralia150;pesapallo ciPhilippines261;Zappa dBerlin51;PiusXII dWolverhampton283;duBarry citGreatBritain123;Gregoire citIndia225;Modi citAustralia217;UCBerkeley HQBotevgrad114;Chanel fdrAndyWarhol34\n+NEW: COP-CouncilGov hgTonyBlair351;USSRhs ElizabethII365;RobertParish poQuarterback334;Carnegie citUK367;ThomasArne bBengaluru366;ABBGroup ceBernardArnault408;WilhelmII edBaldwinWallace453;cornerback spFieldHockey362;rapRock ciRussianEmpire403;Malaysia ctAntarctica442;SophiaHawthorne spouseJoanDidion420;HermioneGranger pfKylieMinogue425;RoyRogers spouseJohnMcVie452;midfielder spSumo416;SketchesbyBoz auSigmundFreud430;Frisell edUnivofArts309;Beaumarchais bParis316;BacktoBlack pfFrankZappa318;Arnault citFrance319;RandalThor auFerdowsi326;VijayMallya citPapalStates329;Maharishi relHinduism331;India capGrosseto341;basketball ciUSSR348;CocoChanel dParis352;Madonna dirNarendraModi354;AP1000 ciCanadair356;CharlieHebdo ciItaly358;EltonJohn citUK381;baseball ciJapan382;Moscow lgGerman383;France ctEurope429;USAgov hgDonaldTrump432;goalkeeper spAssocFootball437;Ilyushin hqMoscow314"
+      }
+    ],
+    "write_calls": [
+      {
+        "id": "call_00_NvA5bieXMpXj3w7ybk211843",
+        "call_id": "call_00_NvA5bieXMpXj3w7ybk211843",
+        "response_item_id": "fc_00_NvA5bieXMpXj3w7ybk211843",
+        "type": "function",
+        "function": {
+          "name": "memory",
+          "arguments": "{\"operations\": [{\"action\": \"replace\", \"content\": \"POOL s0-454;raw in session_search;largest serial wins/subj+rel. Codes: cit ctz, sp sport, ct cont, lg lang, rel religion, fdr founder, au author/creator, pf performed, ci created-in, hq, ce CEO, dir director, po position, hs head-of-state, hg head-of-gov, b born, d died.\\nOLD: TangEmpire capBeaumont177;USSRcap Russellville179;Francecap Harare171;Italycap Duluth209;Bengaluru ctOceania234;Australia ctSAmerica220;Israel ctNAmerica127;India ctAfrica280;Australia lgArabic151;USA lgGerman295;TSEliot lgFrench197;UKhs EmmersonMnangagwa249;USAhs Connachta126;Apple ceVijayMallya201;Microsoft ceSteveJobs188;Twitter ceBernardArnault275;quarterback spMuayThai50;wideReceiver spRugby252;pointGuard spCricket219;HinesWard cornerback36;LisaLeslie goaltender169;Beckham spCricket303;YMontand spouseNPortman233;LauraBush spousePrincessAlice135;Elvis spouseCharlesBold139;Earthsea auPiusXII301;Witcher auTSEliot305;Christianity fdrTaipei43;Methodism fdrJosephGoebbels287;Sasanian fdrWalterChrysler264;Ford fdrHenriGregoire230;ShingonBuddhism fdrWWaynflete304;PIA fdrSweden205;post-punk ciCanada267;cricket ciAustralia150;pesapallo ciPhilippines261;Zappa dBerlin51;PiusXII dWolverhampton283;duBarry citGreatBritain123;Gregoire citIndia225;Modi citAustralia217;UCBerkeley HQBotevgrad114;Chanel fdrAndyWarhol34;Warhol dMontmelian142\\nNEW: COP-CouncilGov hgTonyBlair351;USSRhs ElizabethII365;RobertParish poQuarterback334;Carnegie citUK367;ThomasArne bBengaluru366;ABBGroup ceBernardArnault408;WilhelmII edBaldwinWallace453;cornerback spFieldHockey362;rapRock ciRussianEmpire403;Malaysia ctAntarctica442;SophiaHawthorne spouseJoanDidion420;HermioneGranger pfKylieMinogue425;RoyRogers spouseJohnMcVie452;midfielder spSumo416;SketchesbyBoz auSigmundFreud430;Frisell edUnivofArts309;Beaumarchais bParis316;BacktoBlack pfFrankZappa318;Arnault citFrance319;RandalThor auFerdowsi326;VijayMallya citPapalStates329;Maharishi relHinduism331;India capGrosseto341;basketball ciUSSR348;CocoChanel dParis352;Madonna dirNarendraModi354;AP1000 ciCanadair356;CharlieHebdo ciItaly358;EltonJohn citUK381;baseball ciJapan382;Moscow lgGerman383;France ctEurope429;USAgov hgDonaldTrump432;goalkeeper spAssocFootball437;Ilyushin hqMoscow314;Messier citIran343\", \"old_text\": \"POOL s0-308\"}], \"target\": \"memory\"}"
+        }
+      },
+      {
+        "id": "call_00_if0xmouKyaN0LqoRS7QK9076",
+        "call_id": "call_00_if0xmouKyaN0LqoRS7QK9076",
+        "response_item_id": "fc_00_if0xmouKyaN0LqoRS7QK9076",
+        "type": "function",
+        "function": {
+          "name": "memory",
+          "arguments": "{\"operations\": [{\"action\": \"replace\", \"content\": \"POOL s0-454;raw in session_search;largest serial wins/subj+rel. Codes: cit ctz, sp sport, ct cont, lg lang, rel religion, fdr founder, au author/creator, pf performed, ci created-in, hq, ce CEO, dir director, po position, hs head-of-state, hg head-of-gov, b born, d died.\\nOLD: TangEmpire capBeaumont177;USSRcap Russellville179;Francecap Harare171;Italycap Duluth209;Bengaluru ctOceania234;Australia ctSAmerica220;Israel ctNAmerica127;India ctAfrica280;Australia lgArabic151;USA lgGerman295;TSEliot lgFrench197;UKhs EmmersonMnangagwa249;USAhs Connachta126;Apple ceVijayMallya201;Microsoft ceSteveJobs188;Twitter ceBernardArnault275;quarterback spMuayThai50;wideReceiver spRugby252;pointGuard spCricket219;HinesWard cornerback36;LisaLeslie goaltender169;Beckham spCricket303;YMontand spouseNPortman233;LauraBush spousePrincessAlice135;Elvis spouseCharlesBold139;Earthsea auPiusXII301;Witcher auTSEliot305;Christianity fdrTaipei43;Methodism fdrJosephGoebbels287;Sasanian fdrWalterChrysler264;Ford fdrHenriGregoire230;ShingonBuddhism fdrWWaynflete304;PIA fdrSweden205;post-punk ciCanada267;cricket ciAustralia150;pesapallo ciPhilippines261;Zappa dBerlin51;PiusXII dWolverhampton283;duBarry citGreatBritain123;Gregoire citIndia225;Modi citAustralia217;UCBerkeley HQBotevgrad114;Chanel fdrAndyWarhol34\\nNEW: COP-CouncilGov hgTonyBlair351;USSRhs ElizabethII365;RobertParish poQuarterback334;Carnegie citUK367;ThomasArne bBengaluru366;ABBGroup ceBernardArnault408;WilhelmII edBaldwinWallace453;cornerback spFieldHockey362;rapRock ciRussianEmpire403;Malaysia ctAntarctica442;SophiaHawthorne spouseJoanDidion420;HermioneGranger pfKylieMinogue425;RoyRogers spouseJohnMcVie452;midfielder spSumo416;SketchesbyBoz auSigmundFreud430;Frisell edUnivofArts309;Beaumarchais bParis316;BacktoBlack pfFrankZappa318;Arnault citFrance319;RandalThor auFerdowsi326;VijayMallya citPapalStates329;Maharishi relHinduism331;India capGrosseto341;basketball ciUSSR348;CocoChanel dParis352;Madonna dirNarendraModi354;AP1000 ciCanadair356;CharlieHebdo ciItaly358;EltonJohn citUK381;baseball ciJapan382;Moscow lgGerman383;France ctEurope429;USAgov hgDonaldTrump432;goalkeeper spAssocFootball437;Ilyushin hqMoscow314\", \"old_text\": \"POOL s0-308\"}], \"target\": \"memory\"}"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "mab-glm-write2-wide-r1",
+    "agent": "Hermes 07ab19b0",
+    "protocol": "longmemeval-oracle-hermes-v1",
+    "memory_from": "mab-ds-write1-r1",
+    "source_task_explicit_write": true,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "MEMORY.md",
+        "diff": "--- before/MEMORY.md\n\n+++ after/MEMORY.md\n\n@@ -1 +1 @@\n\n-POOL s0-308; raw text in session_search. Conflicts, newest serial wins: Kyd born Leeds306;Fatah chair Moshe Kahlon232;Hines Ward cornerback36;Bengaluru cont Oceania234;Wizard of Earthsea author Pius XII301;UC Berkeley HQ Botevgrad114;Apple CEO Vijay Mallya201;Lisa Leslie goaltender169;Chanel founder Andy Warhol34;Slovakia fb cricket279;Shingon Buddhism founder William Waynflete304;Tang Empire cap Beaumont177;Aladdin Sane perf Yves Montand285;du Barry citizen Great Britain123;PIA founded Sweden205;quarterback sport Muay Thai50;Witcher author T.S.Eliot305;Zappa died Berlin51;Filoni emp BBC226;Grégoire citizen India225;Christianity founded Taipei43;wide receiver sport rugby252;Israel founder Philippe Duke of Orléans49;Blood on the Tracks Lou Reed181;cricket created Australia150;pesäpallo created Philippines261;W.Chrysler child Charles Frederick231;Yves Montand spouse Natalie Portman233;point guard sport cricket219;Kingdom of Ireland Zoroastrianism260;Rocket Man Ayumi Hamasaki229;Australia cont South America220;Birth of Tragedy Stephen Crane77;UK head of state Emmerson Mnangagwa249;Harvard chair Peter Diamandis222;Laura Bush spouse Princess Alice135;Microsoft CEO Steve Jobs188;Watsuki famous Fairly OddParents259;Beckett educ USC208;Israel cont North America127;rugby union created India186;Vorskla Poltava basketball133;Our Mutual Friend Charles Darwin146;Twitter CEO Bernard Arnault275;USA head of state Connachta126;Australia lang Arabic151;Pius XII died Wolverhampton283;Elvis spouse Charles the Bold139;Warhol died Montmélian142;Minogue speaks German157;Wilde died Guangzhou270;Beckham sport cricket303;Hefner famous The Vampyre189;USSR cap Russellville179;post-punk created Canada267;France cap Harare171;C.J.McDonald citizen Romania250;Italy cap Duluth209;Modi citizen Australia217;Heinkel citizen Tang Empire203;T.S.Eliot speaks French197;C.Klapisch citizen Malaysia239;Methodism founder Joseph Goebbels287;Sasanian Empire founder Walter Chrysler264;India cont Africa280;Ford founder Henri Grégoire230;Canadair founded Tucson265;SteamOS ABB Group277;USA lang German295;Dana International Australian hip hop281;Sable citizen Czech Republic299;M.Mantler music post-punk298\n+POOL s1-454 (raw via session_search); newest serial wins per subject+relation. s309-454 latest: cornerback=field hockey362; midfielder=sumo416; SketchesBoz author=Freud430; WilhelmII edu BaldwinWallace453; ABB CEO=Arnault408; Carnegie cit UK367; raprock cr RussianEmpire403; Hermione=Minogue425; SophiaHaw m.JoanDidion420; Malaysia cont Antarctica442; RoyRogers m.McVie452; CPC head=Blair351 (Lenin324, m.Krupskaya422); USSR head=ElizII365; India cap Grosseto341; Australia cap Oderzo388; France cont Europe429; Italy gov=Conte375; USA gov=Trump432, cap Harrisville396; Tucson head=Rothschild454; UK+England cap London377/378; Arne born Bengaluru366; Parish QB334; Darwin m.AmalaPaul(cit Belgium322); BucharestUniv HQ Ankara409; UArts HQ Phila387 (Phila founded Penn421); Moscow lang German383; Japan lang Swedish439; Canada cont Asia440; Germany cont Africa435; baseball cr Japan382; bball cr USSR348; assocfb cr Italy389; LockheedCEO Hewson379; BoeingCEO al-Jubeir393; ABC dir Heinkel392; BBC dir Modi428; Beatles dir Hockey443; Madonna dir Modi354; AP1000=Canadair356; TM founded=Adalbert360 (atheist339); Buddhism=Morauta370; Back2Black=Zappa318; BornUSA=DanaIntl337; FreeBird=Beatles350; PastMasters=Madonna364; VitoCorleone=Watsuki390; Sidereus=Beckett401; StarshipT=duMaurier344; MarriageFigaro=Kyd398; Shahnameh Persian391; Vampyre German426; Zarathustra Germany345; Keats d.Leipzig372; Lerner d.Mansourah394; Romania cap Rajanpur449; OlgaKiev d.Rodez450; Story→Harvard431; F22=Boeing384; FSeries=Ford400; CharlieHebdo Italy358, Crane famous it423; McVie raprock415; EmmaW English402; SurreyCup bball315; TunisiaNT bball418; NewFirm+AltaIF baseball376/446; Ceni flanker434; Iman Islam357; NP interdenom410; KarenArm CofScotland412; placekicker=rugby321 (Walsh419); goaltender=pesäpallo310"
+      }
+    ],
+    "write_calls": [
+      {
+        "id": "call_96aacb575500482a832768c7",
+        "call_id": "call_96aacb575500482a832768c7",
+        "response_item_id": "fc_96aacb575500482a832768c7",
+        "type": "function",
+        "function": {
+          "name": "memory",
+          "arguments": "{\"operations\": [{\"action\": \"replace\", \"content\": \"POOL s1-454 (raw via session_search); newest serial wins per subject+relation. s309-454 latest: cornerback=field hockey362; midfielder=sumo416; SketchesBoz author=Freud430; WilhelmII edu BaldwinWallace453; ABB CEO=Arnault408; Carnegie cit UK367; raprock cr RussianEmpire403; Hermione=Minogue425; SophiaHaw m.JoanDidion420; Malaysia cont Antarctica442; RoyRogers m.McVie452; CPC head=Blair351 (Lenin324, m.Krupskaya422); USSR head=ElizII365; India cap Grosseto341; Australia cap Oderzo388; France cont Europe429; Italy gov=Conte375; USA gov=Trump432, cap Harrisville396; Tucson head=Rothschild454; UK+England cap London377/378; Arne born Bengaluru366; Parish QB334; Darwin m.AmalaPaul(cit Belgium322); BucharestUniv HQ Ankara409; UArts HQ Phila387 (Phila founded Penn421); Moscow lang German383; Japan lang Swedish439; Canada cont Asia440; Germany cont Africa435; baseball cr Japan382; bball cr USSR348; assocfb cr Italy389; LockheedCEO Hewson379; BoeingCEO al-Jubeir393; ABC dir Heinkel392; BBC dir Modi428; Beatles dir Hockey443; Madonna dir Modi354; AP1000=Canadair356; TM founded=Adalbert360 (atheist339); Buddhism=Morauta370; Back2Black=Zappa318; BornUSA=DanaIntl337; FreeBird=Beatles350; PastMasters=Madonna364; VitoCorleone=Watsuki390; Sidereus=Beckett401; StarshipT=duMaurier344; MarriageFigaro=Kyd398; Shahnameh Persian391; Vampyre German426; Zarathustra Germany345; Keats d.Leipzig372; Lerner d.Mansourah394; Romania cap Rajanpur449; OlgaKiev d.Rodez450; Story\\u2192Harvard431; F22=Boeing384; FSeries=Ford400; CharlieHebdo Italy358, Crane famous it423; McVie raprock415; EmmaW English402; SurreyCup bball315; TunisiaNT bball418; NewFirm+AltaIF baseball376/446; Ceni flanker434; Iman Islam357; NP interdenom410; KarenArm CofScotland412; placekicker=rugby321 (Walsh419); goaltender=pes\\u00e4pallo310\", \"old_text\": \"POOL s0-308\", \"new_text\": \"POOL s1-454 (raw via session_search); newest serial wins per subject+relation. s309-454 latest: cornerback=field hockey362; midfielder=sumo416; SketchesBoz author=Freud430; WilhelmII edu BaldwinWallace453; ABB CEO=Arnault408; Carnegie cit UK367; raprock cr RussianEmpire403; Hermione=Minogue425; SophiaHaw m.JoanDidion420; Malaysia cont Antarctica442; RoyRogers m.McVie452; CPC head=Blair351 (Lenin324, m.Krupskaya422); USSR head=ElizII365; India cap Grosseto341; Australia cap Oderzo388; France cont Europe429; Italy gov=Conte375; USA gov=Trump432, cap Harrisville396; Tucson head=Rothschild454; UK+England cap London377/378; Arne born Bengaluru366; Parish QB334; Darwin m.AmalaPaul(cit Belgium322); BucharestUniv HQ Ankara409; UArts HQ Phila387 (Phila founded Penn421); Moscow lang German383; Japan lang Swedish439; Canada cont Asia440; Germany cont Africa435; baseball cr Japan382; bball cr USSR348; assocfb cr Italy389; LockheedCEO Hewson379; BoeingCEO al-Jubeir393; ABC dir Heinkel392; BBC dir Modi428; Beatles dir Hockey443; Madonna dir Modi354; AP1000=Canadair356; TM founded=Adalbert360 (atheist339); Buddhism=Morauta370; Back2Black=Zappa318; BornUSA=DanaIntl337; FreeBird=Beatles350; PastMasters=Madonna364; VitoCorleone=Watsuki390; Sidereus=Beckett401; StarshipT=duMaurier344; MarriageFigaro=Kyd398; Shahnameh Persian391; Vampyre German426; Zarathustra Germany345; Keats d.Leipzig372; Lerner d.Mansourah394; Romania cap Rajanpur449; OlgaKiev d.Rodez450; Story\\u2192Harvard431; F22=Boeing384; FSeries=Ford400; CharlieHebdo Italy358, Crane famous it423; McVie raprock415; EmmaW English402; SurreyCup bball315; TunisiaNT bball418; NewFirm+AltaIF baseball376/446; Ceni flanker434; Iman Islam357; NP interdenom410; KarenArm CofScotland412; placekicker=rugby321 (Walsh419); goaltender=pes\\u00e4pallo310\"}], \"target\": \"memory\"}"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "v1-ds-a10-write-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v1",
+    "memory_from": null,
+    "source_task_explicit_write": true,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "MEMORY.md",
+        "diff": "--- before/MEMORY.md\n\n+++ after/MEMORY.md\n\n@@ -0,0 +1,6 @@\n\n+# Memory Index\n+\n+- [environment.md](./environment.md) — SQLite dataset schema, table groups, and the\n+  product-category mapping (g1=Office Products, g2=Electronics, g3=Musical\n+  Instruments). Includes the critical `fdbk_g2.ts` epoch-units caveat (mostly\n+  seconds, 12 millisecond outliers) and the evidence log of queries run."
+      },
+      {
+        "file": "environment.md",
+        "diff": "--- before/environment.md\n\n+++ after/environment.md\n\n@@ -0,0 +1,53 @@\n\n+# Environment & Schema Findings\n+\n+## Scope\n+Read-only SQLite database provided via `mcp__sql__query`. Contains three product\n+datasets (one per product category), each in its own table group `g1` / `g2` / `g3`.\n+Task observed: counting reviews by time window. All facts below were verified by\n+running queries against the live DB; inferences are marked.\n+\n+## Table inventory (verified)\n+12 user tables + `sqlite_sequence`:\n+\n+- Items: `items_g1`, `items_g2`, `items_g3`\n+- Feedback/reviews: `fdbk_g1`, `fdbk_g2`, `fdbk_g3`\n+- Attributes: `attrs_g1`, `attrs_g3` (no `attrs_g2`)\n+- Taxonomy: `taxn_g1`, `taxn_g2` (no `taxn_g3`)\n+- Review stats: `fdbk_stats_g1` (only g1)\n+\n+### Reusable schema facts (verified)\n+- Every group keys items by `ref_id` (TEXT). Reviews (`fdbk_g*`) carry `ref_id`\n+  FK -> `items_g*(ref_id)`, plus `rtg`, `ttl`, `body`, `ts`, `hlp_ct`, `vrf`.\n+- **Timestamp column type differs by group** (important gotcha):\n+  - `fdbk_g1.ts` = INTEGER (epoch seconds)\n+  - `fdbk_g2.ts` = INTEGER (epoch seconds; see mixed-unit note below)\n+  - `fdbk_g3.ts` = TEXT\n+- `vrf` differs: `fdbk_g1.vrf` INTEGER, `fdbk_g2.vrf` TEXT, `fdbk_g3.vrf` INTEGER.\n+- `fdbk_g2` has BOTH `id` and `item_id`/`ref_id`; `fdbk_g3` lacks `item_id`.\n+\n+## Dataset -> category mapping (verified via `items_g*.main_cat` + `str_nm`)\n+- **g1 = Office Products** (dominant `main_cat` \"Office Products\"; brands AT-A-GLANCE,\n+  AVERY, BIC, SHARPIE, PILOT, Paper Mate).\n+- **g2 = Electronics** (dominant `main_cat` values: Computers, All Electronics,\n+  Camera & Photo, Cell Phones & Accessories, Home Audio & Theater).\n+- **g3 = Musical Instruments** (dominant `main_cat` \"Musical Instruments\", 17162 items).\n+\n+## Time-series caveat for `fdbk_g2` (verified)\n+- 77,022 rows total. Timestamps are integer epoch **seconds** for 77,010 rows\n+  (range 1008272539 .. 1679763604 => 2001-12 .. 2023-03).\n+- 12 outlier rows are 12-digit **milliseconds** (951582719000 .. 999482389000\n+  => years 2000-2001). Inference: these are mixed-unit data-entry artifacts;\n+  they do not fall in 2021, so a seconds-based range filter naturally excludes them.\n+- Therefore: when filtering `fdbk_g2` by date, compare against epoch SECONDS and\n+  use `strftime('%Y-%m', ts, 'unixepoch')` / `datetime(ts,'unixepoch')` for bucketing.\n+\n+## Evidence log (queries run)\n+1. Listed `sqlite_master` tables + `CREATE TABLE` SQL.\n+2. Grouped `items_g*.main_cat` counts -> identified dominant category per group.\n+3. Sampled `items_g1.str_nm` -> stationery brands, confirming Office Products.\n+4. `GROUP BY LENGTH(CAST(ts AS TEXT))` on `fdbk_g2` -> exposed mixed seconds/milliseconds.\n+5. Bucketed `fdbk_g2` by month around the target window, then counted the window directly.\n+\n+## Not done / open\n+- No reusable fact confirmed about review-quality or verification semantics of `vrf`.\n+- Did not validate `items_g2.main_cat` NULLs (1304 items) against taxonomy."
+      }
+    ],
+    "write_calls": [
+      {
+        "type": "tool_use",
+        "id": "call_00_0xBWliOOmj43NfLjAeMb2856",
+        "name": "Write",
+        "input": {
+          "file_path": "D:\\campus_re\\experiments\\memory_direction_20261002\\workspaces\\v1-ds-a10-write-r1\\memory\\environment.md",
+          "content": "# Environment & Schema Findings\n\n## Scope\nRead-only SQLite database provided via `mcp__sql__query`. Contains three product\ndatasets (one per product category), each in its own table group `g1` / `g2` / `g3`.\nTask observed: counting reviews by time window. All facts below were verified by\nrunning queries against the live DB; inferences are marked.\n\n## Table inventory (verified)\n12 user tables + `sqlite_sequence`:\n\n- Items: `items_g1`, `items_g2`, `items_g3`\n- Feedback/reviews: `fdbk_g1`, `fdbk_g2`, `fdbk_g3`\n- Attributes: `attrs_g1`, `attrs_g3` (no `attrs_g2`)\n- Taxonomy: `taxn_g1`, `taxn_g2` (no `taxn_g3`)\n- Review stats: `fdbk_stats_g1` (only g1)\n\n### Reusable schema facts (verified)\n- Every group keys items by `ref_id` (TEXT). Reviews (`fdbk_g*`) carry `ref_id`\n  FK -> `items_g*(ref_id)`, plus `rtg`, `ttl`, `body`, `ts`, `hlp_ct`, `vrf`.\n- **Timestamp column type differs by group** (important gotcha):\n  - `fdbk_g1.ts` = INTEGER (epoch seconds)\n  - `fdbk_g2.ts` = INTEGER (epoch seconds; see mixed-unit note below)\n  - `fdbk_g3.ts` = TEXT\n- `vrf` differs: `fdbk_g1.vrf` INTEGER, `fdbk_g2.vrf` TEXT, `fdbk_g3.vrf` INTEGER.\n- `fdbk_g2` has BOTH `id` and `item_id`/`ref_id`; `fdbk_g3` lacks `item_id`.\n\n## Dataset -> category mapping (verified via `items_g*.main_cat` + `str_nm`)\n- **g1 = Office Products** (dominant `main_cat` \"Office Products\"; brands AT-A-GLANCE,\n  AVERY, BIC, SHARPIE, PILOT, Paper Mate).\n- **g2 = Electronics** (dominant `main_cat` values: Computers, All Electronics,\n  Camera & Photo, Cell Phones & Accessories, Home Audio & Theater).\n- **g3 = Musical Instruments** (dominant `main_cat` \"Musical Instruments\", 17162 items).\n\n## Time-series caveat for `fdbk_g2` (verified)\n- 77,022 rows total. Timestamps are integer epoch **seconds** for 77,010 rows\n  (range 1008272539 .. 1679763604 => 2001-12 .. 2023-03).\n- 12 outlier rows are 12-digit **milliseconds** (951582719000 .. 999482389000\n  => years 2000-2001). Inference: these are mixed-unit data-entry artifacts;\n  they do not fall in 2021, so a seconds-based range filter naturally excludes them.\n- Therefore: when filtering `fdbk_g2` by date, compare against epoch SECONDS and\n  use `strftime('%Y-%m', ts, 'unixepoch')` / `datetime(ts,'unixepoch')` for bucketing.\n\n## Evidence log (queries run)\n1. Listed `sqlite_master` tables + `CREATE TABLE` SQL.\n2. Grouped `items_g*.main_cat` counts -> identified dominant category per group.\n3. Sampled `items_g1.str_nm` -> stationery brands, confirming Office Products.\n4. `GROUP BY LENGTH(CAST(ts AS TEXT))` on `fdbk_g2` -> exposed mixed seconds/milliseconds.\n5. Bucketed `fdbk_g2` by month around the target window, then counted the window directly.\n\n## Not done / open\n- No reusable fact confirmed about review-quality or verification semantics of `vrf`.\n- Did not validate `items_g2.main_cat` NULLs (1304 items) against taxonomy.\n"
+        }
+      },
+      {
+        "type": "tool_use",
+        "id": "call_01_ZK0DGh4oUGv5C4kK78Um9558",
+        "name": "Write",
+        "input": {
+          "file_path": "D:\\campus_re\\experiments\\memory_direction_20261002\\workspaces\\v1-ds-a10-write-r1\\memory\\MEMORY.md",
+          "content": "# Memory Index\n\n- [environment.md](./environment.md) — SQLite dataset schema, table groups, and the\n  product-category mapping (g1=Office Products, g2=Electronics, g3=Musical\n  Instruments). Includes the critical `fdbk_g2.ts` epoch-units caveat (mostly\n  seconds, 12 millisecond outliers) and the evidence log of queries run.\n"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "v1-ds-a11-write-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v1",
+    "memory_from": null,
+    "source_task_explicit_write": true,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "MEMORY.md",
+        "diff": "--- before/MEMORY.md\n\n+++ after/MEMORY.md\n\n@@ -0,0 +1,6 @@\n\n+# MEMORY.md — Index\n+\n+- [environment.md](environment.md) — SQLite product-review DB: table layout (`items_gN`,\n+  `fdbk_gN`, `attrs/taxn`), category->group mapping (g1=Office, g2=Electronics,\n+  g3=Musical Instruments, INFERRED from dominant `main_cat`), price encoding\n+  (`prc`=cents, `prc_usd`=dollars; verified equal), join/`rtg`/`body` data-quality facts."
+      },
+      {
+        "file": "environment.md",
+        "diff": "--- before/environment.md\n\n+++ after/environment.md\n\n@@ -0,0 +1,55 @@\n\n+# environment.md — Reusable findings from the SQLite product-review database\n+\n+## Scope\n+Read-only SQLite DB exposed only via the `query` tool. Contains three 20,000-row product\n+datasets, each with its own `*_gN` table set. Task context: office products, electronics,\n+musical instruments. This note records schema/join/encoding facts reusable for any future\n+query; it deliberately EXCLUDES the numerical answer to the current request.\n+\n+## Table layout (verified via sqlite_master)\n+- Group tables: `items_g1/2/3`, `fdbk_g1/2/3`, plus `attrs_g1`, `attrs_g3`,\n+  `taxn_g1`, `taxn_g2`, `fdbk_stats_g1`.\n+- `items_gN`: `ref_id` (PK), `ttl`, `avg_rtg`, `rtg_ct`, `prc`, `str_nm`, `main_cat`,\n+  and per-group extras:\n+  - g1: `avg_rtg_30d`, `desc_txt`, `feat_lst`\n+  - g2: `prc INTEGER`, `prc_usd REAL`, `feat_lst`, `img_ct`\n+  - g3: `desc_txt` (no `prc_usd`)\n+- `fdbk_gN`: review rows keyed by `ref_id` (FK -> items_gN). Columns `id`, `ref_id`,\n+  `uid`, `rtg REAL`, `ttl`, `body`, `ts`, `hlp_ct`, `vrf`.\n+  - g1 additionally has `item_id`; g2 has `item_id` and `vrf TEXT`; g3 has no `item_id`\n+    and `ts TEXT`. => schema is NOT identical across groups; alias per group.\n+\n+## Category -> group mapping (INFERRED from dominant `main_cat`, high confidence)\n+`main_cat` is a multi-valued subcategory field (Amazon-style), NOT one value per dataset.\n+Counting `main_cat` per group showed a clear dominant category:\n+- g1 -> Office Products (13,933 of 20,000; also All Electronics 1,308)\n+- g2 -> Electronics (Computers 5,247; All Electronics 4,562; Camera & Photo 2,789;\n+  Cell Phones & Accessories 1,775)\n+- g3 -> Musical Instruments (17,162 of 20,000)\n+NOTE: this mapping is inferred from counts, not stated in schema. Every group also holds\n+minority `main_cat` values, so a category-framed question should target the whole group,\n+not a `main_cat` filter.\n+\n+## Price encoding (VERIFIED)\n+- `prc` is price in **cents** (integer). `prc_usd` = `prc / 100` in dollars.\n+- Verified: 0 rows where `prc/100` differs from `prc_usd` by > 0.001.\n+- g2 coverage: 6,570 rows have `prc`; 6,346 have `prc_usd`; 224 have `prc` only\n+  (no `prc_usd`); 0 have `prc_usd` only. g1/g3 have `prc` only (same cent convention).\n+- Consequence: a \"$40 list price\" filter gives the SAME result via `prc_usd <= 40`\n+  or `prc <= 4000` — confirmed for the current dataset/review slice.\n+- `prc_usd` range in g2 ≈ 0.09..499.99; `prc` range ≈ 9..2,688,800.\n+\n+## Data-quality facts (VERIFIED)\n+- All three item tables have exactly 20,000 rows each.\n+- `main_cat` can be NULL (g1 741, g2 1,304, g3 321).\n+- `fdbk_g2`: 77,022 reviews; 9,875 have `LENGTH(body) > 500`; 0 NULL bodies.\n+- `rtg` in g2 is non-null, integer-valued 1.0..5.0 (no half stars).\n+- Every `fdbk_g2.ref_id` matches an `items_g2.ref_id` (0 orphan reviews) — ref_id join is safe.\n+- Reviews-per-group are large (tens of thousands), so joins on `ref_id` are the intended path.\n+\n+## Practical guidance\n+- `LENGTH(body)` counts characters incl. spaces (SQLite semantics) — \"longer than 500\n+  characters\" => `LENGTH(body) > 500`.\n+- To tie reviews to price, join `fdbk_gN.ref_id = items_gN.ref_id`; do not rely on\n+  `fdbk_g2.item_id` (only g1/g2 have it).\n+- Prefer group-level interpretation when the prompt names a product category."
+      }
+    ],
+    "write_calls": [
+      {
+        "type": "tool_use",
+        "id": "call_00_ET_RZiyJRcLp7xa2tdwXa103816",
+        "name": "Write",
+        "input": {
+          "file_path": "D:\\campus_re\\experiments\\memory_direction_20261002\\workspaces\\v1-ds-a11-write-r1\\memory\\environment.md",
+          "content": "# environment.md — Reusable findings from the SQLite product-review database\n\n## Scope\nRead-only SQLite DB exposed only via the `query` tool. Contains three 20,000-row product\ndatasets, each with its own `*_gN` table set. Task context: office products, electronics,\nmusical instruments. This note records schema/join/encoding facts reusable for any future\nquery; it deliberately EXCLUDES the numerical answer to the current request.\n\n## Table layout (verified via sqlite_master)\n- Group tables: `items_g1/2/3`, `fdbk_g1/2/3`, plus `attrs_g1`, `attrs_g3`,\n  `taxn_g1`, `taxn_g2`, `fdbk_stats_g1`.\n- `items_gN`: `ref_id` (PK), `ttl`, `avg_rtg`, `rtg_ct`, `prc`, `str_nm`, `main_cat`,\n  and per-group extras:\n  - g1: `avg_rtg_30d`, `desc_txt`, `feat_lst`\n  - g2: `prc INTEGER`, `prc_usd REAL`, `feat_lst`, `img_ct`\n  - g3: `desc_txt` (no `prc_usd`)\n- `fdbk_gN`: review rows keyed by `ref_id` (FK -> items_gN). Columns `id`, `ref_id`,\n  `uid`, `rtg REAL`, `ttl`, `body`, `ts`, `hlp_ct`, `vrf`.\n  - g1 additionally has `item_id`; g2 has `item_id` and `vrf TEXT`; g3 has no `item_id`\n    and `ts TEXT`. => schema is NOT identical across groups; alias per group.\n\n## Category -> group mapping (INFERRED from dominant `main_cat`, high confidence)\n`main_cat` is a multi-valued subcategory field (Amazon-style), NOT one value per dataset.\nCounting `main_cat` per group showed a clear dominant category:\n- g1 -> Office Products (13,933 of 20,000; also All Electronics 1,308)\n- g2 -> Electronics (Computers 5,247; All Electronics 4,562; Camera & Photo 2,789;\n  Cell Phones & Accessories 1,775)\n- g3 -> Musical Instruments (17,162 of 20,000)\nNOTE: this mapping is inferred from counts, not stated in schema. Every group also holds\nminority `main_cat` values, so a category-framed question should target the whole group,\nnot a `main_cat` filter.\n\n## Price encoding (VERIFIED)\n- `prc` is price in **cents** (integer). `prc_usd` = `prc / 100` in dollars.\n- Verified: 0 rows where `prc/100` differs from `prc_usd` by > 0.001.\n- g2 coverage: 6,570 rows have `prc`; 6,346 have `prc_usd`; 224 have `prc` only\n  (no `prc_usd`); 0 have `prc_usd` only. g1/g3 have `prc` only (same cent convention).\n- Consequence: a \"$40 list price\" filter gives the SAME result via `prc_usd <= 40`\n  or `prc <= 4000` — confirmed for the current dataset/review slice.\n- `prc_usd` range in g2 ≈ 0.09..499.99; `prc` range ≈ 9..2,688,800.\n\n## Data-quality facts (VERIFIED)\n- All three item tables have exactly 20,000 rows each.\n- `main_cat` can be NULL (g1 741, g2 1,304, g3 321).\n- `fdbk_g2`: 77,022 reviews; 9,875 have `LENGTH(body) > 500`; 0 NULL bodies.\n- `rtg` in g2 is non-null, integer-valued 1.0..5.0 (no half stars).\n- Every `fdbk_g2.ref_id` matches an `items_g2.ref_id` (0 orphan reviews) — ref_id join is safe.\n- Reviews-per-group are large (tens of thousands), so joins on `ref_id` are the intended path.\n\n## Practical guidance\n- `LENGTH(body)` counts characters incl. spaces (SQLite semantics) — \"longer than 500\n  characters\" => `LENGTH(body) > 500`.\n- To tie reviews to price, join `fdbk_gN.ref_id = items_gN.ref_id`; do not rely on\n  `fdbk_g2.item_id` (only g1/g2 have it).\n- Prefer group-level interpretation when the prompt names a product category.\n"
+        }
+      },
+      {
+        "type": "tool_use",
+        "id": "call_01_ET_SINhPMpUvWJSuO0eemHl8656",
+        "name": "Write",
+        "input": {
+          "file_path": "D:\\campus_re\\experiments\\memory_direction_20261002\\workspaces\\v1-ds-a11-write-r1\\memory\\MEMORY.md",
+          "content": "# MEMORY.md — Index\n\n- [environment.md](environment.md) — SQLite product-review DB: table layout (`items_gN`,\n  `fdbk_gN`, `attrs/taxn`), category->group mapping (g1=Office, g2=Electronics,\n  g3=Musical Instruments, INFERRED from dominant `main_cat`), price encoding\n  (`prc`=cents, `prc_usd`=dollars; verified equal), join/`rtg`/`body` data-quality facts.\n"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "v1-ds-a11-write-r2",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v1",
+    "memory_from": null,
+    "source_task_explicit_write": true,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "MEMORY.md",
+        "diff": "--- before/MEMORY.md\n\n+++ after/MEMORY.md\n\n@@ -0,0 +1,7 @@\n\n+# Memory index\n+\n+- [environment.md](environment.md) — Schema + dataset notes for the three-group\n+  SQLite DB (office=g1, electronics=g2, musical=g3): table/column layout, join keys,\n+  verified price-unit relationship (`prc` cents vs `prc_usd` dollars), row counts,\n+  and which claims are verified vs inferred. Read this before writing queries\n+  against these datasets."
+      },
+      {
+        "file": "environment.md",
+        "diff": "--- before/environment.md\n\n+++ after/environment.md\n\n@@ -0,0 +1,52 @@\n\n+# Environment / dataset notes\n+\n+## Scope\n+Read-only SQLite database with three separate product datasets, each using a\n+suffix group (`g1`, `g2`, `g3`) on its tables. Access is only via the SQL query\n+tool. Observed tables: `items_g{1,2,3}`, `fdbk_g{1,2,3}`, `fdbk_stats_g1`,\n+`taxn_g1`, `taxn_g2`, `attrs_g1`, `attrs_g3`, `sqlite_sequence`.\n+\n+## Verified facts (observed directly)\n+- Category -> group mapping (verified by counting `main_cat` per group):\n+  - `g1` = office products (13,933 of 20,000 items `main_cat='Office Products'`)\n+  - `g2` = electronics (16,084 / 20,000 items in electronics categories; largest `main_cat='All Electronics'`)\n+  - `g3` = musical instruments (17,162 / 20,000 items `main_cat='Musical Instruments'`)\n+- Row counts: items_g1/g2/g3 = 20,000 each. Reviews: fdbk_g1 = 377,472;\n+  fdbk_g2 = 77,022; fdbk_g3 = 286,626.\n+- `fdbk_g*` columns include `ref_id`, `rtg` (REAL, distinct values 1.0..5.0),\n+  `body` (TEXT, no NULLs in g2), plus `item_id`, `uid`, `ttl`, `ts`, `hlp_ct`, `vrf`.\n+  g1/g2 `vrf` columns are declared differently (`vrf` INTEGER in g1, TEXT in g2) —\n+  schema is not identical across groups.\n+- Every `fdbk_g2.ref_id` joins to an `items_g2.ref_id` (77,022 / 77,022 matched).\n+  So reviews join to products on `ref_id` (NOT on `fdbk_g2.item_id`, which can\n+  differ from `ref_id` in sample rows).\n+- Price columns (g2): `items_g2.prc` (INTEGER, cents) and `items_g2.prc_usd` (REAL,\n+  dollars). Verified `prc_usd = prc/100` for all 6,346 rows where both are non-null\n+  (0 mismatches). `prc` non-null ~6,570 rows; 224 rows have `prc` but NULL `prc_usd`\n+  (no row with usd but no prc). Max `prc_usd` = 499.99.\n+- `attrs_g2` and `fdbk_stats_g2` do NOT exist; only g1 has `fdbk_stats_g1`, and only\n+  g1/g3 have `attrs_*`. `taxn_g1`/`taxn_g2` hold category taxonomy (ref_id, cat_lvl, cat_nm).\n+\n+## Inferences (not fully proven)\n+- \"List price\" is not a literal column name anywhere observed. The only price\n+  columns are `prc` (cents, g1/g2/g3) and `prc_usd` (dollars, g2 only). Mapping\n+  \"list price\" -> `prc` (equivalently `prc_usd`) is a reasonable interpretation,\n+  not a verified label.\n+- `main_cat` is a mixed multi-category field in every group; the group identity is\n+  determined by the dominant category, not a single uniform category value.\n+- `fdbk_g2.item_id` vs `ref_id` distinction: ref_id is the product key to join on;\n+  the sample showed `item_id` differing from `ref_id`, so prefer `ref_id`.\n+\n+## Query conventions that worked\n+- Text length: use `LENGTH(body)`; SQLite `length()` counts characters for TEXT.\n+- \"longer than N\" -> `LENGTH(body) > N` (strict).\n+- Rating filter: `rtg = 1` (stored as REAL 1.0).\n+- Price threshold $40 -> `prc <= 4000` (cents) or `prc_usd <= 40` (dollars); the\n+  two gave identical result sets in the computed scope, confirming the cents/dollars\n+  relationship.\n+\n+## Verification status\n+- Group->category mapping: **verified** by direct aggregation.\n+- Price unit relationship: **verified** (0 mismatches over both-non-null rows).\n+- Join key `ref_id` for fdbk_g2: **verified** (100% match).\n+- \"List price = prc\": **inference** (best available interpretation)."
+      }
+    ],
+    "write_calls": [
+      {
+        "type": "tool_use",
+        "id": "call_00_oEvrfOYFtSHlLQ8f4klu6991",
+        "name": "Write",
+        "input": {
+          "file_path": "D:\\campus_re\\experiments\\memory_direction_20261002\\workspaces\\v1-ds-a11-write-r2\\memory\\environment.md",
+          "content": "# Environment / dataset notes\n\n## Scope\nRead-only SQLite database with three separate product datasets, each using a\nsuffix group (`g1`, `g2`, `g3`) on its tables. Access is only via the SQL query\ntool. Observed tables: `items_g{1,2,3}`, `fdbk_g{1,2,3}`, `fdbk_stats_g1`,\n`taxn_g1`, `taxn_g2`, `attrs_g1`, `attrs_g3`, `sqlite_sequence`.\n\n## Verified facts (observed directly)\n- Category -> group mapping (verified by counting `main_cat` per group):\n  - `g1` = office products (13,933 of 20,000 items `main_cat='Office Products'`)\n  - `g2` = electronics (16,084 / 20,000 items in electronics categories; largest `main_cat='All Electronics'`)\n  - `g3` = musical instruments (17,162 / 20,000 items `main_cat='Musical Instruments'`)\n- Row counts: items_g1/g2/g3 = 20,000 each. Reviews: fdbk_g1 = 377,472;\n  fdbk_g2 = 77,022; fdbk_g3 = 286,626.\n- `fdbk_g*` columns include `ref_id`, `rtg` (REAL, distinct values 1.0..5.0),\n  `body` (TEXT, no NULLs in g2), plus `item_id`, `uid`, `ttl`, `ts`, `hlp_ct`, `vrf`.\n  g1/g2 `vrf` columns are declared differently (`vrf` INTEGER in g1, TEXT in g2) —\n  schema is not identical across groups.\n- Every `fdbk_g2.ref_id` joins to an `items_g2.ref_id` (77,022 / 77,022 matched).\n  So reviews join to products on `ref_id` (NOT on `fdbk_g2.item_id`, which can\n  differ from `ref_id` in sample rows).\n- Price columns (g2): `items_g2.prc` (INTEGER, cents) and `items_g2.prc_usd` (REAL,\n  dollars). Verified `prc_usd = prc/100` for all 6,346 rows where both are non-null\n  (0 mismatches). `prc` non-null ~6,570 rows; 224 rows have `prc` but NULL `prc_usd`\n  (no row with usd but no prc). Max `prc_usd` = 499.99.\n- `attrs_g2` and `fdbk_stats_g2` do NOT exist; only g1 has `fdbk_stats_g1`, and only\n  g1/g3 have `attrs_*`. `taxn_g1`/`taxn_g2` hold category taxonomy (ref_id, cat_lvl, cat_nm).\n\n## Inferences (not fully proven)\n- \"List price\" is not a literal column name anywhere observed. The only price\n  columns are `prc` (cents, g1/g2/g3) and `prc_usd` (dollars, g2 only). Mapping\n  \"list price\" -> `prc` (equivalently `prc_usd`) is a reasonable interpretation,\n  not a verified label.\n- `main_cat` is a mixed multi-category field in every group; the group identity is\n  determined by the dominant category, not a single uniform category value.\n- `fdbk_g2.item_id` vs `ref_id` distinction: ref_id is the product key to join on;\n  the sample showed `item_id` differing from `ref_id`, so prefer `ref_id`.\n\n## Query conventions that worked\n- Text length: use `LENGTH(body)`; SQLite `length()` counts characters for TEXT.\n- \"longer than N\" -> `LENGTH(body) > N` (strict).\n- Rating filter: `rtg = 1` (stored as REAL 1.0).\n- Price threshold $40 -> `prc <= 4000` (cents) or `prc_usd <= 40` (dollars); the\n  two gave identical result sets in the computed scope, confirming the cents/dollars\n  relationship.\n\n## Verification status\n- Group->category mapping: **verified** by direct aggregation.\n- Price unit relationship: **verified** (0 mismatches over both-non-null rows).\n- Join key `ref_id` for fdbk_g2: **verified** (100% match).\n- \"List price = prc\": **inference** (best available interpretation).\n"
+        }
+      },
+      {
+        "type": "tool_use",
+        "id": "call_01_gIiYqo7cvaHwihrjWdKX6383",
+        "name": "Write",
+        "input": {
+          "file_path": "D:\\campus_re\\experiments\\memory_direction_20261002\\workspaces\\v1-ds-a11-write-r2\\memory\\MEMORY.md",
+          "content": "# Memory index\n\n- [environment.md](environment.md) — Schema + dataset notes for the three-group\n  SQLite DB (office=g1, electronics=g2, musical=g3): table/column layout, join keys,\n  verified price-unit relationship (`prc` cents vs `prc_usd` dollars), row counts,\n  and which claims are verified vs inferred. Read this before writing queries\n  against these datasets.\n"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "v1-ds-b12-native-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v1",
+    "memory_from": "v1-ds-a11-write-r1",
+    "source_task_explicit_write": false,
+    "before_source": "reconstructed from immutable source run; not a recorded before snapshot",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "v1-ds-b12-none-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v1",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "v1-ds-c2-inject-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v1",
+    "memory_from": "v1-ds-a11-write-r1",
+    "source_task_explicit_write": false,
+    "before_source": "reconstructed from immutable source run; not a recorded before snapshot",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "v1-ds-c2-none-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v1",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "v1-ds-c2-scoped-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v1",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "MEMORY.md",
+        "diff": "--- before/MEMORY.md\n\n+++ after/MEMORY.md\n\n@@ -0,0 +1,6 @@\n\n+# MEMORY.md — Index\n+\n+- [environment.md](environment.md) — SQLite product-review DB: table layout (`items_gN`,\n+  `fdbk_gN`, `attrs/taxn`), category->group mapping (g1=Office, g2=Electronics,\n+  g3=Musical Instruments, INFERRED from dominant `main_cat`), price encoding\n+  (`prc`=cents, `prc_usd`=dollars; verified equal), join/`rtg`/`body` data-quality facts."
+      },
+      {
+        "file": "environment.md",
+        "diff": "--- before/environment.md\n\n+++ after/environment.md\n\n@@ -0,0 +1,55 @@\n\n+# environment.md — Reusable findings from the SQLite product-review database\n+\n+## Scope\n+Read-only SQLite DB exposed only via the `query` tool. Contains three 20,000-row product\n+datasets, each with its own `*_gN` table set. Task context: office products, electronics,\n+musical instruments. This note records schema/join/encoding facts reusable for any future\n+query; it deliberately EXCLUDES the numerical answer to the current request.\n+\n+## Table layout (verified via sqlite_master)\n+- Group tables: `items_g1/2/3`, `fdbk_g1/2/3`, plus `attrs_g1`, `attrs_g3`,\n+  `taxn_g1`, `taxn_g2`, `fdbk_stats_g1`.\n+- `items_gN`: `ref_id` (PK), `ttl`, `avg_rtg`, `rtg_ct`, `prc`, `str_nm`, `main_cat`,\n+  and per-group extras:\n+  - g1: `avg_rtg_30d`, `desc_txt`, `feat_lst`\n+  - g2: `prc INTEGER`, `prc_usd REAL`, `feat_lst`, `img_ct`\n+  - g3: `desc_txt` (no `prc_usd`)\n+- `fdbk_gN`: review rows keyed by `ref_id` (FK -> items_gN). Columns `id`, `ref_id`,\n+  `uid`, `rtg REAL`, `ttl`, `body`, `ts`, `hlp_ct`, `vrf`.\n+  - g1 additionally has `item_id`; g2 has `item_id` and `vrf TEXT`; g3 has no `item_id`\n+    and `ts TEXT`. => schema is NOT identical across groups; alias per group.\n+\n+## Category -> group mapping (INFERRED from dominant `main_cat`, high confidence)\n+`main_cat` is a multi-valued subcategory field (Amazon-style), NOT one value per dataset.\n+Counting `main_cat` per group showed a clear dominant category:\n+- g1 -> Office Products (13,933 of 20,000; also All Electronics 1,308)\n+- g2 -> Electronics (Computers 5,247; All Electronics 4,562; Camera & Photo 2,789;\n+  Cell Phones & Accessories 1,775)\n+- g3 -> Musical Instruments (17,162 of 20,000)\n+NOTE: this mapping is inferred from counts, not stated in schema. Every group also holds\n+minority `main_cat` values, so a category-framed question should target the whole group,\n+not a `main_cat` filter.\n+\n+## Price encoding (VERIFIED)\n+- In g2 only, `prc` is price in **cents** (integer). `prc_usd` = `prc / 100` in dollars.\n+- Verified: 0 rows where `prc/100` differs from `prc_usd` by > 0.001.\n+- g2 coverage: 6,570 rows have `prc`; 6,346 have `prc_usd`; 224 have `prc` only\n+  (no `prc_usd`); 0 have `prc_usd` only. g1/g3 have `prc` only; their units were not verified in this source task.\n+- Consequence: a \"$40 list price\" filter gives the SAME result via `prc_usd <= 40`\n+  or `prc <= 4000` — confirmed for the current dataset/review slice.\n+- `prc_usd` range in g2 ≈ 0.09..499.99; `prc` range ≈ 9..2,688,800.\n+\n+## Data-quality facts (VERIFIED)\n+- All three item tables have exactly 20,000 rows each.\n+- `main_cat` can be NULL (g1 741, g2 1,304, g3 321).\n+- `fdbk_g2`: 77,022 reviews; 9,875 have `LENGTH(body) > 500`; 0 NULL bodies.\n+- `rtg` in g2 is non-null, integer-valued 1.0..5.0 (no half stars).\n+- Every `fdbk_g2.ref_id` matches an `items_g2.ref_id` (0 orphan reviews) — ref_id join is safe.\n+- Reviews-per-group are large (tens of thousands), so joins on `ref_id` are the intended path.\n+\n+## Practical guidance\n+- `LENGTH(body)` counts characters incl. spaces (SQLite semantics) — \"longer than 500\n+  characters\" => `LENGTH(body) > 500`.\n+- To tie reviews to price, join `fdbk_gN.ref_id = items_gN.ref_id`; do not rely on\n+  `fdbk_g2.item_id` (only g1/g2 have it).\n+- Prefer group-level interpretation when the prompt names a product category."
+      }
+    ],
+    "write_calls": []
+  },
+  {
+    "run_id": "v1-glm-a11-write-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v1",
+    "memory_from": null,
+    "source_task_explicit_write": true,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "MEMORY.md",
+        "diff": "--- before/MEMORY.md\n\n+++ after/MEMORY.md\n\n@@ -0,0 +1,3 @@\n\n+# Memory Index\n+\n+- [environment.md](environment.md) — Schema of the three product datasets (g1=Office Products, g2=Electronics, g3=Musical Instruments), column definitions, price units (g2: prc=cents, prc_usd=dollars), review join keys, and dataset-identity evidence. Scope: schema/identity observations verified 2026-10-02; g3 identity inferred from sampled titles."
+      },
+      {
+        "file": "environment.md",
+        "diff": "--- before/environment.md\n\n+++ after/environment.md\n\n@@ -0,0 +1,33 @@\n\n+# Database Environment Notes\n+\n+## Schema (verified via sqlite_master, 2026-10-02)\n+Three independent product datasets, suffixed `_g1`, `_g2`, `_g3`:\n+\n+| Table | Content |\n+|---|---|\n+| `items_g1` | ref_id (PK), ttl, avg_rtg, avg_rtg_30d, rtg_ct, prc, str_nm, main_cat, desc_txt, feat_lst |\n+| `fdbk_g1` | id, item_id, ref_id (FK→items_g1), uid, rtg, ttl, body, ts (INTEGER), hlp_ct, vrf (INTEGER) |\n+| `taxn_g1`, `attrs_g1`, `fdbk_stats_g1` | taxonomy (cat_lvl/cat_nm), attributes, per-product review stats |\n+\n+| Table | Content |\n+|---|---|\n+| `items_g2` | ref_id (PK), ttl, avg_rtg, prc (INTEGER), prc_usd (REAL), str_nm, main_cat, feat_lst, img_ct |\n+| `fdbk_g2` | id, item_id, ref_id (FK→items_g2), uid, rtg, ttl, body, ts, hlp_ct, vrf (TEXT) |\n+| `taxn_g2` | taxonomy |\n+\n+| Table | Content |\n+|---|---|\n+| `items_g3` | ref_id (PK), ttl, avg_rtg, rtg_ct, prc, str_nm, main_cat, desc_txt |\n+| `fdbk_g3` | id, ref_id (FK→items_g3), uid, rtg, ttl, body, ts (TEXT), hlp_ct, vrf (INTEGER) |\n+| `attrs_g3` | attributes (no taxonomy table for g3) |\n+\n+## Dataset identity (verified)\n+- **g1 = Office Products**: `taxn_g1` level-0 categories dominated by \"Office Electronics\" (2670), \"Office & School Supplies\" (14008); sqlite_master level-0 max = \"Office Products\".\n+- **g2 = Electronics**: `taxn_g2` level-0 is \"Electronics\" (18,396 of ~18,421 rows), plus tiny \"Car & Vehicle Electronics\" (23) and \"Amazon Devices & Accessories\" (2).\n+- **g3 = Musical Instruments**: inferred from item titles sampled in `items_g3` (guitars, saxophone straps, clarinet reeds, drumsticks, all with main_cat = \"Musical Instruments\"). No taxonomy table exists for g3, so identity rests on the title sample, not a category table.\n+\n+## Data conventions (verified by sampling)\n+- `items_g2.prc` is an integer in **cents**; `prc_usd` is the dollar value (e.g. prc=7499 ↔ prc_usd=74.99).\n+- Review join key: `fdbk_g*.ref_id` → `items_g*.ref_id` (declared FK). `item_id` also exists in fdbk_g1/g2 but is not the FK.\n+- `fdbk_g2.rtg` values observed: integer-like 1.0–5.0 only.\n+- `main_cat` in items_g1/g2/g3 is noisy/mixed across datasets and NOT a reliable dataset indicator; use `taxn_g*` instead (except g3, which has none)."
+      }
+    ],
+    "write_calls": [
+      {
+        "type": "tool_use",
+        "id": "call_d46963a8390c41bfaecf7a83",
+        "name": "Write",
+        "input": {
+          "file_path": "D:\\campus_re\\experiments\\memory_direction_20261002\\workspaces\\v1-glm-a11-write-r1\\memory\\environment.md",
+          "content": "# Database Environment Notes\n\n## Schema (verified via sqlite_master, 2026-10-02)\nThree independent product datasets, suffixed `_g1`, `_g2`, `_g3`:\n\n| Table | Content |\n|---|---|\n| `items_g1` | ref_id (PK), ttl, avg_rtg, avg_rtg_30d, rtg_ct, prc, str_nm, main_cat, desc_txt, feat_lst |\n| `fdbk_g1` | id, item_id, ref_id (FK→items_g1), uid, rtg, ttl, body, ts (INTEGER), hlp_ct, vrf (INTEGER) |\n| `taxn_g1`, `attrs_g1`, `fdbk_stats_g1` | taxonomy (cat_lvl/cat_nm), attributes, per-product review stats |\n\n| Table | Content |\n|---|---|\n| `items_g2` | ref_id (PK), ttl, avg_rtg, prc (INTEGER), prc_usd (REAL), str_nm, main_cat, feat_lst, img_ct |\n| `fdbk_g2` | id, item_id, ref_id (FK→items_g2), uid, rtg, ttl, body, ts, hlp_ct, vrf (TEXT) |\n| `taxn_g2` | taxonomy |\n\n| Table | Content |\n|---|---|\n| `items_g3` | ref_id (PK), ttl, avg_rtg, rtg_ct, prc, str_nm, main_cat, desc_txt |\n| `fdbk_g3` | id, ref_id (FK→items_g3), uid, rtg, ttl, body, ts (TEXT), hlp_ct, vrf (INTEGER) |\n| `attrs_g3` | attributes (no taxonomy table for g3) |\n\n## Dataset identity (verified)\n- **g1 = Office Products**: `taxn_g1` level-0 categories dominated by \"Office Electronics\" (2670), \"Office & School Supplies\" (14008); sqlite_master level-0 max = \"Office Products\".\n- **g2 = Electronics**: `taxn_g2` level-0 is \"Electronics\" (18,396 of ~18,421 rows), plus tiny \"Car & Vehicle Electronics\" (23) and \"Amazon Devices & Accessories\" (2).\n- **g3 = Musical Instruments**: inferred from item titles sampled in `items_g3` (guitars, saxophone straps, clarinet reeds, drumsticks, all with main_cat = \"Musical Instruments\"). No taxonomy table exists for g3, so identity rests on the title sample, not a category table.\n\n## Data conventions (verified by sampling)\n- `items_g2.prc` is an integer in **cents**; `prc_usd` is the dollar value (e.g. prc=7499 ↔ prc_usd=74.99).\n- Review join key: `fdbk_g*.ref_id` → `items_g*.ref_id` (declared FK). `item_id` also exists in fdbk_g1/g2 but is not the FK.\n- `fdbk_g2.rtg` values observed: integer-like 1.0–5.0 only.\n- `main_cat` in items_g1/g2/g3 is noisy/mixed across datasets and NOT a reliable dataset indicator; use `taxn_g*` instead (except g3, which has none).\n"
+        }
+      },
+      {
+        "type": "tool_use",
+        "id": "call_f0723578b9524f94a261f344",
+        "name": "Write",
+        "input": {
+          "file_path": "D:\\campus_re\\experiments\\memory_direction_20261002\\workspaces\\v1-glm-a11-write-r1\\memory\\MEMORY.md",
+          "content": "# Memory Index\n\n- [environment.md](environment.md) — Schema of the three product datasets (g1=Office Products, g2=Electronics, g3=Musical Instruments), column definitions, price units (g2: prc=cents, prc_usd=dollars), review join keys, and dataset-identity evidence. Scope: schema/identity observations verified 2026-10-02; g3 identity inferred from sampled titles.\n"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "v1-glm-b12-native-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v1",
+    "memory_from": "v1-glm-a11-write-r1",
+    "source_task_explicit_write": false,
+    "before_source": "reconstructed from immutable source run; not a recorded before snapshot",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "v1-glm-b12-none-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v1",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "v1-glm-c2-inject-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v1",
+    "memory_from": "v1-glm-a11-write-r1",
+    "source_task_explicit_write": false,
+    "before_source": "reconstructed from immutable source run; not a recorded before snapshot",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "v1-glm-c2-none-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v1",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "v2-ds-a11-write-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v2-native",
+    "memory_from": null,
+    "source_task_explicit_write": true,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "MEMORY.md",
+        "diff": "--- before/MEMORY.md\n\n+++ after/MEMORY.md\n\n@@ -0,0 +1,3 @@\n\n+# Memory Index\n+\n+- [Multi-category SQLite layout](environment.md) — g1/g2/g3 map to office/electronics/musical-instruments, join on `ref_id` (not `item_id`), and `items_g2.prc` is USD cents (= 100 × `prc_usd`)."
+      },
+      {
+        "file": "environment.md",
+        "diff": "--- before/environment.md\n\n+++ after/environment.md\n\n@@ -0,0 +1,30 @@\n\n+---\n+name: multi-category-sqlite-layout\n+description: \"Layout, group-to-category mapping, join keys and price units of the 3-category product/review SQLite database\"\n+metadata:\n+  node_type: memory\n+  type: reference\n+  originSessionId: 6943a139-f675-4581-b14a-097549b7b36e\n+  modified: 2026-10-01T17:25:11.354Z\n+---\n+\n+Scope: the read-only SQLite database exposed by the `sql` query tool in this workspace, which bundles three per-category product datasets (office products, electronics, musical instruments). Observations below are from that database only.\n+\n+Tables (12 + sqlite_sequence): `items_g1`, `items_g2`, `items_g3`; `fdbk_g1`, `fdbk_g2`, `fdbk_g3`; `taxn_g1`, `taxn_g2`; `attrs_g1`, `attrs_g3`; `fdbk_stats_g1`.\n+\n+Group -> category mapping (INFERENCE, strongly supported by `main_cat` distributions over 20,000 items per group):\n+- g1 -> office products (13,933 `Office Products` items)\n+- g2 -> electronics (15,975 items in electronics categories: All Electronics / Camera & Photo / Cell Phones & Accessories / Car Electronics / Home Audio & Theater / Computers / Video Games)\n+- g3 -> musical instruments (17,162 `Musical Instruments` items)\n+No column in any table labels the group, so the mapping must be derived from `main_cat` counts, not read off directly.\n+\n+Join keys (VERIFIED by join-coverage counts):\n+- `fdbk_g2.ref_id` -> `items_g2.ref_id` matches all 77,022 review rows.\n+- `fdbk_g2` also has an `item_id` column, but it matches `items_g2.ref_id` for only 49,393/77,022 rows, so `item_id` is NOT the reliable FK; use `ref_id`.\n+- `fdbk_g3` has no `item_id` column at all, so joins there can only use `ref_id`.\n+\n+Price units in `items_g2` (VERIFIED over the 6,346 rows where both are non-null): `prc = prc_usd * 100` exactly (min and max ratio both 100.0). Thus `prc` is USD cents, `prc_usd` is USD dollars. A \"$N\" threshold can be written either as `prc_usd <= N` or `prc <= 100*N`; both give identical row sets. 13,430 rows have NULL `prc` and 13,654 have NULL `prc_usd`.\n+\n+Review fields: `fdbk_g*.rtg` is a real rating in [1,5] (so 1-star = `rtg = 1`); `fdbk_g*.body` is non-null in all 77,022 `fdbk_g2` rows; `fdbk_g2.ts` is an integer epoch (note `fdbk_g3.ts` is TEXT, a type difference between groups).\n+\n+Schema varies between groups, so per-group SQL cannot be copy-pasted blindly: `items_g1`/`items_g3` carry `desc_txt` (and g1 also `avg_rtg_30d`, `rtg_ct`), `items_g2` carries `prc_usd`/`img_ct` but no `desc_txt`; `attrs_*` and `fdbk_stats_g1` exist for only some groups."
+      }
+    ],
+    "write_calls": [
+      {
+        "type": "tool_use",
+        "id": "call_00_Mq4wn3TNKpejRAKdbrEV8229",
+        "name": "Write",
+        "input": {
+          "file_path": "D:\\campus_re\\experiments\\memory_direction_20261002\\workspaces\\v2-ds-a11-write-r1\\memory\\environment.md",
+          "content": "---\nname: multi-category-sqlite-layout\ndescription: Layout, group-to-category mapping, join keys and price units of the 3-category product/review SQLite database\nmetadata:\n  type: reference\n---\n\nScope: the read-only SQLite database exposed by the `sql` query tool in this workspace, which bundles three per-category product datasets (office products, electronics, musical instruments). Observations below are from that database only.\n\nTables (12 + sqlite_sequence): `items_g1`, `items_g2`, `items_g3`; `fdbk_g1`, `fdbk_g2`, `fdbk_g3`; `taxn_g1`, `taxn_g2`; `attrs_g1`, `attrs_g3`; `fdbk_stats_g1`.\n\nGroup -> category mapping (INFERENCE, strongly supported by `main_cat` distributions over 20,000 items per group):\n- g1 -> office products (13,933 `Office Products` items)\n- g2 -> electronics (15,975 items in electronics categories: All Electronics / Camera & Photo / Cell Phones & Accessories / Car Electronics / Home Audio & Theater / Computers / Video Games)\n- g3 -> musical instruments (17,162 `Musical Instruments` items)\nNo column in any table labels the group, so the mapping must be derived from `main_cat` counts, not read off directly.\n\nJoin keys (VERIFIED by join-coverage counts):\n- `fdbk_g2.ref_id` -> `items_g2.ref_id` matches all 77,022 review rows.\n- `fdbk_g2` also has an `item_id` column, but it matches `items_g2.ref_id` for only 49,393/77,022 rows, so `item_id` is NOT the reliable FK; use `ref_id`.\n- `fdbk_g3` has no `item_id` column at all, so joins there can only use `ref_id`.\n\nPrice units in `items_g2` (VERIFIED over the 6,346 rows where both are non-null): `prc = prc_usd * 100` exactly (min and max ratio both 100.0). Thus `prc` is USD cents, `prc_usd` is USD dollars. A \"$N\" threshold can be written either as `prc_usd <= N` or `prc <= 100*N`; both give identical row sets. 13,430 rows have NULL `prc` and 13,654 have NULL `prc_usd`.\n\nReview fields: `fdbk_g*.rtg` is a real rating in [1,5] (so 1-star = `rtg = 1`); `fdbk_g*.body` is non-null in all 77,022 `fdbk_g2` rows; `fdbk_g2.ts` is an integer epoch (note `fdbk_g3.ts` is TEXT, a type difference between groups).\n\nSchema varies between groups, so per-group SQL cannot be copy-pasted blindly: `items_g1`/`items_g3` carry `desc_txt` (and g1 also `avg_rtg_30d`, `rtg_ct`), `items_g2` carries `prc_usd`/`img_ct` but no `desc_txt`; `attrs_*` and `fdbk_stats_g1` exist for only some groups.\n"
+        }
+      },
+      {
+        "type": "tool_use",
+        "id": "call_01_aMIV3XPiolOIkM4ag4DG8081",
+        "name": "Write",
+        "input": {
+          "file_path": "D:\\campus_re\\experiments\\memory_direction_20261002\\workspaces\\v2-ds-a11-write-r1\\memory\\MEMORY.md",
+          "content": "# Memory Index\n\n- [Multi-category SQLite layout](environment.md) — g1/g2/g3 map to office/electronics/musical-instruments, join on `ref_id` (not `item_id`), and `items_g2.prc` is USD cents (= 100 × `prc_usd`).\n"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "v2-ds-b12-caution-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v2-native",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "environment.md",
+        "diff": "--- before/environment.md\n\n+++ after/environment.md\n\n@@ -5,7 +5,7 @@\n\n   node_type: memory\n   type: reference\n   originSessionId: 6943a139-f675-4581-b14a-097549b7b36e\n-  modified: 2026-10-01T17:25:11.354Z\n+  modified: 2026-10-01T18:38:50.282Z\n ---\n \n Scope: the read-only SQLite database exposed by the `sql` query tool in this workspace, which bundles three per-category product datasets (office products, electronics, musical instruments). Observations below are from that database only.\n@@ -25,6 +25,10 @@\n\n \n Price units in `items_g2` (VERIFIED over the 6,346 rows where both are non-null): `prc = prc_usd * 100` exactly (min and max ratio both 100.0). Thus `prc` is USD cents, `prc_usd` is USD dollars. A \"$N\" threshold can be written either as `prc_usd <= N` or `prc <= 100*N`; both give identical row sets. 13,430 rows have NULL `prc` and 13,654 have NULL `prc_usd`.\n \n+NULL coverage is ASYMMETRIC (VERIFIED 2026-10-02): 224 rows have `prc` but NULL `prc_usd`, and 0 rows have `prc_usd` but NULL `prc` — so a `prc_usd > N` filter silently drops 224 priced items that `prc > 100*N` keeps (e.g. >$50: 1,613 vs 1,837 items). Prefer `prc` (cents) as the complete price column, or `COALESCE(prc_usd, prc/100.0)`. Caveat when comparing: `prc <> prc_usd*100` flags 837 rows purely from float error (74.99*100 = 7499.000000000001), not real value mismatches.\n+\n+`items_g2.avg_rtg` is a product-level rating that does NOT equal the review-derived `AVG(fdbk_g2.rtg)` (e.g. ref_id B07WVF9SL5: avg_rtg 4.7 vs review mean 2.789). For questions phrased as \"average review rating\", aggregate the review rows, not `avg_rtg`.\n+\n Review fields: `fdbk_g*.rtg` is a real rating in [1,5] (so 1-star = `rtg = 1`); `fdbk_g*.body` is non-null in all 77,022 `fdbk_g2` rows; `fdbk_g2.ts` is an integer epoch (note `fdbk_g3.ts` is TEXT, a type difference between groups).\n \n Schema varies between groups, so per-group SQL cannot be copy-pasted blindly: `items_g1`/`items_g3` carry `desc_txt` (and g1 also `avg_rtg_30d`, `rtg_ct`), `items_g2` carries `prc_usd`/`img_ct` but no `desc_txt`; `attrs_*` and `fdbk_stats_g1` exist for only some groups."
+      }
+    ],
+    "write_calls": [
+      {
+        "type": "tool_use",
+        "id": "call_00_w1Rz5KFQKlhNN82uWz9U3760",
+        "name": "Edit",
+        "input": {
+          "replace_all": false,
+          "file_path": "D:\\campus_re\\experiments\\memory_direction_20261002\\workspaces\\v2-ds-b12-caution-r1\\memory\\environment.md",
+          "old_string": "Price units in `items_g2` (VERIFIED over the 6,346 rows where both are non-null): `prc = prc_usd * 100` exactly (min and max ratio both 100.0). Thus `prc` is USD cents, `prc_usd` is USD dollars. A \"$N\" threshold can be written either as `prc_usd <= N` or `prc <= 100*N`; both give identical row sets. 13,430 rows have NULL `prc` and 13,654 have NULL `prc_usd`.",
+          "new_string": "Price units in `items_g2` (VERIFIED over the 6,346 rows where both are non-null): `prc = prc_usd * 100` exactly (min and max ratio both 100.0). Thus `prc` is USD cents, `prc_usd` is USD dollars. A \"$N\" threshold can be written either as `prc_usd <= N` or `prc <= 100*N`; both give identical row sets. 13,430 rows have NULL `prc` and 13,654 have NULL `prc_usd`.\n\nNULL coverage is ASYMMETRIC (VERIFIED 2026-10-02): 224 rows have `prc` but NULL `prc_usd`, and 0 rows have `prc_usd` but NULL `prc` — so a `prc_usd > N` filter silently drops 224 priced items that `prc > 100*N` keeps (e.g. >$50: 1,613 vs 1,837 items). Prefer `prc` (cents) as the complete price column, or `COALESCE(prc_usd, prc/100.0)`. Caveat when comparing: `prc <> prc_usd*100` flags 837 rows purely from float error (74.99*100 = 7499.000000000001), not real value mismatches.\n\n`items_g2.avg_rtg` is a product-level rating that does NOT equal the review-derived `AVG(fdbk_g2.rtg)` (e.g. ref_id B07WVF9SL5: avg_rtg 4.7 vs review mean 2.789). For questions phrased as \"average review rating\", aggregate the review rows, not `avg_rtg`."
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "v2-ds-b12-native-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v2-native",
+    "memory_from": "v2-ds-a11-write-r1",
+    "source_task_explicit_write": false,
+    "before_source": "reconstructed from immutable source run; not a recorded before snapshot",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "v2-ds-b12-none-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v2-native",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "v2-ds-b5-native-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v2-native",
+    "memory_from": "v2-ds-a11-write-r1",
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "v2-ds-b5-none-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v2-native",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "v2-ds-b9-caution-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v2-native",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "environment.md",
+        "diff": "--- before/environment.md\n\n+++ after/environment.md\n\n@@ -5,7 +5,7 @@\n\n   node_type: memory\n   type: reference\n   originSessionId: 6943a139-f675-4581-b14a-097549b7b36e\n-  modified: 2026-10-01T17:25:11.354Z\n+  modified: 2026-10-01T18:31:22.858Z\n ---\n \n Scope: the read-only SQLite database exposed by the `sql` query tool in this workspace, which bundles three per-category product datasets (office products, electronics, musical instruments). Observations below are from that database only.\n@@ -23,7 +23,9 @@\n\n - `fdbk_g2` also has an `item_id` column, but it matches `items_g2.ref_id` for only 49,393/77,022 rows, so `item_id` is NOT the reliable FK; use `ref_id`.\n - `fdbk_g3` has no `item_id` column at all, so joins there can only use `ref_id`.\n \n-Price units in `items_g2` (VERIFIED over the 6,346 rows where both are non-null): `prc = prc_usd * 100` exactly (min and max ratio both 100.0). Thus `prc` is USD cents, `prc_usd` is USD dollars. A \"$N\" threshold can be written either as `prc_usd <= N` or `prc <= 100*N`; both give identical row sets. 13,430 rows have NULL `prc` and 13,654 have NULL `prc_usd`.\n+Price units in `items_g2` (VERIFIED over the 6,346 rows where both are non-null): `prc = prc_usd * 100` exactly (min/max ratio 100.0 up to float error; 0 mismatches with 1e-6 tolerance). Thus `prc` is USD cents, `prc_usd` is USD dollars. 13,430 rows have NULL `prc` and 13,654 have NULL `prc_usd`.\n+\n+CAUTION — `prc_usd` is NOT missing at random; it is a truncated column (VERIFIED): `prc_usd` is NULL for *every* row with `prc >= 50000` (224 rows, i.e. listed price >= $500) and non-NULL for all rows with `prc < 50000`. Max `prc_usd` = 499.99; min `prc` among the 224 prc-only rows = 50000. So `AVG(prc_usd)` = 52.96 over 6,346 rows, while the unbiased `AVG(prc)/100` = 96.23 over 6,570 rows — a ~1.8x difference. Use `prc/100.0` for any average/aggregate (or any threshold >= $500); `prc_usd` silently drops all items costing $500 or more. The \"identical row sets\" equivalence above therefore holds only for thresholds N < 500.\n \n Review fields: `fdbk_g*.rtg` is a real rating in [1,5] (so 1-star = `rtg = 1`); `fdbk_g*.body` is non-null in all 77,022 `fdbk_g2` rows; `fdbk_g2.ts` is an integer epoch (note `fdbk_g3.ts` is TEXT, a type difference between groups).\n "
+      }
+    ],
+    "write_calls": [
+      {
+        "type": "tool_use",
+        "id": "call_00_1y6BLNMIXzoW0W1hgwBC3031",
+        "name": "Edit",
+        "input": {
+          "replace_all": false,
+          "file_path": "D:\\campus_re\\experiments\\memory_direction_20261002\\workspaces\\v2-ds-b9-caution-r1\\memory\\environment.md",
+          "old_string": "Price units in `items_g2` (VERIFIED over the 6,346 rows where both are non-null): `prc = prc_usd * 100` exactly (min and max ratio both 100.0). Thus `prc` is USD cents, `prc_usd` is USD dollars. A \"$N\" threshold can be written either as `prc_usd <= N` or `prc <= 100*N`; both give identical row sets. 13,430 rows have NULL `prc` and 13,654 have NULL `prc_usd`.",
+          "new_string": "Price units in `items_g2` (VERIFIED over the 6,346 rows where both are non-null): `prc = prc_usd * 100` exactly (min/max ratio 100.0 up to float error; 0 mismatches with 1e-6 tolerance). Thus `prc` is USD cents, `prc_usd` is USD dollars. 13,430 rows have NULL `prc` and 13,654 have NULL `prc_usd`.\n\nCAUTION — `prc_usd` is NOT missing at random; it is a truncated column (VERIFIED): `prc_usd` is NULL for *every* row with `prc >= 50000` (224 rows, i.e. listed price >= $500) and non-NULL for all rows with `prc < 50000`. Max `prc_usd` = 499.99; min `prc` among the 224 prc-only rows = 50000. So `AVG(prc_usd)` = 52.96 over 6,346 rows, while the unbiased `AVG(prc)/100` = 96.23 over 6,570 rows — a ~1.8x difference. Use `prc/100.0` for any average/aggregate (or any threshold >= $500); `prc_usd` silently drops all items costing $500 or more. The \"identical row sets\" equivalence above therefore holds only for thresholds N < 500."
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "v2-ds-b9-coverage-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v2-native",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "environment.md",
+        "diff": "--- before/environment.md\n\n+++ after/environment.md\n\n@@ -5,7 +5,7 @@\n\n   node_type: memory\n   type: reference\n   originSessionId: 6943a139-f675-4581-b14a-097549b7b36e\n-  modified: 2026-10-01T17:25:11.354Z\n+  modified: 2026-10-01T17:39:16.201Z\n ---\n \n Scope: the read-only SQLite database exposed by the `sql` query tool in this workspace, which bundles three per-category product datasets (office products, electronics, musical instruments). Observations below are from that database only.\n@@ -25,6 +25,8 @@\n\n \n Price units in `items_g2` (VERIFIED over the 6,346 rows where both are non-null): `prc = prc_usd * 100` exactly (min and max ratio both 100.0). Thus `prc` is USD cents, `prc_usd` is USD dollars. Equality is verified only on the intersection of non-null rows, not on all rows. Because 6,570 prices exist in `prc` but only 6,346 in `prc_usd`, the two columns cannot be substituted in an arbitrary threshold or aggregate without checking coverage. Select the column covering the requested population and then convert units; do not silently discard a known price just because its converted column is NULL. 13,430 rows have NULL `prc` and 13,654 have NULL `prc_usd`.\n \n+Coverage skew (VERIFIED in items_g2): every non-null `prc_usd` row also has `prc` (usd-only count = 0), so the union population = the 6,570 `prc` rows. The 224 `prc`-only rows are high-end items (robots, pro cameras/lenses, $1k-$27k), so `AVG(prc)/100` = $96.23 while `AVG(prc_usd)` = $52.96 — aggregating the narrower column understates the mean by ~45%. Prefer `AVG(COALESCE(prc/100.0, prc_usd))`. Note also that `main_cat` in items_g2 is not purely electronics (~2,700 rows are cross-listed other categories, e.g. Office Products, Musical Instruments), but the dataset itself is the electronics dataset; filtering to electronics main_cats gives $97.97.\n+\n Review fields: `fdbk_g*.rtg` is a real rating in [1,5] (so 1-star = `rtg = 1`); `fdbk_g*.body` is non-null in all 77,022 `fdbk_g2` rows; `fdbk_g2.ts` is an integer epoch (note `fdbk_g3.ts` is TEXT, a type difference between groups).\n \n Schema varies between groups, so per-group SQL cannot be copy-pasted blindly: `items_g1`/`items_g3` carry `desc_txt` (and g1 also `avg_rtg_30d`, `rtg_ct`), `items_g2` carries `prc_usd`/`img_ct` but no `desc_txt`; `attrs_*` and `fdbk_stats_g1` exist for only some groups."
+      }
+    ],
+    "write_calls": [
+      {
+        "type": "tool_use",
+        "id": "call_00_VRKJxCoOT6iaNILbHmli3962",
+        "name": "Edit",
+        "input": {
+          "replace_all": false,
+          "file_path": "D:\\campus_re\\experiments\\memory_direction_20261002\\workspaces\\v2-ds-b9-coverage-r1\\memory\\environment.md",
+          "old_string": "Review fields:",
+          "new_string": "Coverage skew (VERIFIED in items_g2): every non-null `prc_usd` row also has `prc` (usd-only count = 0), so the union population = the 6,570 `prc` rows. The 224 `prc`-only rows are high-end items (robots, pro cameras/lenses, $1k-$27k), so `AVG(prc)/100` = $96.23 while `AVG(prc_usd)` = $52.96 — aggregating the narrower column understates the mean by ~45%. Prefer `AVG(COALESCE(prc/100.0, prc_usd))`. Note also that `main_cat` in items_g2 is not purely electronics (~2,700 rows are cross-listed other categories, e.g. Office Products, Musical Instruments), but the dataset itself is the electronics dataset; filtering to electronics main_cats gives $97.97.\n\nReview fields:"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "v2-ds-b9-coverage-r2",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v2-native",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "environment.md",
+        "diff": "--- before/environment.md\n\n+++ after/environment.md\n\n@@ -5,7 +5,7 @@\n\n   node_type: memory\n   type: reference\n   originSessionId: 6943a139-f675-4581-b14a-097549b7b36e\n-  modified: 2026-10-01T17:25:11.354Z\n+  modified: 2026-10-01T18:31:17.529Z\n ---\n \n Scope: the read-only SQLite database exposed by the `sql` query tool in this workspace, which bundles three per-category product datasets (office products, electronics, musical instruments). Observations below are from that database only.\n@@ -23,7 +23,7 @@\n\n - `fdbk_g2` also has an `item_id` column, but it matches `items_g2.ref_id` for only 49,393/77,022 rows, so `item_id` is NOT the reliable FK; use `ref_id`.\n - `fdbk_g3` has no `item_id` column at all, so joins there can only use `ref_id`.\n \n-Price units in `items_g2` (VERIFIED over the 6,346 rows where both are non-null): `prc = prc_usd * 100` exactly (min and max ratio both 100.0). Thus `prc` is USD cents, `prc_usd` is USD dollars. Equality is verified only on the intersection of non-null rows, not on all rows. Because 6,570 prices exist in `prc` but only 6,346 in `prc_usd`, the two columns cannot be substituted in an arbitrary threshold or aggregate without checking coverage. Select the column covering the requested population and then convert units; do not silently discard a known price just because its converted column is NULL. 13,430 rows have NULL `prc` and 13,654 have NULL `prc_usd`.\n+Price units in `items_g2` (VERIFIED on all 6,346 rows where both are non-null): `prc = ROUND(prc_usd * 100)` — a raw `prc = prc_usd*100` comparison flags 837 false mismatches from float artifacts only. Thus `prc` is USD cents, `prc_usd` is USD dollars. The NULL pattern is a hard cutoff, not random missingness: `prc_usd` is non-null exactly when `prc < 50000` (max prc with a USD value = 49,999; min prc without = 50,000), i.e. USD dollars are only populated for items under $500. So 6,570 rows have `prc` vs 6,346 with `prc_usd` (224 rows, all >= $500, have only `prc`; and 0 rows have `prc_usd` without `prc`). Select the column covering the requested population and convert units; do not silently discard a known price just because its converted column is NULL. 13,430 rows have NULL `prc` and 13,654 have NULL `prc_usd`.\n \n Review fields: `fdbk_g*.rtg` is a real rating in [1,5] (so 1-star = `rtg = 1`); `fdbk_g*.body` is non-null in all 77,022 `fdbk_g2` rows; `fdbk_g2.ts` is an integer epoch (note `fdbk_g3.ts` is TEXT, a type difference between groups).\n "
+      }
+    ],
+    "write_calls": [
+      {
+        "type": "tool_use",
+        "id": "call_00_L8Sq0MEezbK0t15B3tPu9415",
+        "name": "Edit",
+        "input": {
+          "replace_all": false,
+          "file_path": "D:\\campus_re\\experiments\\memory_direction_20261002\\workspaces\\v2-ds-b9-coverage-r2\\memory\\environment.md",
+          "old_string": "Price units in `items_g2` (VERIFIED over the 6,346 rows where both are non-null): `prc = prc_usd * 100` exactly (min and max ratio both 100.0). Thus `prc` is USD cents, `prc_usd` is USD dollars. Equality is verified only on the intersection of non-null rows, not on all rows. Because 6,570 prices exist in `prc` but only 6,346 in `prc_usd`, the two columns cannot be substituted in an arbitrary threshold or aggregate without checking coverage. Select the column covering the requested population and then convert units; do not silently discard a known price just because its converted column is NULL. 13,430 rows have NULL `prc` and 13,654 have NULL `prc_usd`.",
+          "new_string": "Price units in `items_g2` (VERIFIED on all 6,346 rows where both are non-null): `prc = ROUND(prc_usd * 100)` — a raw `prc = prc_usd*100` comparison flags 837 false mismatches from float artifacts only. Thus `prc` is USD cents, `prc_usd` is USD dollars. The NULL pattern is a hard cutoff, not random missingness: `prc_usd` is non-null exactly when `prc < 50000` (max prc with a USD value = 49,999; min prc without = 50,000), i.e. USD dollars are only populated for items under $500. So 6,570 rows have `prc` vs 6,346 with `prc_usd` (224 rows, all >= $500, have only `prc`; and 0 rows have `prc_usd` without `prc`). Select the column covering the requested population and convert units; do not silently discard a known price just because its converted column is NULL. 13,430 rows have NULL `prc` and 13,654 have NULL `prc_usd`."
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "v2-ds-b9-native-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v2-native",
+    "memory_from": "v2-ds-a11-write-r1",
+    "source_task_explicit_write": false,
+    "before_source": "reconstructed from immutable source run; not a recorded before snapshot",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "v2-ds-b9-native-r2",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v2-native",
+    "memory_from": "v2-ds-a11-write-r1",
+    "source_task_explicit_write": false,
+    "before_source": "reconstructed from immutable source run; not a recorded before snapshot",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "v2-ds-b9-native-r3",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v2-native",
+    "memory_from": "v2-ds-a11-write-r1",
+    "source_task_explicit_write": false,
+    "before_source": "reconstructed from immutable source run; not a recorded before snapshot",
+    "changed": true,
+    "changes": [
+      {
+        "file": "environment.md",
+        "diff": "--- before/environment.md\n\n+++ after/environment.md\n\n@@ -5,7 +5,7 @@\n\n   node_type: memory\n   type: reference\n   originSessionId: 6943a139-f675-4581-b14a-097549b7b36e\n-  modified: 2026-10-01T17:25:11.354Z\n+  modified: 2026-10-01T17:36:30.982Z\n ---\n \n Scope: the read-only SQLite database exposed by the `sql` query tool in this workspace, which bundles three per-category product datasets (office products, electronics, musical instruments). Observations below are from that database only.\n@@ -25,6 +25,8 @@\n\n \n Price units in `items_g2` (VERIFIED over the 6,346 rows where both are non-null): `prc = prc_usd * 100` exactly (min and max ratio both 100.0). Thus `prc` is USD cents, `prc_usd` is USD dollars. A \"$N\" threshold can be written either as `prc_usd <= N` or `prc <= 100*N`; both give identical row sets. 13,430 rows have NULL `prc` and 13,654 have NULL `prc_usd`.\n \n+New (2026-10-02 session): `prc_usd` is populated ONLY for `prc < 50000` (= < $500); max `prc_usd` = 499.99 and min `prc` among prc-only rows = 50000, so 6,346 rows have `prc_usd` vs 6,570 with `prc`. Electronics average price in dollars is therefore ambiguous: AVG(prc_usd) = 52.9567 (6,346 rows) vs AVG(prc)/100 = 96.2335 (6,570 rows). Also, `prc` in g1 (AVG 47.64) and g3 (AVG 123.39) is plausibly already DOLLARS (REAL), unlike g2's integer cents — INFERENCE from plausible magnitudes, not verified.\n+\n Review fields: `fdbk_g*.rtg` is a real rating in [1,5] (so 1-star = `rtg = 1`); `fdbk_g*.body` is non-null in all 77,022 `fdbk_g2` rows; `fdbk_g2.ts` is an integer epoch (note `fdbk_g3.ts` is TEXT, a type difference between groups).\n \n Schema varies between groups, so per-group SQL cannot be copy-pasted blindly: `items_g1`/`items_g3` carry `desc_txt` (and g1 also `avg_rtg_30d`, `rtg_ct`), `items_g2` carries `prc_usd`/`img_ct` but no `desc_txt`; `attrs_*` and `fdbk_stats_g1` exist for only some groups."
+      }
+    ],
+    "write_calls": [
+      {
+        "type": "tool_use",
+        "id": "call_00_U5EuZZfTZaB2c4bnkp5n1648",
+        "name": "Edit",
+        "input": {
+          "replace_all": false,
+          "file_path": "D:\\campus_re\\experiments\\memory_direction_20261002\\workspaces\\v2-ds-b9-native-r3\\memory\\environment.md",
+          "old_string": "Review fields: `fdbk_g*.rtg`",
+          "new_string": "New (2026-10-02 session): `prc_usd` is populated ONLY for `prc < 50000` (= < $500); max `prc_usd` = 499.99 and min `prc` among prc-only rows = 50000, so 6,346 rows have `prc_usd` vs 6,570 with `prc`. Electronics average price in dollars is therefore ambiguous: AVG(prc_usd) = 52.9567 (6,346 rows) vs AVG(prc)/100 = 96.2335 (6,570 rows). Also, `prc` in g1 (AVG 47.64) and g3 (AVG 123.39) is plausibly already DOLLARS (REAL), unlike g2's integer cents — INFERENCE from plausible magnitudes, not verified.\n\nReview fields: `fdbk_g*.rtg`"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "v2-ds-b9-none-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v2-native",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "v2-ds-b9-none-r2",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v2-native",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "v2-ds-b9-none-r3",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v2-native",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "v2-glm-a11-write-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v2-native",
+    "memory_from": null,
+    "source_task_explicit_write": true,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "MEMORY.md",
+        "diff": "--- before/MEMORY.md\n\n+++ after/MEMORY.md\n\n@@ -0,0 +1,3 @@\n\n+# Memory index\n+\n+- [Database environment notes](environment.md) — 3-dataset SQLite schema: g1=office, g2=electronics, g3=musical instruments; `items_g2.prc` is cents, `prc_usd` is dollars"
+      },
+      {
+        "file": "environment.md",
+        "diff": "--- before/environment.md\n\n+++ after/environment.md\n\n@@ -0,0 +1,27 @@\n\n+# Database environment notes (observed 2026-10-02)\n+\n+## Schema layout (verified via sqlite_master)\n+Three independent product datasets, table names suffixed `_g1` / `_g2` / `_g3`:\n+\n+- **g1 = Office Products** — tables: `items_g1`, `fdbk_g1`, `fdbk_stats_g1`, `attrs_g1`, `taxn_g1`\n+- **g2 = Electronics** — tables: `items_g2`, `fdbk_g2`, `taxn_g2` (no attrs/stats tables)\n+- **g3 = Musical Instruments** — tables: `items_g3`, `fdbk_g3`, `attrs_g3` (no taxonomy table)\n+\n+Category assignment is **verified** from `main_cat` value counts in each `items_*` table:\n+- `items_g1`: Office Products 13,933 (dominant)\n+- `items_g2`: Computers 5,247, All Electronics 4,562, Camera & Photo 2,789, Cell Phones & Accessories 1,775 (electronics-dominant)\n+- `items_g3`: Musical Instruments 17,162 (dominant)\n+\n+## Key columns (verified via CREATE TABLE statements)\n+- `items_g2`: `ref_id` PK, `ttl`, `avg_rtg`, `prc` (INTEGER), `prc_usd` (REAL), `main_cat`, `feat_lst`, `img_ct`\n+- `fdbk_g2`: `ref_id` (FK → items_g2), `uid`, `rtg` REAL, `ttl`, `body` TEXT, `ts`, `hlp_ct`, `vrf` (TEXT in g2, INTEGER in g1/g3)\n+\n+## Data facts (verified by query)\n+- `items_g2.prc` is **in cents**, `prc_usd` is in dollars — confirmed consistent (0 rows where `ABS(prc - prc_usd*100) > 0.01`); 224 rows have null-pattern mismatch between the two fields. Use `prc_usd <= 40` for dollar thresholds.\n+- `items_g2` has 20,000 rows; 6,570 have `prc`, 6,346 have `prc_usd` (many null prices).\n+- `fdbk_g2.rtg` values are only 1.0–5.0 (counts: 5★ 49,611; 4★ 10,492; 3★ 5,682; 2★ 3,791; 1★ 7,446).\n+- All `fdbk_g2.ref_id` values match `items_g2.ref_id` (0 unmatched on LEFT JOIN) — inner join safe.\n+\n+## Inference vs. verification\n+- Price-unit interpretation (cents vs dollars) is **verified** numerically, not inferred from column names.\n+- Electronics = g2 is **verified** from `main_cat` dominance; g1/g3 assignments likewise."
+      }
+    ],
+    "write_calls": [
+      {
+        "type": "tool_use",
+        "id": "call_d0214a4535824082ba07438d",
+        "name": "Write",
+        "input": {
+          "file_path": "D:\\campus_re\\experiments\\memory_direction_20261002\\workspaces\\v2-glm-a11-write-r1\\memory\\environment.md",
+          "content": "# Database environment notes (observed 2026-10-02)\n\n## Schema layout (verified via sqlite_master)\nThree independent product datasets, table names suffixed `_g1` / `_g2` / `_g3`:\n\n- **g1 = Office Products** — tables: `items_g1`, `fdbk_g1`, `fdbk_stats_g1`, `attrs_g1`, `taxn_g1`\n- **g2 = Electronics** — tables: `items_g2`, `fdbk_g2`, `taxn_g2` (no attrs/stats tables)\n- **g3 = Musical Instruments** — tables: `items_g3`, `fdbk_g3`, `attrs_g3` (no taxonomy table)\n\nCategory assignment is **verified** from `main_cat` value counts in each `items_*` table:\n- `items_g1`: Office Products 13,933 (dominant)\n- `items_g2`: Computers 5,247, All Electronics 4,562, Camera & Photo 2,789, Cell Phones & Accessories 1,775 (electronics-dominant)\n- `items_g3`: Musical Instruments 17,162 (dominant)\n\n## Key columns (verified via CREATE TABLE statements)\n- `items_g2`: `ref_id` PK, `ttl`, `avg_rtg`, `prc` (INTEGER), `prc_usd` (REAL), `main_cat`, `feat_lst`, `img_ct`\n- `fdbk_g2`: `ref_id` (FK → items_g2), `uid`, `rtg` REAL, `ttl`, `body` TEXT, `ts`, `hlp_ct`, `vrf` (TEXT in g2, INTEGER in g1/g3)\n\n## Data facts (verified by query)\n- `items_g2.prc` is **in cents**, `prc_usd` is in dollars — confirmed consistent (0 rows where `ABS(prc - prc_usd*100) > 0.01`); 224 rows have null-pattern mismatch between the two fields. Use `prc_usd <= 40` for dollar thresholds.\n- `items_g2` has 20,000 rows; 6,570 have `prc`, 6,346 have `prc_usd` (many null prices).\n- `fdbk_g2.rtg` values are only 1.0–5.0 (counts: 5★ 49,611; 4★ 10,492; 3★ 5,682; 2★ 3,791; 1★ 7,446).\n- All `fdbk_g2.ref_id` values match `items_g2.ref_id` (0 unmatched on LEFT JOIN) — inner join safe.\n\n## Inference vs. verification\n- Price-unit interpretation (cents vs dollars) is **verified** numerically, not inferred from column names.\n- Electronics = g2 is **verified** from `main_cat` dominance; g1/g3 assignments likewise.\n"
+        }
+      },
+      {
+        "type": "tool_use",
+        "id": "call_4b63edda3c0c42b4bdf7d7f4",
+        "name": "Write",
+        "input": {
+          "file_path": "D:\\campus_re\\experiments\\memory_direction_20261002\\workspaces\\v2-glm-a11-write-r1\\memory\\MEMORY.md",
+          "content": "# Memory index\n\n- [Database environment notes](environment.md) — 3-dataset SQLite schema: g1=office, g2=electronics, g3=musical instruments; `items_g2.prc` is cents, `prc_usd` is dollars\n"
+        }
+      }
+    ]
+  },
+  {
+    "run_id": "v2-glm-b9-coverage-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v2-native",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "v2-glm-b9-native-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v2-native",
+    "memory_from": "v2-glm-a11-write-r1",
+    "source_task_explicit_write": false,
+    "before_source": "reconstructed from immutable source run; not a recorded before snapshot",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "v2-glm-b9-none-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v2-native",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": false,
+    "changes": [],
+    "write_calls": []
+  },
+  {
+    "run_id": "v2-glm-b9-own-coverage-r1",
+    "agent": "Claude Code 2.1.286",
+    "protocol": "clbench-derived-v2-native",
+    "memory_from": null,
+    "source_task_explicit_write": false,
+    "before_source": "memory_before",
+    "changed": true,
+    "changes": [
+      {
+        "file": "environment.md",
+        "diff": "--- before/environment.md\n\n+++ after/environment.md\n\n@@ -17,7 +17,7 @@\n\n - `fdbk_g2`: `ref_id` (FK → items_g2), `uid`, `rtg` REAL, `ttl`, `body` TEXT, `ts`, `hlp_ct`, `vrf` (TEXT in g2, INTEGER in g1/g3)\n \n ## Data facts (verified by query)\n-- `items_g2.prc` is **in cents**, `prc_usd` is in dollars — confirmed consistent (0 rows where `ABS(prc - prc_usd*100) > 0.01`); 224 rows have null-pattern mismatch between the two fields. The demonstrated use was `prc_usd <= 40`. Equality on common non-null rows does not establish equal coverage: `prc` has 6,570 values but `prc_usd` only 6,346. Before substituting the columns in another filter or aggregate, check which covers the requested population and then convert currency units. Do not discard a known price merely because its converted column is NULL.\n+- `items_g2.prc` is **in cents**, `prc_usd` is in dollars — confirmed consistent (0 rows where `ABS(prc - prc_usd*100) > 0.01`); 224 rows have null-pattern mismatch between the two fields. The demonstrated use was `prc_usd <= 40`. Equality on common non-null rows does not establish equal coverage: `prc` has 6,570 values but `prc_usd` only 6,346; the 224 `prc_usd`-null rows are exactly those with `prc >= 50000` (i.e. listed price ≥ $500, up to ~$26,888) — `prc_usd` coverage stops at the $500 boundary. Before substituting the columns in another filter or aggregate, check which covers the requested population and then convert currency units. Do not discard a known price merely because its converted column is NULL.\n - `items_g2` has 20,000 rows; 6,570 have `prc`, 6,346 have `prc_usd` (many null prices).\n - `fdbk_g2.rtg` values are only 1.0–5.0 (counts: 5★ 49,611; 4★ 10,492; 3★ 5,682; 2★ 3,791; 1★ 7,446).\n - All `fdbk_g2.ref_id` values match `items_g2.ref_id` (0 unmatched on LEFT JOIN) — inner join safe."
+      }
+    ],
+    "write_calls": [
+      {
+        "type": "tool_use",
+        "id": "call_b8d3c5c75620410a8b3bd637",
+        "name": "Edit",
+        "input": {
+          "replace_all": false,
+          "file_path": "D:\\campus_re\\experiments\\memory_direction_20261002\\workspaces\\v2-glm-b9-own-coverage-r1\\memory\\environment.md",
+          "old_string": "`prc` has 6,570 values but `prc_usd` only 6,346.",
+          "new_string": "`prc` has 6,570 values but `prc_usd` only 6,346; the 224 `prc_usd`-null rows are exactly those with `prc >= 50000` (i.e. listed price ≥ $500, up to ~$26,888) — `prc_usd` coverage stops at the $500 boundary."
+        }
+      }
+    ]
+  }
+]

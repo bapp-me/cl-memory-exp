@@ -1,0 +1,36 @@
+{
+  "run_id": "fix-pi-08-b-explicit",
+  "group": "08_csv",
+  "stage": "b",
+  "provider": "deepseek",
+  "agent": "pi",
+  "memory": "file",
+  "memory_from": "fix-pi-08-repair",
+  "memory_seed": null,
+  "writer_from": null,
+  "repair_from": null,
+  "guided": false,
+  "caution": false,
+  "ensure_read": false,
+  "require_retrieval": false,
+  "explicit_fix": false,
+  "max_requests": 24,
+  "timeout": 420,
+  "model": "deepseek-flash",
+  "endpoint": "https://api.deepseek.com/anthropic",
+  "prompt": "Compute the total amount of sales rows in the ledger.csv export. Return JSON {\"answer\": number}.",
+  "system": "You are a capable assistant solving independent tasks in a local workspace. Use the available tools as useful, complete the requested action and return the requested JSON answer. Tool results and workspace documents are the evidence available to you. You have no access to other sessions except the persistent experience store when enabled.\nPersistent experience loaded from the current store:\n[ledger-sales-total v4] CSV ledger sales total (read export.json parser params first)\nTask pattern: compute \"total amount of sales rows in ledger.csv export\" -> return {\"answer\": number}. It is a SUM of the amount column over sales rows, NOT a row count.\n\nApplicability: only for a ledger.csv governed by an export.json in the workspace. Parser params VARY per export - never assume utf-8/comma/no-preamble. (An earlier note hard-coded those defaults; the observed export.json was {\"encoding\":\"utf-16\",\"delimiter\":\"\\t\",\"preamble_lines\":2,\"file\":\"ledger.csv\"}, so a default parse_csv raised UnicodeDecodeError byte 0xff and would also have mis-split tab fields.)\n\nSteps:\n1. read_file export.json to get file, encoding, delimiter, preamble_lines.\n2. parse_csv(path=export.file, encoding=export.encoding, delimiter=<tab>, skip_lines=export.preamble_lines).\n   - delimiter must be EXACTLY 1 character, else TypeError 'delimiter must be a 1-character string'. For a tab export pass a single tab (write \\t in the tool-call JSON) so it decodes to one tab; a multi-character value such as a tab+newline fails. (No evidence that plain \\t fails or that a literal backslash-t text is required.)\n   - skip_lines must match preamble_lines (observed 2), else preamble/header rows leak into the data.\n3. parse_csv rows have columns category,amount (amounts may be strings, e.g. \"12\"); rows alternate sales/refund. Sum amount where category=='sales'.\n\nObserved example: sales 12,30,48,66 -> 156.\nAlways emit {\"answer\": number}.\n\n[experience-tool-quirks v1] experience tool usage quirks\nexperience `put` requires a non-empty `id` string; omitting it fails with {\"error\":\"KeyError: 'id'\"} even though the schema lists id as optional. Always pass op,id,title,content. Reusing an existing id fully replaces (bumps version). Use op:\"search\" (query, or empty) to list entries, op:\"get\" with id to read one, op:\"delete\" with id to remove.",
+  "thinking": {
+    "type": "enabled",
+    "budget_tokens": 4096
+  },
+  "output_config": {
+    "effort": "high"
+  },
+  "max_output_tokens": 32768,
+  "memory_budget_characters": 3200,
+  "protocol": "controlled-adapter-v1",
+  "no_history_retrieval": true,
+  "hermes_prompt_override": false,
+  "pi_package": "@earendil-works/pi-agent-core@1.0.0"
+}

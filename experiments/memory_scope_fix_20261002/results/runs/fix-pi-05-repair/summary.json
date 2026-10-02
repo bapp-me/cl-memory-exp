@@ -1,0 +1,41 @@
+{
+  "run_id": "fix-pi-05-repair",
+  "group": "05_update",
+  "stage": "c",
+  "agent": "pi",
+  "provider": "deepseek",
+  "memory": "file",
+  "memory_from": null,
+  "writer_from": null,
+  "repair_from": "main-pi-05-c-file",
+  "guided": false,
+  "caution": false,
+  "ensure_read": false,
+  "explicit_fix": false,
+  "seconds": 12.781,
+  "error": null,
+  "stop_reason": "stop",
+  "quality": {
+    "success": true,
+    "writer_saved": true
+  },
+  "tools": {
+    "experience": 3
+  },
+  "task_tools": 0,
+  "memory_reads": 2,
+  "memory_writes": 1,
+  "tool_errors": 0,
+  "repeated_task_calls": 0,
+  "memory_changed": true,
+  "usage": {
+    "requests": 4,
+    "failed_http": 0,
+    "input_tokens": 6945,
+    "output_tokens": 2008,
+    "cache_read_input_tokens": 22656,
+    "cache_creation_input_tokens": 0,
+    "all_input_tokens": 29601
+  },
+  "final_response": "The repair is complete and verified.\n\n**What was wrong:** The stored entry `mock-api-profile-patch-pattern` presented PATCH-on-omitted-fields as the general pattern for this task type, with no applicability gate. In this trajectory the workspace API was **version 2**, where `PATCH` is unsupported and `PUT` *replaces* the resource (missing fields default to null/false/UTC). Following that stored guidance verbatim would have silently wiped `email` and `digest` — exactly the opposite of the task's \"preserve\" requirement.\n\n**What I changed:**\n- Rewrote `mock-api-profile-patch-pattern` (now v2) to lead with an explicit **APPLICABILITY** condition: it applies *only* when `api.json`/the `/profile` doc says PATCH is supported (v1 semantics). It now flags that on v2 the pattern is wrong/inapplicable and cross-references the correct approach (GET then PUT the full object).\n- Preserved the original v1 workflow and lessons intact, reframed as \"when PATCH is the documented verb.\"\n- Left `mock-api-profile-update-by-version` unchanged — its content matches the visible evidence (v1 = PATCH partial, v2 = PUT full replace) and is already correct/useful.\n\nBoth entries now agree and the misleading unconditional PATCH advice is no longer presented without its guardrail. No future task answers were invented; only the stored applicability conditions were corrected based on the visible v2 evidence."
+}

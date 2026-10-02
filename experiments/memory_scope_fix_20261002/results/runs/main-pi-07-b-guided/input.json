@@ -1,0 +1,35 @@
+{
+  "run_id": "main-pi-07-b-guided",
+  "group": "07_config",
+  "stage": "b",
+  "provider": "deepseek",
+  "agent": "pi",
+  "memory": "file",
+  "memory_from": "guided-pi-07-w",
+  "memory_seed": null,
+  "writer_from": null,
+  "repair_from": null,
+  "guided": false,
+  "caution": false,
+  "ensure_read": false,
+  "explicit_fix": false,
+  "max_requests": 24,
+  "timeout": 420,
+  "model": "deepseek-flash",
+  "endpoint": "https://api.deepseek.com/anthropic",
+  "prompt": "Set the effective application port to 8102, retaining its host. Verify runtime configuration and return JSON {\"answer\": 8102}.",
+  "system": "You are a capable assistant solving independent tasks in a local workspace. Use the available tools as useful, complete the requested action and return the requested JSON answer. Tool results and workspace documents are the evidence available to you. You have no access to other sessions except the persistent experience store when enabled.\nPersistent experience loaded from the current store:\n[local-config-override v1] Local app config: file vs deployment override resolution\nTask pattern (observed workspace): files \"README.md\",\"deployment.json\",\"settings.json\". Tools: list_files, read_file, write_file (JSON text only), config (shows EFFECTIVE runtime config).\n\nObserved precedence rule (README.md): settings.json provides base values (e.g. {\"port\":8001,\"host\":\"127.0.0.1\"}); deployment.json is {\"environment\":{...},\"config_file\":\"settings.json\"}. If deployment.json environment.APP_PORT is present, it OVERRIDES the file port. config tool output reflects the merged effective settings.\n\nProcedure to change effective port, retain host:\n1. list_files + config to see current effective values.\n2. read settings.json, deployment.json, README.md to learn precedence and current overrides.\n3. If a deployment override is NOT the desired value (or must be superseded), edit the authoritative source. In the observed run environment.APP_PORT was ABSENT, so editing settings.json port (keeping host) sufficed. NOTE: if environment.APP_PORT is present it wins, so editing settings.json alone would NOT change the effective port — you must change/remove the override instead. Always check which wins before editing.\n4. write_file with full JSON text, then re-run config to VERIFY (do not trust the edit alone).\n\nVerified observation: after settings.json -> {\"port\":8101,\"host\":\"127.0.0.1\"}, config returned {\"port\":8101,\"host\":\"127.0.0.1\"}. Untested: behavior when deployment.json environment.APP_PORT is set/non-empty; exact override key name beyond APP_PORT (README stated APP_PORT for this app); other keys beyond port/host.",
+  "thinking": {
+    "type": "enabled",
+    "budget_tokens": 4096
+  },
+  "output_config": {
+    "effort": "high"
+  },
+  "max_output_tokens": 32768,
+  "memory_budget_characters": 3200,
+  "protocol": "controlled-adapter-v1",
+  "no_history_retrieval": true,
+  "hermes_prompt_override": false,
+  "pi_package": "@earendil-works/pi-agent-core@1.0.0"
+}

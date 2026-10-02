@@ -1,0 +1,12 @@
+{
+  "csv-sales-total-procedure": {
+    "title": "Procedure: sum sales rows from CSV export",
+    "content": "Task type: \"Compute the total amount of sales rows in the ledger.csv export. Return JSON {answer:number}.\"\nEnvironment: isolated workspace, tools list_files/read_file/parse_csv/experience. Files seen: [\"export.json\",\"ledger.csv\"].\n\nProcedure (reusable):\n1) list_files first.\n2) ALWAYS read export.json first when present — parser params vary per task. Seen so far: {\"encoding\":\"utf-8\",\"delimiter\":\",\",\"preamble_lines\":0,\"file\":\"ledger.csv\"}; and {\"encoding\":\"utf-16\",\"delimiter\":\"\\t\",\"preamble_lines\":2,\"file\":\"ledger.csv\"}. Pass as parse_csv(path, encoding=..., delimiter=..., skip_lines=preamble_lines). Note JSON \"\\t\" must be passed as an actual tab char.\n3) parse_csv returns {\"rows\":[{col:val,...}]} with string values; caps at 50 rows.\n4) Confirm header/values, filter rows where category==\"sales\", coerce amount to number, sum. Exclude refund rows (do not subtract).\n5) Answer JSON {\"answer\": <number>}.\n\nObserved instances: utf-8/comma/0 preamble: sales 10,28,46,64 -> 148 (count 4). utf-16/tab/2 preamble: sales 12,30,48,66 -> 156 (count 4). Both cases alternating sales/refund, 8 rows.\nUntested: grader expecting count vs sum (assumed sum per \"total amount\"); files >50 rows; refunds subtracted vs excluded.\nread_file on a CSV returned bytes + truncated hex prefix, so use parse_csv not read_file for rows.",
+    "version": 2
+  },
+  "experience-tool-quirk": {
+    "title": "experience tool: put requires explicit id",
+    "content": "Observed: calling experience with op=put but omitting \"id\" failed with {\"error\":\"KeyError: 'id'\"}. Retrying with an explicit \"id\" (e.g. \"ledger-sales-total\") succeeded: {\"saved\":\"<id>\",\"version\":1,\"characters\":N}. So always pass id on put; put replaces/creates that entry and bumps version. search returns {\"matches\":[{id,title,content,version}],...}; get by id returns the single entry. Applicability: check applies whenever writing experience entries in this environment. Untested: delete/empty-query behavior.",
+    "version": 1
+  }
+}

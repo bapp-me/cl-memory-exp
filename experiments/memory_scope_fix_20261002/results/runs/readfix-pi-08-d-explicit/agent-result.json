@@ -1,0 +1,388 @@
+{
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a capable assistant solving independent tasks in a local workspace. Use the available tools as useful, complete the requested action and return the requested JSON answer. Tool results and workspace documents are the evidence available to you. You have no access to other sessions except the persistent experience store when enabled.\nA persistent experience store is available through experience search/get. No entries are automatically loaded.",
+      "toolsAdded": [
+        {
+          "name": "list_files",
+          "description": "List all files in the current isolated task workspace.",
+          "parameters": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "read_file",
+          "description": "Read a workspace file. Binary files return a short byte prefix and size.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "parse_csv",
+          "description": "Parse a local CSV export and return all rows (at most 50). Defaults: UTF-8, comma, no skipped preamble. Supply parser parameters when needed.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "encoding": {
+                "type": "string"
+              },
+              "delimiter": {
+                "type": "string"
+              },
+              "skip_lines": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "experience",
+          "description": "Persistent experience store across independent tasks. Search/get, put (create or fully replace an entry) or delete. You may curate useful experience at your discretion. Content budget 3200 characters; no automatic end-of-task write. Empty search lists entries. Changes are immediately searchable.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string",
+                "enum": [
+                  "search",
+                  "get",
+                  "put",
+                  "delete"
+                ]
+              },
+              "id": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "content": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "op"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "timestamp": 0
+    },
+    {
+      "role": "user",
+      "content": [
+        {
+          "type": "text",
+          "text": "Compute the total amount of sales rows in the ledger.csv export. Return JSON {\"answer\": number}.\nDiagnostic retrieval condition: before task actions, use experience search/get to inspect relevant stored experience, then complete the task."
+        }
+      ],
+      "timestamp": 1790915466142
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "thinking",
+          "thinking": "Let me start by checking the experience store and listing files.",
+          "thinkingSignature": "4db3bb92-179f-4b15-9e4d-e550342bcfbe"
+        },
+        {
+          "type": "toolCall",
+          "id": "call_00_4IgoF29tUct1lOR06Hsj7785",
+          "name": "experience",
+          "arguments": {
+            "op": "search",
+            "query": "ledger.csv sales rows total amount"
+          }
+        },
+        {
+          "type": "toolCall",
+          "id": "call_01_x125PI8bO11lJQrxWeZe9575",
+          "name": "list_files",
+          "arguments": {}
+        }
+      ],
+      "api": "anthropic-messages",
+      "provider": "experiment",
+      "model": "deepseek-flash",
+      "usage": {
+        "input": 195,
+        "output": 83,
+        "cacheRead": 512,
+        "cacheWrite": 0,
+        "totalTokens": 790,
+        "cost": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "total": 0
+        },
+        "cacheWrite1h": 0
+      },
+      "stopReason": "toolUse",
+      "timestamp": 1790915466147,
+      "responseId": "4db3bb92-179f-4b15-9e4d-e550342bcfbe",
+      "rawStopReason": "tool_use",
+      "thinkingLevel": "high"
+    },
+    {
+      "role": "toolResult",
+      "toolCallId": "call_00_4IgoF29tUct1lOR06Hsj7785",
+      "toolName": "experience",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"matches\":[{\"id\":\"ledger-sales-total\",\"title\":\"CSV ledger sales total (read export.json parser params first)\",\"content\":\"Task pattern: compute \\\"total amount of sales rows in ledger.csv export\\\" -> return {\\\"answer\\\": number}. It is a SUM of the amount column over sales rows, NOT a row count.\\n\\nApplicability: only for a ledger.csv governed by an export.json in the workspace. Parser params VARY per export - never assume utf-8/comma/no-preamble. (An earlier note hard-coded those defaults; the observed export.json was {\\\"encoding\\\":\\\"utf-16\\\",\\\"delimiter\\\":\\\"\\\\t\\\",\\\"preamble_lines\\\":2,\\\"file\\\":\\\"ledger.csv\\\"}, so a default parse_csv raised UnicodeDecodeError byte 0xff and would also have mis-split tab fields.)\\n\\nSteps:\\n1. read_file export.json to get file, encoding, delimiter, preamble_lines.\\n2. parse_csv(path=export.file, encoding=export.encoding, delimiter=<tab>, skip_lines=export.preamble_lines).\\n   - delimiter must be EXACTLY 1 character, else TypeError 'delimiter must be a 1-character string'. For a tab export pass a single tab (write \\\\t in the tool-call JSON) so it decodes to one tab; a multi-character value such as a tab+newline fails. (No evidence that plain \\\\t fails or that a literal backslash-t text is required.)\\n   - skip_lines must match preamble_lines (observed 2), else preamble/header rows leak into the data.\\n3. parse_csv rows have columns category,amount (amounts may be strings, e.g. \\\"12\\\"); rows alternate sales/refund. Sum amount where category=='sales'.\\n\\nObserved example: sales 12,30,48,66 -> 156.\\nAlways emit {\\\"answer\\\": number}.\",\"version\":4}],\"index\":\"synchronous current-version lexical search\",\"total_entries\":2}"
+        }
+      ],
+      "details": {
+        "matches": [
+          {
+            "id": "ledger-sales-total",
+            "title": "CSV ledger sales total (read export.json parser params first)",
+            "content": "Task pattern: compute \"total amount of sales rows in ledger.csv export\" -> return {\"answer\": number}. It is a SUM of the amount column over sales rows, NOT a row count.\n\nApplicability: only for a ledger.csv governed by an export.json in the workspace. Parser params VARY per export - never assume utf-8/comma/no-preamble. (An earlier note hard-coded those defaults; the observed export.json was {\"encoding\":\"utf-16\",\"delimiter\":\"\\t\",\"preamble_lines\":2,\"file\":\"ledger.csv\"}, so a default parse_csv raised UnicodeDecodeError byte 0xff and would also have mis-split tab fields.)\n\nSteps:\n1. read_file export.json to get file, encoding, delimiter, preamble_lines.\n2. parse_csv(path=export.file, encoding=export.encoding, delimiter=<tab>, skip_lines=export.preamble_lines).\n   - delimiter must be EXACTLY 1 character, else TypeError 'delimiter must be a 1-character string'. For a tab export pass a single tab (write \\t in the tool-call JSON) so it decodes to one tab; a multi-character value such as a tab+newline fails. (No evidence that plain \\t fails or that a literal backslash-t text is required.)\n   - skip_lines must match preamble_lines (observed 2), else preamble/header rows leak into the data.\n3. parse_csv rows have columns category,amount (amounts may be strings, e.g. \"12\"); rows alternate sales/refund. Sum amount where category=='sales'.\n\nObserved example: sales 12,30,48,66 -> 156.\nAlways emit {\"answer\": number}.",
+            "version": 4
+          }
+        ],
+        "index": "synchronous current-version lexical search",
+        "total_entries": 2
+      },
+      "isError": false,
+      "timestamp": 1790915467309
+    },
+    {
+      "role": "toolResult",
+      "toolCallId": "call_01_x125PI8bO11lJQrxWeZe9575",
+      "toolName": "list_files",
+      "content": [
+        {
+          "type": "text",
+          "text": "[\"export.json\",\"ledger.csv\"]"
+        }
+      ],
+      "details": [
+        "export.json",
+        "ledger.csv"
+      ],
+      "isError": false,
+      "timestamp": 1790915467316
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "thinking",
+          "thinking": "Let me read export.json.",
+          "thinkingSignature": "23e6032a-178d-4105-8690-0162ed3b1eaa"
+        },
+        {
+          "type": "toolCall",
+          "id": "call_00_XAuOZIfxz5VXOhwHxNoU2426",
+          "name": "read_file",
+          "arguments": {
+            "path": "export.json"
+          }
+        }
+      ],
+      "api": "anthropic-messages",
+      "provider": "experiment",
+      "model": "deepseek-flash",
+      "usage": {
+        "input": 487,
+        "output": 45,
+        "cacheRead": 768,
+        "cacheWrite": 0,
+        "totalTokens": 1300,
+        "cost": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "total": 0
+        },
+        "cacheWrite1h": 0
+      },
+      "stopReason": "toolUse",
+      "timestamp": 1790915467318,
+      "responseId": "23e6032a-178d-4105-8690-0162ed3b1eaa",
+      "rawStopReason": "tool_use",
+      "thinkingLevel": "high"
+    },
+    {
+      "role": "toolResult",
+      "toolCallId": "call_00_XAuOZIfxz5VXOhwHxNoU2426",
+      "toolName": "read_file",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"path\":\"export.json\",\"content\":\"{\\n  \\\"encoding\\\": \\\"utf-16\\\",\\n  \\\"delimiter\\\": \\\"\\\\t\\\",\\n  \\\"preamble_lines\\\": 2,\\n  \\\"file\\\": \\\"ledger.csv\\\"\\n}\"}"
+        }
+      ],
+      "details": {
+        "path": "export.json",
+        "content": "{\n  \"encoding\": \"utf-16\",\n  \"delimiter\": \"\\t\",\n  \"preamble_lines\": 2,\n  \"file\": \"ledger.csv\"\n}"
+      },
+      "isError": false,
+      "timestamp": 1790915467919
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "thinking",
+          "thinking": "Now parse with tab delimiter and skip 2 lines.",
+          "thinkingSignature": "8035c4e4-8a49-4a67-a6d6-77fb9c424e37"
+        },
+        {
+          "type": "toolCall",
+          "id": "call_00_tuLaO6xOOGNHcRhgWFAy9393",
+          "name": "parse_csv",
+          "arguments": {
+            "path": "ledger.csv",
+            "encoding": "utf-16",
+            "delimiter": "\t",
+            "skip_lines": 2
+          }
+        }
+      ],
+      "api": "anthropic-messages",
+      "provider": "experiment",
+      "model": "deepseek-flash",
+      "usage": {
+        "input": 216,
+        "output": 104,
+        "cacheRead": 1152,
+        "cacheWrite": 0,
+        "totalTokens": 1472,
+        "cost": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "total": 0
+        },
+        "cacheWrite1h": 0
+      },
+      "stopReason": "toolUse",
+      "timestamp": 1790915467921,
+      "responseId": "8035c4e4-8a49-4a67-a6d6-77fb9c424e37",
+      "rawStopReason": "tool_use",
+      "thinkingLevel": "high"
+    },
+    {
+      "role": "toolResult",
+      "toolCallId": "call_00_tuLaO6xOOGNHcRhgWFAy9393",
+      "toolName": "parse_csv",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"rows\":[{\"category\":\"sales\",\"amount\":\"13\"},{\"category\":\"refund\",\"amount\":\"22\"},{\"category\":\"sales\",\"amount\":\"31\"},{\"category\":\"refund\",\"amount\":\"40\"},{\"category\":\"sales\",\"amount\":\"49\"},{\"category\":\"refund\",\"amount\":\"58\"},{\"category\":\"sales\",\"amount\":\"67\"},{\"category\":\"refund\",\"amount\":\"76\"}]}"
+        }
+      ],
+      "details": {
+        "rows": [
+          {
+            "category": "sales",
+            "amount": "13"
+          },
+          {
+            "category": "refund",
+            "amount": "22"
+          },
+          {
+            "category": "sales",
+            "amount": "31"
+          },
+          {
+            "category": "refund",
+            "amount": "40"
+          },
+          {
+            "category": "sales",
+            "amount": "49"
+          },
+          {
+            "category": "refund",
+            "amount": "58"
+          },
+          {
+            "category": "sales",
+            "amount": "67"
+          },
+          {
+            "category": "refund",
+            "amount": "76"
+          }
+        ]
+      },
+      "isError": false,
+      "timestamp": 1790915469070
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "thinking",
+          "thinking": "Sales: 13+31+49+67 = 160.",
+          "thinkingSignature": "ef686cf6-b0f2-42ca-bd4b-8e193c8d7990"
+        },
+        {
+          "type": "text",
+          "text": "{\"answer\": 160}"
+        }
+      ],
+      "api": "anthropic-messages",
+      "provider": "experiment",
+      "model": "deepseek-flash",
+      "usage": {
+        "input": 156,
+        "output": 21,
+        "cacheRead": 1408,
+        "cacheWrite": 0,
+        "totalTokens": 1585,
+        "cost": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "total": 0
+        },
+        "cacheWrite1h": 0
+      },
+      "stopReason": "stop",
+      "timestamp": 1790915469072,
+      "responseId": "ef686cf6-b0f2-42ca-bd4b-8e193c8d7990",
+      "rawStopReason": "end_turn",
+      "thinkingLevel": "high"
+    }
+  ],
+  "final_response": "{\"answer\": 160}",
+  "error": null,
+  "stop_reason": "stop",
+  "turns": 4
+}

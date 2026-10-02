@@ -1,0 +1,63 @@
+{
+  "status": "pilot_frozen",
+  "pi_package": "@earendil-works/pi-agent-core@1.0.0",
+  "calibration_path": "No Memory plus bounded ICL initial selection; Mem0 confirmation deferred until its integration; not a complete 2x3 matrix",
+  "calibration_repetitions": 1,
+  "calibration_units": [
+    "First preselected complete AgentCL dependency pair: BigCodeBench/868, source then target",
+    "Database Exploration complete pre-migration stage: 20 questions in native schema_drift sequence, seed 42, run_index 0"
+  ],
+  "calibration_tasks_per_configuration": 22,
+  "calibration_total_executions": 88,
+  "memory_policy": {
+    "source": "own observable task prompt, assistant text, tool calls and results; excludes hidden scoring and reasoning text",
+    "icl": "whole episodes in original order; remove oldest until <=48000 UTF-8 bytes; no generated summary",
+    "retriever": "fixed lexical word-set Jaccard, top 3, ties favor recent episode; inject selected episodes in chronological order; same 48000 byte cap",
+    "context_capacity_measure": "byte cap is a conservative engineering bound, not a claim of exact tokenizer counts",
+    "start": "new Pi Agent for every task; fresh working directory; no provider session ID",
+    "readonly": "fixed first-pass memory; no new probe episodes appended"
+  },
+  "task_budgets": {
+    "max_model_turns": 18,
+    "max_output_tokens_per_turn": 8192,
+    "max_task_seconds": 600,
+    "request_payload_utf8_bytes": 320000,
+    "reasoning_effort": "high",
+    "temperature": "provider default, explicit temperature omitted in thinking mode",
+    "seed": "not requested; provider determinism not guaranteed",
+    "database_queries": 15,
+    "database_response_seconds": 60,
+    "code_python_calls": 15,
+    "code_response_seconds": 180,
+    "code_execution_cpu_seconds": 90,
+    "code_execution_wall_seconds": 120,
+    "code_execution_virtual_memory_mib": 3072,
+    "code_execution_process_limit": 64
+  },
+  "database_adapter": {
+    "native_functions_reused_verbatim_by_ast": [
+      "_build_schema_drift_question_sequence",
+      "_execute_sql",
+      "_format_results",
+      "_evaluate_answer"
+    ],
+    "native_prompt": "QUESTION_TEMPLATE",
+    "native_state": "read-only pre/post database snapshots, switch at index 20; fixed original stage notification",
+    "feedback": "preserve correctness, strip gold answers; reference SQL never exposed",
+    "additional_security_restriction": "read-only SQLite connection, query_only, ATTACH/DETACH denied",
+    "framework_boundary": "controlled Pi adapter using native task methods; does not run CL-Bench full CLI orchestration"
+  },
+  "sandbox": {
+    "implementation": "WSL2 user/mount/network/PID namespaces plus chroot, no host home/repo/proc, capabilities dropped, no_new_privs",
+    "evaluation": "separate post-submission sandbox with submitted code and hidden tests; no grader feedback to AgentCL memory",
+    "acceptance": "passed with Python 3.10 and pinned library set"
+  },
+  "version_limits": [
+    "Model IDs are mutable aliases",
+    "No replicate stability measurement",
+    "Library compatibility must pass reference tests before code benchmark calibration"
+  ],
+  "database_calibration_frozen_at": "2026-10-02T10:55:35.406388+00:00",
+  "scoring_exclusions": "records/scorer-issues.json, user confirmed",
+  "pilot_frozen_at": "2026-10-02T11:19:55.208900+00:00"
+}

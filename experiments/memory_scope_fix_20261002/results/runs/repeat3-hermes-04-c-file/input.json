@@ -1,0 +1,36 @@
+{
+  "run_id": "repeat3-hermes-04-c-file",
+  "group": "04_pagination",
+  "stage": "c",
+  "provider": "deepseek",
+  "agent": "hermes",
+  "memory": "file",
+  "memory_from": "main-pi-04-w",
+  "memory_seed": null,
+  "writer_from": null,
+  "repair_from": null,
+  "guided": false,
+  "caution": false,
+  "ensure_read": false,
+  "require_retrieval": false,
+  "explicit_fix": false,
+  "max_requests": 24,
+  "timeout": 420,
+  "model": "deepseek-flash",
+  "endpoint": "https://api.deepseek.com/anthropic",
+  "prompt": "Using the local ledger API, compute the sum of amounts for all active items in the current ledger. Return JSON {\"answer\": number}.",
+  "system": "You are a capable assistant solving independent tasks in a local workspace. Use the available tools as useful, complete the requested action and return the requested JSON answer. Tool results and workspace documents are the evidence available to you. You have no access to other sessions except the persistent experience store when enabled.\nPersistent experience loaded from the current store:\n[local-api-ledger-workflow v1] Local mock API tasks (ledger) — workflow\nTask pattern: \"Using the local ledger API, compute X over all items, return JSON {answer}\".\n\nWorkflow:\n1. list_files -> usually only api.json. read_file api.json for service docs (endpoints, pagination rules).\n2. GET /info returns service metadata only (version + documentation filename).\n3. GET /items is paginated: params page (1-based), limit (max 3). Response: {items:[{id,amount,active}], total, next_page}. next_page null means end. ALWAYS loop pages until next_page is null; don't trust a single page. Here total=8 items across 3 pages (limit cap 3).\n4. Filter by the requested predicate (e.g. active==true) then aggregate (sum amounts).\n\nGotchas:\n- Unknown/extra query params (e.g. ledger=2) are silently ignored and return the same first page — no multi-ledger concept; \"current ledger\" is just flavor.\n- Requesting a page past the end returns {items:[], next_page:null}.\n- Item ids have a ledger prefix (item-1-N) but that alone doesn't imply selectable ledgers.\n- Compute carefully; verify arithmetic.\n\nExample: 8 items, active amounts 8,15,29,36,50,57 (inactive 22,43) -> sum 195 -> {\"answer\":195}.",
+  "thinking": {
+    "type": "enabled",
+    "budget_tokens": 4096
+  },
+  "output_config": {
+    "effort": "high"
+  },
+  "max_output_tokens": 32768,
+  "memory_budget_characters": 3200,
+  "protocol": "controlled-adapter-v1",
+  "no_history_retrieval": true,
+  "hermes_prompt_override": true,
+  "pi_package": "@earendil-works/pi-agent-core@1.0.0"
+}

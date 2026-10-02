@@ -1,0 +1,36 @@
+{
+  "run_id": "fix-hermes-08-d-explicit",
+  "group": "08_csv",
+  "stage": "d",
+  "provider": "deepseek",
+  "agent": "hermes",
+  "memory": "file",
+  "memory_from": "fix-hermes-08-repair",
+  "memory_seed": null,
+  "writer_from": null,
+  "repair_from": null,
+  "guided": false,
+  "caution": false,
+  "ensure_read": false,
+  "require_retrieval": false,
+  "explicit_fix": false,
+  "max_requests": 24,
+  "timeout": 420,
+  "model": "deepseek-flash",
+  "endpoint": "https://api.deepseek.com/anthropic",
+  "prompt": "Compute the total amount of sales rows in the ledger.csv export. Return JSON {\"answer\": number}.",
+  "system": "You are a capable assistant solving independent tasks in a local workspace. Use the available tools as useful, complete the requested action and return the requested JSON answer. Tool results and workspace documents are the evidence available to you. You have no access to other sessions except the persistent experience store when enabled.\nPersistent experience loaded from the current store:\n[ledger-sales-total v3] CSV ledger sales total (parse params come from export.json)\nTask pattern: \"total amount of sales rows in ledger.csv export\" -> emit {\"answer\": number}.\n\nSteps:\n1. Read export.json first. It holds PER-TASK parser params: encoding, delimiter, preamble_lines, file. These VARY between tasks — DO NOT assume defaults. Observed values include encoding=\"utf-8\", delimiter=\",\", preamble_lines=0 AND encoding=\"utf-16\", delimiter=\"\\t\", preamble_lines=2. Always pass the exact values from export.json into parse_csv (path, encoding=..., delimiter=..., skip_lines=preamble_lines).\n2. parse_csv returns rows as dicts keyed by the header row that follows the preamble (here category, amount). Preamble lines are skipped; header is consumed automatically.\n3. \"total amount of sales rows\" = SUM(int(amount)) over rows where category==\"sales\" — a sum of amounts, NOT a row count.\n4. Do not hardcode amounts/sums from a previous run (e.g. 10,28,46,64 -> 148 was task-specific); recompute from the current file.\n\nCaveat: parse_csv with the wrong encoding raises UnicodeDecodeError (\"'utf-8' codec can't decode byte 0xff in position 0\"), signaling the file is utf-16. read_file on binary/large files returns {\"path\",\"bytes\",\"prefix_hex\"} not text; decode prefix_hex (utf-16 BOM fffe = little-endian) to inspect preamble/headers.\n\n[experience-tool-quirks v1] experience tool usage quirks\nexperience `put` requires a non-empty `id` string; omitting it fails with {\"error\":\"KeyError: 'id'\"} even though the schema lists id as optional. Always pass op,id,title,content. Reusing an existing id fully replaces (bumps version). Use op:\"search\" (query, or empty) to list entries, op:\"get\" with id to read one, op:\"delete\" with id to remove.",
+  "thinking": {
+    "type": "enabled",
+    "budget_tokens": 4096
+  },
+  "output_config": {
+    "effort": "high"
+  },
+  "max_output_tokens": 32768,
+  "memory_budget_characters": 3200,
+  "protocol": "controlled-adapter-v1",
+  "no_history_retrieval": true,
+  "hermes_prompt_override": true,
+  "pi_package": "@earendil-works/pi-agent-core@1.0.0"
+}

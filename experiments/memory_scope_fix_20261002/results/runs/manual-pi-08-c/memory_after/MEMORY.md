@@ -1,0 +1,5 @@
+[human-scoped-diagnostic v1] Manually scoped a experience (diagnostic only)
+Observed one ledger export: encoding utf-8, delimiter comma, preamble_lines 0; columns category and amount. Those parser settings describe that export only. For each new file read export.json and pass its encoding, delimiter and preamble_lines (as skip_lines) explicitly to parse_csv; verify column names in returned rows, then sum numeric amount where category is sales. Never reuse a prior numeric answer.
+
+[ledger-sales-sum v1] ledger sales sum procedure
+For ledger sales-sum tasks: read export.json for parser settings, pass encoding/delimiter/preamble_lines(skip_lines) explicitly to parse_csv, verify columns category/amount, sum amounts where category=="sales". Example: utf-16, tab, 2 preamble lines -> sales 12+30+48+66=156. Settings and answers are file-specific; never reuse a prior numeric answer.

@@ -1,0 +1,12 @@
+{
+  "ledger-sales-total": {
+    "title": "CSV ledger aggregation pattern",
+    "content": "Task pattern: \"total amount of sales rows in ledger.csv export\". Steps: read export.json FIRST — it holds parser params (encoding, delimiter, preamble_lines, file). Do NOT assume utf-8/comma/0. Observed variants: {\"encoding\":\"utf-16\",\"delimiter\":\"\\t\",\"preamble_lines\":2}. Pass those exact values: parse_csv(path, encoding=..., delimiter=..., skip_lines=preamble_lines). ledger.csv columns = category,amount; rows alternate sales/refund. \"total amount of sales rows\" = SUM(amount) for rows where category==\"sales\" (sum, not row count). Latest sample: sales 12,30,48,66 -> 156 (4 rows). read_file may return only a hex prefix for binary/large files; prefix_hex starts \"fffe\" = UTF-16 LE BOM, hinting at the encoding. Always emit {\"answer\": number}.",
+    "version": 3
+  },
+  "experience-tool-quirks": {
+    "title": "experience tool usage quirks",
+    "content": "experience `put` requires a non-empty `id` string; omitting it fails with {\"error\":\"KeyError: 'id'\"} even though the schema lists id as optional. Always pass op,id,title,content. Reusing an existing id fully replaces (bumps version). Use op:\"search\" (query, or empty) to list entries, op:\"get\" with id to read one, op:\"delete\" with id to remove.",
+    "version": 1
+  }
+}

@@ -1,0 +1,1 @@
+POOL: synthetic knowledge benchmark, covered serial range s0-454. Rule: a larger serial overrides an older conflicting fact on the same subject+relation; resolve each hop of a multi-hop question separately at the newest fact. Complete raw pool text is located via session_search and the workspace history/ directory. Navigation index only — never enumerate facts here.
