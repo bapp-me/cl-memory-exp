@@ -23,6 +23,7 @@ def main():
             before, after = read(folder / 'memory-before.json'), read(folder / 'memory-after.json')
             result = read(folder / 'commit.json')['result']
             row = {'method': method, 'task_id': result['task_id'], 'state_hash_changed': digest(before) != digest(after),
+                   'terminal_state': result['terminal_state'],
                    'role_accounting': result.get('role_accounting'), 'semantic_memory_quality': None,
                    'semantic_unknown_reason': 'No semantic review or counterfactual performed'}
             if method == 'mem0':
@@ -48,7 +49,9 @@ def main():
             elif method == 'ace':
                 row.update(before_bullets=sum(line.startswith('[') for line in before['playbook'].splitlines()),
                            after_bullets=sum(line.startswith('[') for line in after['playbook'].splitlines()))
-                row['native_operations'] = dict(Counter(op['type'] for op in read(folder / 'native-operations.json')['operations']))
+                journal = folder / 'native-operations.json'
+                row['native_operations'] = dict(Counter(op['type'] for op in read(journal)['operations'])) if journal.exists() else None
+                row['native_operation_observation'] = 'observed' if journal.exists() else 'not produced before memory exception'
                 events = [json.loads(line) for line in (folder / 'controller-events.jsonl').read_text(encoding='utf-8').splitlines()]
                 row['curator_rejection_records'] = [event.get('reason') for event in events if event['event'] == 'native_curator_reject']
             else:
@@ -58,6 +61,7 @@ def main():
     for method in sorted({row['method'] for row in records}):
         selected = [row for row in records if row['method'] == method]
         summary.append({'method': method, 'tasks_observed': len(selected),
+                        'terminal_states': dict(Counter(row['terminal_state'] for row in selected)),
                         'mem0_extraction_json_rejected': sum(row.get('extraction_json_valid') is False for row in selected),
                         'native_empty_fact_extractions': sum(row.get('extraction_json_valid') is True and row.get('extracted_facts') == 0 for row in selected),
                         'ace_curator_rejections': sum(len(row.get('curator_rejection_records', [])) for row in selected)})

@@ -21,6 +21,7 @@ def archive(phase):
         registry = read(ROOT / 'records/section7.1-registry.json')
         runs = [REPO / item['path'] for item in registry['runs'] if item['source_kind'] == 'new_formal_stream']
         sources = sorted((ROOT / 'records').glob('full-methods-freeze-*.json'))
+        sources.extend(sorted((ROOT / 'records').glob('*-continuation-freeze.json')))
         task_count = 384
     files = sorted({path for run in runs for path in run.rglob('*') if path.is_file()} | set(sources))
     api_key = secret().encode()

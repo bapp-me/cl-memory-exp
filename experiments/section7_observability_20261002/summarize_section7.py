@@ -60,6 +60,8 @@ def main():
                            'full_effective': len(effective), 'target_effective': len(targets)})
         known_tokens = {key: sum((row['known_usage_subtotal'] or {}).get(key, 0) for row in rows) for key in USAGE_FIELDS}
         summary = {'method': entry['method'], 'benchmark': entry['benchmark'], 'tasks': len(rows),
+                   'terminal_states': dict(Counter(row['terminal_state'] for row in rows)),
+                   'memory_failures_retained_in_scores_and_costs': sum(row['terminal_state'] == 'memory_failure' for row in rows),
                    'effective_tasks': len(effective), 'correct': sum(row['correct'] is True for row in effective),
                    'effective_complex_targets': len(targets) if entry['benchmark'] == 'codeeval' else None,
                    'correct_complex_targets': sum(row['correct'] is True for row in targets) if entry['benchmark'] == 'codeeval' else None,

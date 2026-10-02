@@ -12,7 +12,7 @@ def jsonl(path):
     return [json.loads(line) for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
 
 
-def audit(phase, prefixes, benchmarks=None):
+def audit(phase, prefixes, benchmarks=None, partial=False):
     benchmarks = benchmarks or ['codeeval', 'babyai']
     methods = ['mem0', 'awm', 'ace'] if phase == 'canary' else ['bounded_icl', 'mem0', 'awm', 'ace']
     errors, tasks, all_intervals = [], [], []
@@ -40,11 +40,14 @@ def audit(phase, prefixes, benchmarks=None):
             config = read(run / 'manifest.json')
             expected = config['stream_tasks']
             folders = sorted(run.glob('[0-9][0-9][0-9]'))
-            if len(folders) != expected:
+            if partial:
+                folders = [folder for folder in folders if (folder / 'commit.json').exists()]
+            if not partial and len(folders) != expected:
                 errors.append({'run': run.name, 'expected': expected, 'directories': len(folders)})
             selected_runs.append({'run_id': run.name, 'method': method, 'benchmark': benchmark, 'tasks': expected,
                                   'config_hash': digest(config), 'source_freeze_prefix': run.name.rsplit('-' + benchmark + '-', 1)[0]})
             previous = read(run / 'initial-memory.json')
+            recovery = read(run / 'timeout-recovery.json') if (run / 'timeout-recovery.json').exists() else {}
             for folder in folders:
                 problems = []
 
@@ -68,16 +71,31 @@ def audit(phase, prefixes, benchmarks=None):
                 check('configuration_hash', commit['config_hash'] == digest(config))
                 check('injection_hash', digest(selected) == retrieval['injected_hash'] == execution['injected_hash'])
                 check('injection_byte_cap', len(json.dumps(selected, ensure_ascii=False).encode()) <= 48000)
-                check('terminal_completed', commit['result']['terminal_state'] == 'completed')
+                retained_timeout = False
+                if phase == 'full' and commit['result']['terminal_state'] == 'memory_failure':
+                    from continue_timeout_stream import review
+                    try:
+                        evidence = review(folder)
+                        retained_timeout = evidence in recovery.get('reviewed_timeouts', [])
+                    except (AssertionError, KeyError, FileNotFoundError):
+                        retained_timeout = False
+                check('terminal_completed_or_verified_retained_timeout',
+                      commit['result']['terminal_state'] == 'completed' or retained_timeout)
                 check('task_order', identity['task_id'] == config['ordered_task_ids'][int(folder.name)])
                 episode = json.loads(read(folder / 'legal-episode.json')['text'])
                 check('legal_episode_schema', set(episode) == {'task', 'trajectory'})
                 check('hidden_reasoning_excluded', all(not (isinstance(item, dict) and item.get('type') == 'thinking') for item in episode['trajectory']))
                 events = jsonl(folder / 'controller-events.jsonl')
                 writes = [item for item in events if item['event'] == 'memory_event']
-                check('write_provenance_and_state', len(writes) == 1 and writes[0]['source_event_ids'] == [identity['attempt_id']]
-                      and writes[0]['before_hash'] == digest(before) and writes[0]['after_hash'] == digest(after))
-                if method in ['mem0', 'awm', 'ace']:
+                if retained_timeout:
+                    exceptions = [item for item in events if item['event'] == 'memory_exception']
+                    check('timeout_exception_provenance_and_state', not writes and len(exceptions) == 1
+                          and exceptions[0]['attempt_id'] == identity['attempt_id']
+                          and exceptions[0]['before_hash'] == digest(before) == digest(after) == exceptions[0]['after_hash'])
+                else:
+                    check('write_provenance_and_state', len(writes) == 1 and writes[0]['source_event_ids'] == [identity['attempt_id']]
+                          and writes[0]['before_hash'] == digest(before) and writes[0]['after_hash'] == digest(after))
+                if method in ['mem0', 'awm', 'ace'] and not retained_timeout:
                     check('native_operation_journal', (folder / 'native-operations.json').exists())
                     journal = read(folder / 'native-operations.json')
                     check('native_operations_mapped_to_version', journal['before_hash'] == digest(before) and journal['after_hash'] == digest(after))
@@ -142,6 +160,7 @@ def audit(phase, prefixes, benchmarks=None):
                     errors.append({'run': run.name, 'task_id': identity['task_id'], 'errors': sorted(set(problems))})
                 tasks.append({'run_id': run.name, 'method': method, 'benchmark': benchmark, 'task_id': identity['task_id'],
                               'passed': not problems, 'correct': commit['result']['correct'], 'known_usage': total,
+                              'terminal_state': commit['result']['terminal_state'], 'retained_timeout': retained_timeout,
                               'role_accounting': dict(reconstructed), 'unknown_usage_attempts': unknown})
     peak, active = 0, 0
     for _, delta in sorted(all_intervals, key=lambda item: (item[0], item[1])):
@@ -156,12 +175,14 @@ def audit(phase, prefixes, benchmarks=None):
         if not required <= roles:
             errors.append({'method': method, 'error': 'No real native-role call', 'required': sorted(required), 'observed': sorted(roles)})
     expected_total = 36 if phase == 'canary' else sum(item['tasks'] for item in selected_runs)
-    report = {'phase': phase, 'schema_version': 'section7-observability-v2', 'passed': not errors and len(tasks) == expected_total,
+    report = {'phase': phase, 'schema_version': 'section7-observability-v2', 'passed': not errors and (partial or len(tasks) == expected_total),
+              'scope': 'committed_prefix_only' if partial else 'complete_streams', 'complete': len(tasks) == expected_total,
+              'terminal_states': dict(Counter(row['terminal_state'] for row in tasks)),
               'tasks_checked': len(tasks), 'expected_tasks': expected_total, 'errors': errors, 'api_peak': peak,
               'role_accounting': dict(by_role), 'runs': selected_runs, 'tasks': tasks, 'model_calls_during_audit': 0,
               'limits': ['Method judgments of relevance/bullet use are self-assessment, not causal truth.',
                          'No price manifest; money remains unknown.', 'R=1; short code canaries do not replace formal streams.']}
-    save(ROOT / 'records' / ('complex-online-acceptance.json' if phase == 'canary' else 'formal-new-streams-acceptance.json'), report)
+    save(ROOT / 'records' / ('formal-prefix-observability.json' if partial else 'complex-online-acceptance.json' if phase == 'canary' else 'formal-new-streams-acceptance.json'), report)
     print(json.dumps({key: value for key, value in report.items() if key not in ['tasks']}))
     if not report['passed']:
         raise SystemExit(1)
@@ -172,5 +193,6 @@ if __name__ == '__main__':
     parser.add_argument('--phase', choices=['canary', 'full'], required=True)
     parser.add_argument('--prefixes', nargs='+', required=True)
     parser.add_argument('--benchmarks', nargs='+', choices=['codeeval', 'babyai'])
+    parser.add_argument('--partial', action='store_true')
     args = parser.parse_args()
-    audit(args.phase, args.prefixes, args.benchmarks)
+    audit(args.phase, args.prefixes, args.benchmarks, args.partial)
