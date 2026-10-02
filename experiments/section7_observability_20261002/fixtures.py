@@ -5,6 +5,8 @@ from pathlib import Path
 import subprocess
 import unittest.mock
 import uuid
+from urllib.request import Request, urlopen
+from types import SimpleNamespace
 from runtime import ROOT, ORIGINAL, LEGACY, read, save, digest, event, retrieval_record, memory_context, record_memory_change, normalized_usage, load_babyai, BabyTask, sandbox, run_task
 
 
@@ -51,6 +53,34 @@ def main():
     assert normalized_usage({'prompt_tokens': 0}) is None
     assert normalized_usage({'prompt_tokens': 100, 'completion_tokens': 7, 'prompt_tokens_details': {'cached_tokens': 20}}) == dict(input=80, output=7, cacheRead=20, cacheWrite=0, totalTokens=107)
     passed('unknown usage distinct from valid zero and cache accounting')
+    submitted = 'def f():\n    return 1\n'
+    (out / 'submission.py').write_bytes(submitted.encode('utf-8'))
+    import hashlib
+    assert hashlib.sha256((out / 'submission.py').read_bytes()).hexdigest() == hashlib.sha256(submitted.encode()).hexdigest()
+    passed('exact submitted text/file bytes across Windows newline handling')
+    fixture_config = read(ROOT / 'records/confirmed-config-v1.json')
+    submit_row = {'id': 'fixture-submit', 'category': 'raw', 'problem': 'Fixture legal submission request',
+                  'test_code': 'assert f()==1', 'solution': 'HIDDEN_SENTINEL'}
+    submit_prefix = 'fixture-submit-' + uuid.uuid4().hex
+
+    def mock_node(command, **kwargs):
+        cfg = read(command[-1])
+        request = Request(cfg['tool_url'], data=json.dumps({'name': 'SUBMIT', 'args': {'code': submitted},
+            'tool_call_id': 'fixture-submit-call'}).encode(), headers={'Content-Type': 'application/json', 'X-Run-Token': cfg['tool_token']})
+        with urlopen(request, timeout=5) as response:
+            assert json.load(response)['submitted']
+        folder = Path(cfg['out'])
+        save(folder / 'pi-result.json', {'messages': [{'role': 'assistant', 'content': [{'type': 'toolCall',
+             'name': 'SUBMIT', 'id': 'fixture-submit-call', 'arguments': {'code': submitted}}]}],
+             'turns': 1, 'toolCalls': 1, 'error': None, 'stop_reason': 'toolUse', 'responseTimedOut': False, 'contextExceeded': False})
+        save(folder / 'call-ledger.json', [])
+        return SimpleNamespace(returncode=0)
+
+    with unittest.mock.patch('runtime.subprocess.run', side_effect=mock_node):
+        after, submit_result = run_task(fixture_config, 'no_memory', 'codeeval', 0, submit_row, [], 'fixture-key', run_prefix=submit_prefix)
+    submitted_file = ROOT / '.runtime/runs' / (submit_prefix + '-codeeval-no_memory') / '000/submission.py'
+    assert submitted_file.read_bytes() == submitted.encode('utf-8') and submit_result['correct'] is True
+    passed('actual controller SUBMIT acknowledgement/exact artifact bytes/scorer input')
     probe = ROOT / '.runtime/sandbox-canary/isolation'
     probe.mkdir(parents=True, exist_ok=True)
     code = """import os, socket, json

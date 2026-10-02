@@ -215,7 +215,8 @@ def run_task(config, method, benchmark, index, row, history, api_key, wrapper=No
                 if value.get('submitted') and submission_call is None:
                     submission_call = data['tool_call_id']
                     if benchmark == 'codeeval':
-                        (out / 'submission.py').write_text(task.submission, encoding='utf-8')
+                        # Preserve the exact SUBMIT bytes even on Windows.
+                        (out / 'submission.py').write_bytes(task.submission.encode('utf-8'))
                     event(out, 'submission', **identity, tool_call_id=submission_call,
                           artifact_sha256=hashlib.sha256(task.submission.encode()).hexdigest())
             except Exception as failure:

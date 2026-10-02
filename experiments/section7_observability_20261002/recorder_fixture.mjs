@@ -55,6 +55,8 @@ try {
   assert.equal(call.http_attempts[0].status, 503);
   assert.equal(call.http_attempts[0].raw_usage, null);
   assert.equal(call.http_attempts[1].raw_usage.total_tokens, 107);
+  assert.equal(call.http_attempts[1].sse_done_received, true);
+  assert.equal(call.http_attempts[1].error, undefined);
   assert.equal(observed.at(-1).type, 'done');
   const requests = fs.readFileSync(path.join(input('recorded').out, 'requests.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
   assert(requests.every(r => r.all_injected_blocks_mapped));

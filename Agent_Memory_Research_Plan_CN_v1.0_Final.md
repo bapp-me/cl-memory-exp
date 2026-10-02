@@ -6,6 +6,8 @@
 **文档关系：** 本文完整整合 v0.2 原方案、v0.3 审核稿、v0.4 基准决策及后续确认；执行时以本文为准，无须再拼接阅读旧稿。
 
 > **当前进度：** 第 00–06 节已按用户修订范围完成；主模型为 GLM 5.3 Flash，接口 ID 为 `glm-5.3-flash`。实际执行为单次运行、完整代码第一遍、12 个记忆组只读目标抽测和一个 BabyAI 8 任务家族，不是原生完整两遍协议。第 7 节复杂 baseline 尚未启动。[E1][E2][E3]
+
+> **第 7.0 节执行进度（截至 2026-10-03）：** 已完成拟复用四条旧流的 208 次任务离线字段盘点、15 项无模型 fixture，以及 No Memory / 受限 ICL / Jaccard episodic 三方法各 4 个代码任务和 8 个 BabyAI 任务的在线观测验收，共 36 次任务执行、206 次模型调用。API 上限经用户确认提升为 50，实际峰值为 16；同一记忆流保持串行。提交换行哈希和 SDK 正常关闭的记录问题已单列被动修复与原证据对账，未重新调用模型。Mem0 / AWM / ACE 的具体新增记忆配置待用户确认，故 **7.0 整节仍在进行中，7.1 正式 baseline 未启动**。[E10]
 >
 > **本次修订范围：** 根据仓库完成报告、逐题汇总、访问登记和记录器代码，更新进度、baseline 范围、失败分类和观测验收。新增的是文档规则，**不是已经补好埋点或完成新实验**。本次未重新调用实验模型，也未逐文件解压核验原始轨迹归档；旧日志的实际完整性由第 7.0 节的本地验收确认。
 >
@@ -1508,6 +1510,7 @@ Pi / adapter / memory commit：
 - **[E7]** [scorer-issues.json](experiments/agent_memory_plan_20261002/records/scorer-issues.json)：三项固定评分排除及理由。
 - **[E8]** [diagnostic-audit.json](experiments/agent_memory_plan_20261002/records/diagnostic-audit.json)：诊断分支与隔离审计。
 - **[E9]** [tool-metrics.json](experiments/agent_memory_plan_20261002/records/tool-metrics.json)：已有工具统计入口；原始逐文件完整性仍由本地验收确认。
+- **[E10]** [第 7.0 节进度](experiments/section7_observability_20261002/records/section7-progress.json)、[在线验收](experiments/section7_observability_20261002/records/online-acceptance.json)与[待确认复杂方法配置](experiments/section7_observability_20261002/records/complex-proposed-config-v1.json)：首批三简单方法已验收；源快照、被动修复、逐题日志与归档分开保存，复杂方法尚未运行。
 
 “16 个源评分通过且已注入仍失败”来自 [E2] 字段交叉计数；是本次离线分析，不是第 6 节作者已经作出的因果结论。新增的第 7/13 节字段和脚本要求均待实现。
 

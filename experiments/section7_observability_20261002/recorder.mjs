@@ -72,7 +72,6 @@ export function createRecorder(input) {
       provider_model: null, provider_response_id: null, monetary_cost: null, usage_provenance: 'not_returned'};
     current.http_attempts.push(entry);
     const raw = typeof options.body === 'string' ? options.body : Buffer.from(options.body ?? '').toString();
-    savePayload(JSON.parse(raw), current, attempt, raw);
     append('transport.jsonl', {...entry, event: 'http_start'});
     const finish = error => {
       if (entry.finished_at) return;
@@ -82,6 +81,7 @@ export function createRecorder(input) {
       append('transport.jsonl', {...entry, event: 'http_end'});
     };
     try {
+      savePayload(JSON.parse(raw), current, attempt, raw);
       const response = await fetch(url, options);
       entry.status = response.status;
       entry.headers_seconds = (performance.now() - entry.started_monotonic_ms) / 1000;
@@ -96,10 +96,13 @@ export function createRecorder(input) {
         pending = lines.pop();
         for (const line of lines) {
           if (!line.startsWith('data:')) continue;
+          if (line.slice(5).trim() === '[DONE]') { entry.sse_done_received = true; continue; }
           try {
             const data = JSON.parse(line.slice(5).trim());
             entry.provider_model = data.model ?? entry.provider_model;
             entry.provider_response_id = data.id ?? entry.provider_response_id;
+            entry.provider_finish_reasons = [...new Set([...(entry.provider_finish_reasons ?? []),
+              ...(data.choices ?? []).map(c => c.finish_reason).filter(Boolean)])];
             const usage = data.usage ?? data.choices?.find(c => c.usage)?.usage;
             if (usage) { entry.raw_usage = usage; entry.usage_provenance = 'provider_sse'; }
           } catch { /* SSE includes [DONE] and optional non-JSON frames. */ }
@@ -113,7 +116,11 @@ export function createRecorder(input) {
             else { inspect(decoder.decode(value, {stream: true})); controller.enqueue(value); }
           } catch (error) { finish(error); controller.error(error); }
         },
-        async cancel(reason) { finish(reason ?? 'consumer_cancelled'); await reader.cancel(reason); }
+        async cancel(reason) {
+          entry.completion_reason = entry.sse_done_received ? 'sdk_closed_after_sse_done' : 'consumer_cancelled_without_done';
+          finish(entry.sse_done_received ? undefined : reason ?? 'consumer_cancelled');
+          await reader.cancel(reason);
+        }
       });
       return new Response(body, {status: response.status, statusText: response.statusText, headers: response.headers});
     } catch (error) { finish(error); throw error; }

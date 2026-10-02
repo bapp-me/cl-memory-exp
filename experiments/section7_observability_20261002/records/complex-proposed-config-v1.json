@@ -1,0 +1,241 @@
+{
+  "config_id": "section7-complex-proposal-v1",
+  "status": "awaiting_user_confirmation_and_adapter_implementation",
+  "online_started": false,
+  "user_confirmation": null,
+  "common_confirmed_config": "records/confirmed-config-v1.json",
+  "common_confirmed_config_hash": "8369d1fe5b05279783314c2d6ffbf798af6b564eb0672f77177a41bd00726e18",
+  "unchanged_common_settings": {
+    "model": {
+      "provider": "glm",
+      "api_id": "glm-5.3-flash",
+      "base_url": "https://api.z.ai/api/paas/v4",
+      "solver_and_proposed_auxiliary_roles": "same GLM model",
+      "reasoning_effort": "high",
+      "temperature": null,
+      "temperature_policy": "Omitted in thinking mode; provider default, matching legacy protocol",
+      "max_output_tokens_per_turn": 8192,
+      "declared_context_window": 131072,
+      "context_window_note": "Pi declaration, not a verified provider capacity or token measurement",
+      "request_payload_utf8_byte_cap": 320000,
+      "model_seed": null,
+      "model_alias_version_policy": "Record provider response/version metadata when available; do not claim fixed weights"
+    },
+    "api_cap": 50,
+    "solver_budgets": {
+      "code": {
+        "max_model_turns": 18,
+        "max_python_calls": 15,
+        "max_task_seconds": 600,
+        "response_timeout_ms": 180000,
+        "execution_cpu_seconds": 90,
+        "execution_wall_seconds": 120,
+        "virtual_memory_mib": 3072,
+        "process_limit": 64
+      },
+      "babyai": {
+        "max_model_turns": 20,
+        "max_high_level_actions": 20,
+        "max_task_seconds": 900,
+        "response_timeout_ms": 60000
+      },
+      "transport_extra_retries": 2,
+      "task_performance_retry": false,
+      "monetary_hard_limit": null,
+      "monetary_hard_limit_status": "User confirmed no hard monetary cap for this 36-task batch",
+      "price_manifest": null,
+      "accounting": "All roles, retries and failed calls retained; unavailable usage or unverified price remains unknown rather than zero"
+    },
+    "data": {
+      "agentcl_revision": "a01e2ca6e33fd07d9cf80e4bd69a5b3585d3400f",
+      "code_pair_selection": "First and last target in the existing preregistered pilot target order; selection uses metadata only, never scores",
+      "code_ordered_tasks": [
+        {
+          "source_index": 13,
+          "task_id": "raw:BigCodeBench/296"
+        },
+        {
+          "source_index": 34,
+          "task_id": "raw:BigCodeBench/325"
+        },
+        {
+          "source_index": 48,
+          "task_id": "new:BigCodeBench/325"
+        },
+        {
+          "source_index": 95,
+          "task_id": "new:BigCodeBench/296"
+        }
+      ],
+      "babyai_family": "goto_door_to_open_door_loc",
+      "babyai_ordered_task_ids": [
+        38,
+        39,
+        36,
+        37,
+        53,
+        52,
+        54,
+        55
+      ],
+      "babyai_seed_rule": "1234 + occurrence_index, matching registered native observations",
+      "repetitions": 1,
+      "online_initial_memory": "empty separately for every method and benchmark",
+      "long_history_checks": "Frozen legacy snapshots and model-free fixtures, no added online long stream",
+      "scoring_mask": "Reuse records/scorer-issues.json; masks do not change legal execution or memory permissions"
+    },
+    "memory_injection_utf8_byte_cap": 48000
+  },
+  "scope": {
+    "methods": [
+      "mem0_classic_vector",
+      "awm_online_pi",
+      "ace_online_pi_official_add_only"
+    ],
+    "task_executions": 36,
+    "per_method": "Same preregistered 4 code tasks + full 8-task BabyAI family",
+    "repetitions": 1,
+    "initial_memory": "empty separately for every method and benchmark",
+    "formal_96_task_stream_or_validation_or_final_test": false
+  },
+  "concurrency": {
+    "global_inflight_api_cap": 50,
+    "max_active_methods": 3,
+    "independent_online_streams": 6,
+    "within_each_online_stream": 1,
+    "commit_all_memory_updates_before_next_task": true,
+    "per_method_gate": "Only launch this method after its offline/fixture checks pass; halt only affected stream on observation/infrastructure failure"
+  },
+  "auxiliary_model": {
+    "api_id": "glm-5.3-flash",
+    "reasoning_effort": "high",
+    "temperature": "omitted, same provider default",
+    "max_output_tokens_per_call": 8192,
+    "whole_call_timeout_seconds": 180,
+    "transport_extra_retries": 2,
+    "correctness_or_invalid_json_regeneration": false,
+    "all_roles_and_failures_counted": true
+  },
+  "memory_source": "Only own legitimate prompts, visible actions/tool feedback and submitted output; no hidden score, answer, tests, pairing labels or reasoning blocks",
+  "mem0": {
+    "package": "mem0ai",
+    "version": "0.1.118",
+    "wheel_sha256": "c2b371224a340fd5529d608dfbd2e77c610c7ffe421005ff7e862fd6f322cca8",
+    "variant": "Classic OSS vector memory; graph and reranker disabled; not current 2.x memory algorithm",
+    "native_operations": [
+      "ADD",
+      "UPDATE",
+      "DELETE",
+      "NONE"
+    ],
+    "add": {
+      "infer": true,
+      "frequency": "after each submitted/completed task",
+      "input": "Own legal episode formatted as messages; native fact extraction and update prompts retained"
+    },
+    "search": {
+      "query": "current legal task prompt",
+      "limit": 5,
+      "threshold": null,
+      "packing": "Native similarity order; preserve complete facts within 48000-byte solver injection cap",
+      "internal_update_neighbor_limit": 5,
+      "limitation": "Search limit 5 is an explicitly chosen project setting; the pinned public search API default is 100"
+    },
+    "embedding": {
+      "provider": "huggingface",
+      "model": "sentence-transformers/all-MiniLM-L6-v2",
+      "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+      "dimensions": 384,
+      "device": "cpu",
+      "max_seq_length": 256,
+      "normalization": "Retain pinned model modules",
+      "mode": "local inference; no paid embedding API",
+      "long_text_policy": "Native 256-token truncation, logged; no query rewriting or custom chunking"
+    },
+    "storage": {
+      "vector_store": "local Qdrant, cosine",
+      "history": "per-stream SQLite",
+      "isolation": "Distinct collection, path and logical user ID for every method/benchmark/repetition",
+      "snapshots": "Recoverable index/state plus native history/diffs; solver sandbox has no access"
+    },
+    "pending_work": [
+      "Resolve and lock Python dependencies without invoking a model",
+      "Add role/embedding/native state observation hooks",
+      "Run native adapter fixtures"
+    ]
+  },
+  "awm": {
+    "repository": "zorazrw/agent-workflow-memory",
+    "revision": "8c0ff8cd11d648c8fceb99e4e42f37e3b75381b1",
+    "mode": "online own-experience workflow induction; Pi solver adaptation",
+    "induction_frequency_tasks": 1,
+    "writer_calls_per_update": 1,
+    "induction_input": "Cumulative legal past trajectories in this short stream; no author task-specific exemplars",
+    "native_mechanism": "Induce common multi-step subroutines, abstract task-specific arguments, avoid overlapping workflows",
+    "representation": "Native text workflow library; writer may legitimately output no reusable workflow",
+    "solver_injection": "Whole workflow blocks in library order up to 48000 UTF-8 bytes; no additional embedding/reranker",
+    "overflow_policy": "Drop oldest whole workflow blocks from injection, preserving underlying library and logged selection",
+    "adaptations": [
+      "Replace web action/environment vocabulary with the declared code/BabyAI tools",
+      "No website dataset annotations, prewritten gold examples or hidden success filter",
+      "Keep the native cumulative induction/library update rather than substituting episode retrieval"
+    ],
+    "pending_work": [
+      "Freeze adapted induction/solver prompt hashes",
+      "Implement workflow boundary/provenance logs",
+      "Run parsing/NOOP/overflow fixtures"
+    ]
+  },
+  "ace": {
+    "repository": "ace-agent/ace",
+    "revision": "82709de050e1db6e6ef2f07bcb0393560b94992a",
+    "mode": "online Pi Generator + native Reflector + native Curator/deterministic playbook application",
+    "no_ground_truth": true,
+    "reflector_frequency_tasks": 1,
+    "reflection_calls_per_task": 1,
+    "curator_frequency_tasks": 1,
+    "curator_calls_per_task": 1,
+    "reflector_inputs": "Own submitted answer, visible action trace and legal tool feedback; no external correctness label",
+    "playbook_operations_supported_by_this_revision": [
+      "ADD",
+      "helpful/harmful/neutral counter updates",
+      "empty operations NOOP"
+    ],
+    "playbook_operations_not_implemented_in_native_apply_function": [
+      "UPDATE",
+      "MERGE",
+      "DELETE"
+    ],
+    "optional_bulletpoint_analyzer": false,
+    "batched_proposal_aggregation": false,
+    "playbook_prompt_token_budget": 80000,
+    "token_budget_note": "Native prompt-side budget, not a verified hard tokenizer limit for GLM; 320000-byte request guard remains in force",
+    "solver_injection": "Whole playbook bullets in native section order, within 48000 UTF-8 bytes",
+    "overflow_policy": "Exclude oldest whole bullets from solver injection only; log mapping and retain full playbook state",
+    "adaptations": [
+      "Pi supplies the Generator trajectory and declared tools",
+      "Apply reflection/curation only after fixed submission; no new attempt on current task",
+      "Use native NO_GT prompt variants and supported operations; disclose ADD-only limitation",
+      "Record model bullet-use judgments as self-assessment, not causal evidence"
+    ],
+    "pending_work": [
+      "Adapt the Generator observation interface and freeze prompt hashes",
+      "Connect native Reflector/Curator with recorded GLM calls",
+      "Run counter/delta/NOOP/readonly/source-isolation fixtures"
+    ]
+  },
+  "approval_boundary": "Confirm these new memory choices before any complex-method online/model/embedding inference; source audit alone is not adapter acceptance",
+  "required_before_online": [
+    "All adapter-specific fixture gates pass",
+    "Freeze adapted prompts, dependency locks and source/config hashes",
+    "Record departures from original web/QA orchestration",
+    "Keep 36-task ceiling and no additional correctness retry"
+  ],
+  "primary_sources": [
+    "https://pypi.org/project/mem0ai/0.1.118/",
+    "https://docs.mem0.ai/components/embedders/models/huggingface",
+    "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2",
+    "https://github.com/zorazrw/agent-workflow-memory",
+    "https://github.com/ace-agent/ace"
+  ]
+}
