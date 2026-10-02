@@ -228,15 +228,22 @@ class Mem0Memory(Adapter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         from mem0 import Memory
+        import mem0.memory.main as native_module
         environment = read(ROOT / 'records/complex-environment.json')
         self.folder = ROOT / '.runtime/mem0-state' / self.run_id
         self.folder.mkdir(parents=True, exist_ok=True)
-        self.native = Memory.from_config({'version': 'v1.1',
+        prior_meta_dir = native_module.mem0_dir
+        native_module.mem0_dir = str(self.folder / 'meta')
+        try:
+            self.native = Memory.from_config({'version': 'v1.1',
             'llm': {'provider': 'openai', 'config': {'model': 'glm-5.3-flash', 'api_key': 'not-used-by-recorded-bridge'}},
             'embedder': {'provider': 'huggingface', 'config': {'model': environment['local_path'],
                          'embedding_dims': 384, 'model_kwargs': {'device': 'cpu', 'trust_remote_code': False}}},
-            'vector_store': {'provider': 'qdrant', 'config': {'collection_name': 'memory', 'path': str(self.folder / 'vectors'), 'embedding_model_dims': 384}},
+            'vector_store': {'provider': 'qdrant', 'config': {'collection_name': 'memory', 'path': str(self.folder / 'vectors'),
+                                                          'embedding_model_dims': 384, 'on_disk': True}},
             'history_db_path': str(self.folder / 'history.sqlite')})
+        finally:
+            native_module.mem0_dir = prior_meta_dir
         assert self.native.enable_graph is False
         self.user = self.run_id
         self.original_embed = self.native.embedding_model.embed
@@ -341,6 +348,7 @@ class Mem0Memory(Adapter):
 
     def close(self):
         self.native.vector_store.client.close()
+        self.native._telemetry_vector_store.client.close()
 
 
 def make_adapter(method, run_id, config, api_key, fixture_responses=None):
