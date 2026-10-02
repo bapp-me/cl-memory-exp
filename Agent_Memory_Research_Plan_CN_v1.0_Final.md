@@ -451,7 +451,7 @@ BabyAI 只覆盖 `goto_door_to_open_door_loc` 完整预选 8 任务家族：无�
 
 ### 7.0 先完成观测验收，再扩大 baseline
 
-本节执行顺序固定为：**离线日志盘点 → 补必要采集 → 无模型 fixture 检查 → 小规模在线试跑 → 冻结观测协议 → 正式 baseline → 失败分析**。本次只制定规则，未实现下列新增脚本或字段。
+本节执行顺序固定为：**离线日志盘点 → 补必要采集 → 无模型 fixture 检查 → 小规模在线试跑 → 冻结观测协议 → 正式 baseline → 失败分析**。截至 2026-10-03，7.0 的脚本、采集字段及六方法在线验收已完成；7.1 正式代码流仍在运行。具体范围以 [E10] 的逐项证据为准，语义诊断与因果干预不因观测验收通过而视为完成。
 
 #### 7.0.1 零新增模型调用的离线盘点
 
@@ -583,7 +583,7 @@ LLM 不能单凭读日志把 D1 升级为 D2。没有做跨时点探针就不输
 | 经验是否实际造成成功/负迁移、压缩能否保持质量、是否真实遗忘 | D | 需要同起点干预、预算控制或多时点只读探针；LLM 打标签不足以证明 |
 | 项目隔离/全局规则遵循 | A1/B/C | 有 scope ID 时可机械检查访问；正确语义需场景规则；当前无对应场景则 not_applicable，不虚构分数 |
 
-当前采集能力依据 `core.py`、`pi_runner.mjs`、已提交统计及审计记录核查；原始 runs 已打包，尚需 7.0 的本地逐文件检查。[E2][E5][E6][E8][E9] **不要求在正式 baseline 前写完全部语义分析器；要求先保存未来能分析的证据。**
+上表的采集缺口依据第 6 节的 `core.py`、`pi_runner.mjs`、已提交统计及审计记录列出。[E2][E5][E6][E8][E9] 7.0 已逐题盘点旧流、重建 549 个历史 payload，并在新记录器中保存实际去密钥请求、注入块映射、辅助角色和原生状态变更。[E10] **不要求在正式 baseline 前写完全部语义分析器；要求先保存未来能分析的证据。**
 
 #### 7.2.4 新运行必须保留的证据链
 
@@ -1510,9 +1510,9 @@ Pi / adapter / memory commit：
 - **[E7]** [scorer-issues.json](experiments/agent_memory_plan_20261002/records/scorer-issues.json)：三项固定评分排除及理由。
 - **[E8]** [diagnostic-audit.json](experiments/agent_memory_plan_20261002/records/diagnostic-audit.json)：诊断分支与隔离审计。
 - **[E9]** [tool-metrics.json](experiments/agent_memory_plan_20261002/records/tool-metrics.json)：已有工具统计入口；原始逐文件完整性仍由本地验收确认。
-- **[E10]** [第 7.0 节进度](experiments/section7_observability_20261002/records/section7-progress.json)、[在线验收](experiments/section7_observability_20261002/records/online-acceptance.json)与[待确认复杂方法配置](experiments/section7_observability_20261002/records/complex-proposed-config-v1.json)：首批三简单方法已验收；源快照、被动修复、逐题日志与归档分开保存，复杂方法尚未运行。
+- **[E10]** [第 7.0 节进度](experiments/section7_observability_20261002/records/section7-progress.json)、[简单方法在线验收](experiments/section7_observability_20261002/records/online-acceptance.json)、[原生复杂方法在线验收](experiments/section7_observability_20261002/records/complex-online-acceptance.json)、[旧流 availability](experiments/section7_observability_20261002/records/legacy-availability.json)、[历史 payload 重建](experiments/section7_observability_20261002/records/legacy-payload-reconstruction.json)与[已确认复杂方法配置](experiments/section7_observability_20261002/records/complex-confirmed-config-v1.json)：六方法共 72 次在线验收通过，启动修复、源快照、逐题记录和归档保留。7.1 使用[正式矩阵登记](experiments/section7_observability_20261002/records/section7.1-registry.json)；[已提交前缀审计](experiments/section7_observability_20261002/records/formal-prefix-observability.json)不代表整个正式流已完成。[ACE 超时恢复协议](experiments/section7_observability_20261002/records/timeout-continuation-freeze.json)保留原失败和未知 usage，从已核验未改变的提交状态继续，不重做已提交任务。
 
-“16 个源评分通过且已注入仍失败”来自 [E2] 字段交叉计数；是本次离线分析，不是第 6 节作者已经作出的因果结论。新增的第 7/13 节字段和脚本要求均待实现。
+“16 个源评分通过且已注入仍失败”来自 [E2] 字段交叉计数；是本次离线分析，不是第 6 节作者已经作出的因果结论。7.0 已完成必要观测；第 7.2 节语义失败诊断、后续干预与未见验证仍待执行。
 
 ### 18.3 原始资料
 
