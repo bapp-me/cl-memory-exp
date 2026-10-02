@@ -67,6 +67,9 @@ class Adapter:
     def restore(self, state):
         self.state = copy.deepcopy(state)
 
+    def restore_checkpoint(self, folder, state):
+        self.restore(state)
+
     def after_update(self, before, operations):
         if self.aux.errors:
             raise AuxiliaryCallError('; '.join(self.aux.errors))
@@ -292,6 +295,15 @@ class Mem0Memory(Adapter):
         selected, record = pack(entries, prompt, ranked=True)
         record['candidate_scope'] = 'Native Qdrant top-5 returned set; complete persisted point pool separately snapshotted'
         return selected, record
+
+    def restore_checkpoint(self, folder, state):
+        self.restore(state)
+        path = folder / 'native-history-after.sqlite'
+        if path.exists():
+            source = sqlite3.connect(path)
+            destination = sqlite3.connect(self.folder / 'history.sqlite')
+            source.backup(destination)
+            source.close(); destination.close()
 
     def update(self, episode):
         before = self.snapshot()

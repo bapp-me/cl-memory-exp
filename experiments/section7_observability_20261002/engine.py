@@ -179,7 +179,7 @@ def run_task(config, method, benchmark, index, row, history, api_key, wrapper=No
         if commit['before_hash'] != digest(history) or commit['config_hash'] != digest(config):
             raise RuntimeError('Resume state/config mismatch')
         if adapter:
-            adapter.restore(read(out / 'memory-after.json'))
+            adapter.restore_checkpoint(out, read(out / 'memory-after.json'))
         return read(out / 'memory-after.json'), commit['result']
     if out.exists() and any(out.iterdir()):
         raise RuntimeError('Uncommitted attempt requires audit; no automatic task retry')
