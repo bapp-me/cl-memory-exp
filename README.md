@@ -26,7 +26,7 @@ GLM 5.3 Flash，单次独立运行。代码复杂目标中，无记忆 18/46，�
 
 第 6 节实际执行 444 次：192 pilot、32 新诊断分支、192 完整第一遍、16 BabyAI、12 记忆只读抽测。无记忆不做第二遍；只读抽测不是完整原生第二遍，也不支持未见泛化。隐藏答案不向 agent 开放；三个评分资产问题按约定排除评分但保留执行。
 
-第 7.0/7.1 节已完成。六方法共 72 次在线观测验收通过；新增正式代码 384 次全部提交并通过完整观测审计。六方法 R=1 矩阵共 624 次，含历史两组 208 次、完整 BabyAI canary 32 次及新增代码 384 次。API 并发上限 50，同一记忆流串行；新增正式流实测 API 峰值 4。见[完整观测审计](experiments/section7_observability_20261002/records/formal-new-streams-acceptance.json)、[逐题/成本汇总](experiments/section7_observability_20261002/records/section7.1-final.json)、[配对表](experiments/section7_observability_20261002/records/section7.1-pairs.json)和[基线适配说明](experiments/section7_observability_20261002/records/baseline-adaptations.json)。
+第 7.0/7.1 节已完成。六方法共 72 次在线观测验收通过；新增正式代码 384 次全部提交并通过完整观测审计。六方法 R=1 矩阵共 624 次，含历史两组 208 次、完整 BabyAI canary 32 次及新增代码 384 次。API 并发上限 50，同一记忆流串行；新增正式流实测 API 峰值 4。见[逐项完成核对](experiments/section7_observability_20261002/records/section7-completion-audit.json)、[完整观测审计](experiments/section7_observability_20261002/records/formal-new-streams-acceptance.json)、[逐题/成本汇总](experiments/section7_observability_20261002/records/section7.1-final.json)、[配对表](experiments/section7_observability_20261002/records/section7.1-pairs.json)和[基线适配说明](experiments/section7_observability_20261002/records/baseline-adaptations.json)。
 
 | 方法 | 复杂目标 /46 | 全代码 /93 | BabyAI /8 | 96 题代码 tokens（含缓存与所有角色） |
 |---|---:|---:|---:|---:|
