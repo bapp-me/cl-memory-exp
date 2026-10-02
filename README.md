@@ -26,7 +26,7 @@ GLM 5.3 Flash，单次独立运行。代码复杂目标中，无记忆 18/46，�
 
 第 6 节实际执行 444 次：192 pilot、32 新诊断分支、192 完整第一遍、16 BabyAI、12 记忆只读抽测。无记忆不做第二遍；只读抽测不是完整原生第二遍，也不支持未见泛化。隐藏答案不向 agent 开放；三个评分资产问题按约定排除评分但保留执行。
 
-第 7.0 节已启动：208 次旧任务离线盘点及三个简单方法共 36 次任务的观测验收通过，实际模型调用 206 次。用户确认 API 并发上限为 50，本批实际峰值 16；复杂方法配置待确认，7.1 正式 baseline 未启动。见 [进度登记](experiments/section7_observability_20261002/records/section7-progress.json)和[待确认配置](experiments/section7_observability_20261002/records/complex-proposed-config-v1.json)。
+第 7.0 节六方法的 72 次在线观测验收已通过，启动与被动记录问题已修复并保留原始证据。API 并发上限 50，同一在线流串行；用户授权的第 7.1 节四条 96 题完整代码流正在运行，尚未完成。最终矩阵 624 次，登记复用历史 208 次与完整 BabyAI canary 32 次，新增正式代码 384 次。见 [进度登记](experiments/section7_observability_20261002/records/section7-progress.json)和[待确认配置](experiments/section7_observability_20261002/records/complex-proposed-config-v1.json)。
 
 ## 数据与凭据边界
 
