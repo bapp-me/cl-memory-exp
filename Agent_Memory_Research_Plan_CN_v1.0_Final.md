@@ -1,15 +1,16 @@
 # 持续学习 Agent 记忆系统：完整研究与评测方案
 
-**版本：** v1.1 第 6 节完成后修订版（保留原文件名，供既有链接继续使用）  
-**日期：** 2026-10-02  
+**版本：** v1.2 第 7.0/7.1 节完成后修订版（保留原文件名，供既有链接继续使用）
+
+**日期：** 2026-10-03
 **适用范围：** 从环境接入、模型校准、基准选型、记忆方法开发，到最终测试与结果交付  
 **文档关系：** 本文完整整合 v0.2 原方案、v0.3 审核稿、v0.4 基准决策及后续确认；执行时以本文为准，无须再拼接阅读旧稿。
 
-> **当前进度：** 第 00–06 节已按用户修订范围完成；主模型为 GLM 5.3 Flash，接口 ID 为 `glm-5.3-flash`。实际执行为单次运行、完整代码第一遍、12 个记忆组只读目标抽测和一个 BabyAI 8 任务家族，不是原生完整两遍协议。第 7 节复杂 baseline 尚未启动。[E1][E2][E3]
+> **当前进度：** 第 00–06 节已按用户修订范围完成；主模型为 GLM 5.3 Flash，接口 ID 为 `glm-5.3-flash`。第 6 节实际执行为单次运行、完整代码第一遍、12 个记忆组只读目标抽测和一个 BabyAI 8 任务家族，不是原生完整两遍协议。[E1][E2][E3] 第 7.0 观测验收及第 7.1 六方法 baseline 已完成；第 7.2 及后续阶段仍待执行。[E10]
 
-> **第 7.0/7.1 节执行进度（截至 2026-10-03）：** 7.0 六方法观测验收已通过：208 次旧任务离线盘点、72 次在线验收及原生机制/并行初始化 fixture。Mem0 初始化的 meta tensor 与共享迁移目录锁冲突已修复，失败启动记录保留；一条未返回 usage 的调用显式未知。用户已授权同配置自动执行 7.1，四条完整 96 题代码流正在运行；最终六方法矩阵为 624 次，登记复用旧两组 208 次及完整 BabyAI canary 32 次，新增正式代码执行 384 次。尚未宣称 7.1 完成。[E10]
+> **第 7.0/7.1 节执行进度（截至 2026-10-03）：** 两节均已完成。7.0 包含 208 次旧任务离线盘点、549 个历史 payload 重建、72 次在线验收及原生机制/并行初始化 fixture；Mem0 启动修复与原失败记录保留。7.1 六方法 R=1 矩阵共 624 次，含旧两组描述性复用 208 次、完整 BabyAI canary 32 次及新增正式代码 384 次。新增代码的完整观测审计通过；ACE 三次记忆更新超时、一次 Solver 超时及全部未知 usage 均保留，无任务或辅助调用重跑。旧结果、原生方法适配、预算限制与 R=1 的解释边界单独披露。[E10]
 >
-> **本次修订范围：** 根据仓库完成报告、逐题汇总、访问登记和记录器代码，更新进度、baseline 范围、失败分类和观测验收。新增的是文档规则，**不是已经补好埋点或完成新实验**。本次未重新调用实验模型，也未逐文件解压核验原始轨迹归档；旧日志的实际完整性由第 7.0 节的本地验收确认。
+> **规则修订的历史范围（本轮执行前）：** 第 6 节结束时的修订只新增 baseline、失败分类与观测验收规则，未调用实验模型或核验原始归档。后续用户确认后实施了 7.0/7.1；当前完成范围与实证结果以 [E10] 为准，未将后续语义诊断或最终验证标为完成。
 >
 > **执行优先级：** 当前第 4、6、7、13、15 节及实际冻结记录优先于旧稿中的预算示例。第 7.1/7.2 先离线盘点、补观测、做小规模试跑，再正式运行。沿用当前 `R=1`，不自动追加第二次重复、完整第二遍、independent 或最终测试。最终方法与最终测试仍未完成；Project / Global Memory 仍只是场景要求。
 >
@@ -451,7 +452,7 @@ BabyAI 只覆盖 `goto_door_to_open_door_loc` 完整预选 8 任务家族：无�
 
 ### 7.0 先完成观测验收，再扩大 baseline
 
-本节执行顺序固定为：**离线日志盘点 → 补必要采集 → 无模型 fixture 检查 → 小规模在线试跑 → 冻结观测协议 → 正式 baseline → 失败分析**。截至 2026-10-03，7.0 的脚本、采集字段及六方法在线验收已完成；7.1 正式代码流仍在运行。具体范围以 [E10] 的逐项证据为准，语义诊断与因果干预不因观测验收通过而视为完成。
+本节执行顺序固定为：**离线日志盘点 → 补必要采集 → 无模型 fixture 检查 → 小规模在线试跑 → 冻结观测协议 → 正式 baseline → 失败分析**。截至 2026-10-03，7.0 的脚本、采集字段及六方法在线验收已完成，7.1 完整六方法矩阵也已完成并通过观测审计。具体范围以 [E10] 的逐项证据为准，语义诊断与因果干预仍待 7.2 及后续阶段执行。
 
 #### 7.0.1 零新增模型调用的离线盘点
 
@@ -505,7 +506,7 @@ BabyAI 只覆盖 `goto_door_to_open_door_loc` 完整预选 8 任务家族：无�
 
 先审计 No Memory、受限 ICL、Jaccard episodic 的观测，再依次接入 Mem0、AWM、ACE。每种复杂方法独立通过 7.0，不将“适配没跑通”记作科学意义的零分。
 
-已存在 No Memory 与 episodic 的代码 96 任务和 BabyAI 8 任务 R=1。受限 ICL 只有相关 pilot/校准结果，不能用 24 题结果补全 96 题长流。
+7.0/7.1 执行前，已存在 No Memory 与 episodic 的代码 96 任务和 BabyAI 8 任务 R=1；受限 ICL 当时只有 pilot/校准结果。现已实际补齐 ICL、Mem0、AWM、ACE 的完整 96 题代码流；完整 BabyAI 8 题 canary 按相同配置登记复用，未用短代码 canary 代替正式长流。[E10]
 
 ```text
 六组第一遍矩阵：6 × (96 + 8) = 624 次任务执行
@@ -513,7 +514,7 @@ BabyAI 只覆盖 `goto_door_to_open_door_loc` 完整预选 8 任务家族：无�
 如果全部通过等价性和日志验收，尚需四组：4 × (96 + 8) = 416 次
 ```
 
-416 不包括不能复用的旧配置、在线小跑、辅助数据库实验、只读诊断、最近邻或新增重复。预算按实际执行去重，不把计划数写成已完成数。
+上述 416 是完整 BabyAI canary 复用前的预算。实际登记新增正式代码 384 次、完整 BabyAI canary 复用 32 次、历史两组复用 208 次，矩阵共 624 次。72 次在线验收另计，其中上述 32 次 BabyAI 已计入矩阵，不能重复计算付费执行量。实际新增在线任务执行为 72 + 384 = 456 次，不包含零模型调用的失败启动、离线核验或 fixture。[E10]
 
 旧 No Memory 并发差异使其延迟不能用于统一速度对照；模型可变别名也限制跨日期比较。以正确性/usage 的描述性结果优先复用；若需当前可比基线，在正式新组前对两个旧配置做预登记的小型桥接检查。观察差异只能作为漂移警报，不能用小桥接保证整个长流等价。出现版本/输入不一致时，重跑受影响的整条在线流或改为单独报告，不能只补失败的后半段。
 
@@ -528,6 +529,12 @@ BabyAI 只覆盖 `goto_door_to_open_door_loc` 完整预选 8 任务家族：无�
 保存逐任务原生结果、复杂目标配对表、源经验可获得/保留/检索/注入/适用的证据、方法自身状态、成本分项和未完成项。每方法自己生成并继承自己的历史；共享冻结历史仅属于明确命名的受控分析。
 
 成功任务也要记录 memory 健康情况与成本。无用写入、重复注入或过高费用可能发生在成功任务中，不应只分析失败样本。
+
+**本轮已交付（R=1）：** [逐题与角色成本汇总](experiments/section7_observability_20261002/records/section7.1-final.json)、[288 行源—目标配对表](experiments/section7_observability_20261002/records/section7.1-pairs.json)、[完整新增流观测审计](experiments/section7_observability_20261002/records/formal-new-streams-acceptance.json)、[记忆健康统计](experiments/section7_observability_20261002/records/memory-health.json)、[原生适配说明](experiments/section7_observability_20261002/records/baseline-adaptations.json)与[原始归档索引](experiments/section7_observability_20261002/records/full-native-raw-archive.json)。对应状态、注入内容、实际 payload、提交与所有失败记录均保留。配对表分别记录原始 episode 在方法状态中的保留、抽象记忆来源、可观测候选及实际注入；内容忠实度与语义适用性仍为未知，没有把来源标记当作有效使用。
+
+复杂目标正确数依次为 No Memory 18/46、ICL 21/46、Jaccard episodic 27/46、Mem0 18/46、AWM 18/46、ACE 20/46；全代码和 BabyAI 结果、全角色成本见 [README 结果表](README.md)。成本同时保留全部 96 题及全部 48 个复杂目标的口径，未删除三个评分排除项。旧两组保持历史描述复用身份，金额因缺少核验价格/账单保持未知，不进行跨日期的统一速度比较，也不由这次 R=1 结果声称稳定或因果优势。
+
+实际限制包括 Mem0 代码流中 91 次空 facts、4 次原生 JSON 拒绝；AWM 49 次累计历史触及 320,000 字节请求预算而保留旧 workflow；ACE 3 次 Reflector 超时和 1 次 Solver 响应超时。Reflector 超时从核验未改变的提交状态继续，Solver 超时按原预算保留未提交与评分结果，均不重跑。正式新代码有 4 条未返回 usage 的 HTTP 请求，复用的 Mem0 BabyAI 另有 1 条；均显式未知。
 
 ### 7.2 失败分类与观测可实现性
 
@@ -1075,7 +1082,7 @@ M 个记忆配置的合计：R × [M × (2T + H) + (T + H)]
 | Phase 0 | 接入、状态隔离、反馈与评分验收 | 已按第 6 节范围完成；复杂方法新增接口需再验收 |
 | Phase 1 | Model A/B 校准 | 已完成 88 次 2×2、R=1；主模型 GLM |
 | Phase 1B | 实际 192 初筛 + 32 新分叉（16 正常分支复用） | 已完成；保留默认分工，不声称重复稳定 |
-| Phase 2 | 两简单组完整流/非代码检查已完成；现在执行 7.0→7.1 | 先观测验收，再补复杂 baseline，合规旧结果复用 |
+| Phase 2 | 7.0 观测验收与 7.1 六方法矩阵已完成 | 72 次在线验收；624 次 R=1 矩阵，复用身份与全部成本保留 |
 | Phase 3 | 失败分析、竞争解释、诊断干预 | 一个主要瓶颈和可证伪假设 |
 | Phase 4 | Memory v1/v2、消融、阶段性验证 | 有证据的改进、成本和限制 |
 | Phase 5 | 冻结方法、资产验收、锁定测试 manifest | 关键对照和最终协议齐备 |
@@ -1511,6 +1518,7 @@ Pi / adapter / memory commit：
 - **[E8]** [diagnostic-audit.json](experiments/agent_memory_plan_20261002/records/diagnostic-audit.json)：诊断分支与隔离审计。
 - **[E9]** [tool-metrics.json](experiments/agent_memory_plan_20261002/records/tool-metrics.json)：已有工具统计入口；原始逐文件完整性仍由本地验收确认。
 - **[E10]** [第 7.0 节进度](experiments/section7_observability_20261002/records/section7-progress.json)、[简单方法在线验收](experiments/section7_observability_20261002/records/online-acceptance.json)、[原生复杂方法在线验收](experiments/section7_observability_20261002/records/complex-online-acceptance.json)、[旧流 availability](experiments/section7_observability_20261002/records/legacy-availability.json)、[历史 payload 重建](experiments/section7_observability_20261002/records/legacy-payload-reconstruction.json)与[已确认复杂方法配置](experiments/section7_observability_20261002/records/complex-confirmed-config-v1.json)：六方法共 72 次在线验收通过，启动修复、源快照、逐题记录和归档保留。7.1 使用[正式矩阵登记](experiments/section7_observability_20261002/records/section7.1-registry.json)；[已提交前缀审计](experiments/section7_observability_20261002/records/formal-prefix-observability.json)不代表整个正式流已完成。[ACE 超时恢复协议](experiments/section7_observability_20261002/records/timeout-continuation-freeze.json)保留原失败和未知 usage，从已核验未改变的提交状态继续，不重做已提交任务。
+- **[E11]** [完整新增流观测审计](experiments/section7_observability_20261002/records/formal-new-streams-acceptance.json)、[六方法最终矩阵](experiments/section7_observability_20261002/records/section7.1-final.json)、[源—目标配对表](experiments/section7_observability_20261002/records/section7.1-pairs.json)、[记忆健康统计](experiments/section7_observability_20261002/records/memory-health.json)与[正式原始归档索引](experiments/section7_observability_20261002/records/full-native-raw-archive.json)：新增正式代码 384 次全部提交并通过观测审计，完整矩阵 624 次；原始归档 12,649 个文件逐成员 SHA256 核验通过。完整性以该全量审计为准，前缀审计保留为历史进度证据。
 
 “16 个源评分通过且已注入仍失败”来自 [E2] 字段交叉计数；是本次离线分析，不是第 6 节作者已经作出的因果结论。7.0 已完成必要观测；第 7.2 节语义失败诊断、后续干预与未见验证仍待执行。
 

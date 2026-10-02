@@ -26,7 +26,22 @@ GLM 5.3 Flash，单次独立运行。代码复杂目标中，无记忆 18/46，�
 
 第 6 节实际执行 444 次：192 pilot、32 新诊断分支、192 完整第一遍、16 BabyAI、12 记忆只读抽测。无记忆不做第二遍；只读抽测不是完整原生第二遍，也不支持未见泛化。隐藏答案不向 agent 开放；三个评分资产问题按约定排除评分但保留执行。
 
-第 7.0 节六方法的 72 次在线观测验收已通过，启动与被动记录问题已修复并保留原始证据。API 并发上限 50，同一在线流串行；用户授权的第 7.1 节四条 96 题完整代码流正在运行，尚未完成。最终矩阵 624 次，登记复用历史 208 次与完整 BabyAI canary 32 次，新增正式代码 384 次。见 [进度登记](experiments/section7_observability_20261002/records/section7-progress.json)和[待确认配置](experiments/section7_observability_20261002/records/complex-proposed-config-v1.json)。
+第 7.0/7.1 节已完成。六方法共 72 次在线观测验收通过；新增正式代码 384 次全部提交并通过完整观测审计。六方法 R=1 矩阵共 624 次，含历史两组 208 次、完整 BabyAI canary 32 次及新增代码 384 次。API 并发上限 50，同一记忆流串行；新增正式流实测 API 峰值 4。见[完整观测审计](experiments/section7_observability_20261002/records/formal-new-streams-acceptance.json)、[逐题/成本汇总](experiments/section7_observability_20261002/records/section7.1-final.json)、[配对表](experiments/section7_observability_20261002/records/section7.1-pairs.json)和[基线适配说明](experiments/section7_observability_20261002/records/baseline-adaptations.json)。
+
+| 方法 | 复杂目标 /46 | 全代码 /93 | BabyAI /8 | 96 题代码 tokens（含缓存与所有角色） |
+|---|---:|---:|---:|---:|
+| No Memory（历史描述复用） | 18 | 60 | 3 | 310,663，历史 SDK 登记值 |
+| 受限 ICL | 21 | 63 | 5 | 3,637,459 |
+| Jaccard episodic（历史描述复用） | 27 | 71 | 6 | 1,214,123，历史 SDK 登记值 |
+| Mem0 classic 0.1.118 | 18 | 61 | 4 | 542,447 |
+| AWM online | 18 | 59 | 4 | 3,211,143 |
+| ACE online（原生 ADD 与计数更新） | 20 | 63 | 5 | 已知小计 6,916,335，另有未知 usage |
+
+评分保留固定排除项：每方法执行 96 个代码任务，评分 93 个；复杂目标执行 48 个，评分 46 个。所有执行与费用均保留。历史两组的原始失败请求 usage 未完整核验，模型使用可变别名，历史延迟不用于统一速度对照；这些结果是描述性复用。金额因缺少核验价格/账单保持未知，表中 tokens 不等于美元费用，也不能由 R=1 推出稳定或因果优势。
+
+[记忆健康统计](experiments/section7_observability_20261002/records/memory-health.json)记录：Mem0 96 次代码更新中有 91 次空 facts、4 次原生 JSON 拒绝；AWM 有 49 次累计历史超过 320,000 字节请求预算，保留旧 workflow；ACE 有 3 次 Reflector 超时及 1 次 Solver 响应超时。前者均保留原失败，从核验未改变的提交状态继续；后者未提交答案并保留原评分，均不重跑。正式新代码共有 4 条未返回 usage 的 HTTP 请求，复用的 Mem0 BabyAI 另有 1 条。上述统计描述实际操作与预算，未进行语义或因果归因。
+
+新增正式代码的原始请求、工具轨迹、提交、记忆状态及失败证据已归档为 `experiments/section7_observability_20261002/artifacts/full-native-raw-runs.tar.gz`，12,649 个文件均逐成员核验哈希；[归档索引](experiments/section7_observability_20261002/records/full-native-raw-archive.json)保留摘要和逐文件 SHA256。下一阶段为 7.2 失败诊断；未自动运行第二次重复、第二遍、未见验证或最终测试。
 
 ## 数据与凭据边界
 
