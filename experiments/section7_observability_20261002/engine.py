@@ -355,5 +355,6 @@ def run_task(config, method, benchmark, index, row, history, api_key, wrapper=No
     save(out / 'commit.json', commit)
     event(out, 'task_commit', **identity, terminal_state=terminal, before_hash=digest(history), after_hash=digest(after))
     print(json.dumps({'run_id': run_id, 'task_id': task_id, 'terminal_state': terminal, 'correct': score.get('correct'),
-                      'calls': len(ledger), 'tokens_known': usage_sum['totalTokens']}), flush=True)
+                      'generation_attempts': execution['calls'], 'http_attempts': execution['http_attempts'],
+                      'tokens_known_all_roles': execution['known_usage_subtotal']['totalTokens']}), flush=True)
     return after, record

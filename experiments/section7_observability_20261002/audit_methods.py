@@ -12,7 +12,8 @@ def jsonl(path):
     return [json.loads(line) for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
 
 
-def audit(phase, prefixes):
+def audit(phase, prefixes, benchmarks=None):
+    benchmarks = benchmarks or ['codeeval', 'babyai']
     methods = ['mem0', 'awm', 'ace'] if phase == 'canary' else ['bounded_icl', 'mem0', 'awm', 'ace']
     errors, tasks, all_intervals = [], [], []
     by_role = defaultdict(lambda: {'generation_attempts': 0, 'http_attempts': 0, 'unknown_usage_attempts': 0, 'known_usage': {key: 0 for key in USAGE_FIELDS}})
@@ -29,7 +30,7 @@ def audit(phase, prefixes):
                     errors.append({'freeze': str(path), 'file': name, 'error': 'Frozen source content/hash disagree'})
             source_freezes[prefix] = freeze
     for method in methods:
-        for benchmark in ['codeeval', 'babyai']:
+        for benchmark in benchmarks:
             candidates = [ROOT / '.runtime/runs' / f'{prefix}-{benchmark}-{method}' for prefix in prefixes]
             candidates = [run for run in candidates if (run / 'manifest.json').exists() and list(run.glob('*/commit.json'))]
             if not candidates:
@@ -170,5 +171,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--phase', choices=['canary', 'full'], required=True)
     parser.add_argument('--prefixes', nargs='+', required=True)
+    parser.add_argument('--benchmarks', nargs='+', choices=['codeeval', 'babyai'])
     args = parser.parse_args()
-    audit(args.phase, args.prefixes)
+    audit(args.phase, args.prefixes, args.benchmarks)
