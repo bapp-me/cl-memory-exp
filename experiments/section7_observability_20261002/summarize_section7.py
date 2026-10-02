@@ -31,6 +31,9 @@ def main():
                       'source_path': folder.relative_to(REPO).as_posix(),
                       'correct': result['correct'], 'scorable': result['scorable'],
                       'terminal_state': result.get('terminal_state', 'historical_committed'),
+                      'response_timed_out': result.get('response_timed_out'),
+                      'context_exceeded': result.get('context_exceeded'),
+                      'solver_error': result.get('error'), 'memory_error': result.get('memory_error'),
                       'submitted': result.get('submitted'), 'tool_calls': result.get('tool_calls'),
                       'turns': result.get('turns'), 'solver_seconds': result.get('seconds'),
                       'total_system_seconds': result.get('total_system_seconds'),
@@ -41,6 +44,11 @@ def main():
                       'money': None, 'money_reason': 'No verified runtime price/invoice',
                       'historical_usage_status': 'retained SDK counters; raw provider and failed-request usage not verified' if entry['source_kind'] == 'legacy_descriptive_reuse' else None}
             payload = optional_json(folder / 'pi-result.json')
+            if payload:
+                if record['response_timed_out'] is None:
+                    record['response_timed_out'] = payload.get('responseTimedOut')
+                if record['context_exceeded'] is None:
+                    record['context_exceeded'] = payload.get('contextExceeded')
             tools = []
             if payload:
                 tools = [item for message in payload['messages'] if message['role'] == 'assistant'
@@ -68,6 +76,10 @@ def main():
             'known_usage': {key: sum((row['role_accounting'] or {}).get(role, {}).get('known_usage', {}).get(key, 0) for row in rows) for key in USAGE_FIELDS}
         } for role in roles}
         summary = {'method': entry['method'], 'benchmark': entry['benchmark'], 'tasks': len(rows),
+                   'response_timeout_tasks': sum(row['response_timed_out'] is True for row in rows),
+                   'response_timeout_observation_missing_tasks': sum(row['response_timed_out'] is None for row in rows),
+                   'context_budget_exceeded_tasks': sum(row['context_exceeded'] is True for row in rows),
+                   'unsubmitted_tasks': sum(row['submitted'] is False for row in rows),
                    'terminal_states': dict(Counter(row['terminal_state'] for row in rows)),
                    'memory_failures_retained_in_scores_and_costs': sum(row['terminal_state'] == 'memory_failure' for row in rows),
                    'effective_tasks': len(effective), 'correct': sum(row['correct'] is True for row in effective),
