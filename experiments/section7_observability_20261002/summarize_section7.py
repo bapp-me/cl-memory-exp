@@ -93,6 +93,7 @@ def main():
             folder = REPO / target['source_path']
             before = read(folder / 'memory-before.json')
             injected = read(folder / 'injected.json')
+            retrieval = optional_json(folder / 'retrieval.json')
             source_attempt = entry['run_id'] + f".task-{source['index']:03d}.attempt-1"
             retained, injected_provenance = None, None
             if entry['method'] in ['bounded_icl', 'episodic_retrieval', 'no_memory']:
@@ -100,17 +101,25 @@ def main():
                 def has_episode(episodes):
                     return any(json.loads(episode['text'])['task'] == source_text for episode in episodes)
                 retained, injected_provenance = has_episode(before), has_episode(injected)
+                raw_episode_retained = retained
+                source_ids = {digest(episode) for episode in before if has_episode([episode])}
+                candidate_provenance = bool(source_ids & {item['memory_id'] for item in retrieval['observable_candidates']}) if retrieval else None
             else:
                 provenance = before.get('provenance', {})
                 retained = any(source_attempt in origins for origins in provenance.values())
                 selected_ids = [item['memory_id'] for item in injected]
                 injected_provenance = any(source_attempt in provenance.get(memory_id, []) for memory_id in selected_ids)
+                raw_episode_retained = source_attempt in before['source_attempts'] if entry['method'] == 'awm' else False
+                candidate_provenance = any(source_attempt in provenance.get(item['memory_id'], []) for item in retrieval['observable_candidates']) if retrieval else None
             pair_rows.append({'method': entry['method'], 'source_task_id': source['task_id'], 'target_task_id': target['task_id'],
                               'source_index': source['index'], 'target_index': target['index'],
                               'distance': target['index'] - source['index'], 'source_correct': source['correct'],
                               'source_scorable': source['scorable'], 'target_correct': target['correct'], 'target_scorable': target['scorable'],
                               'source_experience_legally_executed_before_target': True,
+                              'raw_source_episode_retained_in_method_state': raw_episode_retained,
                               'source_provenance_retained': retained, 'source_provenance_injected': injected_provenance,
+                              'source_provenance_in_observable_retrieval_candidates': candidate_provenance,
+                              'candidate_observation_unknown_reason': 'No per-task candidate artifact in this historical result' if retrieval is None else None,
                               'content_fidelity_of_source': None, 'semantic_applicability': None,
                               'unknown_reason': 'Provenance does not prove required source content survived abstraction or is useful to target',
                               'target_usage': target['usage'], 'target_known_usage_subtotal': target['known_usage_subtotal'],
