@@ -9,6 +9,8 @@ import re
 import sqlite3
 import sys
 import time
+import threading
+import functools
 from typing import Any, Dict, List, Optional, Tuple
 from runtime import ROOT, read, save, digest, event
 from engine import event
@@ -22,6 +24,16 @@ os.environ['USE_TF'] = '0'
 os.environ['USE_FLAX'] = '0'
 sys.path.insert(0, str(ROOT / '.runtime/complex-libs'))
 SOURCES = ROOT / '.cache/complex-sources'
+_MEM0_INITIALIZATION_LOCK = threading.Lock()
+
+
+def serialized_embedding_initialization(function):
+    @functools.wraps(function)
+    def guarded(*args, **kwargs):
+        # Transformers' meta-weight construction mutates process-wide contexts.
+        with _MEM0_INITIALIZATION_LOCK:
+            return function(*args, **kwargs)
+    return guarded
 
 
 def pure_functions(path, names=None, globals_extra=None):
@@ -212,6 +224,7 @@ class ACEMemory(Adapter):
 
 
 class Mem0Memory(Adapter):
+    @serialized_embedding_initialization
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         from mem0 import Memory
