@@ -34,7 +34,9 @@ def main():
                       'submitted': result.get('submitted'), 'tool_calls': result.get('tool_calls'),
                       'turns': result.get('turns'), 'solver_seconds': result.get('seconds'),
                       'total_system_seconds': result.get('total_system_seconds'),
-                      'usage': result.get('usage'), 'role_accounting': result.get('role_accounting'),
+                      'usage': result.get('usage'),
+                      'known_usage_subtotal': result.get('known_usage_subtotal', result.get('usage')),
+                      'role_accounting': result.get('role_accounting'),
                       'unknown_usage_http_attempts': result.get('unknown_usage_http_attempts'),
                       'money': None, 'money_reason': 'No verified runtime price/invoice',
                       'historical_usage_status': 'retained SDK counters; raw provider and failed-request usage not verified' if entry['source_kind'] == 'legacy_descriptive_reuse' else None}
@@ -56,7 +58,7 @@ def main():
         if entry['benchmark'] == 'codeeval' and (len(effective) != 93 or len(targets) != 46):
             issues.append({'run': entry['path'], 'error': 'Wrong scoring mask denominators',
                            'full_effective': len(effective), 'target_effective': len(targets)})
-        known_tokens = {key: sum((row['usage'] or {}).get(key, 0) for row in rows) for key in USAGE_FIELDS}
+        known_tokens = {key: sum((row['known_usage_subtotal'] or {}).get(key, 0) for row in rows) for key in USAGE_FIELDS}
         summary = {'method': entry['method'], 'benchmark': entry['benchmark'], 'tasks': len(rows),
                    'effective_tasks': len(effective), 'correct': sum(row['correct'] is True for row in effective),
                    'effective_complex_targets': len(targets) if entry['benchmark'] == 'codeeval' else None,
@@ -72,7 +74,8 @@ def main():
             continue
         raw_map = {row['task_id'].split(':', 1)[1]: row for row in rows if row['task_id'].startswith('raw:')}
         for target in [row for row in rows if row['task_id'].startswith('new:')]:
-            source = raw_map[target['task_id'].split(':', 1)[1]]
+            target_asset = assets[target['index']]
+            source = raw_map[target_asset['corresponding_raw_id']]
             folder = REPO / target['source_path']
             before = read(folder / 'memory-before.json')
             injected = read(folder / 'injected.json')
@@ -96,7 +99,9 @@ def main():
                               'source_provenance_retained': retained, 'source_provenance_injected': injected_provenance,
                               'content_fidelity_of_source': None, 'semantic_applicability': None,
                               'unknown_reason': 'Provenance does not prove required source content survived abstraction or is useful to target',
-                              'target_usage': target['usage'], 'target_tools': target['tools_by_name'],
+                              'target_usage': target['usage'], 'target_known_usage_subtotal': target['known_usage_subtotal'],
+                              'target_unknown_usage_http_attempts': target['unknown_usage_http_attempts'],
+                              'target_tools': target['tools_by_name'],
                               'memory_before_path': (folder / 'memory-before.json').relative_to(REPO).as_posix(),
                               'injection_path': (folder / 'injected.json').relative_to(REPO).as_posix()})
     assert len(registry['runs']) == 12
