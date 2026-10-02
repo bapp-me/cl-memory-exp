@@ -59,6 +59,14 @@ def main():
             issues.append({'run': entry['path'], 'error': 'Wrong scoring mask denominators',
                            'full_effective': len(effective), 'target_effective': len(targets)})
         known_tokens = {key: sum((row['known_usage_subtotal'] or {}).get(key, 0) for row in rows) for key in USAGE_FIELDS}
+        target_tokens = {key: sum((row['known_usage_subtotal'] or {}).get(key, 0) for row in targets) for key in USAGE_FIELDS}
+        roles = sorted({role for row in rows for role in (row['role_accounting'] or {})})
+        all_roles = {role: {
+            'logical_call_attempts': sum((row['role_accounting'] or {}).get(role, {}).get('calls', 0) for row in rows),
+            'http_attempts': sum((row['role_accounting'] or {}).get(role, {}).get('http_attempts', 0) for row in rows),
+            'unknown_usage_http_attempts': sum((row['role_accounting'] or {}).get(role, {}).get('unknown_usage_attempts', 0) for row in rows),
+            'known_usage': {key: sum((row['role_accounting'] or {}).get(role, {}).get('known_usage', {}).get(key, 0) for row in rows) for key in USAGE_FIELDS}
+        } for role in roles}
         summary = {'method': entry['method'], 'benchmark': entry['benchmark'], 'tasks': len(rows),
                    'terminal_states': dict(Counter(row['terminal_state'] for row in rows)),
                    'memory_failures_retained_in_scores_and_costs': sum(row['terminal_state'] == 'memory_failure' for row in rows),
@@ -66,6 +74,10 @@ def main():
                    'effective_complex_targets': len(targets) if entry['benchmark'] == 'codeeval' else None,
                    'correct_complex_targets': sum(row['correct'] is True for row in targets) if entry['benchmark'] == 'codeeval' else None,
                    'retained_usage_total': known_tokens, 'usage_missing_tasks': sum(row['usage'] is None for row in rows),
+                   'all_role_accounting': all_roles if roles else None,
+                   'effective_complex_target_usage_subtotal': target_tokens if entry['benchmark'] == 'codeeval' else None,
+                   'effective_complex_target_usage_missing_tasks': sum(row['usage'] is None for row in targets) if entry['benchmark'] == 'codeeval' else None,
+                   'effective_complex_target_working_tool_calls': sum(row['working_tool_calls'] for row in targets) if entry['benchmark'] == 'codeeval' else None,
                    'usage_provenance': 'unverified historical SDK counters' if entry['source_kind'] == 'legacy_descriptive_reuse' else 'returned raw HTTP usage, all roles included',
                    'working_tool_calls': sum(row['working_tool_calls'] for row in rows),
                    'submit_calls': sum(row['submit_calls'] for row in rows), 'source_kind': entry['source_kind'],
