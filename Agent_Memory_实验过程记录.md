@@ -344,3 +344,19 @@ Hermes 固定源码支持五个 bundled 外部 adapter，官方文档另列 Honc
 启动过程中先误用提权账户 BAPP/fucak 解密 Codex 沙箱账户 BAPP/codexsandboxonline 创建的 DPAPI 数据，失败均发生在模型请求前；普通沙箱账户成功加载原 GLM 密钥，无需替换。用户要求记住此差异，已另写长期记忆扩展说明，不保存密钥。首题模型执行完成后，被动校验器假定用户 content 为字符串，而 Pi 实际为 text-block 数组；新增严格归一化校验，重新审计已保存数据后通过，没有改变模型输入/冻结源码/预算或重跑首题。
 
 原始审计归档 `artifacts/frozen-jaccard-raw.tar.gz` 共 1,062 文件、4,648,832 字节，SHA256 af04b63d479cdd351fa1fbb9b07d5d13a3a4cb0d41647db5f8f30c1e72860080；逐成员哈希、安全恢复预检和 GLM 凭据精确扫描通过。新请求/轨迹仅作隔离审计，未进入任何 agent 记忆。实验结束后核对 PID/命令/端口并停止本次 WSL broker。结果与复核入口已写入独立报告和 README，不改 S0 执行路线及历史分数。
+
+## 三版自主记忆检索准备与验收（2026-10-04，香港时间）
+
+用户新任务明确要求：仅以 No Memory 的 48 道简单题轨迹为共同语料，参考主流记忆系统设计三版访问工具，检查并补齐 observability，再分别运行复杂题；复杂题互不可见，可以高并发。研究计划作为背景，旧文档的仅更新文档/P0 范围不取代本次任务；本轮不自动扩展其他 benchmark、重复、writer 或在线策略记忆。
+
+在 `experiments/agentic_search_20261004` 实现 `lexical`（BM25 原始事件 search/read）、`hybrid_context`（BM25 + 字符 trigram TF-IDF 的 RRF、来源任务与操作/观察上下文）和 `graph_walk`（同 BM25 起点加相邻、操作/结果、共同代码符号的自主展开）。设计参考 Letta、Mem0/Hindsight、Graphiti 官方来源；均为简化实现，不称产品复现；字符相似度不称语义 embedding，图边不称有效事实。首轮是多种系统设计的比较，不能孤立归因于某一算法部件。
+
+48 条库记录均与原 No Memory 可见消息和简单题题面逐条吻合，共 279 个事件，原库 canonical SHA256 为 dac0179536ec6d1316507b86d7bdbd542345209c5c52492e4b60ef61f0882914。保留失败尝试、工具观察和最终提交，但不导入隐藏分数、标准解、配对目标 ID 或模型 reasoning。每题独立 Pi/Session/工作目录；索引只读，不写复杂题 legal-episode，不向别题交付复杂轨迹。
+
+新增动态 memory tool result 到实际 provider payload 的逐字映射、完整候选/边与范围、重复阅读、截断/空命中/错误、搜索时间、工具往返和 stream 首次可见数据时间；沿用模型/HTTP/usage/提交/评分账本。新观测支持搜索—曝光—后续动作的直接描述，不自动证明语义使用或因果价值；精确片段 token/cache、缺失 usage 和价格仍如实 unknown。历史漏采字段不能补造。
+
+无付费验收通过：96 个并发 Session 隔离、路径/非法来源/混入复杂题/突变 checkpoint 拒绝、长 Unicode 事件分页、重复范围与预算、真实 Pi 对本地 mock provider 的 13 次请求，以及 503 重试/成功但无 usage 的 2 次请求。上述 request counts 是最后一次完整验收，不含前期调试重放；均非付费模型调用或效果实验。旧 WSL broker 已关闭，本次重新启动后验证主机路径/网络/API key 隔离及科学计算依赖通过。
+
+拟运行 3 × 48 题、R=1，GLM glm-5.3-flash/high、8192 output tokens、每题 18 轮/15 PYTHON/600 秒；每题最多 12 次 memory 调用、48000 bytes 证据响应、单次 12000 bytes。每版首题各一次 canary 计入 144 次，其余全局 48 任务并发、8 沙箱槽。只做最多 2 次额外传输重试，不重试到成功；原评分 mask 为每版 48 次执行/46 题主评分。原简单库历史 137698 tokens 单列，本轮构建索引没有模型调用。无可靠价格，金额不填估计值。
+
+具体配置与 freeze、验收证据已保存，尚未生成 approval.json，正式付费入口在读取凭据前要求匹配配置哈希的用户确认。本阶段完成设计、实现与无付费验收，尚未完成 144 次目标运行；goal 保持未完成。后续收到确认才启动并报告结果。

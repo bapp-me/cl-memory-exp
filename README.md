@@ -4,6 +4,8 @@ Training-free Agent memory 实验代码与研究证据。主要语言为中文�
 
 ## 从这里开始
 
+- [三版自主记忆检索：设计、隔离与观测验收](experiments/agentic_search_20261004/README.md)：冻结同一份 48 道 No Memory 简单题历史，实现事件 BM25、混合排序与上下文交付、图关系展开三版工具。279 个来源事件逐条核对，真实 Pi + 模拟服务、并行隔离、缺失 usage 和 WSL 检查通过；拟执行 3 × 48 复杂题，具体配置待用户确认，目前无新付费调用。
+
 - [冻结 No Memory 简单题库的 Jaccard top-3 补跑](experiments/section7_frozen_jaccard_20261004/冻结简单题库Jaccard补跑报告.md)：2026-10-04 完成 48 道复杂题 R=1，复杂题不写回；正确 27/46，与历史在线 Jaccard 相同，有效目标 tokens 574,109→468,934（下降 18.3%），PYTHON 52→48。99 个请求均有 usage，峰值并发 47，来源只读隔离通过。这是独立补充对照，不改变 S0 路线或宣称单因素因果收益。
 
 - [Pi 短任务写入与后台观测核验](experiments/pi_memory_lifecycle_20261003/短任务写入与后台观测核验.md)：Pi coding-agent 1.0.0 + pi-hermes-memory 0.9.10 的真实 SDK/原生子进程合成检查，13 组集成和 4 项组件断言通过。默认单轮任务不触发常规 review/flush；waitForIdle/dispose 不能代替记忆完成确认，辅助及子进程调用须单独记账。轻量底座路线可继续，生产适配、真实 provider 和 S0 尚未验收；没有付费模型调用。
