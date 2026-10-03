@@ -4,6 +4,8 @@ Training-free Agent memory 实验代码与研究证据。主要语言为中文�
 
 ## 从这里开始
 
+- [冻结 No Memory 简单题库的 Jaccard top-3 补跑](experiments/section7_frozen_jaccard_20261004/冻结简单题库Jaccard补跑报告.md)：2026-10-04 完成 48 道复杂题 R=1，复杂题不写回；正确 27/46，与历史在线 Jaccard 相同，有效目标 tokens 574,109→468,934（下降 18.3%），PYTHON 52→48。99 个请求均有 usage，峰值并发 47，来源只读隔离通过。这是独立补充对照，不改变 S0 路线或宣称单因素因果收益。
+
 - [Pi 短任务写入与后台观测核验](experiments/pi_memory_lifecycle_20261003/短任务写入与后台观测核验.md)：Pi coding-agent 1.0.0 + pi-hermes-memory 0.9.10 的真实 SDK/原生子进程合成检查，13 组集成和 4 项组件断言通过。默认单轮任务不触发常规 review/flush；waitForIdle/dispose 不能代替记忆完成确认，辅助及子进程调用须单独记账。轻量底座路线可继续，生产适配、真实 provider 和 S0 尚未验收；没有付费模型调用。
 
 - [Pi 与 Hermes 记忆生态补充调研](experiments/memory_ecosystem_20261003/Pi与Hermes记忆生态补充调研.md)：Pi coding-agent 可用 SDK 作为实验底座；核对 pi-hermes-memory、Mem0、Hindsight、Honcho、pi-memctx 和 Hermes 第三方 provider。前轮 B 优于自行移植的结论不能扩成对全部 Pi 现成插件的排名；新候选尚未运行验收。
@@ -23,6 +25,7 @@ Training-free Agent memory 实验代码与研究证据。主要语言为中文�
 
 | 目录 | 内容与状态 |
 |---|---|
+| `experiments/section7_frozen_jaccard_20261004/` | 固定 No Memory 简单源库的 Jaccard top-3：48 道复杂题完成，协议、逐题结果、费用及原始审计归档 |
 | `experiments/section7_hypotheses_20261003/` | 第7.3节假设分析、候选冻结快照、建议预算；仅离线分析，7.4未启动 |
 | `experiments/section7_analysis_20261003/` | 第 7.2 节全量离线分析、三方小样本校准、324 条审查、逐字证据与主 agent 复核、原始调用归档 |
 | `experiments/agent_memory_plan_20261002/` | 当前 00–06 执行：配置、Pi/工具适配、隔离评分、冻结协议、全部结果索引与审计 |
