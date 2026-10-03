@@ -1,0 +1,143 @@
+{
+  "case_id": "c-2aaf80af55a2",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true"
+        }
+      ],
+      "reason": "The paired menu-frequency source episode was correct and scorable on its own five tests; limits are that its function name/interface differs from the target wrapper and it was not injected."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "data = Counter(flattened)"
+        },
+        {
+          "section": "source_visible",
+          "quote": "ax = sns.barplot(x='menu_item', y='frequency', data=df)"
+        }
+      ],
+      "reason": "The retained source record faithfully contains the target-relevant flatten/count/barplot/None logic; this says the source record is not corrupted, not that the target saw it."
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Given a nested list of menu items, this function flattens the list"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of restaurant menus, where each menu is represented as a nested list"
+        }
+      ],
+      "reason": "Both tasks require flattening menu items, counting frequencies, and returning one bar-plot Axes; the target differs mainly by function name/wrapper."
+    },
+    "visible_use": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "The visible target trajectory never cites memory content or IDs, and there is no counterfactual, so independent solving and memory-guided adaptation cannot be distinguished."
+    }
+  },
+  "labels": [
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_episode_byte_budget\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_in_observable_retrieval_candidates\": true"
+        }
+      ],
+      "reason": "All candidates were selected before packing but 77 were dropped for byte budget and only five were injected; source provenance was observable yet not injected. This supports packing/visibility limitation, not retrieval failure, and does not prove the dropped source caused any outcome."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Given a nested list of menu items, this function flattens the list and visualizes the frequency"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        }
+      ],
+      "reason": "A legitimate, correct source episode for the same flatten/count/barplot operation exists. It establishes opportunity, not injection or transfer."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "All cases verified — frequencies counted correctly across menus"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "The target visibly executed tests, submitted, and received a correct/scorable evaluation. This confirms task success but not any memory causal role."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"tests_run\": 0"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"checks_executed\": 1"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "return task_func(all_items)"
+        }
+      ],
+      "reason": "The evaluator ran zero named tests but one custom check marked correct, while the reference delegates to task_func and the submitted solution is standalone. This marks limited verification, not a target failure."
+    }
+  ],
+  "primary_hypothesis": "PACKING_VISIBILITY",
+  "competing_explanations": [
+    "The target may have solved directly from the prompt and prompt-supplied imports, with no memory transfer.",
+    "Source provenance was observable but not injected; the similar implementation may be task-intrinsic rather than source-guided.",
+    "The five injected memories are largely unrelated to menu-frequency plotting and may have had no effect or only generic plot-lifecycle influence.",
+    "The offline evaluator ran zero named tests and one custom check, so edge-case correctness is not fully established."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether any source or injected memory content was actually present in the target context despite source_provenance_injected being false.",
+    "Which dropped candidate was the menu-frequency source, since the drop reason is generic.",
+    "Whether the target would fail without packed memories, because no counterfactual was run.",
+    "Hidden test coverage and exact token cost are not fully measurable from this packet."
+  ],
+  "minimal_intervention": {
+    "change": "Inject only the retained menu-frequency source episode instead of the five unrelated recent memories, holding all else equal.",
+    "fixed": "Same target prompt, same evaluator, and same total memory byte budget.",
+    "falsifier": "If target behavior and correctness are unchanged when the menu source is absent or when all memories are removed, the proposed memory-related mechanism is not behaviorally limiting."
+  },
+  "causal_claim": false
+}

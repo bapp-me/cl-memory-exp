@@ -1,0 +1,156 @@
+{
+  "case_id": "c-c7cc411c7de7",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Calculates the sum of elements in each row of the array."
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "The phrasing 'the PDF range covers N% of a standard normal distribution' means the CENTRAL quantile range"
+        }
+      ],
+      "reason": "Source episode scored correct and generated a relevant PDF-range rule, but its single-array row-sum contract is only a partial template for the target list-of-arrays Figure task."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "When a docstring EXPLICITLY pins the PDF overlay's range, follow its exact wording over the generic 'plot the PDF over the sample's [min, max]' heuristic"
+        },
+        {
+          "section": "target_visible",
+          "quote": "x = np.linspace(norm.ppf(0.005), norm.ppf(0.995), 200)"
+        }
+      ],
+      "reason": "The stored PDF-range insight matches the target's explicit 99% central-quantile requirement and the submitted ppf(0.005)/ppf(0.995) implementation."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "plot a histogram of the normalized data from each array"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Calculates the sum of elements in each row of the array."
+        }
+      ],
+      "reason": "The PDF-range rule applies, but the source's single-array row-sum normalization and return contract do not directly map to the target's list-of-arrays Figure contract."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "exactly the err-00157 pattern; matplotlib's 'green' is 127/255, not 0.5"
+        },
+        {
+          "section": "target_visible",
+          "quote": "err-00094 — check the oracle first"
+        }
+      ],
+      "reason": "The agent visibly invoked injected error memories to diagnose and repair two harness-side verification failures before submitting."
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "exactly the err-00157 pattern; matplotlib's 'green' is 127/255, not 0.5"
+        },
+        {
+          "section": "target_visible",
+          "quote": "err-00094 — check the oracle first"
+        }
+      ],
+      "reason": "Visible citation and application of injected memories to resolve verification failures; cannot prove the memories were necessary or that they caused the final success."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"memory_id\": \"sai-00062\""
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"oldest_complete_block_byte_budget\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "The source-derived memory sai-00062 was retrieved and selected before packing but dropped by the byte budget and not injected; target PDF-range behavior therefore cannot be attributed to that source memory."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "target_visible",
+          "quote": "\"submitted\":true"
+        }
+      ],
+      "reason": "The target submitted a completed artifact and the offline evaluator marked it correct; this supports success but says nothing about memory causality."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "plot a histogram of the normalized data from each array"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "ax, _ = task_func(arr)"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "Calculates the sum of elements in each row of the array."
+        }
+      ],
+      "reason": "Reference pipeline delegates each target array to task_func with row-sum normalization, while the target prompt only says normalized data from each array; the target submission instead z-scores whole arrays. Hidden checks may not discriminate this reading."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "Target success may be due to direct prompt execution rather than memory; the 99% PDF range is explicitly stated in the target prompt.",
+    "The source-derived PDF-range memory was dropped during packing, so any observable match to source is not evidence that source memory was used.",
+    "The first verification failure came from an expected green constant that matched the injected err-00157 example, so err-00157 may have been a source of spurious failure as well as a diagnostic aid.",
+    "The target contract may require row-sum normalization via the reference task_func, but the prompt does not state it; offline evaluation passed with only limited checks, so the contract remains ambiguous."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "No counterfactual: cannot tell whether the injected err-00157/err-00094 memories were necessary for recovery.",
+    "Cannot determine whether hidden target tests exercised row-sum normalization or only Figure/axes structure.",
+    "Cannot inspect full unselected memory library, so absence of other relevant memories is not established.",
+    "Post-target update tags err-00157 harmful, but that update occurred after the target and is not direct evidence of target-time causation."
+  ],
+  "minimal_intervention": {
+    "change": "Ablate the injected err-00157 and err-00094 entries while keeping the same target prompt, tools, and budget.",
+    "fixed": "Same target prompt, same model, same available tools, and same memory byte budget.",
+    "falsifier": "If the same exit-0 submission and no extra repair cycles occur without those memories, the visible memory use was not necessary for success."
+  },
+  "causal_claim": false
+}

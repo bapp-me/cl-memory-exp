@@ -1,0 +1,143 @@
+{
+  "case_id": "c-9c232b29a84a",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Goal: go to the yellow door"
+        },
+        {
+          "section": "injection/0",
+          "quote": "The yellow door is accessible directly. Let me go to it."
+        }
+      ],
+      "reason": "Injected source is a coherent same-family BabyAI 'goto' episode that reaches the goal door directly and terminates completed, so it is a legitimate source experience but covers only the directly-visible case."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "I'll navigate toward the yellow door. First, let me check available actions."
+        },
+        {
+          "section": "injection/0",
+          "quote": "go to yellow closed door 1"
+        }
+      ],
+      "reason": "The injected text is an internally consistent observation/action/outcome record whose described outcome matches its own final observation; no contradictory content appears in the packet."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Goal: go to the purple door"
+        },
+        {
+          "section": "injection/0",
+          "quote": "The yellow door is accessible directly. Let me go to it."
+        }
+      ],
+      "reason": "The shared part is the action schema (enumerate actions, then 'go to <color> closed door 1'); the target instead required exploring a hidden purple door, a condition absent from the source."
+    },
+    "visible_use": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The purple door isn't visible here. I may need to go through one of the doors to find it."
+        },
+        {
+          "section": "target_visible",
+          "quote": "go to purple closed door 1"
+        }
+      ],
+      "reason": "The agent's decisive exploration (toggling through the blue door, turning) has no counterpart in the source, and the reused-looking strings are ordinary environment affordances; memory influence cannot be separated from an intrinsic policy."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The task is completed."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"progress\": 1.0"
+        }
+      ],
+      "reason": "Target was solved in-episode within the action budget, so the outcome itself gives no leverage for or against memory benefit."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Goal: go to the yellow door"
+        },
+        {
+          "section": "injection/0",
+          "quote": "The yellow door is accessible directly. Let me go to it."
+        }
+      ],
+      "reason": "A same-family successful source existed, but its key condition (goal door directly visible/reachable) does not match the target's hidden-door condition, so the opportunity is only partial; it does not prove fidelity or applicability."
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"dropped\": []"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"rank\": 1"
+        }
+      ],
+      "reason": "One candidate was retrieved, ranked first and injected with nothing dropped, so this is not a packing-eviction story; retrieval success says nothing about relevance or use."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "I'll check the available actions first, since no purple door is mentioned in the observation."
+        },
+        {
+          "section": "injection/0",
+          "quote": "I'll navigate toward the yellow door. First, let me check available actions."
+        }
+      ],
+      "reason": "Only a surface parallel (checking actions before acting, then 'go to <color> closed door 1') links target behavior to the source; this proxy cannot show the memory caused the trajectory."
+    }
+  ],
+  "primary_hypothesis": "unknown",
+  "competing_explanations": [
+    "The identical opening move and door-action phrasing may come from the solver's own prior/affordances rather than the injected memory (no counterfactual run).",
+    "The memory may have supplied only a generic action schema while the successful exploration of the hidden purple door was generated in-episode.",
+    "No visible indication of misapplication: the source's direct-navigation step was simply not applicable to the hidden-door target."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "No memory-disabled or mismatched-memory control run, so causal contribution of the injected source is unresolvable.",
+    "Whether the injected text is byte-faithful to the original source episode cannot be checked from this packet.",
+    "Token accounting unavailable (token_count null, token_measurement_method 'unavailable'), so payload cost can only be described in bytes.",
+    "Unselected library entries are absent, so retrieval completeness/absence cannot be judged."
+  ],
+  "minimal_intervention": {
+    "change": "Re-run the same target prompt and environment with memory disabled (and, if desired, with the same source trajectory replaced by an unrelated BabyAI episode).",
+    "fixed": "Same room layout/seed, same solver, same system prompt, same action budget and tool set.",
+    "falsifier": "If the memory-off run reproduces the same action sequence (check available actions -> toggle blue door -> turns -> go to purple closed door 1), the visible-reuse candidate is refuted."
+  },
+  "causal_claim": false
+}

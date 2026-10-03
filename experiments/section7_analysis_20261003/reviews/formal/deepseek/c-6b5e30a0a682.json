@@ -1,0 +1,128 @@
+{
+  "case_id": "c-6b5e30a0a682",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=20:True:5"
+        },
+        {
+          "section": "injection/1",
+          "quote": "x = np.linspace(norm.ppf(0.005), norm.ppf(0.995), 100)"
+        }
+      ],
+      "reason": "源题 scorable 且 5 项测试通过，是可用的合法来源；但其“99% 覆盖”在源自身参考解里用 ppf(0.01)/ppf(0.99) 表达，说明该规格在源侧就存在解释弹性，不构成绝对真值。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "ax.hist(normalized_data, bins=30, density=True, alpha=0.6, color='green')"
+        },
+        {
+          "section": "target_submission",
+          "quote": "row_sums = np.sum(arr, axis=1)"
+        }
+      ],
+      "reason": "与目标相关的必要做法（按行求和后 0 均值/1 标准差归一化、bins=30、绿色 alpha=0.6、红线 lw=2、ppf(0.005)/ppf(0.995)）在目标提交中逐项保留，未出现内容矛盾或丢失。"
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Plots a histogram of normalized data from an input 2D numpy array alongside the probability density function (PDF)"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Each subplot should have its own title indicating the index of the array it represents."
+        }
+      ],
+      "reason": "源的单数组归一化+直方图+标准正态 PDF 叠加在目标中逐数组复用即可；目标新增条件是“数组列表→多子图、每子图标题、总 suptitle”，属于同族泛化而非更换领域。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "fig.suptitle('Histograms of Normalized Data with Standard Normal PDFs')"
+        },
+        {
+          "section": "target_submission",
+          "quote": "ax.hist(normalized_data, bins=30, density=True, alpha=0.6, color='green')"
+        }
+      ],
+      "reason": "目标把逐数组例程包进 subplots 循环并加上 suptitle，且沿用了目标题面未给出的 bins=30 与按行和归一化，属可见的行为适配；这只是行为代理，不证明记忆导致成功。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "row_sums = np.sum(arr, axis=1)"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "plot a histogram of the normalized data from each array alongside the probability density function (PDF) of a standard normal distribution"
+        }
+      ],
+      "reason": "目标题面未规定 bins 数与归一化方式，而提交使用了与源一致的按行和归一化和 bins=30，属同源做法的可见迁移；无对照条件，不能断言记忆造成成功。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "x = np.linspace(norm.ppf(0.01), norm.ppf(0.99), 100)"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "Ran 0 tests in 0.000s"
+        }
+      ],
+      "reason": "题面要求覆盖 99%，参考解用 ppf(0.01)/ppf(0.99)（约 98%），而目标评估仅 2 项检查且未执行题面测试，说明该规格未被强校验；仅标为候选口径不一致，不重打分。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"working_tool_calls\": 1"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"totalTokens\": 14945"
+        }
+      ],
+      "reason": "目标仅 1 次 PYTHON 探针加 1 次 SUBMIT、约 15k token，探针开销很低；但本题不足以判断记忆带来收益或性价比，故只记开销事实。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "目标题面本身已给出绿色 60% 透明、红色 lw=2、99% 覆盖等常量，bins=30 与按行和归一化也可能被独立重新推导，缺少反事实，不能排除无记忆的相同写法。",
+    "注入的另外两条内容（injection/0、injection/2）同样含有正态直方图与红线 PDF 的相近写法，无法排除多源混合的贡献。",
+    "未选中记忆库未提供，无法判断是否存在更贴合目标的其它经验或检索/打包过程。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法回答记忆是否为成功的原因（无对照条件、无 D0 检索记录）。",
+    "目标 stderr 的 Fontconfig 错误仅为环境噪声，returncode 为 0，是否影响图形渲染未在证据中判定。",
+    "未选中状态哈希之外没有前后内容对照，无法评估更新与保留情况。",
+    "隐藏判分细节不可见，ppf(0.005)/0.995 与参考解 ppf(0.01)/0.99 的差异是否会被扣分未知。"
+  ],
+  "minimal_intervention": {
+    "change": "从注入上下文中移除与源题配对的那条经验（injection/1），仅此一处改动。",
+    "fixed": "保持相同的目标题面、相同的三数组/预算设置与相同的求解器配置。",
+    "falsifier": "若在没有该条经验时，目标仍写出按行和归一化并固定 bins=30 的逐数组版本，则 USE_TRANSFER 候选被削弱。"
+  },
+  "causal_claim": false
+}

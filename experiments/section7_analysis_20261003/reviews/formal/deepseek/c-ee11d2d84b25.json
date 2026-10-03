@@ -1,0 +1,103 @@
+{
+  "case_id": "c-ee11d2d84b25",
+  "result_status": "infrastructure_interruption",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "源题（单词版 bigram）离线评估 correct=true、tests_run=7，是合法通过源；但其记录只覆盖单词版，不能证明对多词版同样成立。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "sanitize with the explicit negated class re.sub(r'[^a-zA-Z]', '', word)"
+        }
+      ],
+      "reason": "源新增经验如实描述其单词版做法（显式字符类 + 重叠 bigram + 原始 defaultdict），未见与源行为矛盾。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "find the occurrences of each two-letter combination across all words"
+        }
+      ],
+      "reason": "源经验的核心（清洗后滑动取二元组）适用，但目标新增跨词累计、不得跨词边界、返回普通 dict 等条件，旧经验只部分覆盖。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "\"submitted\": false"
+        }
+      ],
+      "reason": "目标可见输出为空、无提交，属行为代理层面的“未见复用”，不是因果结论。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "INFRA_PROTOCOL",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"response_timed_out\": true"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"solver_error\": \"Request was aborted\""
+        }
+      ],
+      "reason": "响应超时/被中止、working_tool_calls=0、submit_calls=0，可解释离线评测的 NameError；不能据此评价记忆或任务能力。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_block_byte_budget\""
+        }
+      ],
+      "reason": "与目标同族的源经验 sai-00086/sai-00087 在检索候选中出现却被预算淘汰，未进入 injected_ids；只说明打包可见性，不证明它若注入就会成功。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "Canonical pattern for 'occurrences of each two-letter combination in a sanitized word' tasks"
+        }
+      ],
+      "reason": "存在合法且高度相关的源经验可供复用，但 source_provenance_injected=false；这是机会存在与否的记录，不是使用效果证据。"
+    }
+  ],
+  "primary_hypothesis": "INFRA_PROTOCOL",
+  "competing_explanations": [
+    "可将 NameError 记为 TASK_EXECUTION 失败，但 mechanical 的 response_timed_out 与 'Request was aborted' 更支持基础设施中断。",
+    "相关内容 sai-00086/87 被淘汰可能只是字节预算的机械结果，未必与本次目标无输出相关。",
+    "空 assistant 内容可能是采集/抓取缺失而非模型真的无输出。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "中止前模型是否有过内部推理或部分代码，无法由可见证据回答。",
+    "注入的 50 条偏题记忆是否影响行为，无可见输出可判，不能断言干扰或无收益。",
+    "源经验若被注入是否会改变结果，无反事实，无法判断。"
+  ],
+  "minimal_intervention": {
+    "change": "在相同提示与记忆上下文下重跑，使请求不再被中止/超时，让模型有机会产出并提交 new_task_func。",
+    "fixed": "保持相同源历史、相同检索候选与注入集合、相同任务提示与预算。",
+    "falsifier": "若在完全相同的上下文下重跑仍以相同方式中止并零提交，则基础设施中断解释被削弱。"
+  },
+  "causal_claim": false
+}

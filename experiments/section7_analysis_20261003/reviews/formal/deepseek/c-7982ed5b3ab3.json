@@ -1,0 +1,123 @@
+{
+  "case_id": "c-7982ed5b3ab3",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "Both examples match exactly. Submitting the solution."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=26:True:9"
+        }
+      ],
+      "reason": "源题在 9 项检查上通过且示例输出与文档一致，属合法经验；但它只覆盖单组 task_func，未覆盖目标的多组 report 封装与返回键约定。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "本题未发生任何记忆注入（注入计数为 0、injection_metadata 为空），目标上下文中不存在可用于比对保真度的源内容。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "- target_words (list of str): List of words/phrases where spaces should be replaced with underscores."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "return a dictionary where keys are identifiers for each set of target_words, n_sentences, and vocabulary"
+        }
+      ],
+      "reason": "源的单组“目标词短语下划线替换”逻辑与目标子问题一致，但目标新增了多组数据遍历、异常捕获与 report 键/返回结构契约，源未覆盖这部分。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "target_visible",
+          "quote": "words = random.sample(vocab, 10)"
+        }
+      ],
+      "reason": "目标代码未呈现源题式（random.choices + re.IGNORECASE 正则）的复用痕迹，且无注入记录；这只是可见行为代理，不能据此断言记忆不存在或无效。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AssertionError: The generated report does not match the expected output."
+        },
+        {
+          "section": "target_visible",
+          "quote": "words = random.sample(vocab, 10)"
+        }
+      ],
+      "reason": "提交以 set_1/set_2 之类的序号键返回报告，而离线断言要求 report 键与输入数据键一致，且生成用无放回抽样与参考实现的有放回抽样不同；这只能说明执行/契约不匹配，不能说明记忆造成结果。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "for key, value in data.items():"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "return a dictionary where keys are identifiers for each set of target_words, n_sentences, and vocabulary"
+        }
+      ],
+      "reason": "参考解把输入当作字典并沿用其键，而目标题干未说明 data 的结构，也未说明键必须来自输入键；这是题意/测试约定可能不一致的候选，而非已证实的缺陷。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "- target_words (list of str): List of words/phrases where spaces should be replaced with underscores."
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "确实存在一个通过且结构相关的源经验（同族短语替换任务），但该经验未保留/未注入且记忆策略为 disabled；有可复用来源不等于它被提供或适用。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "题干未定义 data 结构，键命名（set1 vs set_1）可能属题目契约歧义，失败未必是代理自身失误。",
+    "本题记忆被禁用且零注入，失败可能与任何记忆/迁移无关，纯为独立实现偏差。",
+    "参考解与离线断言相互印证，但隐藏测试的其余检查未在证据中出现，无法排除还有其他不匹配点。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试除键集合断言外还检查什么（大小写、放回抽样、异常字符串）不可知。",
+    "data 究竟应为 dict 还是 (target_words, n_sentences, vocabulary) 列表，题干未明确，无法由现有证据裁决。",
+    "源经验在目标侧的可获得性（未选中记忆库未提供）无法判定，仅知本次注入为 0。"
+  ],
+  "minimal_intervention": {
+    "change": "让提交按 data 的键值对遍历（data.items()）并以输入键作为 report 的键，其余生成逻辑保持不变。",
+    "fixed": "保持相同的题干文本、相同离线评估脚本与预算、相同的记忆策略（disabled）。",
+    "falsifier": "若改为沿用输入键返回后离线评估仍报 set(report) != set(expected_output)，则键约定假设被反驳，应转向其他契约差异（如抽样方式或大小写）。"
+  },
+  "causal_claim": false
+}

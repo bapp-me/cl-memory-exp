@@ -1,0 +1,143 @@
+{
+  "case_id": "c-640d2a3530e0",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": false"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "AssertionError: Expected 'show' to have been called once. Called 0 times."
+        }
+      ],
+      "reason": "源题可评分但失败一处绘图检查（未调用 show），故为 partial 而非 pass。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "greater_avg = np.array([x for x in data if x > avg])"
+        },
+        {
+          "section": "source_visible",
+          "quote": "greater_avg = np.array([x for x in data if x > avg])"
+        }
+      ],
+      "reason": "注入文本与源轨迹的均值/二分计数片段逐字一致，说明源经验被原样保留；但保真不等于该经验正确或适用。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "identify values greater than the average for each sublist"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "identifies values greater than the average"
+        }
+      ],
+      "reason": "源是单列表版本，目标要求按子列表分别求均值并合并返回，核心均值/计数思路可迁移，但结构、返回契约与绘图范围已改变。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "This is a nested-list extension of my earlier work."
+        },
+        {
+          "section": "target_submission",
+          "quote": "greater_avg_combined.extend(x for x in sublist if x > avg)"
+        }
+      ],
+      "reason": "可见文本自述为旧工作的扩展，代码把逐元素均值过滤改写成子列表循环，属行为层面的合理适配代理；无干预不能证明记忆带来成功。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "This is a nested-list extension of my earlier work."
+        },
+        {
+          "section": "target_submission",
+          "quote": "total_count = len(sorted_data) - bisect.bisect_right(sorted_data, value)"
+        }
+      ],
+      "reason": "可见自述引用先前工作且沿用 mean+二分计数的同一模式，支持‘迁移复用’候选；无对照条件，不能证明由记忆造成成功或带来增益。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "All tests pass. Submitting:"
+        },
+        {
+          "section": "source_visible",
+          "quote": "All tests pass. Submitting:"
+        }
+      ],
+      "reason": "注入的是源 episode 的整段原始轨迹（含其失败版本），而非提炼后的规则，说明记忆表征为原始记录；这不证明该记录被正确理解或复用。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 3"
+        },
+        {
+          "section": "source_state_summary",
+          "quote": "\"full_unselected_state_presented\": false"
+        }
+      ],
+      "reason": "只有 3 条注入内容与字节数可见，未选中库与检索候选排序不可见，因此只能谈打包可见性，不能判定检索命中或淘汰。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "plt.hist(combined_data, bins='auto')"
+        },
+        {
+          "section": "target_submission",
+          "quote": "return np.array(greater_avg_combined), total_count, ax"
+        }
+      ],
+      "reason": "参考解只返回二元组并以 show 绘图，目标返回含 Axes 的三元组；源题正是因 show 未调用而失败，而目标用 6 项检查通过，标为题意/契约可能不一致的候选。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "目标仅凭提示即可使用 bisect/statistics 写出该逻辑，缺少反事实，无法区分记忆迁移与独立解题",
+    "注入的 DataFrame 变体提供了 axvline/标题等绘图结构，可能比单列表源贡献更多，当前无法分离各源贡献",
+    "检索候选排序与是否选中源 episode 不可见，注入存在不直接等于检索命中"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "目标隐藏评分对 plt.show、bins 与返回元组长度的要求",
+    "未选中记忆库与检索排名不可见",
+    "无法确定可见文本/代码相似是否由记忆内容引起",
+    "无法评估注入 16345 字节的净收益或成本"
+  ],
+  "minimal_intervention": {
+    "change": "在相同提示与预算下移除所有注入内容重跑目标，比较提交代码与通过情况",
+    "fixed": "同一目标提示、同一历史环境、同一评分口径与预算",
+    "falsifier": "若无注入时仍产出结构相同且通过的目标解，则 USE_TRANSFER 候选被削弱"
+  },
+  "causal_claim": false
+}

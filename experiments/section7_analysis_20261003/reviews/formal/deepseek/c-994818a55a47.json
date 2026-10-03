@@ -1,0 +1,126 @@
+{
+  "case_id": "c-994818a55a47",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true"
+        }
+      ],
+      "reason": "Source episode is scorable and passed its own checks, so it is a legitimate experience; limit is that its contract returns one RegressionResultsWrapper for one DataFrame, not the target's per-DatasetID dict."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "X = filtered[columns[1:]]"
+        },
+        {
+          "section": "source_visible",
+          "quote": "X = filtered[columns[1:]]"
+        }
+      ],
+      "reason": "The injected source carries the same filter/OLS/None steps as the visible source episode, so the target-relevant necessary content is preserved as far as this packet shows."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Return a dictionary where the keys are the 'DatasetID' and the values are the results of the OLS regression for each dataset."
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Performs an OLS linear regression on a subset of the provided DataFrame."
+        }
+      ],
+      "reason": "Filtering plus statsmodels OLS on a column-ordered subset transfers, but the target adds DatasetID grouping and dict-of-models return, which the source does not cover."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "filtered = subset[(subset[columns[1]] > height) & (subset[columns[2]] < weight)]"
+        },
+        {
+          "section": "source_visible",
+          "quote": "filtered = df[(df[columns[1]] > height) & (df[columns[2]] < weight)]"
+        }
+      ],
+      "reason": "Target code reuses source-style filter and add_constant OLS steps and adapts them inside a groupby loop with dict/None handling; this is a behavioral proxy, not evidence of provenance."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "\"returncode\":0,\"stdout\":\"D1 <class 'statsmodels.regression.linear_model.RegressionResultsWrapper'>"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"checks_executed\": 7"
+        }
+      ],
+      "reason": "The agent ran one PYTHON verification, submitted once, and the offline evaluator marks the submission correct; this only shows the task was executed and solved, not why."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "X = sm.add_constant(X)\n    results[dataset_id] = sm.OLS(y, X).fit()"
+        },
+        {
+          "section": "source_visible",
+          "quote": "X = sm.add_constant(X)\n    model = sm.OLS(y, X)\n    return model.fit()"
+        }
+      ],
+      "reason": "Shared filter/constant/OLS structure with the source is a visible reuse-and-adaptation candidate; without an ablation it cannot show the memory caused the pass."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": true"
+        }
+      ],
+      "reason": "A correct, same-family source episode was injected before the target, so a transfer opportunity existed; injection does not establish it was consulted or that its content fully fits."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The detailed target prompt alone (parameter names height/weight/columns, exact filter semantics) could yield the same code, so text overlap may reflect the shared task statement rather than memory use.",
+    "Retrieval visibility is missing (`source_provenance_in_observable_retrieval_candidates` is null), so it is unknown which injected item the agent actually saw or used."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the source memory was actually retrieved/attended versus the target being solved from its own prompt.",
+    "Whether the two unrelated injections (injection/0, injection/2) had any effect; their presence alone is not interference evidence.",
+    "No counterfactual run and no hidden test detail beyond correct=true/scorable=true."
+  ],
+  "minimal_intervention": {
+    "change": "Re-run the same target with the source-consistent memory withheld (or with only the unrelated injections) and compare the submitted solution.",
+    "fixed": "Same target prompt, same model, same tool budget and same evaluation mask.",
+    "falsifier": "If the no-source-memory run yields the same groupby/dict solution with the same passing checks, the USE_TRANSFER candidate is weakened."
+  },
+  "causal_claim": false
+}

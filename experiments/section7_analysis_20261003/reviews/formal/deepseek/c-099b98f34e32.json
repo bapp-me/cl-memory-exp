@@ -1,0 +1,167 @@
+{
+  "case_id": "c-099b98f34e32",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "The task is completed."
+        },
+        {
+          "section": "injection/1",
+          "quote": "There's no purple door visible in this room, so it's likely behind one of the doors. Let me explore."
+        },
+        {
+          "section": "injection/2",
+          "quote": "go to red closed door 1"
+        }
+      ],
+      "reason": "Three D1 episodes show successful same-family door navigation, including exploration when the target is absent. They are legitimate but none resolves a same-color locked-vs-closed choice."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "go to yellow closed door 1"
+        },
+        {
+          "section": "injection/2",
+          "quote": "go to red closed door 1"
+        }
+      ],
+      "reason": "Injected source episodes faithfully encode simple go-to-door action sequences and are not contradicted in this packet. Fidelity does not establish applicability to two green doors."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Goal: go to a green door"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "There is a green locked door 1 2 steps in front of you and 1 steps to your right."
+        },
+        {
+          "section": "injection/0",
+          "quote": "go to yellow closed door 1"
+        }
+      ],
+      "reason": "The task family and action template apply, but source examples select a visible closed target door while the target has both green locked and green closed choices."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "go to green closed door 1"
+        },
+        {
+          "section": "injection/0",
+          "quote": "go to yellow closed door 1"
+        },
+        {
+          "section": "injection/2",
+          "quote": "go to red closed door 1"
+        }
+      ],
+      "reason": "The observed final action matches the direct closed-door action template of D1 episodes. This is a behavioral proxy only; the prompt alone also points to the green closed door."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 3"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Goal: go to the yellow door"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Goal: go to a green door"
+        }
+      ],
+      "reason": "Three same-family successful trajectories were present as D1 candidates. This proves an opportunity and injection, not retrieval or causal use."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "go to green closed door 1"
+        },
+        {
+          "section": "injection/0",
+          "quote": "go to yellow closed door 1"
+        },
+        {
+          "section": "injection/1",
+          "quote": "go to purple closed door 1"
+        }
+      ],
+      "reason": "The target action matches the injected source action template. Without a counterfactual, this is visible consistency, not evidence of transfer."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Goal: go to a green door"
+        },
+        {
+          "section": "target_visible",
+          "quote": "The task is completed."
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "Scoring accepted going to the green closed door as completing a green-door goal. No contract mismatch is visible here."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "go to green closed door 1"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"working_tool_calls\": 1"
+        }
+      ],
+      "reason": "A single direct ACTION solved the target. This does not itself show memory influence."
+    }
+  ],
+  "primary_hypothesis": "unknown",
+  "competing_explanations": [
+    "The target prompt directly lists a green closed door, so TASK_EXECUTION without memory use is a sufficient explanation.",
+    "D1 examples may have been retrieved or attended, making USE_TRANSFER a plausible but unproven candidate.",
+    "Because both green locked and green closed doors may satisfy the goal, the closed-door choice may be arbitrary rather than source-driven."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the D1 episodes were retrieved and attended or were merely present in context.",
+    "Whether the goal would also be completed by going to the green locked door.",
+    "Whether source selection or packing caused these three episodes to be injected.",
+    "Whether any unshown memory or post-task update affected behavior."
+  ],
+  "minimal_intervention": {
+    "change": "Remove the three D1 injections while keeping the target prompt, environment, and action budget fixed.",
+    "fixed": "Same target prompt, BabyAI layout, model, and one-action budget.",
+    "falsifier": "If the agent still emits 'go to green closed door 1' and succeeds without D1, the USE_TRANSFER candidate is weakened."
+  },
+  "causal_claim": false
+}

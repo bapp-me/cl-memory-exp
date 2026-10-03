@@ -1,0 +1,135 @@
+{
+  "case_id": "c-488a4944b3fa",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true,"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Calculate the Euclidean distances between consecutive points in a provided"
+        }
+      ],
+      "reason": "The paired source task passed offline scoring (13 checks), so its experience is legitimate but limited to a list of consecutive-pair distances; the target adds a closing segment and a summed total, so the source rule transfers only after modification."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        }
+      ],
+      "reason": "The only injected content concerns pandas/matplotlib bar charts, so no target-relevant necessary content (point normalization, consecutive Euclidean distance) is carried by the injected memories; this absence is scoped to the injected set, not the unshown library."
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "A DataFrame value-count bar chart has no bearing on computing a closed-loop travel distance over coordinate points, so the injected candidate does not apply to the target contract."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "return float(sum(distance.euclidean(a, b) for a, b in zip(loop, loop[1:])))"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        }
+      ],
+      "reason": "The submitted solution is pure itertools/scipy geometry with no pandas/matplotlib trace, so the injected memories leave no visible behavioral imprint; this is a behavioral proxy and does not prove memory had zero internal influence."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "All tests pass (the `(0,0),(1,0),(1,1)` case correctly gives `2 + √2 ≈ 3.414`). Submitting:"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true,"
+        }
+      ],
+      "reason": "The agent wrote code, hit a ValueError on nested tuples, rewrote normalization, re-ran, and submitted an artifact scored correct; this shows ordinary solve-and-debug execution and does not attribute the outcome to memory."
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"score\": 0.23393103332479315"
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "\"score\": 0.12662813361603406"
+        }
+      ],
+      "reason": "Retrieval surfaced two candidates at low similarity scores and both were injected, indicating a weakly-matched semantic candidate set; low scores show weak match, not proven applicability or interference."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "target_submission",
+          "quote": "from itertools import zip_longest\nfrom scipy.spatial import distance"
+        }
+      ],
+      "reason": "Injected content is about DataFrame bar charts while the submitted code only uses itertools/scipy distance logic, so no transfer of the injected content is visible; success with irrelevant injection cannot show memory was harmless, useful, or causal."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "If a tuple contains just one number it is assumed that both coordinates are equal to this number."
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": []"
+        }
+      ],
+      "reason": "A closely related legitimate source episode exists whose normalization rule matches the target's single-number-point requirement, yet no source memory id appears in the injected or provenance set, so source availability at target time is not established."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The success may come entirely from the model's own prior knowledge of a normalization pattern similar to the source solution, with injected memories playing no role.",
+    "The low-score retrieval may reflect an embedding/query mismatch rather than absence of a relevant stored source, since the full unselected library is not presented.",
+    "The target eval contract (5 checks, 0 unittest tests) is verified only by an offline evaluator, so the exact hidden edge cases exercised are unknown."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the source episode's content was ever written into memory (source_update_operations lists no operations).",
+    "Whether injecting source-derived memory would change target behavior, since no counterfactual run exists.",
+    "Whether the isolated eval contract penalizes edge inputs such as scalar ints or empty containers in points.",
+    "What the hidden target tests contain beyond checks_executed=5."
+  ],
+  "minimal_intervention": {
+    "change": "Replace the two pandas/bar-chart injections with a memory derived from the paired source episode (single-element point normalization and consecutive Euclidean distances) while leaving everything else fixed.",
+    "fixed": "Same target prompt, same solver model and budget, same retrieval/packing policy, same 2-item injection budget.",
+    "falsifier": "If behavior and outcome are unchanged with the source-derived memory injected, the claim that memory content relevance matters for this target would be unsupported."
+  },
+  "causal_claim": false
+}

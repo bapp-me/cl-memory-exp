@@ -1,0 +1,127 @@
+{
+  "case_id": "c-f9b3fc9915de",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=39:True:6"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Generate a Pandas DataFrame from a 2D list and perform a multiple linear regression."
+        }
+      ],
+      "reason": "源题以 6/39 检查通过，是合法可用经验；但其契约是单数据集、固定 5 列并返回 (df, results)，与目标的多数据集报告结构不同，故只能算带限制的通过。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false, \"source_provenance_retained\": false"
+        },
+        {
+          "section": "source_state_summary",
+          "quote": "\"before_target_hash\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\""
+        }
+      ],
+      "reason": "源结束时状态哈希与目标前哈希相同，且证据显示源片段未保留、来源未保留；本题没有可核对保真度的记忆内容，故为 absent 而非被歪曲。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Each sub-list should have exactly 5 elements, where the first 4 elements are treated as independent variables ('A', 'B', 'C', 'D')"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "You are given multiple 2D lists representing different datasets."
+        }
+      ],
+      "reason": "statsmodels OLS + add_constant + numpy seed 的通路可迁移；但目标要求多数据集聚合报告、可变预测变量数与另一套返回键，源题的固定列名/单数据集契约只部分适用。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0, \"injected_text_utf8_bytes\": 0, \"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "注入数为 0 且 memory_policy 为 disabled，目标轨迹中看不到任何记忆内容；代码风格相似只能算共性代理，不构成使用记忆的证据。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(isinstance(report['Dataset 1']['DataFrame'], pd.DataFrame))"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "reports[f'Dataset {i+1}'] = {"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "return a summary report with the details of each regression analysis."
+        }
+      ],
+      "reason": "判分要求顶层键形如 'Dataset 1' 且值为 {'DataFrame','Regression Results','R-squared'}，而题面只说“summary report”，未给出键名与 1 基序号；首条断言即因键名不符报 KeyError。只能说明返回契约欠定义与测试耦合，不能据此判定记忆或方法优劣。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "r_squared_values[f\"dataset_{idx}\"] = float(model.rsquared)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "print(res[\"r_squared_comparison\"])"
+        }
+      ],
+      "reason": "提交实现自建 'datasets' 列表与 'r_squared_comparison' 结构，并只用自造格式自测通过；这解释了可见运行成功而离线判分失败，但自测格式不等于隐藏契约。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0, \"injected_text_utf8_bytes\": 0, \"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        }
+      ],
+      "reason": "本题没有写入或注入任何专门经验，因此不能把失败归因于记忆检索、打包或存取策略；也不能反推曾有经验被存入却未被取出。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "模型确实选择了与隐藏测试不兼容的输出 schema（任务执行/模型选择问题），而非题面本身欠定义",
+    "隐藏测试可能还检查 R-squared 数值、列名或报告比较字段，首条 KeyError 只暴露了最早一处不匹配",
+    "本题无任何记忆注入，D1 类机制（检索、打包、复用）无法解释该失败"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试全集与具体断言顺序不可见，仅观察到第一条断言失败",
+    "'Dataset 1' 的 1 基命名与 'DataFrame'/'Regression Results' 等键名是否可由题面合理推出，无客观标准",
+    "源题经验是否曾存在于方法状态中（证据显示未保留），以及若注入是否会改变结果，均无法判断"
+  ],
+  "minimal_intervention": {
+    "change": "仅把返回值改为以 f'Dataset {i+1}' 为键、值为 {'DataFrame': df, 'Regression Results': model, 'R-squared': model.rsquared} 的结构，保留现有校验与 OLS 拟合流程",
+    "fixed": "相同的 arrays 输入、random_seed、statsmodels/pandas 环境与判分 mask",
+    "falsifier": "若改成该键结构后离线评测仍以同样或新的断言失败，则返回契约欠定义不是主因"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,128 @@
+{
+  "case_id": "c-63d216be8875",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"tests_run\": 5,\n  \"checks_executed\": 14,\n  \"correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(length, count, seed=0):"
+        }
+      ],
+      "reason": "源题通过其自身 5 项测试，是合法可复用的近邻经验；但它只覆盖单一 length/count 配对，且其 docstring 允许 count 非负（含 0），不覆盖目标的多长度/多计数契约。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "- count (int): The number of random strings to generate. Should be a non-negative integer."
+        },
+        {
+          "section": "injection/1",
+          "quote": "If a check fails, `raise ValueError` (or `TypeError` for wrong-type cases) with a descriptive message naming the offending parameter."
+        }
+      ],
+      "reason": "生成与 Counter 计数部分与源经验一致，但注入的校验工作流把“非法输入即抛错”写成通用规则，与源契约“非负整数”以及本目标把 counts 当列表的用法相冲突；也没有任何注入内容说明 lengths/counts 成对。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "def new_task_func(lengths, counts, seed=0):"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "for length, count in zip(lengths, counts):"
+        }
+      ],
+      "reason": "种子化随机生成 + 频率统计的套路可迁移到本目标，但目标把签名改成复数 lengths/counts（应为成对列表），校验类经验的适用范围在此已改变。"
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "if not isinstance(counts, int) or counts <= 0:"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ValueError: counts must be a positive integer"
+        }
+      ],
+      "reason": "可见提交中主动加入了对 counts 的标量正整数断言，正是这一点让合法调用 new_task_func([3, 4], [2, 3], 0) 抛错；这是行为代理，不能证明记忆是唯一原因。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "If a check fails, `raise ValueError` (or `TypeError` for wrong-type cases) with a descriptive message naming the offending parameter."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ValueError: counts must be a positive integer"
+        }
+      ],
+      "reason": "注入的“Input Validation Guard”工作流与提交中的参数类型断言高度同形，且该断言直接导致评测首个断言抛错；只能说明复用痕迹，无对照不能证明是记忆造成失败。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "def new_task_func(lengths, counts, seed=0):"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "for length, count in zip(lengths, counts):"
+        }
+      ],
+      "reason": "目标契约要求 lengths 与 counts 成对逐项生成字符串，提交却把 counts 当标量重复次数，属于对题面的直接执行错误；评测首个断言即在参数校验处中断。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(length, count, seed=0):"
+        },
+        {
+          "section": "injection/0",
+          "quote": "`random.choices(<pool>, k=<count>)`"
+        }
+      ],
+      "reason": "源经验与注入记忆都以单一 count 参数表示生成次数，而目标改为复数列表参数组合；记忆表示未覆盖这一新增维度，只构成表示缺口候选，不证明必然导致失败。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "无对照条件下，该校验也可能是模型自发添加的通用防御式写法，与注入记忆无关。",
+    "题面正文只说“each with a specified length”，未明说 counts 是每长度对应的列表，契约歧义本身可能解释该错误。",
+    "源题中 random.choice 与 random.choices 的差异是另一条风险，但本题失败发生在参数校验处，未被评测触及。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "没有无记忆/改写注入的对照运行，无法分离记忆贡献与模型自身习惯。",
+    "隐藏正确性不可见，只有离线评测暴露的首个断言错误，未见其余检查点结果。",
+    "未展示完整未选中记忆库，不能断言缺少成对列表经验。",
+    "token 计数不可用，无法量化注入开销。"
+  ],
+  "minimal_intervention": {
+    "change": "去掉对 counts 的标量类型断言，改为按参考解把 lengths 与 counts 逐对 zip 生成字符串。",
+    "fixed": "保持同一注入记忆集、同一预算与同一题面签名。",
+    "falsifier": "若无记忆对照运行同样加入标量 counts 校验并同样失败，则记忆复用解释被削弱。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,122 @@
+{
+  "case_id": "c-28619071039e",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "pre-registered scorer defect; task retained, excluded from scores"
+        }
+      ],
+      "reason": "源题离线评分不可用（scorable=false，correct=null），仅见可见自测输出，无法确认其通过与否。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "与目标有关的源内容是图表约定（Value Distribution/Value/Count），但观测到的 6 条注入记忆均不含该内容，无法确认其是否被保留。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "This function use \"Value Distribution\" for the plot title."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "the average amount spent per transaction for each category"
+        }
+      ],
+      "reason": "源只覆盖柱状图子组件（标题/坐标轴），而目标还要求类别汇总字典，源无法提供其键名结构。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "ax.set_title('Transaction Counts by Category')"
+        }
+      ],
+      "reason": "目标可见代码使用自定义标题与嵌套 'total_amount' 键，未见复用源的 'Value Distribution' 约定；仅为行为代理。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should return the summary report as a dictionary and the Axes object of the bar chart."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "KeyError: 'total_amount_per_category'"
+        }
+      ],
+      "reason": "可见题面未规定报告字典键名，也未规定柱状图标题/坐标轴文本，而隐藏测试断言精确键名与 'Value Distribution' 约定；属契约相对可见题面欠说明的候选，不能据此重打分。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "This function use \"Value Distribution\" for the plot title."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "and a bar chart showing the distribution of transaction counts across categories"
+        }
+      ],
+      "reason": "源经验仅提供柱状图子组件（标题/标签）这一有限机会，未覆盖类别汇总字典的键名，故即便完全复用也不足够。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "ax.set_title('Transaction Counts by Category')"
+        },
+        {
+          "section": "source_visible",
+          "quote": "ax.set_title(\"Value Distribution\")"
+        }
+      ],
+      "reason": "可见行为显示目标未沿用源的标题/标签约定，输出为自造格式；这是行为代理，无受控对照，不能证明记忆导致失败或负迁移。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_episode_byte_budget"
+        }
+      ],
+      "reason": "选择后按字节预算淘汰了 history_index 0–66，仅注入最新的 6 条（67–72）且其中无柱状图源内容；属打包可见性，不等于源已被检索到却未使用。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "源经验内容可能因字节预算淘汰未进入目标上下文（PACKING_VISIBILITY），而不是被看到后忽略",
+    "所需的 'total_amount_per_category' 等键名可能来自被隐藏的原始任务上下文，目标提示与记忆均未提供，Agent 无法推断",
+    "无受控干预，无法排除模型自行选择嵌套字典结构导致格式不符"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "源 episode 内容是否实际出现在目标上下文中",
+    "源题的正确性无法确认（离线评分 scorable=false）",
+    "隐藏测试的完整断言列表只见到第一条",
+    "是否存在任何记忆条目携带必需的报告键名或图表标签约定"
+  ],
+  "minimal_intervention": {
+    "change": "在目标上下文中提供所需输出契约：报告字典键 'total_amount_per_category'/'average_amount_per_category' 与柱状图标题/坐标轴 'Value Distribution'/'Value'/'Count'",
+    "fixed": "保持相同目标提示、历史、注入预算与执行环境",
+    "falsifier": "若提供该契约后目标仍提交嵌套 'total_amount' 字典并以 'Transaction Counts by Category' 为标题，则契约缺失不是主因"
+  },
+  "causal_claim": false
+}

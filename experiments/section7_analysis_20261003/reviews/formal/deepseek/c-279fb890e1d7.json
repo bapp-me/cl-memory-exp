@@ -1,0 +1,143 @@
+{
+  "case_id": "c-279fb890e1d7",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=30:True:5"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "that proves sampling is done WITH replacement — ruling out random.sample or popping from a shuffled deck"
+        }
+      ],
+      "reason": "Source episode passed its own 30 hidden checks, so the experience is legitimate, but its added poker insight hardens 'duplicates in the example' into a general with-replacement rule for card tasks, which does not transfer cleanly to a target that deals disjoint hands from a shuffled deck."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "rank_count = Counter(card[:-1] for card in hand)"
+        },
+        {
+          "section": "injection/5",
+          "quote": "Use slicing card[:-1] (everything before the last character, the suit)"
+        }
+      ],
+      "reason": "The injected err-00015 rule (slice card[:-1], never card[0], so '10' is not read as '1') matches what the source agent actually did and is true of the code both episodes wrote; no contradicting content in the packet."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/5",
+          "quote": "Use slicing card[:-1] (everything before the last character, the suit)"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Additionally, the function should determine the winner based on the highest frequency of a single rank in their hand"
+        }
+      ],
+      "reason": "The rank-extraction rule applies directly and was used, but the target's new conditions (4 players, winner/tie rule, return structure) have no injected memory coverage; err-00004/err-00005/err-00015 and the statsmodels/PCA/window notes are the only task-adjacent items."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "rank_counts = Counter(card[:-1] for card in hand)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "harness noise, per err-00058/err-00092"
+        }
+      ],
+      "reason": "The submitted rank counting follows err-00015 verbatim in effect, and the trace explicitly cites err-00058/err-00092 when it discards a placeholder assertion and re-runs to exit 0; this is behavioral overlap only, not proof the memory caused the outcome."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should return a list of tuples, where each tuple contains the player's hand and a Counter dictionary"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert len(poker_game()[0]) == 4"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AssertionError: There should be 4 players in the game."
+        }
+      ],
+      "reason": "The visible prompt asks for a returned list of player tuples, while the hidden test indexes poker_game()[0] as the 4-player container and poker_game()[1] as the winner message, i.e. the graded contract is a (players, message) pair. This is direct prompt/test disagreement and cannot prove a memory caused the miss."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "results.append((hand, rank_counts))"
+        },
+        {
+          "section": "target_visible",
+          "quote": "assert isinstance(res, list) and len(res) == 4"
+        }
+      ],
+      "reason": "The submitted function returns the bare `results` list, and its self-battery checked `len(res) == 4` on the outermost object — the same length check the grader applies one level deeper, so the local check could never expose the shape defect. Nothing here shows memory involvement."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/5",
+          "quote": "Use slicing card[:-1] (everything before the last character, the suit)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "rank_counts = Counter(card[:-1] for card in hand)"
+        }
+      ],
+      "reason": "The one clearly applicable injected rule is reproduced in the submission, which is consistent adaptation; the overlap is a visible proxy (card[:-1] is also the natural fix) and cannot show the rule was necessary or that it affected the failing contract check."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_block_byte_budget"
+        }
+      ],
+      "reason": "The directly source-paired poker strategy sai-00014 was retrieved and selected, then removed during byte-budget packing (it appears in the dropped list with this reason), so the target never saw it. A packing drop is not a retrieval failure, and this memory concerns sampling-with-replacement, which would not have addressed the return-shape failure."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "The prompt itself says the function returns a list of tuples, exactly what was submitted, so the failure may be a task-prompt/grader mismatch rather than a solver error.",
+    "The reference composes the source's single-hand `task_func()` four times inside `poker_game()` and returns a pair; the target prompt neither defines nor mentions `task_func`, so the target may have lacked the information needed for the graded return structure.",
+    "With no counterfactual and no injected memory about return shape or composition, memory cannot be shown to have caused or prevented this failure."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "Whether the target prompt shown here is byte-identical to the grader's original task description.",
+    "Whether `task_func` was available in the target's execution namespace and whether the submission was even expected to call it.",
+    "Whether the length assertion was the only failing hidden check (target tests_run/checks_executed are 0).",
+    "Whether any earlier memory ever addressed the (players, message) return contract."
+  ],
+  "minimal_intervention": {
+    "change": "Return a 2-element structure whose second element is the winner/tie message (or make the prompt state the required return shape) while keeping the existing counting and tie-break logic.",
+    "fixed": "Same injected memory set (sai-00135/00136/00138, err-*, misc-*), same tool budget and same 63-distance source pairing.",
+    "falsifier": "A re-run in which the function returns (players, message) and both hidden checks (`poker_game()[1] != \"It's a tie game\"`, `len(poker_game()[0]) == 4`) pass would refute the contract-mismatch candidate."
+  },
+  "causal_claim": false
+}

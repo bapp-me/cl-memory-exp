@@ -1,0 +1,163 @@
+{
+  "case_id": "c-51e533cabee8",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": false"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(a, b):"
+        }
+      ],
+      "reason": "The paired source is a same-domain precursor, but its offline evaluation failed and it provides no successful solution to reuse."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "No retained source episode or injected memory content exists in the given evidence, so there is no target-relevant memory to assess for fidelity."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(a, b):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def new_task_func(list_of_pairs):"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "df = pd.DataFrame({'A': a, 'B': b})"
+        }
+      ],
+      "reason": "The core distance/DataFrame/plot idea is related, but the target adds list-of-pairs aggregation and hidden tests expect A/B columns rather than the source-style row index."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "No memory was injected, so visible code overlap with the source pattern cannot support a memory-use claim."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "create a Pandas DataFrame for each pair with indices 'A' and 'B'"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "df = pd.DataFrame({'A': a, 'B': b})"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "DataFrame shape mismatch"
+        }
+      ],
+      "reason": "The prompt wording says 'indices' A/B, matching the target submission's row labels, while the hidden reference/test expects A/B columns; the observed (2,3) versus (3,2) mismatch tracks this contractual ambiguity. This shows a candidate contract conflict, not proof of memory harm."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "df = pd.DataFrame([a, b], index=['A', 'B'])"
+        },
+        {
+          "section": "target_visible",
+          "quote": "2 <class 'matplotlib.axes._axes.Axes'>"
+        }
+      ],
+      "reason": "The visible target execution computes distances and returns Axes objects, but builds the DataFrame in row-index form, causing the hidden shape assertion failure. The local visible run only demonstrates runtime success, not hidden correctness."
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "No source memory was admitted or injected for the target, so the target cannot be evaluated for retrieval or reuse of a stored source experience. This absence does not by itself explain the target failure."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(a, b):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def new_task_func(list_of_pairs):"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": false"
+        }
+      ],
+      "reason": "A semantically related source task exists, but it is narrower and failed with the same row-index DataFrame orientation issue; any D1 reuse would be partial and potentially misaligned rather than a supported successful transfer."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "The agent may have simply misread 'indices' as row labels despite hidden tests expecting columns, making this ordinary task misexecution rather than a contract defect.",
+    "Because injected_count is 0 and memory policy is disabled, visible similarity to the source solution cannot establish memory use or transfer.",
+    "The source episode itself failed and was not retained, so target failure is not evidence that source memory caused the error."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the hidden target test or the prompt's 'indices' wording is the authoritative contract.",
+    "Whether any unselected or external memory state existed; the provided packet shows none.",
+    "Whether the target agent ever saw the source episode; no retrieval candidates or injection metadata are provided.",
+    "Whether the offline test harness's exact DataFrame column expectation reflects the intended problem statement."
+  ],
+  "minimal_intervention": {
+    "change": "Build the DataFrame with A/B columns instead of row labels, e.g. pd.DataFrame({'A': a, 'B': b}), while keeping the rest of the distance and plotting logic.",
+    "fixed": "Same list_of_pairs inputs, same distance return values, same Axes return contract, and same disabled-memory/no-injection history.",
+    "falsifier": "If the hidden evaluator accepted row-index DataFrames or the prompt were changed to require row indices A/B, the contract-mismatch hypothesis would be weakened."
+  },
+  "causal_claim": false
+}

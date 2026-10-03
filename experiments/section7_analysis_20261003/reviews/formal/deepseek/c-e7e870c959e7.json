@@ -1,0 +1,131 @@
+{
+  "case_id": "c-e7e870c959e7",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=13:False:5"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "FAILED (failures=3)"
+        }
+      ],
+      "reason": "源任务是合法 OLS 任务，但其提交遗漏 sm.add_constant，离线测试失败，因此源经验部分可用但有缺陷。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "目标运行未注入任何记忆内容，无法评估针对目标的记忆保真度。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Return a dictionary where the keys are the 'DatasetID' and the values are the results of the OLS regression for each dataset."
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df: pd.DataFrame, height: int, weight: int, columns: list)"
+        }
+      ],
+      "reason": "目标把源的单表 OLS 扩展为按 DatasetID 分组并返回字典；源中的过滤和 OLS 只部分适用，且源解法缺少常数项。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "target_submission",
+          "quote": "X = sm.add_constant(X)"
+        }
+      ],
+      "reason": "没有记忆注入，目标可见代码独立包含分组与 add_constant，无法观察到从源记忆的复用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "for dataset_id, group in df.groupby('DatasetID'):"
+        },
+        {
+          "section": "target_submission",
+          "quote": "X = sm.add_constant(X)"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "EVALUATOR_RESULT=7:True:0"
+        }
+      ],
+      "reason": "可见执行直接实现分组过滤 OLS 并提交，离线目标检查通过；这只证明目标执行成功，不能证明记忆造成成功。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df: pd.DataFrame, height: int, weight: int, columns: list)"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Return a dictionary where the keys are the 'DatasetID' and the values are the results of the OLS regression for each dataset."
+        }
+      ],
+      "reason": "源任务是相邻但不同口径的 OLS 经验；目标新增 DatasetID 分组和字典返回契约，因此只是语义候选，不能证明实际注入或使用。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "机械记录显示没有源经验被注入或写入目标上下文；因此不支持检索或迁移机制。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "源经验可能存在于历史中但未注入，因此目标成功不能归因于源记忆。",
+    "目标解法中的 add_constant 和分组可能来自独立推理或模型先验，而非源任务经验。",
+    "源任务失败与其测试及单表契约有关，目标契约已改变，源失败不能推出目标也会失败。"
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "无对照干预，无法判断如果注入源经验会如何改变目标行为。",
+    "未提供完整未选记忆库，不能从本包推断其他记忆是否存在。",
+    "源解法的过滤逻辑是否会被正确迁移到目标分组契约，无法由现有证据回答。"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "相同的目标提示、执行环境、可见工具预算和隐藏检查。",
+    "falsifier": "若在相同目标提示下注入源经验后成功/失败模式发生可重复变化，则本案例的无迁移候选受到反驳。"
+  },
+  "causal_claim": false
+}

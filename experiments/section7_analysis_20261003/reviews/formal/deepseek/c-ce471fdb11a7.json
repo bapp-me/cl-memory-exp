@@ -1,0 +1,128 @@
+{
+  "case_id": "c-ce471fdb11a7",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        },
+        {
+          "section": "source_visible",
+          "quote": "All cases pass, including the docstring example, empty input, and no-match cases."
+        }
+      ],
+      "reason": "配对源题离线评估 correct=true、5 个测试通过，属于合法成功经验；但源题是 pandas 过滤+value_counts 的另一种任务形态，只能算带限度的可用来源。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "If a check fails, `raise ValueError` (or `TypeError` for wrong-type cases) with a descriptive message naming the offending parameter."
+        },
+        {
+          "section": "source_visible",
+          "quote": "All cases pass, including the docstring example, empty input, and no-match cases."
+        }
+      ],
+      "reason": "与目标相关的计数类规则与源题行为一致，但同一库中‘校验失败即 raise’的条目与源题可见的‘空输入返回 {}’不一致，且库由 45 个事件累计而成，无法确认每源内容仍保留。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "find the most common word lengths in the 'Content' field for each category"
+        },
+        {
+          "section": "injection/2",
+          "quote": "Feed the items into `collections.Counter(...)` (or a `defaultdict(int)` loop with `counts[<key>] += 1`) to accumulate frequencies."
+        }
+      ],
+      "reason": "目标核心是按类别做词长频次统计，与频次计数/验证循环类记忆直接相关；但随机种子、绘图、模型拟合、DataFrame 构造等条目与本题无关，故为部分适用。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The function works correctly. Word lengths are grouped by category and counted."
+        },
+        {
+          "section": "target_submission",
+          "quote": "category_word_lengths = defaultdict(lambda: defaultdict(int))"
+        }
+      ],
+      "reason": "可见行为是先用 PYTHON 跑示例与边界再 SUBMIT，且采用 defaultdict 累加计数，与注入的计数/示例验证类工作流形态一致；这只是行为代理，不能证明记忆导致该写法或导致通过。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/7",
+          "quote": "Compare the printed outputs with the expected example values (exact match, rounded values, types, or plot attributes like `ax.get_title()` / `ax.patches`)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "The function works correctly. Word lengths are grouped by category and counted."
+        }
+      ],
+      "reason": "目标以单次 PYTHON 调用跑示例+空输入+标点边界后即 SUBMIT，与注入的“示例验证循环”工作流步骤吻合，构成可见迁移候选；无反事实，不能证明成功由记忆造成。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/2",
+          "quote": "(or a `defaultdict(int)` loop with `counts[<key>] += 1`)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "category_word_lengths = defaultdict(lambda: defaultdict(int))"
+        }
+      ],
+      "reason": "记忆以抽象伪代码给出 defaultdict 计数表示，目标提交的嵌套 defaultdict 计数与其同构；但目标题面本身要求 dict-of-counts，且源题实际用 pandas value_counts，故重合不能证明该表示被读取或复制。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "assert process_documents(doc) == expected_output"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "EVALUATOR_RESULT=1:True:0"
+        }
+      ],
+      "reason": "离线参考/测试里既定义源题式 `def task_func(df, letter):` 又断言 process_documents，且本地 tests_run 为 0 而隐藏检查仍判正确，提示评测资产可能复用源题脚手架；仅标候选，不能据此断言本题评分无效。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "目标解法可由题面与 Python 惯用写法直接得出（defaultdict 分组计数），无需任何记忆参与",
+    "目标未沿用源题/记忆中的 pandas value_counts 与 DataFrame 构造路径，注入可能实际未被采用",
+    "注入 8 条工作流覆盖面很广，任何常规行为都容易与其中某条‘吻合’，属事后匹配"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法观测模型是否实际读到或使用了注入文本",
+    "无 token 计量（token_measurement_method=unavailable），无法评估注入开销相对收益",
+    "隐藏检查的具体内容与离线 tests/reference 是否同一套不可知",
+    "无法判断注入库中哪些条目曾由该源事件写入（provenance 仅为来源覆盖）"
+  ],
+  "minimal_intervention": {
+    "change": "移除全部 8 条注入工作流（空注入），其余不变重跑本题",
+    "fixed": "相同 prompt、相同模型与采样参数、相同工具集与上下文/步数预算",
+    "falsifier": "若空注入运行仍产出同样的 defaultdict 分组计数与‘示例+边界验证后 SUBMIT’行为并同样被判正确，则 USE_TRANSFER 候选被削弱"
+  },
+  "causal_claim": false
+}

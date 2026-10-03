@@ -1,0 +1,123 @@
+{
+  "case_id": "c-85600d9b1efe",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        },
+        {
+          "section": "source_visible",
+          "quote": "leap_seconds_count = int(np.sum(LEAP_SECONDS > start_time.year))"
+        }
+      ],
+      "reason": "Source episode passed all 5 offline tests, but its leap-year comparison is strict '>' while the target reference uses '>=', and the 1970 example cannot discriminate the two, so the recipe generalizes only with limits."
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/29",
+          "quote": "Do not ESTIMATE hand-derived numeric oracles by mental arithmetic or intuition"
+        },
+        {
+          "section": "target_visible",
+          "quote": "(err-00120 pattern)"
+        }
+      ],
+      "reason": "A relevant generic verification heuristic is present and was applied faithfully, but no injected memory conveys the decision-relevant per-date int-truncation/return-type semantics."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/29",
+          "quote": "Do not ESTIMATE hand-derived numeric oracles by mental arithmetic or intuition"
+        }
+      ],
+      "reason": "Injected items are generic verification guidance that transfers to this coding task, but none addresses the leap-second/int-return contract that decided the outcome."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The 1979 case failing is my hand-counted oracle being wrong (err-00120 pattern)"
+        }
+      ],
+      "reason": "The agent explicitly invoked the err-00120 memory and recomputed its oracle programmatically; this is a visible behavior proxy only, not a causal effect on the final result."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "total += (now - dt).total_seconds()"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(total_elapsed_seconds(['1972-01-01', '2000-01-01', '2020-01-01']) == sum([task_func('1972-01-01'), task_func('2000-01-01'), task_func('2020-01-01')]))"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "total_seconds += leap_seconds\n\n    return int(total_seconds)"
+        }
+      ],
+      "reason": "The submission accumulates raw float seconds per date and returns a float, whereas the reference truncates each date's total to int before summing, so the exact-equality assertion fails; this shows the code-level defect but does not establish any memory cause."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "def total_elapsed_seconds(date_list):"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "for date_str in date_list:\n        total_seconds += task_func(date_str)"
+        }
+      ],
+      "reason": "The target prompt supplies only the bare signature (no doctest example or return-type statement), while the hidden check compares against per-date int-truncated task_func sums, so the truncation/return-type contract is not stated in the visible task."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "(err-00120 pattern)"
+        },
+        {
+          "section": "injection/29",
+          "quote": "Do not ESTIMATE hand-derived numeric oracles by mental arithmetic or intuition"
+        }
+      ],
+      "reason": "An injected memory is visibly cited and its guidance followed (oracle recomputed programmatically); it evidences memory use and correct adaptation but cannot show the memory caused success or the eventual failure."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "Without a counterfactual run, no attribution to memory is possible; the float-vs-int defect is independent of the injected verification heuristics.",
+    "The outcome may equally be driven by the under-specified target prompt (no docstring example / return-type line), i.e. an eval-contract reading rather than a memory effect.",
+    "The source episode's recipe used strict '>' comparisons, so even a faithfully retained source experience would not have matched the target reference's '>=' reading."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "The full hidden test set is not provided; only one equality assertion is visible, so the exact set of divergences (float vs per-date int truncation) is inferred.",
+    "It is unclear whether the source task's canonical leap-year comparison was '>' or '>=', since the visible source implementation used '>' but the target reference uses '>='.",
+    "The auxiliary reflector call aborted, but target post-task updates cannot explain prior target behavior and the abort's effect on memory writes is not observable."
+  ],
+  "minimal_intervention": {
+    "change": "Return/accumulate each date's total as an int, e.g. total += int((now - dt).total_seconds() + n_leap), matching the reference's per-date truncation.",
+    "fixed": "Keep the same target prompt, the same LEAP_SECONDS table, the same hidden tests and the same current-time behavior.",
+    "falsifier": "If the per-date-int-truncated submission still fails the '1972-01-01/2000-01-01/2020-01-01' exact-equality check, the TASK_EXECUTION candidate is refuted."
+  },
+  "causal_claim": false
+}

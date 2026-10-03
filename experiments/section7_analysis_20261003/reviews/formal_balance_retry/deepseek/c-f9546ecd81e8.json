@@ -1,0 +1,124 @@
+{
+  "case_id": "c-f9546ecd81e8",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=20:True:5"
+        },
+        {
+          "section": "source_visible",
+          "quote": "print([p.get_facecolor() for p in ax.patches[:1]])"
+        }
+      ],
+      "reason": "配对源题通过 5 项测试且 scorable，属合法可用的通过经验；但源题结束时 writer facts 为空、无 update operations，其内容并未以其细节形式出现在注入文本中，覆盖有限。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": []"
+        }
+      ],
+      "reason": "注入的两条摘要描述 pandas DataFrame/条形图任务，与展示的配对源（numpy 直方图+正态 PDF）内容不对应，且无源 ID 关联，无法核实保真度。"
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "记忆内容是 DataFrame 的 value_counts 条形图，目标契约是 2D numpy 数组的密度直方图加标准正态 PDF，所需机制无重叠（无 pandas、无 value_counts、无 PDF 叠加）。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "ax.hist(flat, bins=30, density=True, alpha=0.6, color='green',"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "The histograms should be density-based, semi-transparent (60% opacity) and green in color."
+        }
+      ],
+      "reason": "提交代码中每个绘图参数都能逐项对应题面文字，未见 pandas/条形图/计数类元素或源题归一化逻辑的痕迹；这只是行为代理，不构成因果结论。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "Native Qdrant top-5 returned set; complete persisted point pool separately snapshotted"
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "\"score\": 0.34525926928172257"
+        }
+      ],
+      "reason": "检索命名空间只回传 top 候选并以低相似度（0.345/0.263）把两条泛化记忆送入注入，说明召回集偏泛；只能表明召回了弱相关条目，不能证明它们干扰了执行。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "flat = np.ravel(arr)"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"selected_before_packing\": [\n    \"046fecd0-bb97-4487-aea7-9105b37efe5a\",\n    \"96e021ae-d807-4ddf-ae9c-de2d36854446\""
+        }
+      ],
+      "reason": "两条记忆确实进入注入清单，但可见产物中完全没有其内容特征，成功可由题面独立推出；不能据此断定记忆无效或有害，也不能断定模型“正确忽略”。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "注入表示是单句主题级摘要，缺少可复用的 API 细节（如直方图密度/透明度/PDF 范围）；只能说明表示粒度粗，不能证明更细表示会改变行为。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "检索召回的泛化摘要与目标不相关，因而无可见复用；真正原因可能在于 RETRIEVAL 精度而非使用环节。",
+    "成功可能完全来自模型自身能力，注入内容对结果既无正贡献也无负贡献，本次运行无法区分二者。",
+    "注入摘要是对源题（也已通过）的粗粒度概括，源细节可能存在于别处但未在本包展示，故“无使用”可能只是可见性缺失。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法判断两条注入记忆是否在推理中对行为产生过任何影响（无反事实）。",
+    "source_provenance_at_target 的 memory_ids 为空且 source writer facts 为空，注入内容的真实写入来源未知。",
+    "离线评测记录 Ran 0 tests 但 checks_executed=2，具体检查项与覆盖的隐藏契约不可见。",
+    "未展示完整持久化记忆库，不能推断“不存在更相关内容”。"
+  ],
+  "minimal_intervention": {
+    "change": "把两条 DataFrame/条形图摘要替换为与本题任务族匹配的直方图+PDF 经验（或空注入）后重跑。",
+    "fixed": "相同目标题面、相同模型与提示、相同一次 PYTHON 加一次 SUBMIT 的工具预算与同一隐藏检查。",
+    "falsifier": "若替换/移除注入后可见代码或评测结果发生变化，则 no_visible_use 判断被反驳。"
+  },
+  "causal_claim": false
+}

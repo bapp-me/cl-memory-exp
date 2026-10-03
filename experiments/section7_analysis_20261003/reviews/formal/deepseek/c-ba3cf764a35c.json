@@ -1,0 +1,143 @@
+{
+  "case_id": "c-ba3cf764a35c",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=14:True:7"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(word: str) -> dict:"
+        }
+      ],
+      "reason": "Source task passes evaluation, but its contract is single-word and returns defaultdict, not the target's list-level dict task."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/2",
+          "quote": "a `defaultdict(int)` loop with `counts[<key>] += 1`"
+        },
+        {
+          "section": "source_visible",
+          "quote": "counts[sanitized[i:i+2]] += 1"
+        }
+      ],
+      "reason": "The relevant frequency-count workflow matches the source's pair-counting approach; no contradiction appears in the provided evidence."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Find the occurrences of each two-letter combination in the sanitized word"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of words, find the occurrences of each two-letter combination across all words, where only alphabetic characters are considered."
+        }
+      ],
+      "reason": "Source supplies the per-word bigram core, but target adds iteration over a word list and aggregation across all words."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "for a, b in zip(clean, clean[1:]):"
+        },
+        {
+          "section": "injection/2",
+          "quote": "slice consecutive characters (`<text>[i:i+2]`, `zip(<word>, <word>[1:])`)"
+        }
+      ],
+      "reason": "Visible target code uses the same pair-extraction and defaultdict counting pattern described in the injected workflow; this is a behavioral proxy, not proof of memory use."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The function works as expected"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "EVALUATOR_RESULT=3:True:0"
+        }
+      ],
+      "reason": "Direct visible execution and offline scoring show the submitted target code ran and passed available checks; this does not show any memory contribution."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(word: str) -> dict:"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of words, find the occurrences of each two-letter combination across all words, where only alphabetic characters are considered."
+        }
+      ],
+      "reason": "A legitimate related source existed, but the target changed the scope from one word to a list of words, so the source is only partially applicable."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/2",
+          "quote": "slice consecutive characters (`<text>[i:i+2]`, `zip(<word>, <word>[1:])`)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "for a, b in zip(clean, clean[1:]):"
+        }
+      ],
+      "reason": "Visible code is consistent with adapting the injected frequency-count workflow to the list-level target; without a counterfactual this cannot prove memory caused the success."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"selected_before_packing\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 8,"
+        }
+      ],
+      "reason": "All 8 observable candidates were selected and injected with no packing drop, so the memory content was visible to the target; visibility does not show attention or usefulness."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The model could have inferred bigram counting directly from the target prompt and general Python knowledge, without using the injected memory.",
+    "The injected workflows are generic summaries aggregated across many sources, so visible similarity alone is weak evidence of retrieval-specific reuse.",
+    "No memory-disabled counterfactual is available, so memory necessity versus independent solution cannot be distinguished."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Cannot establish whether the target agent actually read or attended to the injected workflow content.",
+    "Target token count is unavailable, so budget pressure and cost/utility cannot be assessed.",
+    "The full hidden correctness suite is unavailable; only the offline target evaluation with 3 checks is visible.",
+    "The full memory library after REPLACE_WORKFLOW_LIBRARY is not presented, so exact source content retention is inferred only from summaries."
+  ],
+  "minimal_intervention": {
+    "change": "Re-run the same target with memory disabled or with only unrelated workflows injected.",
+    "fixed": "Same model, prompt, environment, tool budget, evaluator, and source history.",
+    "falsifier": "If the no-memory run produces an equivalent correct bigram solution and passes, the memory-use hypothesis is undermined; if it fails or diverges, the candidate is strengthened."
+  },
+  "causal_claim": false
+}

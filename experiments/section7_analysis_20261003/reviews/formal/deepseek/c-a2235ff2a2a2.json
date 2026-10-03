@@ -1,0 +1,143 @@
+{
+  "case_id": "c-a2235ff2a2a2",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Only the first principal component is considered in this analysis."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "源 episode 在其自身测试中通过且可评分；但源任务是单数组、首主成分、返回 Axes，范围比目标窄。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Only the first principal component is considered in this analysis."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "The figure should have subplots corresponding to each array"
+        }
+      ],
+      "reason": "行求和 PCA 核心内容与目标相关且忠实，但源的返回类型、标题和单数组范围只部分符合目标契约。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(arr):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def new_solution(arrays):"
+        }
+      ],
+      "reason": "同一行求和 PCA 思想可迁移，但目标签名、输入列表和返回 figure 的要求不同。"
+    },
+    "visible_use": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "target_visible",
+          "quote": "row_sums = np.sum(arr, axis=1)"
+        }
+      ],
+      "reason": "目标上下文中未见源 provenance 注入；虽然目标代码使用行求和 PCA，但目标提示本身已明确要求该操作，无法归因于源记忆。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(arr):"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "存在合法的行求和 PCA 源经验且源通过测试；只证明机会存在，不证明目标注入或复用。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "- ax (matplotlib.axes.Axes): An Axes object from matplotlib."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "return the figure object."
+        }
+      ],
+      "reason": "源表示是单数组 Axes 且仅首主成分，目标需要多数组单 figure 子图；表示/接口差异需要适配，不能证明失败。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_episode_byte_budget\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "相关源 provenance 在可观察检索候选中但未进入注入；旧完整 episode 因字节预算被丢弃，属于打包可见性问题，不是检索失败。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "data = np.sum(arr, axis=1).reshape(-1, 1)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "row_sums = np.sum(arr, axis=1)"
+        }
+      ],
+      "reason": "目标可见代码与源共享行求和 PCA 模式，但目标提示独立要求同一步骤；无反事实，不能推断真实迁移。"
+    }
+  ],
+  "primary_hypothesis": "unknown",
+  "competing_explanations": [
+    "目标提示本身完整指定行求和 PCA、子图、标题和返回 figure，成功可由提示遵循单独解释。",
+    "源 episode 可能在方法状态中被保留但未注入，可见代码相似无法区分记忆复用与提示遵循。",
+    "注入的 8 条记忆均来自无关代码任务，可能有干扰或仅有开销，但现有证据不能判断其作用。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "求解器实际上下文中是否可访问保留的源 episode。",
+    "源是确实在打包中被丢弃，还是仅未进入注入集合。",
+    "隐藏检查是否接受折线图与参考柱状图差异，或要求精确标题/返回类型。",
+    "无关注入是否影响开销或解题过程。"
+  ],
+  "minimal_intervention": {
+    "change": "将保留的行求和 PCA 源片段强制注入目标上下文，保持其他注入不变，以检验可见行为是否改变。",
+    "fixed": "相同目标提示、相同隐藏评估和相同内存预算。",
+    "falsifier": "若强制注入后提交代码与得分同无源时完全一致，则目标未复用该源经验或该源经验非必要。"
+  },
+  "causal_claim": false
+}

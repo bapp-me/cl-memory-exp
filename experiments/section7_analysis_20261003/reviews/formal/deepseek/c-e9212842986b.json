@@ -1,0 +1,139 @@
+{
+  "case_id": "c-e9212842986b",
+  "result_status": "infrastructure_interruption",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Performs Principal Component Analysis (PCA) on the sum of rows of a 2D numpy array and plots the explained variance ratio."
+        }
+      ],
+      "reason": "源题自身评测通过（correct=true，5 个测试），故有效；但其契约为单数组返回 Axes，与目标的多数组/Figure 契约不同，属有限适用。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "源经验原文与来源信息都未在方法状态中保留、也未注入目标，目标侧不存在可判保真度的记忆内容；未展示的完整记忆库不在推断范围。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The figure should have subplots corresponding to each array"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Performs Principal Component Analysis (PCA) on the sum of rows of a 2D numpy array and plots the explained variance ratio."
+        }
+      ],
+      "reason": "源经验覆盖“对 2D 数组的行和做 PCA 并画解释方差比”这一核心步骤，但目标新增了数组列表循环、多子图 Figure 返回与按索引命名标题。"
+    },
+    "visible_use": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "注入计数为 0 且注入元数据为空，目标执行中不存在可观察的记忆使用行为；目标代码与源解法相似只能视为可见代理，不能证明复用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "INFRA_PROTOCOL",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "\"text\": \"fetch failed\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"submitted\": false"
+        }
+      ],
+      "reason": "PYTHON 与全部 6 次 SUBMIT 调用的 toolResult 都是 isError=true 的 \"fetch failed\"，最终 submitted 为 false，故提交产物从未落盘；这不能说明模型解题能力。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "NameError: name 'new_solution' is not defined"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"tests_run\": 0,"
+        }
+      ],
+      "reason": "离线下评测把未提交的空模块当作可评对象（scorable=true，tests_run=0）并因 NameError 判错，属评分口径与产物缺失之间的候选不一致，非模型可避免的语义错误。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_retained\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "源经验存在且与目标高度相关（同一 row-sum PCA 主题），但来源信息未保留、注入为 0，说明本题不存在可供检索/注入的 D1 机会；不证明记忆系统失效。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        }
+      ],
+      "reason": "记忆策略为 disabled、源回合未保留，说明没有专门经验被写入，因此本题不能解读为“已存但未检索到”的 RETRIEVAL 失败。"
+    }
+  ],
+  "primary_hypothesis": "INFRA_PROTOCOL",
+  "competing_explanations": [
+    "离线目标评测返回 scorable=true 且 correct=false，若严格按该产物计分，可被记为 scorable_failure（测试从未真正执行，tests_run=0）。",
+    "目标代码从未运行，无法排除其存在真实缺陷；例如它用 np.sum(arr, axis=0)（列求和）与源题的 arr.sum(axis=1)（行求和）方向相反，虽然可见测试只断言子图数量。",
+    "mechanical 中 working_tool_calls=2 与所有 toolResult 均为错误、terminal_state=historical_committed 与 submitted=false 相互矛盾，工具层与提交层的真实状态不明。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "目标实现若有工具可用是否通过隐藏测试，现有证据无法判断。",
+    "\"fetch failed\" 是沙箱/提交端基础设施故障还是协议层拒绝，由现有字段无法区分。",
+    "未展示完整记忆库，是否有其他候选存在过、是否曾考虑注入，均未知。",
+    "submitted=false 与 terminal_state=historical_committed 的具体含义不清。"
+  ],
+  "minimal_intervention": {
+    "change": "在 PYTHON/SUBMIT 工具能正常返回结果的环境中重跑同一目标，让最终代码被实际提交并执行。",
+    "fixed": "保持相同目标题面、相同源题历史、相同记忆策略（disabled）与相同预算。",
+    "falsifier": "若在工具正常的环境下提交同一份代码仍得到与实现无关的失败（如断言失败或 Namespace 缺失），则基础设施解释被推翻。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,142 @@
+{
+  "case_id": "c-e7b8d1aa67f7",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "raise an error if the input data is not pandas DataFrame"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "TypeError: data must be a pandas DataFrame"
+        }
+      ],
+      "reason": "源题功能大体同类，但异常类型为 TypeError 而非离线期望的 ValueError，源评测失败；属于部分可用但契约不符的源经验。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "data must be a pandas DataFrame"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "named uniquely for each dataset"
+        }
+      ],
+      "reason": "源记录保留了 DataFrame 校验、copy 和随机列添加，但缺少目标要求的数据集间唯一列名，且异常类型与目标契约不一致，因此与目标相关必要内容只部分保真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Add a new column with random values to the"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "named uniquely for each dataset"
+        }
+      ],
+      "reason": "源经验覆盖单表加随机列，与目标部分重叠；但目标新增了列表处理、每数据集唯一列名和合适异常要求，适用性不完整。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "def process_datasets(datasets, key_prefix, min_value, max_value):"
+        },
+        {
+          "section": "injection/0",
+          "quote": "scramble the letters in each word of every sentence"
+        }
+      ],
+      "reason": "目标轨迹中可见的是自行编写的 process_datasets 实现与测试；实际注入的 D1 候选是无关任务，源记录也未注入，因此没有可见的源复用或候选迁移证据。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_episode_byte_budget"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "源经验出现在可观察候选中但未进入注入集，淘汰理由为旧完整 episode 字节预算；这说明有效源未进入目标可见上下文，不能据此断言检索失败或目标行为受源影响。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Add a new column with random values to the"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "named uniquely for each dataset"
+        }
+      ],
+      "reason": "存在合法且相关的源题经验，可提供加随机列和 DataFrame 校验思路；但源题不含唯一列名等目标新增条件，只构成部分机会，不能证明被实际利用。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "TypeError: data must be a pandas DataFrame"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "EVALUATOR_RESULT=4:True:0"
+        }
+      ],
+      "reason": "源题因异常类型不符合期望而失败，目标题改用 ValueError 且离线评分为正确；这支持任务契约边界差异，不代表记忆导致成功。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "scramble the letters in each word of every sentence"
+        },
+        {
+          "section": "target_visible",
+          "quote": "def process_datasets(datasets, key_prefix, min_value, max_value):"
+        }
+      ],
+      "reason": "实际注入的语义候选与目标任务明显无关，目标代码也未表现出对源记录 TypeError/randint 的采用；只能说明可见迁移缺失，不能证明无潜在影响。"
+    }
+  ],
+  "primary_hypothesis": "PACKING_VISIBILITY",
+  "competing_explanations": [
+    "目标题可能由模型原生能力直接解决；没有反事实，不能归因于记忆。",
+    "源经验即使被注入也可能因 TypeError 和缺少唯一列名而不适用于目标契约。",
+    "注入的 D1 候选是无关任务，其存在不证明造成干扰，也不能解释目标成功。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法确定源记录在历史中的精确索引及是否仅因字节预算被淘汰而未注入。",
+    "无法排除目标模型在可见上下文之外还有其他未展示记忆或先验。",
+    "隐藏评测只报告正确与检查数，未展示具体断言，无法核验所有边界。"
+  ],
+  "minimal_intervention": {
+    "change": "将实际注入的某个无关 episode 替换为被淘汰的源记录，保持相同检索与打包预算。",
+    "fixed": "相同目标题、模型、工具、历史与字节预算。",
+    "falsifier": "若目标仍使用 ValueError 和唯一列名并成功，则源缺席不是限制；若目标改为采用源记录的 TypeError 或出现行为变化，则提示可见迁移或负迁移候选。"
+  },
+  "causal_claim": false
+}

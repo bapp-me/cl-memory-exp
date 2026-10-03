@@ -1,0 +1,128 @@
+{
+  "case_id": "c-a9bd9eec0d55",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df):"
+        }
+      ],
+      "reason": "源任务通过离线测试，但只覆盖单 DataFrame 标准化、缺失值均值填充和相关性热图；目标新增列表输入、合并相关矩阵和非 Axes 返回契约。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].mean())"
+        },
+        {
+          "section": "source_visible",
+          "quote": "df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].mean())"
+        }
+      ],
+      "reason": "目标保留了源中按数值列用均值填充、标准化并计算热图的核心步骤；但源的合并/返回契约不涉及目标的多 DataFrame 合并输出。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "combined heatmap of the correlation matrices for all DataFrames"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df):"
+        }
+      ],
+      "reason": "源的单 DataFrame 处理部分可迁移到目标每个 DataFrame 上，但目标的列表级合并与最终返回要求是新增条件。"
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "return ax"
+        },
+        {
+          "section": "source_visible",
+          "quote": "return standardized_df, ax"
+        }
+      ],
+      "reason": "可见代码复用了源的单 DataFrame 热图/返回 Axes 风格，但目标隐藏测试要求可 shape 的合并相关矩阵；这只是行为代理，不能证明记忆导致失败。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "return ax"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AttributeError: 'Axes' object has no attribute 'shape'"
+        }
+      ],
+      "reason": "提交函数返回 Axes，而隐藏检查访问 combined_corr.shape；可见运行通过但最终可评分执行失败。该证据支持目标执行/契约落实问题，不证明记忆造成失败。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "return a combined heatmap of the correlation matrices"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(combined_corr.shape == (2, 4))"
+        }
+      ],
+      "reason": "题面措辞可被理解为返回热图/Axes，而测试期望具有 shape 的 combined_corr 数据对象；这是候选契约歧义/不一致，但需保留为候选。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].mean())"
+        },
+        {
+          "section": "target_submission",
+          "quote": "df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].mean())"
+        }
+      ],
+      "reason": "目标可见地沿用源的单 DataFrame 均值填充/标准化步骤，属于 D1 语义迁移候选；源未展示多 DataFrame 合并契约，因此不能据相似性证明有效复用或负迁移。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "EVAL_CONTRACT：题面要求返回热图，而隐藏测试要求 combined_corr.shape，返回类型与合并表示可能不一致。",
+    "无反事实：源样式代码和可见成功运行不能证明记忆导致隐藏失败；目标在无源记忆时也可能作出相同返回选择。",
+    "未观察到实际检索候选列表，仅有源 provenance 注入为 true，不能确认源内容在目标时如何被呈现或被采用。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏评测期望的返回类型可由题面唯一确定，还是题面/测试存在不一致？",
+    "目标时实际注入了哪些检索候选，以及模型是否基于它们编写代码？",
+    "合并方式应为逐元素平均、水平拼接还是其他表示，仅凭 shape (2,4) 不能完全推出全部测试断言。",
+    "目标结束后的状态更新是否存在，不能由本证据判断。"
+  ],
+  "minimal_intervention": {
+    "change": "改为返回可被检查的合并相关矩阵 DataFrame（按隐藏契约构造并绘制热图），而不是只返回 Axes/均值合并热图。",
+    "fixed": "保持相同题面、源记忆、运行环境和预算。",
+    "falsifier": "若隐藏评测接受 Axes/热图返回，或期望均值合并后的方阵表示，则 TASK_EXECUTION 候选被反驳。"
+  },
+  "causal_claim": false
+}

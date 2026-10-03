@@ -1,0 +1,141 @@
+{
+  "case_id": "c-13ac666cf090",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(rolls, seed=None):"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=27:True:5"
+        }
+      ],
+      "reason": "The paired source task was correct and scorable on its own tests, but its contract is only a single-set dice histogram, not the target combined-task contract."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_retained\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "No source provenance was retained or injected into the target, so target-relevant memory content is absent rather than partial."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(rolls, seed=None):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def combined_task_func(sets, rolls_per_set, seed=None):"
+        }
+      ],
+      "reason": "The source's single-set dice-frequency histogram partially overlaps the target, but the target adds multiple sets, combined frequency, and changed title/axis labels."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "With memory disabled and no injected text, any similarity to the source is not visible memory use or transfer."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Combined Histogram of Dice Rolls Dice Value Combined Frequency"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "EVALUATOR_RESULT=3:True:0"
+        }
+      ],
+      "reason": "The target executed and the offline evaluator marked it correct; the visible output includes the required title and labels. This proves execution success, not memory reuse."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(rolls, seed=None):"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=27:True:5"
+        }
+      ],
+      "reason": "A legitimate prior source exists and passed its own evaluation, making it a plausible opportunity. It does not show that this source was retained, injected, retrieved, or transferred."
+    },
+    {
+      "tag": "INFRA_PROTOCOL",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "Memory is disabled and no injection occurred, so D1 retrieval/use cannot be observed and no memory causal claim is supported."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The histogram should have the title 'Combined Histogram of Dice Rolls', with the x-axis labeled 'Dice Value' and the y-axis labeled 'Combined Frequency'"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert combined_task_func(2, 100, seed=42)[0].sum() == task_func(200, seed=42)[0].sum()"
+        }
+      ],
+      "reason": "The prompt requires specific combined-histogram labels and combined distributions, while the reference checks include one-set equality and total sums. Success is scorable but may not by itself prove full contract alignment or memory use."
+    }
+  ],
+  "primary_hypothesis": "INFRA_PROTOCOL",
+  "competing_explanations": [
+    "TASK_EXECUTION: the target model may solve directly from the prompt and common coding knowledge without any memory; the disabled memory policy prevents distinguishing this."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the paired source would have been retrieved if memory were enabled.",
+    "Whether any unselected memory content existed or influenced behavior.",
+    "Whether the submitted bar chart fully matches the evaluator's interpretation of 'histogram' beyond the reported checks.",
+    "No controlled no-memory versus memory counterfactual is available."
+  ],
+  "minimal_intervention": {
+    "change": "Enable or inject the paired source experience/provenance into the target context and rerun under the same protocol.",
+    "fixed": "Keep the same target prompt, model, tool budget, seeds, environment, and fixed scoring mask.",
+    "falsifier": "If a rerun with explicit source injection shows no source-dependent behavior or preserves identical correctness without reuse, the no-injection account of D1 unobservability is insufficient."
+  },
+  "causal_claim": false
+}

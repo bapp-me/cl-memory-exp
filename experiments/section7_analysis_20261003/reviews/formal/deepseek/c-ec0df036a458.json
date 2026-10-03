@@ -1,0 +1,128 @@
+{
+  "case_id": "c-ec0df036a458",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "NameError: name 'np' is not defined"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": false"
+        }
+      ],
+      "reason": "同一族的源题（标准化+相关热图）最终提交在离线评测中报错且 correct=false，故为可用但有缺陷的经验。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Reject invalid inputs with explicit errors before performing the main computation."
+        },
+        {
+          "section": "injection/7",
+          "quote": "Confirm correctness of an implementation against the task's stated examples before submitting."
+        }
+      ],
+      "reason": "注入的工作流是通用模式，目标对其复现（校验+示例验证）与文本一致；但注入集里没有目标必需的“返回合并相关矩阵/FDataFrame”契约，故只是部分保真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Produce reproducible random data (numbers, samples, strings, choices) using a deterministic random seed."
+        },
+        {
+          "section": "injection/1",
+          "quote": "Reject invalid inputs with explicit errors before performing the main computation."
+        }
+      ],
+      "reason": "输入校验、DataFrame 构造、绘图返回等条目部分适用；随机数据生成、Counter、模型拟合等条目与本任务无关。"
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "injection/4",
+          "quote": "Return the `ax` (and `fig` when required) object."
+        },
+        {
+          "section": "target_submission",
+          "quote": "raise ValueError(\"list_of_dfs must be a non-empty list of pandas DataFrames\")"
+        }
+      ],
+      "reason": "可见行为与注入工作流吻合（显式校验、返回 Axes 绘图对象），但最终返回类型与评测所需 DataFrame 不符；这只是行为代理，非因果。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "return a combined heatmap of the correlation matrices for all DataFrames"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert combined_corr.shape == (2, 4)"
+        }
+      ],
+      "reason": "题面/函数名要求“返回 combined heatmap（图）”，但参考解与隐藏测试把返回值当作可 .shape 的合并相关矩阵 DataFrame；两者对返回物不一致，属候选契约歧义，不能断言谁绝对正确。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AttributeError: 'Axes' object has no attribute 'shape'. Did you mean: 'sharex'?"
+        },
+        {
+          "section": "target_submission",
+          "quote": "    return ax"
+        }
+      ],
+      "reason": "提交函数的返回值是 Axes，评测对其取 .shape 直接抛错、checks_executed=0；这是可直接观察的产物与所需输出不匹配。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Reject invalid inputs with explicit errors before performing the main computation."
+        },
+        {
+          "section": "injection/4",
+          "quote": "Return the `ax` (and `fig` when required) object."
+        }
+      ],
+      "reason": "目标可见地套用了注入的输入校验与绘图返回工作流，返回 Axes 与后一条吻合；但无干预对照，不能证明是记忆导致返回类型错误，题面措辞同样是候选来源。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "TASK_EXECUTION：agent 只是选错返回类型；若同时把合并方式改为与测试一致的布局，返回合并 DataFrame 可能通过。",
+    "USE_TRANSFER：绘图的“Return the `ax`”模式可能强化了返回 Axes 的选择，但题面本身说“return a combined heatmap”，无法与记忆影响分离。",
+    "合并方式差异：目标用逐元素均值（2x2），参考用 axis=1 拼接（2x4），返回类型之外还有实现口径分歧，现有证据无法判定测试是否只查 shape。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法确定隐藏测试是否只校验返回值类型/形状，还是也校验合并矩阵的数值口径（均值 vs 拼接）。",
+    "无法确定注入的 8 条工作流中哪一条实际影响了返回类型选择；无对比运行。",
+    "未提供完整未选记忆库与 token 打包细节，不能判定检索/打包是否遗漏了更相关的标准化-合并经验。",
+    "source_auxiliary_visible 里出现的“Preprocess a Numeric DataFrame (Impute and Standardize)”未出现在注入集中，但其在目标时刻是否可选不可知。"
+  ],
+  "minimal_intervention": {
+    "change": "让 combined_heatmap 返回合并后的相关矩阵 DataFrame（并使其布局与测试期望一致），而非返回 Axes。",
+    "fixed": "相同目标题面、相同注入记忆包与预算、相同评测脚本与评分 mask（不重打分）。",
+    "falsifier": "若返回形状为 (2,4) 的合并相关矩阵仍失败，或明确要求返回 Axes 也失败，则返回契约假设被反驳。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,118 @@
+{
+  "case_id": "c-3ff2794e5197",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"tests_run\": 5"
+        }
+      ],
+      "reason": "源回合自身可评分且通过其隐藏测试，是合法源经验；但它只覆盖单组掷骰，不含目标的多组合并与 'Combined' 标题要求。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "证据只给出源回合本身与 provenance，未展示写入方法状态的实际记忆文本，无法判断与目标相关内容是否保真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "The title of the histogram is \"Histogram of Dice Rolls\""
+        },
+        {
+          "section": "target_prompt",
+          "quote": "The histogram should have the title 'Combined Histogram of Dice Rolls'"
+        }
+      ],
+      "reason": "掷骰模拟、频次数组、直方图与轴标签同族，但目标新增多组聚合语义并改写标题/轴标签，属部分适用而非直接复用。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "combined_freq = np.zeros(len(NUMBERS), dtype=int)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "combined_freq[r - 1] += 1"
+        }
+      ],
+      "reason": "目标自写累计计数与 bar 绘图，未出现任何注入片段的专有结构，也无逐字复用痕迹；这只是行为代理，不是因果结论。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_episode_byte_budget"
+        }
+      ],
+      "reason": "检索已列出候选但按字节预算丢弃了最旧完整回合（含源相关回合），最终只打包 6 条无关注入，属选择后的打包淘汰而非未检索到；不能据此断言记忆无用。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "ax.bar(NUMBERS, combined_freq, tick_label=NUMBERS)"
+        },
+        {
+          "section": "source_visible",
+          "quote": "ax.hist(outcomes, bins=np.arange(0.5, 7.5, 1), edgecolor='black', align='mid')"
+        }
+      ],
+      "reason": "目标可见实现与源/参考的 choice+hist 路线不同，未见可归因于记忆的适配；因源相关回合未被注入，无法据此评价迁移或负迁移。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "EVALUATOR_RESULT=3:True:0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"terminal_state\": \"completed\""
+        }
+      ],
+      "reason": "目标自行实现并通过离线检查，说明本题直接执行即可完成；成功本身不证明记忆有效复用。"
+    }
+  ],
+  "primary_hypothesis": "PACKING_VISIBILITY",
+  "competing_explanations": [
+    "全部候选 score 为 null，无法判断源相关回合在无预算限制时是否会被选中注入。",
+    "目标成功可能完全来自模型自身能力，缺乏注入源记忆的反事实对照。",
+    "6 条无关注入可能仅占上下文而未影响行为，现有证据不能判定其干扰或收益。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "源回合在检索列表中的具体 history_index 无法确定。",
+    "方法状态中记忆文本与源内容的一致性无法核验。",
+    "离线 3 项检查与参考解 3 条断言是否一一对应不可确认。"
+  ],
+  "minimal_intervention": {
+    "change": "在同一历史与预算下调整打包策略，使与目标同族的掷骰源回合不被 'oldest_complete_episode_byte_budget' 淘汰而进入注入集。",
+    "fixed": "保持相同源对、相同 6 条既有注入候选、相同字节预算与相同工具环境。",
+    "falsifier": "若证据显示源相关记忆实际出现在 injected_ids 或未被丢弃，则打包淘汰候选不成立。"
+  },
+  "causal_claim": false
+}

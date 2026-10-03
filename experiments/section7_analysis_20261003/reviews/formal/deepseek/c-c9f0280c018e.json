@@ -1,0 +1,159 @@
+{
+  "case_id": "c-c9f0280c018e",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(department_data):"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "department_data (dict): A dictionary with department codes as keys and number of employees as values."
+        },
+        {
+          "section": "injection/0",
+          "quote": "result[dept] = [random.choice(LEVELS) for _ in range(count)]"
+        }
+      ],
+      "reason": "Source episode is correct and scorable for its single-dict task_func, but its contract is narrower than the target's list-of-chunks new_solution."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "result[dept] = [random.choice(LEVELS) for _ in range(count)]"
+        },
+        {
+          "section": "injection/0",
+          "quote": "return json.dumps(result)"
+        }
+      ],
+      "reason": "Injected source episode contains the target-relevant source algorithm and seed-0 output, and no target-relevant memory content is contradicted."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "def new_solution(department_data_list):"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "for department_data in department_data_list:"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "final_result[code].extend(levels)"
+        }
+      ],
+      "reason": "Core random distribution transfers per chunk, but the target adds list input and duplicate-department extension that the source dict-only experience does not cover."
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The output matches the known-good pattern exactly (same seed-0 result as the verified department-levels task)."
+        },
+        {
+          "section": "target_submission",
+          "quote": "result[dept] = [random.choice(LEVELS) for _ in range(count)]"
+        }
+      ],
+      "reason": "Agent visibly adapts the source pattern and validates against the source seed-0 output, but reuses per-department assignment without the target's required merging; this is a behavior proxy, not a causal finding."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": true"
+        },
+        {
+          "section": "injection/0",
+          "quote": "random.seed(0)"
+        }
+      ],
+      "reason": "A correct, scorable source episode from the same department-level task family was retained and injected. It supports that a legitimate D1 source existed, but does not prove the target agent used it or that it caused success."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The output matches the known-good pattern exactly (same seed-0 result as the verified department-levels task)."
+        },
+        {
+          "section": "target_submission",
+          "quote": "result[dept] = [random.choice(LEVELS) for _ in range(count)]"
+        }
+      ],
+      "reason": "Visible behavior shows the source algorithm was reused and adapted to the target input shape, and the agent explicitly references the verified task. This cannot establish causal benefit without a counterfactual."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "result[dept] = [random.choice(LEVELS) for _ in range(count)]"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "final_result[code].extend(levels)"
+        }
+      ],
+      "reason": "The target reference aggregates chunks by extending duplicate department codes, while the submitted loop overwrites duplicates. This is a candidate edge-case gap, not an observed failure because the provided target evaluation is correct=true."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"tests_run\": 0"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"checks_executed\": 5"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"tests_run\": 5"
+        }
+      ],
+      "reason": "Target evaluation reports zero unittest tests but five checks correct, unlike the source evaluation's five tests. This marks the scoring basis as ambiguous only; it does not show the target solution is incorrect."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The target prompt itself contains a seed-0 expected output and source-like imports, so success may be prompt-driven and memory redundant; no counterfactual isolates memory.",
+    "The provided target checks do not exercise duplicate department codes across chunks, so the missing extend may be harmless under the observed contract.",
+    "Unrelated injected Counter tasks are present, but there is no visible behavior showing they interfered with the department-levels solution."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether hidden target tests include duplicate department codes across list elements or unknown department codes.",
+    "Whether the agent actually inspected the injected source episode beyond its visible reference to the verified department-levels task.",
+    "What the full unselected memory library contained and whether other source experiences were available.",
+    "Whether target correct=true with tests_run=0 corresponds to the same assertions as the reference tests or to external hidden checks."
+  ],
+  "minimal_intervention": {
+    "change": "In final new_solution, aggregate items by department code and extend levels when a code appears in multiple input chunks before JSON serialization.",
+    "fixed": "Same injected source memory and unrelated injections, same random-seed expectations, same tool and token budget.",
+    "falsifier": "A hidden test with the same department code in two list elements returning a combined list length (e.g., 3+2=5) would refute the view that the unadapted loop is sufficient."
+  },
+  "causal_claim": false
+}

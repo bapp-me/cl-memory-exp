@@ -1,0 +1,127 @@
+{
+  "case_id": "c-aef1e4ea6fb2",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=19:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Analyze a text by creating a document term matrix with CountVectorizer. The text contains several sentences, each separated by a period."
+        }
+      ],
+      "reason": "源题通过其 5 项测试，但其契约是单文档 DTM；不覆盖多文档组合（拼接轴、列名规则），故只能算有限适用。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/5",
+          "quote": "Build the frame via `pd.DataFrame(<data>, columns=<col_names>)`"
+        },
+        {
+          "section": "injection/1",
+          "quote": "`raise ValueError` (or `TypeError` for wrong-type cases) with a descriptive message naming the offending parameter."
+        }
+      ],
+      "reason": "注入条目对 DataFrame 构造、输入校验等通用模式是忠实但高度抽象的概括；没有任何条目保留本题所需的“多文档如何拼接、列名是否加前缀”内容。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Analyze a text by creating a document term matrix with CountVectorizer."
+        }
+      ],
+      "reason": "句子切分 + CountVectorizer + DataFrame(feature names) 部分仍适用；目标新增“逐文档 DTM 后组合成一个矩阵”和行/列语义要求，源经验未覆盖。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "with a descriptive message naming the offending parameter."
+        },
+        {
+          "section": "target_submission",
+          "quote": "raise TypeError(\"documents must be a list of strings\")"
+        }
+      ],
+      "reason": "提交物中可见地按输入校验/示例验证模式实施；这是行为代理，不能证明记忆带来收益，也不能证明其导致失败。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "all these matrices should be concatenated horizontally to form a single combined matrix"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "combined_df = pd.concat(all_dtm, axis=0, ignore_index=True)"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(result.shape == (4, 11))"
+        }
+      ],
+      "reason": "题面明确要求水平拼接，而参考解按 axis=0 竖直堆叠、隐藏断言要求 4 行；题面与测试对拼接轴/列名规则存在冲突候选。仅标候选，不代表评分可改。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The function behaves correctly on both test cases. Submitting:"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(result.shape == (4, 11))"
+        }
+      ],
+      "reason": "自选样例（两文档 2/3 句）只验证了自身设计下的输出，未核验行数=全部句子、列名不加前缀的契约，最终提交在隐藏断言上失败。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "`raise ValueError` (or `TypeError` for wrong-type cases) with a descriptive message naming the offending parameter."
+        },
+        {
+          "section": "target_submission",
+          "quote": "raise ValueError(\"documents must not be empty\")"
+        }
+      ],
+      "reason": "校验守卫这一注入工作流在目标代码中可见复现，属一致复用；但它是通用模式，代码重合只是可见代理，不能证明因果、收益或负迁移。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "失败也可能只是对题面的常规理解偏差，而非题面/测试冲突；但题面同时说“each row corresponds to a sentence”，与水平拼接存在内部张力",
+    "列名前缀 'doc{i}_' 可能来自模型自创或题面“adapted from the vectorizer feature names”的过度解读，注入记忆并未要求前缀，无法归因",
+    "隐藏测试可能还检查列名或其他结构，本包只暴露一条断言，失败可能多因叠加"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试的完整检查项与列名期望未知",
+    "八条注入记忆的实际 token 预算与是否被裁剪不可见",
+    "无法判断源工作流是否真的被模型读取/采纳，缺乏反事实"
+  ],
+  "minimal_intervention": {
+    "change": "将组合改为竖直堆叠并去掉列名前缀：pd.concat(matrices, axis=0, ignore_index=True)，列名直接用 vect.get_feature_names_out()",
+    "fixed": "保持相同目标题面、相同文档样例、相同注入记忆与预算",
+    "falsifier": "若竖直堆叠且不加前缀的提交在隐藏测试中仍失败，或隐藏测试接受水平拼接，则 EVAL_CONTRACT 候选被反驳"
+  },
+  "causal_claim": false
+}

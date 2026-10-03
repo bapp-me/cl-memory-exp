@@ -1,0 +1,114 @@
+{
+  "case_id": "c-36a4194b6270",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=22:True:10"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "ValueError: If start_date is not a datetime object or is after end_date."
+        }
+      ],
+      "reason": "源题离线评测 correct=true（10 tests），但其契约是单区间、返回 datetime 列表并抛 ValueError，与目标的多区间计数契约并不相同。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "仅提供检索/打包元数据（hash、rank、字节数），未提供任何记忆条目的实际文本，无法核对与源技术的保真度。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Create a list of business days between two dates, excluding weekends and specified country's public holidays."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "calculating the total number of business days across multiple date ranges for a given country"
+        }
+      ],
+      "reason": "同属工作日+节假日领域，bdate_range/country_holidays 思路可迁移；但目标新增多区间求和、字符串解析和不抛异常等条件。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Find the occurrences of each two-letter combination in the sanitized word"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "注入的 8 条记忆均为无关任务，源题技术未出现在注入集中，目标可见行为里也没有这些无关记忆的特征。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_episode_byte_budget"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 8"
+        }
+      ],
+      "reason": "51 个候选中 43 个因字节预算被丢弃、仅注入 8 条最新条目，属打包可见性而非检索失败；不能据此断言源检索不到或导致行为差异。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_in_observable_retrieval_candidates\": true"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true"
+        }
+      ],
+      "reason": "存在相关且正确的源题（工作日列表函数）并出现在候选中，构成复用机会；但未被注入，机会未落地，不能证明其影响。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"injected_utf8_bytes\": 43322"
+        }
+      ],
+      "reason": "约 43KB 的 8 条无关经验占用上下文预算，同时同领域源被挤出；只描述开销，单题内不能据此断言净收益高低。"
+    }
+  ],
+  "primary_hypothesis": "PACKING_VISIBILITY",
+  "competing_explanations": [
+    "目标在首个探针就使用 pandas freq='C' + country_holidays，可能来自模型自身先验而非记忆，无对照无法区分。",
+    "源题在 51 个候选中的具体 history_index 未知，无法确认它是否恰在被丢弃的 43 条之内。",
+    "隐藏正确性不可见（tests_run=0，仅有 4 个 checks），是否存在错误记忆或冗余无法判断。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "源条目是否被丢弃、以及丢弃是否改变可见行为，均无直接证据。",
+    "记忆条目的实际文本与保真度不可见。",
+    "目标与源题的代码相似是否经由记忆通道传递，无法确定。"
+  ],
+  "minimal_intervention": {
+    "change": "打包阶段提高字节预算或对与目标同领域的类源条目做保留，避免相关源被 oldest_complete_episode_byte_budget 丢弃",
+    "fixed": "相同的检索排序、相同的 51 条候选历史与评测预算",
+    "falsifier": "若保留相关源后目标的可见行为与提交代码完全不变，则打包漏掉源并非关键，OPPORTUNITY_SOURCE 解释被削弱"
+  },
+  "causal_claim": false
+}

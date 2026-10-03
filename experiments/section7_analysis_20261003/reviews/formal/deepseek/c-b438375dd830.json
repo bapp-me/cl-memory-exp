@@ -1,0 +1,119 @@
+{
+  "case_id": "c-b438375dd830",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=22:True:10"
+        }
+      ],
+      "reason": "源题 10 项测试全过、correct=true，是合法源经验；但源为单谐波函数，其蒸馏出的工作流较泛化，覆盖有限。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/4",
+          "quote": "Return the `ax` (and `fig` when required) object."
+        },
+        {
+          "section": "source_visible",
+          "quote": "return wave, fig, ax"
+        }
+      ],
+      "reason": "注入的绘图工作流保留了 subplots/标题/标签与可选 figure 返回，但未保留源已验证的 (wave, fig, ax) 明确返回签名，与目标所需契约仅部分吻合。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "generates a complex wave with multiple harmonics, each with its own amplitude and frequency, over a given range of time points"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Generates and plots a complex wave with a specified amplitude and frequency over given time points,"
+        }
+      ],
+      "reason": "同属复波+Hann 窗+实虚部绘图家族，但目标改为多谐波求和、标题改动并弱化返回契约，源经验只部分适用。"
+    },
+    "visible_use": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The function works as expected — the wave vanishes at the edges (Hann window effect)"
+        }
+      ],
+      "reason": "可见代码与提示、通用绘图记忆均吻合，返回却与源经验不同；无法判定记忆是否被读取或造成偏差。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should return the combined complex wave and a plot displaying both the real and imaginary parts of the combined wave."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ValueError: not enough values to unpack (expected 3, got 2)"
+        }
+      ],
+      "reason": "目标提示只说返回“wave 和一个 plot”，隐藏测试却解包 (wave, fig, ax) 三项，契约表述歧义直接导致解包失败。仅是题意/测试可能不一致的候选，不等于确认评分错误。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "    return wave, ax"
+        },
+        {
+          "section": "target_visible",
+          "quote": "The function works as expected — the wave vanishes at the edges (Hann window effect)"
+        }
+      ],
+      "reason": "提交函数只返回两项，自测也按两返回值解读，未核对返回元组长度即提交，因而离线评测失败；不能据此判断波形算法本身有误。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "return wave, fig, ax"
+        },
+        {
+          "section": "target_submission",
+          "quote": "    return wave, ax"
+        }
+      ],
+      "reason": "源题通过且返回三元组，目标可见代码在 Hann 窗与复数波绘图上重合却丢掉 figure，属可能的迁移/表述偏差候选；无反事实，不能证明记忆被使用或导致失败。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "TASK_EXECUTION：代理未核对返回元组长度，即使契约清晰也可能漏掉 figure 返回值",
+    "提示中“and a plot”在语法上也可解读为 figure+axes 两项，代理可能只是误读而非测试与题意冲突",
+    "注入的通用工作流未含返回签名，无法判断记忆本可帮助避免该错"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试实现与固定评分 mask 未提供，无法确认 (wave, fig, ax) 是否为唯一期望返回",
+    "目标提示是否被有意改写以模糊返回契约，无法由现有证据判断",
+    "无法确认代理是否实际读取并采纳了注入的记忆内容"
+  ],
+  "minimal_intervention": {
+    "change": "在目标提示中明确返回三元组 (combined_wave, fig, ax)",
+    "fixed": "保持其余提示、相同注入记忆、相同工具与预算",
+    "falsifier": "若在写明返回三元组的提示下代理仍只返回 (wave, ax)，则契约歧义不是主因"
+  },
+  "causal_claim": false
+}

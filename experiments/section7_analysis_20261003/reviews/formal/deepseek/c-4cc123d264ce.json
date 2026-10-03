@@ -1,0 +1,137 @@
+{
+  "case_id": "c-4cc123d264ce",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "[sai-00001] helpful=4 harmful=0"
+        }
+      ],
+      "reason": "Only counters/provenance are visible; no source task traces or outcomes are provided to verify legitimate source experience."
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "target_update_operations",
+          "quote": "When the goal contains a spatial qualifier (e.g., 'the door behind you'), first EXCLUDE all objects explicitly described as being in front of you"
+        }
+      ],
+      "reason": "No source comparison is given; the post-task ADD shows a spatial-qualifier rule was added later, but it cannot verify fidelity of target-time memories."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Before acting, check the available actions list first"
+        },
+        {
+          "section": "injection/6",
+          "quote": "When the goal is to open a door (not to go through it), prefer the plain 'toggle <door>' action over 'toggle and go through <door>' if available."
+        }
+      ],
+      "reason": "General check-actions and plain-toggle rules fit this target, but no injected rule captures the 'behind you' spatial qualifier; room-exploration advice is only partially applicable."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "I'll turn around to face it."
+        },
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"go to blue closed door 1\""
+        },
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"toggle\""
+        }
+      ],
+      "reason": "Visible behavior matches injected high-level go-to and plain-toggle advice, but this is only a behavioral proxy with no counterfactual."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The task is completed."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": false"
+        },
+        {
+          "section": "target_submission",
+          "quote": "\"submitted\": false"
+        }
+      ],
+      "reason": "Direct records conflict: environment observation declares task completion while offline evaluation marks incorrect and submission false. This supports a scoring/contract mismatch candidate, not proof that the action or memory was wrong."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"turn left\""
+        },
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"go to blue closed door 1\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"submitted\": false"
+        }
+      ],
+      "reason": "The visible trace shows a plausible 180-degree turn, high-level movement to the blue door, and toggle, but no submit call. It supports an execution/submission boundary candidate, while not showing which door was gold."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Before acting, check the available actions list first"
+        },
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"check available actions\""
+        },
+        {
+          "section": "injection/6",
+          "quote": "prefer the plain 'toggle <door>' action over 'toggle and go through <door>' if available"
+        }
+      ],
+      "reason": "Actions align with injected check-actions-first and plain-toggle rules, but without intervention this cannot establish memory caused the behavior or outcome."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "TASK_EXECUTION: the agent may have opened the wrong door or failed a required submission, so correct=false could reflect a real task failure.",
+    "USE_TRANSFER: injected rules may have shaped the observed turn/go/toggle sequence, but no counterfactual shows memory effect.",
+    "Source and retrieval packets are incomplete for source fidelity and full-library coverage, so the memory's actual contribution cannot be isolated."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether environmental 'The task is completed.' should be scored as correct.",
+    "Whether an explicit submit signal was required and/or exposed.",
+    "Which door is the gold target for 'open a door behind you'.",
+    "Whether any injected memory influenced the visible action sequence.",
+    "Source quality and fidelity cannot be verified from the provided D1 evidence."
+  ],
+  "minimal_intervention": {
+    "change": "Ensure terminal completion from the environment is accepted by the scorer, or expose/require the completion signal when the observation says the task is completed.",
+    "fixed": "Same BabyAI task, same injected memory set, same environment, and same action budget.",
+    "falsifier": "If rerunning with explicit submission still yields correct=false despite 'task completed', the EVAL_CONTRACT candidate is disconfirmed and a genuine execution/state mismatch becomes more likely."
+  },
+  "causal_claim": false
+}

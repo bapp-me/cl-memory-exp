@@ -1,0 +1,144 @@
+{
+  "case_id": "c-8721e322b8c7",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Create a Pandas DataFrame with random alphabets in each cell."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "源题通过其离线检查，是合法经验；但它只生成单个 DataFrame，对目标的多表拼接只覆盖子集。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "data = np.random.choice(alphabets, size=(rows, columns))"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "源轨迹的最终提交与源题契约一致并通过检查；就源内容本身看没有矛盾。缺失的多表拼接属于目标新增条件，不是源记录失真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "generates multiple Pandas DataFrames, each with random alphabets in each cell, and then concatenates them vertically"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Create a Pandas DataFrame with random alphabets in each cell."
+        }
+      ],
+      "reason": "源经验支持随机字母 DataFrame 和列名生成，但目标额外要求多表生成、垂直 concat 与空输入处理。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "data = np.random.choice(list(string.ascii_lowercase), size=(rows_per_df, columns_per_df))"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Determine the outlier indices in a 1D numpy array based on the Z score."
+        }
+      ],
+      "reason": "目标可见实现只体现题目自身的随机字母 DataFrame 与 concat 逻辑，注入 episode 内容与目标接口/算法不匹配；这仅是行为代理，不能证明记忆未被使用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Create a Pandas DataFrame with random alphabets in each cell."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "generates multiple Pandas DataFrames, each with random alphabets in each cell, and then concatenates them vertically"
+        }
+      ],
+      "reason": "存在合法的源经验且与目标部分重合，但源只覆盖单表生成；不能证明该源经验实际注入或影响目标。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_episode_byte_budget"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "检索候选先保留全部，再按字节预算淘汰较旧完整 episode；源 provenance 可观察但未注入，属于打包可见性，不是检索失败或遗忘。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "ValueError: No objects to concatenate"
+        },
+        {
+          "section": "target_submission",
+          "quote": "if not dfs:\n        return pd.DataFrame()"
+        }
+      ],
+      "reason": "可见执行显示 agent 先触发空表拼接错误，随后本地加空表返回并提交；说明成功来自任务迭代，而非可观察的记忆复用。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "concatenates them vertically to form a single large DataFrame"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "目标契约要求多表垂直拼接，离线检查判定正确；这只说明最终产物符合评分契约，不证明记忆有效。"
+    }
+  ],
+  "primary_hypothesis": "unknown",
+  "competing_explanations": [
+    "成功可能主要来自基础模型的独立编码能力，而非任何注入经验。",
+    "源经验与目标部分重合，但被标记为未注入，不能据此推断实际迁移。",
+    "已注入的 8 条 episode 与目标语义不匹配，可能只是无关上下文，也可能有不可见提示而未在目标可见动作中体现。",
+    "空表 edge case 的修复可由本地测试驱动解释，无需记忆参与。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "target_visible 未显示系统/用户消息中的记忆文本，无法直接确认 agent 实际看到的注入内容。",
+    "无 counterfactual，不能判断源经验或任一注入 episode 是否影响行为。",
+    "源 provenance 在 retrieval 候选中，但本包未直接把 source prompt 与某个 history_index/memory_id 对应的关系标全。",
+    "隐藏正确性仅离线可得，目标内反馈只说 Hidden correctness is not available。"
+  ],
+  "minimal_intervention": {
+    "change": "none；目标已正确；若需因果检验，只能另设受控注入实验",
+    "fixed": "保持相同目标题、工具、预算和候选库",
+    "falsifier": "若受控注入源经验或候选记忆后目标实现或正确率显著变化，则当前 unknown/无可见复用判断被反驳。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,132 @@
+{
+  "case_id": "c-8cd46b883209",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"tests_run\": 9"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Removes all special characters, punctuation marks, and spaces from the input string using a regular expression,"
+        }
+      ],
+      "reason": "源题离线评测 9 项测试通过且 correct=true，是合法源经验；但其只覆盖单字符串清理+哈希，不含列表聚合与最频哈希。"
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "injection_metadata 为空且 memory_policy=disabled，没有任何源内容进入目标上下文，无从判断保真度。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "cleaned_str = re.sub(r'[^a-zA-Z0-9]', '', input_str)"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "remove all special characters, punctuation marks, and spaces from each string, retaining only alphanumeric characters"
+        }
+      ],
+      "reason": "源的核心子步骤（ASCII 正则清理+SHA256）与目标同源，但目标新增逐元素列表处理、Counter 最频哈希和空列表返回契约。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        }
+      ],
+      "reason": "目标轨迹中没有任何记忆内容或注入文本出现，模型完全靠自写测试迭代，故无可见复用代理。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "hashes the cleaned string with SHA256"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"distance\": 32"
+        }
+      ],
+      "reason": "存在与目标高度重叠的合法源经验可作为语义候选；但源未被注入目标，不能据此推断已检索或已复用。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "AssertionError"
+        },
+        {
+          "section": "target_visible",
+          "quote": "All tests passed"
+        }
+      ],
+      "reason": "三次自建测试从大小写失败、Unicode 失败到最终全部通过，显示目标由自身推理与工具迭代完成，支持纯 D0 解释；这不能排除外部经验影响，只是本题无注入证据。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        }
+      ],
+      "reason": "可见证据只说明没有任何候选被打包呈现；不能区分是策略禁用、检索未命中还是预算淘汰。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"checks_executed\": 2"
+        },
+        {
+          "section": "target_visible",
+          "quote": "Hidden correctness is not available."
+        }
+      ],
+      "reason": "目标判定发生在离线评测通道（0 个 unittest 运行、2 项检查、correct=true），且在线隐藏正确性不可见；这约束了结果状态，不解释记忆作用。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "记忆策略被显式禁用（memory_policy=disabled），因此无法判断若注入源经验是否会改变行为",
+    "目标与源问题存在共享子步骤，可能只是模型自身对该类正则+哈希的既有知识，而非任何记忆复用"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "没有反事实注入，无法判断源经验对目标成功是否必要或充分",
+    "离线评分器（checks_executed=2, tests_run=0）与隐藏测试的一致性未在证据中说明",
+    "未提供的完整记忆库中是否存在其他候选，不能从空 injection_metadata 推断"
+  ],
+  "minimal_intervention": {
+    "change": "在保持目标 prompt、工具与预算不变的前提下，注入源题已验证的 ASCII 正则清理+SHA256 经验",
+    "fixed": "相同目标描述、相同 PYTHON/SUBMIT 工具链、相同上下文与调用预算",
+    "falsifier": "若注入后目标的迭代轨迹与最终提交解与未注入时完全一致，则反驳该源经验是可复用机会的假设"
+  },
+  "causal_claim": false
+}

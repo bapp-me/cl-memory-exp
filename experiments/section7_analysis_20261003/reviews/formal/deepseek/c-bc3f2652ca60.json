@@ -1,0 +1,133 @@
+{
+  "case_id": "c-bc3f2652ca60",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "FAILED (errors=1)"
+        }
+      ],
+      "reason": "源题是同族 pandas 加列任务，可评分但自身提交未通过（correct:false），因此它提供的“经验”本身带缺陷。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "source ID coverage is not content fidelity"
+        }
+      ],
+      "reason": "注入的两条内容都是关于 matplotlib 柱状图的其它任务，没有任何与本题（加列/异常语义）相关且来自本源的忠实内容；未展示的库内容不可推断。"
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "injection/1",
+          "quote": "bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "注入记忆描述的是绘图/取值计数场景，与本题的逐 DataFrame 加列并抛异常没有可迁移的语义要点。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "dataset[column_name] = np.random.uniform(min_value, max_value, size=len(dataset))"
+        }
+      ],
+      "reason": "可见提交里没有柱状图/绘图相关痕迹，无法看到对注入内容的适配；也没有反事实，不能判断记忆起了任何作用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "the function should raise an appropriate exception"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "except ValueError:"
+        }
+      ],
+      "reason": "题面只要求“合适的异常”，隐藏测试却具体断言 ValueError，提交的 TypeError 因此直接失败；这只说明契约欠定，不证明 reference 读法是唯一正确读法。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "TypeError: Dataset at index 1 is not a pandas DataFrame (got dict)."
+        },
+        {
+          "section": "target_submission",
+          "quote": "If any element of `datasets` is not a pandas DataFrame."
+        }
+      ],
+      "reason": "直接可见的失败点是提交自身在非 DataFrame 输入上抛 TypeError，未进入测试断言分支；这是可核查的执行结果，不能据此推断记忆影响。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "raw_source_episode_retained_in_method_state"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "source ID coverage is not content fidelity"
+        }
+      ],
+      "reason": "源题结束时写入为空（source_update_operations 的 operations 为空、source_auxiliary_visible 的 facts 为空），本源的专门经验未进入记忆；但“没写入”不等于“已存却没检索到”。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "Native Qdrant top-5 returned set; complete persisted point pool separately snapshotted"
+        },
+        {
+          "section": "injection/1",
+          "quote": "bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "top-2 候选（分数约 0.32/0.21）被注入且内容与题面主题偏离，属检索/选择层面的候选偏差；因为只看这一 top-5 视图，不能断言池中不存在更相关内容。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "TASK_EXECUTION 也可作为主因：提交选择 TypeError 而隐藏测试只捕获 ValueError，两者是同一现象的不同视角，现有证据不足以在“题意欠定”和“模型选错异常”之间做因果裁决。",
+    "注入内容完全不相关，因此没有任何证据支持 USE_TRANSFER（无论正迁移还是负迁移）；目标行为与记忆之间缺少可观察联系。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试的具体断言集合未知（只有离线运行结果），题面对异常类型的隐含期望无法从原 prompt 完整恢复。",
+    "两条注入记忆各自的真实来源与保真度未知，未展示的完整记忆库也不能据此推断为空。",
+    "源题与目标题的相似性是否曾通过其它未观察通道影响模型（例如共同训练倾向），无反事实无法判断。"
+  ],
+  "minimal_intervention": {
+    "change": "在保持其余条件不变下，把目标实现中针对非 DataFrame 输入抛出的异常类型改为与契约一致的 ValueError（或在题面中明确要求的异常类型）。",
+    "fixed": "相同的检索/注入集合、相同的回合与工具预算、相同的历史与运行环境。",
+    "falsifier": "若改为 ValueError 后离线评测仍不通过，或隐藏测试实际接受任意异常类型，则该候选解释被反驳。"
+  },
+  "causal_claim": false
+}

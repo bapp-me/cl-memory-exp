@@ -1,0 +1,151 @@
+{
+  "case_id": "c-72766e2ad465",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=18:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Generate a category distribution within a specified range and return as a DataFrame."
+        }
+      ],
+      "reason": "源题通过离线评测且可评分，是合法的单数据集分布生成经验；但目标要求多数据集合并，源覆盖范围有限。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "If a check fails, `raise ValueError` (or `TypeError` for wrong-type cases) with a descriptive message naming the offending parameter."
+        },
+        {
+          "section": "source_visible",
+          "quote": "distribution = {category: random.randint(low, high) for category in CATEGORIES}"
+        }
+      ],
+      "reason": "注入的随机生成与输入校验描述与源可见实现一致（randint 逐类别生成、对非法范围抛异常），与目标相关的必要内容未失真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should return a DataFrame that combines the category distributions for all datasets, with an additional column indicating the dataset name."
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Generate a category distribution within a specified range and return as a DataFrame."
+        }
+      ],
+      "reason": "源是单数据集两列 DataFrame，目标是多数据集合并并新增 'Dataset' 列，属同一族但需新增聚合与列结构。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "If a check fails, `raise ValueError` (or `TypeError` for wrong-type cases) with a descriptive message naming the offending parameter."
+        },
+        {
+          "section": "target_submission",
+          "quote": "raise ValueError(\"datasets must not be empty\")"
+        },
+        {
+          "section": "injection/7",
+          "quote": "exploratory PYTHON call(s) → full-function PYTHON verification → SUBMIT."
+        }
+      ],
+      "reason": "目标先做类型/空输入守卫，再 PYTHON 验证后 SUBMIT，行为形态与注入工作流一致，但仅为可见代理。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Generate a category distribution within a specified range and return as a DataFrame."
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": true"
+        }
+      ],
+      "reason": "源题与目标同属 pandas 随机分布 DataFrame 生成，来源可转移机会存在；来源覆盖不证明内容被读取或适用。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "If a check fails, `raise ValueError` (or `TypeError` for wrong-type cases) with a descriptive message naming the offending parameter."
+        },
+        {
+          "section": "target_submission",
+          "quote": "raise ValueError(\"datasets must not be empty\")"
+        },
+        {
+          "section": "injection/7",
+          "quote": "exploratory PYTHON call(s) → full-function PYTHON verification → SUBMIT."
+        }
+      ],
+      "reason": "目标的校验与验证-提交序列和注入工作流一致；无记忆关闭对照，不能证明是记忆导致该写法。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "**Goal:** Produce reproducible random data (numbers, samples, strings, choices) using a deterministic random seed."
+        },
+        {
+          "section": "injection/5",
+          "quote": "Convert raw lists/dicts/arrays into a pandas DataFrame with specified column names or indices"
+        }
+      ],
+      "reason": "注入内容为跨题抽象工作流条款，未包含多数据集逐集生成后合并的具体形态，目标需自行构造聚合逻辑；表示粒度不足不等于记忆无效。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The implementation works. Each dataset's category counts are drawn uniformly from its specified range, and results are combined into a single DataFrame"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"checks_executed\": 8"
+        }
+      ],
+      "reason": "成功可由目标自身的一轮实现加自测解释，评测 8 项检查通过；这不能反推记忆被有效复用。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "USE_TRANSFER：可见校验与先验证后提交的顺序贴合注入工作流，但缺记忆关闭反事实，无法与模型既有习惯区分。",
+    "注入条目是跨多题累积的通用工作流摘要，目标成功也可能完全来自模型自身能力。",
+    "证据只显示注入与检索候选清单，无法确认模型实际读取或采信了这些片段。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无受控干预，无法判断记忆对成功是否有因果贡献。",
+    "未展示未选中的完整记忆库，不能由本包推断缺失或不相关条目是否存在。",
+    "token_count 为 null，无法量化注入对上下文/开销的实际影响。",
+    "模型内部推理被移除，只能依据可见行为代理判断是否复用。"
+  ],
+  "minimal_intervention": {
+    "change": "在相同目标、相同工具与预算下关闭记忆注入（或换成无关记忆）重跑，比较是否仍写出类型/空输入守卫并保持先 PYTHON 验证后 SUBMIT。",
+    "fixed": "保持相同 prompt、工具集、随机性与既有评分 mask 不变。",
+    "falsifier": "若关闭记忆后仍出现同样的校验与验证-提交顺序并同样通过评测，则可见迁移证据不成立。"
+  },
+  "causal_claim": false
+}

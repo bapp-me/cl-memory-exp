@@ -1,0 +1,137 @@
+{
+  "case_id": "c-a8ecad1fc4c4",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "PREFICES = ['EMP$$', 'MAN$$', 'DEV$$', 'HR$$']"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "FAILED (failures=4)"
+        }
+      ],
+      "reason": "源是与目标同域的合法可评分题目，但其自身最终解也判错（4 个失败），因此只提供有局限的工作流经验。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Seed the random number generator for reproducibility, using either `random.seed(<seed>)`"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "the values are lists of"
+        }
+      ],
+      "reason": "注入内容忠实保留了'种子随机生成'这类流程，但未携带源任务与目标相关的关键表示：每个部门的值为等级列表。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Generate the random data by invoking the appropriate sampling primitive with abstract parameters"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ValueError: Invalid employee count for department 'EMP$$': MAN$$"
+        }
+      ],
+      "reason": "种子随机生成部分适用于目标，但记忆未覆盖 list[dict] 输入与等级列表输出的契约，故只能部分适用。"
+    },
+    "visible_use": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "a, b = sorted(random.randint(0, total) for _ in range(2))"
+        }
+      ],
+      "reason": "可见行为未沿用记忆建议的按人次 random.choice，且无对照，无法判定是否或在何处复用了注入记忆。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ValueError: Invalid employee count for department 'EMP$$': MAN$$"
+        },
+        {
+          "section": "target_submission",
+          "quote": "# Normalize the input into a list of (code, total) pairs"
+        }
+      ],
+      "reason": "目标把 department_data_list 当作 (code,total) 对，遇到 list[dict] 时把第二个 dict 的键当作 total 而抛错；这解释失败，但不证明记忆是原因。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Seed the random number generator for reproducibility, using either `random.seed(<seed>)`"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "the values are lists of"
+        }
+      ],
+      "reason": "注入的是抽象'种子随机'工作流，未携带源任务的具体表示（每部门为等级列表），表示层不足是候选，不能证明补全表示即可修复。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of department codes and their respective employee counts"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def new_solution(department_data_list):"
+        }
+      ],
+      "reason": "目标 prompt 未明确输入为 list[dict]、输出值为等级列表，隐藏测试与参考解却如此要求；契约欠明确只作候选标记，非确认矛盾。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "`random.choice(<pool>)`"
+        },
+        {
+          "section": "target_submission",
+          "quote": "a, b = sorted(random.randint(0, total) for _ in range(2))"
+        }
+      ],
+      "reason": "可见实现未采用记忆推荐的 random.choice 采样，也无源表示被复用的痕迹；属可见代理，不能据此断言记忆有害或无益。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "注入记忆均为抽象工作流，未覆盖本题输入/输出契约，即使无记忆也可能同样失败（无对照）。",
+    "目标 prompt 本身欠明确，失败可能主要源于题目契约而非记忆内容。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无对照，无法确定注入记忆是否影响成败。",
+    "未展示未选中记忆库全量，不能推断相关内容缺失。",
+    "无法确认源任务'值为等级列表'的表示是否曾完整写入记忆。"
+  ],
+  "minimal_intervention": {
+    "change": "实现前先按题面契约（list[dict] → 每部门等级列表）构造输入做一次验证，而非假设 (code,count) 对。",
+    "fixed": "保持相同的历史、注入记忆、环境与预算。",
+    "falsifier": "若在相同记忆下按正确契约实现仍失败，或记忆已含等级列表表示而目标仍忽略，则反驳该候选。"
+  },
+  "causal_claim": false
+}

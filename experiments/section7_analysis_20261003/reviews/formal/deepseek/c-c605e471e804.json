@@ -1,0 +1,133 @@
+{
+  "case_id": "c-c605e471e804",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "No source-task traces or outcomes are provided, only post-filter memory statements and helpful counters; legal-source pass/fail cannot be verified."
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "No original source episodes are available to verify whether the injected statements faithfully reproduce their sources."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "When a high-level 'go to <object>' action is available, always prefer it over manual turn/move sequences."
+        },
+        {
+          "section": "injection/4",
+          "quote": "When the goal object is not visible and you must explore, choose the most promising door to traverse: prefer closed/unlocked doors over locked doors"
+        },
+        {
+          "section": "target_update_operations",
+          "quote": "even in this direct-action case, not just during exploration."
+        }
+      ],
+      "reason": "Direct-action guidance is applicable, but the unlocked-preference memory is explicitly scoped to 'not visible ... explore', whereas the target had two visible green doors; the post-task ADD admits this missing direct tie-break case."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Per my strategy, I'll go to the green closed door (unlocked is preferable to locked)."
+        },
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"check available actions\""
+        },
+        {
+          "section": "injection/2",
+          "quote": "Before acting, check the available actions list first"
+        }
+      ],
+      "reason": "The visible trace checks available actions and then chooses the unlocked green door, matching injected guidance; this is a behavioral proxy, not proof of memory causation."
+    }
+  },
+  "labels": [
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"observable_candidates\": ["
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"memory_id\": \"sai-00001\""
+        }
+      ],
+      "reason": "Six candidates were surfaced in retrieval, so semantic memories were available as candidates; scores are null and retrieval ranking alone does not prove use or correctness."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"dropped\": []"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 6"
+        }
+      ],
+      "reason": "All selected candidates were injected and none were dropped, so visible packing loss is not an explanation here; this says nothing about whether the content influenced behavior."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Per my strategy, I'll go to the green closed door (unlocked is preferable to locked)."
+        },
+        {
+          "section": "injection/4",
+          "quote": "prefer closed/unlocked doors over locked doors"
+        }
+      ],
+      "reason": "The visible tie-break aligns with the injected unlocked-preference memory; no counterfactual or memory-disabled run rules out intrinsic model competence or observation-driven choice."
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_update_operations",
+          "quote": "\"type\": \"ADD\""
+        },
+        {
+          "section": "target_update_operations",
+          "quote": "\"stream.task-003.attempt-1\""
+        }
+      ],
+      "reason": "A new generalized direct-action tie-break rule was admitted after the target, sourced from this attempt; as a post-target update it cannot explain the target's prior visible behavior."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The agent may have succeeded from its own BabyAI competence or directly from the observation, independent of the injected memories; no memory-disabled control is provided.",
+    "The unlocked-preference memory was scoped to exploration when the goal is not visible, so applying it to a visible two-door tie may be an adaptation or a post-hoc rationalization rather than retrieval of an applicable rule.",
+    "Both green doors satisfy the goal 'go to a green door', so choosing the closed one may not have been causally necessary even if it matched the memory."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "No raw source tasks or memory source traces are included, so source quality and memory fidelity cannot be verified.",
+    "No retrieval scores or token counts are available, so ranking strength and budget effects cannot be measured.",
+    "It is unknown whether selecting the green locked door would also have completed the task.",
+    "The full memory library is not included, so absence of other relevant or conflicting memories cannot be inferred."
+  ],
+  "minimal_intervention": {
+    "change": "Run the same target with the memory block removed, or with sai-00006 removed while keeping the direct-action memories.",
+    "fixed": "Keep the same prompt, initial observation, tool schema, step budget, decoding settings, and environment seed.",
+    "falsifier": "If the memory-disabled run still checks available actions and chooses the green closed door in two actions, the visible adaptation is not attributable to the injected memory; if it instead chooses the locked door, the unlocked-preference memory is supported as behaviorally relevant."
+  },
+  "causal_claim": false
+}

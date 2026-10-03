@@ -1,0 +1,141 @@
+{
+  "case_id": "c-19bf350810c2",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "Ran 5 tests in 0.005s"
+        },
+        {
+          "section": "source_visible",
+          "quote": "std_score = student_scores.std()"
+        }
+      ],
+      "reason": "源 episode 5/5 通过，且给出同域 pandas 统计写法（样本标准差 .std()）；但它是“单学生、返回 DataFrame”的函数，窄于目标“对全体学生聚合并定义 ValueError”的契约，故仅 pass_with_limits。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "目标 episode 未携带任何记忆内容（策略关闭、注入 0 字节、源状态哈希前后一致），因此不存在与目标相关的记忆陈述可供判断保真度。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "student_scores = df[df['Student'] == student]['Score']"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "for multiple students"
+        }
+      ],
+      "reason": "源经验覆盖同一 pandas 统计与样本标准差约定，但目标是全学生聚合、输入形式与错误语义均有新增/改变条件，只有部分适用。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "可见轨迹里是候选自写的 groupby + np.std 方案，且无任何注入或源 provenance 出现，观察不到对源经验的复用或误用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "std = float(np.std(scores))"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "Values do not match for key 1: 4.242640687119285 != 5.196152422706632"
+        }
+      ],
+      "reason": "提交代码用 np.std（总体标准差 ddof=0），隐藏测试期望 5.196152422706632（样本标准差），失败发生在自身可见执行与数值约定上；这只能定位失败点，不能证明任何记忆作用。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "Ran 5 tests in 0.005s"
+        },
+        {
+          "section": "source_visible",
+          "quote": "student_scores = df[df['Student'] == student]['Score']"
+        }
+      ],
+      "reason": "存在一个正确且同域的源经验（含 pandas 样本标准差用法），构成可借鉴机会；但源覆盖不等于保真或适用，pair 元数据只说明来源存在，不说明已注入或已复用。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of dictionaries containing test results for multiple students"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "calculate_stats_for_students({'Student': [1, 2, 1, 1], 'Score': [10, 1, 1, 1]})"
+        }
+      ],
+      "reason": "题意写“list of dictionaries”，离线测试改传“列字典”，且期望单样本得 NaN 而非 ValueError；只标为契约/测试可能不一致的候选，未证明评分错误，也不是本题失败已证成因。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "std_score = student_scores.std()"
+        },
+        {
+          "section": "target_visible",
+          "quote": "std = float(np.std(scores))"
+        }
+      ],
+      "reason": "源用 pandas 样本标准差、目标改用 numpy 总体标准差，是内容层“本可复用却背离”的候选信号；但零注入、无可见复用痕迹，不能据此断言负迁移或遗忘。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "EVAL_CONTRACT：隐藏测试传列字典并期望 ddof=1 及单样本 NaN，而题意只规定“无成绩抛 ValueError”，np.std 可能是对欠定义规格的合理读法。",
+    "零注入且未保留源 episode，源-目标在标准差约定上的差异可能纯属巧合，与任何记忆机制无关；未展示的未选记忆库也无法评估检索行为。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏评分器是否与题意（list of dictionaries vs 列字典）完全一致，题面未说明 ddof 取值。",
+    "是否存在由源 episode 派生并可达的记忆记录；source_provenance_in_observable_retrieval_candidates 为 null。",
+    "若改用 pandas 样本标准差能否通过全部隐藏用例（含单样本 NaN 语义），无反事实运行证据。"
+  ],
+  "minimal_intervention": {
+    "change": "把标准差从 np.std（ddof=0）改为样本标准差（pandas Series .std()/ddof=1），单样本返回 NaN 而非抛错。",
+    "fixed": "保持相同题面、相同隐藏测试集、相同零记忆策略与无注入上下文。",
+    "falsifier": "若仅做该改动后仍因 key 1 或 key 2 的 NaN/ValueError 语义失败，则“标准差约定是唯一关键改动”的候选被反驳。"
+  },
+  "causal_claim": false
+}

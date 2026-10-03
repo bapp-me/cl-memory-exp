@@ -1,0 +1,159 @@
+{
+  "case_id": "c-59ddcbb36dff",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "leap_count = int(np.sum((LEAP_SECONDS > parsed.year) & (LEAP_SECONDS <= now.year)))"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "Source episode passed its own tests, but its single-date leap-count rule is only partially aligned with the target oracle's per-date sum."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "No memory content was injected or retained for this target, so there is no memory statement whose fidelity can be assessed."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "def total_elapsed_seconds(date_list):"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(date_str):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Return the sum of all these elapsed seconds."
+        }
+      ],
+      "reason": "The source single-date task overlaps on parsing and leap seconds, but the target needs list aggregation and the hidden oracle applies per-date integer truncation and a >= boundary."
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "leap_count = int(np.sum(LEAP_SECONDS > dt.year))"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(total_elapsed_seconds(['1972-01-01', '2000-01-01', '2020-01-01']) == sum([task_func('1972-01-01'), task_func('2000-01-01'), task_func('2020-01-01')]))"
+        }
+      ],
+      "reason": "Target visibly reuses strict-greater leap counting and returns a float total, and those choices fail the hidden equality assertion; this is a behavioral proxy, not causal proof."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "return total"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(total_elapsed_seconds(['1972-01-01', '2000-01-01', '2020-01-01']) == sum([task_func('1972-01-01'), task_func('2000-01-01'), task_func('2020-01-01')]))"
+        }
+      ],
+      "reason": "The submitted function returns a float total with a strict > leap count and fails the hidden equality check; this only proves the target artifact does not match the oracle."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Return the sum of all these elapsed seconds."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "total_seconds += task_func(date_str)"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "leap_seconds = np.sum(LEAP_SECONDS >= given_date.year)"
+        }
+      ],
+      "reason": "The prompt does not state per-date integer truncation or the starting-year leap-second boundary, while the hidden oracle sums int-returning task_func calls using >=; this is a possible contract mismatch candidate, not an established题意 error."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "leap_count = int(np.sum(LEAP_SECONDS > dt.year))"
+        },
+        {
+          "section": "source_visible",
+          "quote": "leap_count = int(np.sum((LEAP_SECONDS > parsed.year) & (LEAP_SECONDS <= now.year)))"
+        }
+      ],
+      "reason": "The target code resembles the source leap-count pattern, but no injection is recorded, so this is only visible similarity and cannot prove transfer or negative transfer."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        }
+      ],
+      "reason": "A correct source episode exists, but no source provenance was injected or retained for the target, so target failure cannot be attributed to memory availability."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "EVAL_CONTRACT: the hidden oracle expects integer per-date task_func sums with a >= starting-year boundary, while the target prompt only says to sum elapsed seconds, so the contract may be underspecified.",
+    "No memory was injected (memory_policy disabled, injected_count 0), so visible similarity to the source may be model prior rather than memory transfer.",
+    "The assertion could also fail because the target returns a float total and calls datetime.now() once rather than summing int-truncated per-date task_func calls."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the source hidden tests would have rejected the same strict > boundary; source correctness only shows its visible submission passed its own tests.",
+    "Whether the target hidden tests require integer per-date truncation; only the single assertion line is available.",
+    "Actual retrieval, selected memory content, and post-task updates are unavailable because memory is disabled and injection metadata is empty.",
+    "Whether additional target hidden tests would fail for timezone handling or other boundary dates."
+  ],
+  "minimal_intervention": {
+    "change": "Replace the target's strict > leap count and float total with per-date source-style task_func semantics: int((now_dt - dt).total_seconds()) + int(np.sum(LEAP_SECONDS >= dt.year)), then sum those integers.",
+    "fixed": "Same date-list input format, same current-time environment, same hidden oracle, same source episode history, and same memory policy.",
+    "falsifier": "If the revised per-date int + >= submission still fails the same assertion, or hidden tests show the > boundary is expected, the TASK_EXECUTION candidate is insufficient."
+  },
+  "causal_claim": false
+}

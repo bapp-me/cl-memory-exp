@@ -1,0 +1,136 @@
+{
+  "case_id": "c-c9a3bf401c66",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=11:True:5"
+        }
+      ],
+      "reason": "Source episode passed its own tests (11 checks) and submitted a coherent solution. Its limits are that the source implements source-specific task_func(goals, penalties), not the target's league-wide simulate_league(num_matches) contract."
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "Source provenance is retained and observable, but not injected into the target; no target-context source text can be compared with the source episode, so fidelity is unassessable."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "def simulate_league(num_matches, rng_seed=None):"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(goals, penalties, rng_seed=None):"
+        }
+      ],
+      "reason": "Source shares football/random/DataFrame/LinearRegression elements, but the target changes the interface and requires aggregating multiple matches with two teams per match, so only part of the source pattern applies."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "stats[home]['goals'] += home_goals"
+        },
+        {
+          "section": "source_visible",
+          "quote": "Version 1 matches the example exactly"
+        }
+      ],
+      "reason": "Target submission implements its own per-match two-team accumulation and never calls source task_func or reuses source example values; visible behavior shows no source-memory reuse."
+    }
+  },
+  "labels": [
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_episode_byte_budget\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "Source provenance was in observable retrieval candidates but absent from injected_ids; oldest complete episodes were dropped by byte budget. This is packing/visibility loss, not retrieval failure, and does not prove source content was necessary."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(goals, penalties, rng_seed=None):"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=11:True:5"
+        }
+      ],
+      "reason": "A legal, passing source episode exists in history for a closely related task. Its presence alone does not show it was available to or affected the target."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "match_data, _ = task_func(goals, penalties, rng_seed)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "stats[home]['goals'] += home_goals"
+        }
+      ],
+      "reason": "Reference solution aggregates repeated task_func outputs, while submitted target directly increments two randomly chosen teams per match; hidden evaluation still passes with 8 checks, suggesting value-level semantics may not be enforced. This is a candidate contract looseness only."
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 6"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_text_utf8_bytes\": 42043"
+        }
+      ],
+      "reason": "Six unrelated episodes (~42KB) were injected while the target solved the task with one PYTHON call. This describes observed overhead only; it cannot show harm or absence of benefit."
+    }
+  ],
+  "primary_hypothesis": "PACKING_VISIBILITY",
+  "competing_explanations": [
+    "Target success may be entirely due to the provided starter code and model coding ability, not memory.",
+    "The relevant source may never have been intended as usable memory for this modified contract.",
+    "Hidden checks appear structural; different simulation semantics may be accepted without indicating memory transfer."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the source episode was among the dropped oldest episodes cannot be mapped from the supplied IDs alone.",
+    "Whether any source content was available to the target agent through an unshown channel.",
+    "Whether the target implementation would satisfy exact aggregation semantics if hidden tests compared values.",
+    "Whether the six injected unrelated episodes had any behavioral effect.",
+    "Token counts are unavailable; only byte counts and partial usage are given."
+  ],
+  "minimal_intervention": {
+    "change": "Preserve the relevant source episode/provenance in the injected context instead of dropping it by byte budget, while keeping the same target prompt and budget otherwise.",
+    "fixed": "Same source history, target task, memory policy, packing budget, and evaluation checks.",
+    "falsifier": "If injecting the source episode leaves target behavior and evaluation unchanged, or if source content was already in context, the packing-visibility explanation is not supported."
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,162 @@
+{
+  "case_id": "c-de5c81cf0017",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=18:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(value_range=(0, 100)):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "The function should return a DataFrame that combines the category distributions for all datasets"
+        }
+      ],
+      "reason": "Source passed its tests and shares the pandas category-distribution pattern, but the target adds multi-dataset combination, a Dataset column, and broader range handling."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "source ID coverage is not content fidelity; entire unselected library is not presented"
+        }
+      ],
+      "reason": "Injected D1 snippets omit the source's category-distribution logic and source provenance is not retained, so no target-relevant faithful source content is observable in the injection."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "The generic pandas/DataFrame mention weakly overlaps the target, but matplotlib, bar charts, and value_counts do not address category generation or multi-dataset reporting."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "counts = [random.choice(rng) for _ in CATEGORIES]"
+        },
+        {
+          "section": "target_submission",
+          "quote": "counts = [random.randint(low, high) for _ in CATEGORIES]"
+        }
+      ],
+      "reason": "The visible solution directly implements category count generation and shows no matplotlib, bar-chart, or value_counts trace that would indicate behavioral use of the injected snippets."
+    }
+  },
+  "labels": [
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(value_range=(0, 100)):"
+        }
+      ],
+      "reason": "The observable memory surface is coarse semantic text about other coding tasks rather than a direct source record of the category-distribution function; this cannot prove no D0 record exists elsewhere or that these snippets affected behavior."
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        },
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "\"role\": \"001-writer\","
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        }
+      ],
+      "reason": "No source-update operations or writer facts are visible and the raw source episode was not retained, so source-specific admission is not observed; this is not proof that no related memory exists in the full unseen library."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Generate a category distribution within a specified range and return as a DataFrame."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "The function should return a DataFrame that combines the category distributions for all datasets"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=18:True:5"
+        }
+      ],
+      "reason": "A legitimate passing source task exists and shares the category-distribution DataFrame pattern, but the target changes scope by requiring multiple datasets and a Dataset column, so the source opportunity is only partial."
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"selected_before_packing\": ["
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "\"score\": 0.44288832314249593"
+        }
+      ],
+      "reason": "Two D1 candidates were selected and injected with no dropped items, but retrieval and injection alone do not establish utility, transfer, or causal impact."
+    }
+  ],
+  "primary_hypothesis": "REPRESENTATION",
+  "competing_explanations": [
+    "The target may have succeeded from the prompt and task scaffolding alone, with the injected snippets being non-contributing.",
+    "The injected snippets may come from other tasks rather than the paired source; source provenance is not retained, and the full unselected library is not presented.",
+    "Without a controlled no-memory or direct-record intervention, the success cannot be attributed to memory use or disuse."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether either injected memory ID originates from the paired source task or from unrelated tasks.",
+    "Whether a direct D0 record of the source existed but was not selected or was not presented in the packet.",
+    "Whether the solver internally read the injected text even though no visible trace appears in the code."
+  ],
+  "minimal_intervention": {
+    "change": "Replace the two generic D1 snippets with a provenance-linked direct record of the paired source category-distribution implementation.",
+    "fixed": "Keep the same target prompt, solver, retrieval budget and slot count, and hidden checks.",
+    "falsifier": "If target behavior is unchanged with the original generic snippets or with no memory, representation is not necessary for this success."
+  },
+  "causal_claim": false
+}

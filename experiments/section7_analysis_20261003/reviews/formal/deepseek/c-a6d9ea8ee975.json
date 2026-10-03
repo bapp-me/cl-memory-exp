@@ -1,0 +1,138 @@
+{
+  "case_id": "c-a6d9ea8ee975",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=12:True:4"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "using 'date' (converted to ordinal) as the predictor for 'value'"
+        }
+      ],
+      "reason": "源题在其自身4项测试上通过且可评分；但其契约是单 DataFrame、ordinal 特征、标题'Value vs Date...'，与目标的多数据集聚合/标题要求不同，故仅带限通过。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "与目标相关的源内容未被注入（仅存于可观察候选与保留状态），注入的5条均为无关任务，故无法对目标相关记忆的保真度作判断。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "using 'date' (converted to ordinal) as the predictor for 'value'"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "perform linear regression on each dataset to predict 'value' based on 'date'"
+        }
+      ],
+      "reason": "同属日期-线性回归+绘图+ValueError 校验族，但目标是多数据集聚合、返回三元组且标题字符串不同，旧经验至多部分适用。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "ax.set_title('Overall Trend of Aggregated Predictions')"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "目标提交未见源标题/ordinal 等源特征，且源未注入；行为代理上无可归因于相关记忆的复用痕迹。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The final plot should show the overall trend of the aggregated predictions."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "Plot title should be 'Aggregated Predictions vs Date'."
+        }
+      ],
+      "reason": "目标题面只要求展示总体趋势，未给出标题字面；隐藏断言却要求精确标题，属题意/测试可能不一致的候选，需人工确认，不能据此断定模型违反明示契约。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "ax.set_title('Overall Trend of Aggregated Predictions')"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "Plot title should be 'Aggregated Predictions vs Date'."
+        }
+      ],
+      "reason": "提交实现自测通过（回归、异常、空输入均工作），失败点是标题字面不匹配这一单点执行差异；不证明回归或聚合逻辑错误。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_episode_byte_budget"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 5"
+        }
+      ],
+      "reason": "66个候选中有61条以字节预算为由在打包阶段被丢弃，仅注入最近5条且与目标无关；源题相对距离较远，属打包/可见性环节而非检索排序失败。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Performs linear regression on a DataFrame using 'date' (converted to ordinal) as the predictor for 'value'"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true"
+        }
+      ],
+      "reason": "存在一条通过且任务族相近的源经验，并出现在可观察检索候选中，但未被注入，机会未落地；这不证明该经验若注入必能避免本次失败。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "失败可完全由 TASK_EXECUTION 解释：模型自选了标题字符串，与隐藏断言期望值不同，与记忆无关。",
+    "源经验未被注入（source_provenance_injected=false），因此本次失败不能归因于记忆检索或复用问题。",
+    "目标题面未规定标题，隐藏测试的标题硬约束可能是题意/测试不一致，需人工审定后再定责。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试除标题外是否还有其他未在题面提出的断言，无法从现有证据得知。",
+    "源题内容未被注入，无法通过反事实验证其是否可避免本次失败。",
+    "注入的5条无关经验是否对目标产生任何影响（含干扰）缺少证据。"
+  ],
+  "minimal_intervention": {
+    "change": "将绘图标题改为隐藏测试要求的 'Aggregated Predictions vs Date'（或在题面中显式给出该标题要求）。",
+    "fixed": "保持相同的目标题面、数据集、返回结构与注入历史/字节预算不变。",
+    "falsifier": "若改为该标题后仍因其他隐藏断言失败，或题面被修订后模型仍无法通过，则标题契约假设不充分。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,127 @@
+{
+  "case_id": "c-5459e6217899",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "fit PCA on the ORIGINAL 2D input array"
+        }
+      ],
+      "reason": "Source episode is a legal, scored pass, so it yields usable experience; however its post-hoc lesson prefers fitting PCA on the original array while the target's graded reference fits row-sum/single-feature, so the source's normative claim is only partly supported for this target."
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/27",
+          "quote": "asserting explained_variance_ratio_ == 1.0 when you fit PCA on a single feature"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "fit PCA on the ORIGINAL 2D input array"
+        }
+      ],
+      "reason": "The injected circular-verification rule (err-00061) faithfully generalizes the source episode, but the source's companion claim that the single-feature/row-sum reading is the degenerate wrong one conflicts with the target reference, which itself collapses to one feature."
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "perform Principal Component Analysis (PCA) on the sum of rows of each array"
+        },
+        {
+          "section": "injection/27",
+          "quote": "an assert whose expected value is mathematically forced by the implementation choice under test"
+        }
+      ],
+      "reason": "Same PCA/row-sum family, and the injected rule's exact scenario recurs: the target fits a single feature and asserts the forced EVR value."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "assert list(fig.axes[0].get_lines()[0].get_ydata()) == [1.0]"
+        },
+        {
+          "section": "injection/27",
+          "quote": "Do not use circular verification checks that are guaranteed to pass under your own interpretation"
+        }
+      ],
+      "reason": "The only trace matching the most on-point injected memory is the agent performing its anti-pattern (asserting the forced EVR == [1.0]); no visible adaptation of that guidance appears, but absence of a counterfactual prevents any causal reading."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "assert len(fig.axes) == 2, 'Number of subplots should be equal to the number of arrays'"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"checks_executed\": 2"
+        }
+      ],
+      "reason": "The graded oracle inspects only subplot count/titles, so a constant-EVR single-feature solution passes; this explains why success cannot evidence memory benefit and does not prove the memory was useless."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/27",
+          "quote": "asserting explained_variance_ratio_ == 1.0 when you fit PCA on a single feature"
+        },
+        {
+          "section": "target_visible",
+          "quote": "assert list(fig.axes[0].get_lines()[0].get_ydata()) == [1.0]"
+        }
+      ],
+      "reason": "The injected rule's literal example is instantiated in the target's verification, suggesting the guidance did not transfer into behavior; it cannot establish that the memory caused or failed to cause the outcome."
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "data = np.sum(arr, axis=0).reshape(-1, 1)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "lines y-data: [[1.0]]"
+        }
+      ],
+      "reason": "Collapsing each 2D array to one feature forces explained_variance_ratio_ to [1.0] for every input; the provided reference performs the same collapse, so this representation choice is not by itself a memory failure."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "The agent may have solved the structure-only contract with no memory influence at all; success without a counterfactual cannot show memory benefit or harm.",
+    "err-00061 may have been injected but simply not attended to, so its non-application cannot be attributed to the memory system.",
+    "The degenerate single-feature EVR may be intended by the task, since the target's own reference also fits on row sums."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the agent actually read the injected err-00061 or any other injected bullet.",
+    "Whether hidden tests beyond subplot count/title exist and would discriminate the axis=0 vs axis=1 sum or line vs bar plot.",
+    "Why the source-derived content other than err-00061 is absent from injected_ids/candidates (sai-00060 not observable), and whether that omission mattered."
+  ],
+  "minimal_intervention": {
+    "change": "Add a data-dependent oracle (e.g., a full-rank array where the intended reading gives EVR < 1.0, or an explicit intended-representation clause in the spec) so the degenerate single-feature collapse is discriminated.",
+    "fixed": "Same injected memory set, retrieval list and byte budget for the target run.",
+    "falsifier": "If the strengthened oracle also rejects the provided reference_solution, the inconsistency lies in the task/eval contract rather than in memory use."
+  },
+  "causal_claim": false
+}

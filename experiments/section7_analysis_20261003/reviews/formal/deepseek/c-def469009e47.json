@@ -1,0 +1,119 @@
+{
+  "case_id": "c-def469009e47",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "All checks pass, including the exact docstring example. Submitting:"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"scorable\": true"
+        }
+      ],
+      "reason": "源题通过并做了沙箱验证，属合法源经验；但源的核心洞见是随机计数语义，边界有限。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "original values NOT present in the predefined list must be excluded from the reversed dict"
+        }
+      ],
+      "reason": "源衍生的反转过滤洞见与源可见的 'Pangolin' 行为一致，忠实于来源；但该内容并未注入目标。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/11",
+          "quote": "Canonical pattern for 'frequency of combinations of elements in each row' tasks:"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Canonical pattern for 'PCA explained-variance-ratio plot' tasks"
+        }
+      ],
+      "reason": "注入集含少量 Counter/频率类条目，但多数是绘图、PCA、ddof 等无关任务族，仅部分适用。"
+    },
+    "visible_use": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The implementation works correctly across all cases:"
+        }
+      ],
+      "reason": "作答轨迹未点名任何记忆，无法把行为归因于具体记忆或复用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "reverse each dictionary and count the occurrences of each predefined animal name across all groups"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "reverse the keys and values in a given dictionary and count the occurrences of each"
+        }
+      ],
+      "reason": "目标与源同属 dict 反转+计数家族，存在合法源经验；同族只说明机会，不证明内容已转移。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_block_byte_budget\""
+        }
+      ],
+      "reason": "源衍生记忆在候选中被选中后按字节预算淘汰，故未注入；这属打包可见性，不是检索失败或未写入。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "assert set(total_animal_counts.keys()) == set(ANIMALS)"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "可见参考测试要求键集等于 ANIMALS，而离线评测判成功；仅标为候选不一致，不据此重打分。"
+    }
+  ],
+  "primary_hypothesis": "OPPORTUNITY_SOURCE",
+  "competing_explanations": [
+    "目标成功可能完全来自模型自身推理，与任何记忆无关（无对照）。",
+    "offline_target_reference 的测试可能对应源题而非目标隐藏测试，不一致可能是伪象。",
+    "若隐藏测试确实要求键集=ANIMALS，则 offline correct 可能为评分口径假象。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试是否要求 Counter 含全部 ANIMALS 键。",
+    "参考解/参考测试与目标离线评测是否同一口径。",
+    "是否存在任何注入记忆实际影响了作答。"
+  ],
+  "minimal_intervention": {
+    "change": "打包时保留源衍生记忆（或在预算内显式提升其优先级），以观察是否被复用。",
+    "fixed": "相同目标 prompt、同一模型、相同环境与记忆预算。",
+    "falsifier": "若注入这些记忆后行为与结果不变，则源→目标经验转移未被证实。"
+  },
+  "causal_claim": false
+}

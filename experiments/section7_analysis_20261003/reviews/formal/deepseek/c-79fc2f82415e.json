@@ -1,0 +1,150 @@
+{
+  "case_id": "c-79fc2f82415e",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "the model never ran the VERBATIM submitted code"
+        }
+      ],
+      "reason": "源题可评分且正确，但其验证用的是 np.mean/np.var 代理而非逐字提交，并靠打印 np.where 结果目测，因此其派生更新带有未经验证的推断。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/24",
+          "quote": "The safe submission converts indices to Python ints before returning"
+        },
+        {
+          "section": "source_visible",
+          "quote": "print(np.where(np.abs(z) > 2)[0])"
+        }
+      ],
+      "reason": "ddof=0/严格>等数值内容与源一致；但 err-00096 关于 NumPy 2.x 下 np.int64 repr 的断言在源中从未被实际观测（源只打印 np.where 输出），属可辩护假设而非已证事实。"
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "identify the outliers in each group based on the Z score"
+        },
+        {
+          "section": "injection/2",
+          "quote": "Remember np.std defaults to ddof=0"
+        }
+      ],
+      "reason": "目标所需的总体标准差 z 分数、严格比较、std==0 守卫与索引转 Python int 的指导完全对得上；目标只新增了按组输出字典的外层契约。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "outlier_indices = [int(idx) for idx in np.where(np.abs(z_scores) > threshold)[0]]"
+        },
+        {
+          "section": "injection/24",
+          "quote": "The safe submission converts indices to Python ints before returning"
+        }
+      ],
+      "reason": "提交代码把索引规范为 Python int 并注明使用总体标准差，与注入内容方向一致且无冲突；这只是行为代理，不能证明因果。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"memory_id\": \"sai-00095\""
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_block_byte_budget\""
+        }
+      ],
+      "reason": "源题最贴题的规范模式记忆被检索选中后因字节预算被丢弃，未进入注入集；这只说明可见/打包情况，不证明它一定会改变行为。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "outlier_indices = [int(idx) for idx in np.where(np.abs(z_scores) > threshold)[0]]"
+        },
+        {
+          "section": "injection/24",
+          "quote": "The safe submission converts indices to Python ints before returning"
+        },
+        {
+          "section": "injection/2",
+          "quote": "Remember np.std defaults to ddof=0"
+        }
+      ],
+      "reason": "可见提交同时体现 int 归一化与 ddof=0，与注入内容吻合，构成复用代理；无对照条件，不能证明记忆造成成功。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "AssertionError: ([], [])"
+        },
+        {
+          "section": "target_visible",
+          "quote": "Both failures were my oracles' fault"
+        },
+        {
+          "section": "target_visible",
+          "quote": "All checks pass."
+        }
+      ],
+      "reason": "多轮失败均来自自写 oracle 的算术错误（小样本最大 |z|、norm.fit 返回 2 值等），随后修正并 exit-0；是可见执行轨迹，不构成记忆有害证据。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "return a dictionary where the keys are the indices of the groups"
+        },
+        {
+          "section": "target_submission",
+          "quote": "results[i] = (outlier_indices, mean, variance)"
+        }
+      ],
+      "reason": "目标把源的单元组元组返回改为按组索引的字典，需要把源模式套进新外层结构；此处适配正确，未见偏差。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "索引转 Python int 可能是通用稳妥写法，并非由注入的 err-00096 引发，缺乏反事实。",
+    "成功可能主要来自 agent 自身的迭代调试与统计理解，而非记忆复用。",
+    "被丢弃的 sai-00095 可能对行为无影响，因为注入集中的 err-00096 与 err-00005 已覆盖所需要点。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法判定 int 归一化是记忆驱动还是独立习惯。",
+    "被丢弃的 sai-00095 若被注入是否会改变任何行为未知。",
+    "隐藏正确性不可得（提交反馈称 hidden correctness is not available），离线判分只说 correct=true。"
+  ],
+  "minimal_intervention": {
+    "change": "在相同检索与打包预算下撤掉注入的 err-00096 索引归一化指导，观察提交是否仍把索引转为 Python int。",
+    "fixed": "保持相同的历史、检索候选、字节预算与任务/环境不变。",
+    "falsifier": "若撤掉该指导后提交仍规范索引并同样通过，则 USE_TRANSFER 的因果主张被削弱。"
+  },
+  "causal_claim": false
+}

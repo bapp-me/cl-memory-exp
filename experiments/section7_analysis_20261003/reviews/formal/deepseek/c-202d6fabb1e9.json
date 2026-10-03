@@ -1,0 +1,98 @@
+{
+  "case_id": "c-202d6fabb1e9",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "证据包内没有任何源题轨迹或记忆条目，只有目标轨迹与机械状态，无法评价来源合法性或质量。"
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "记忆策略为 disabled 且注入数为零，本题上下文没有可与目标核对的记忆内容。"
+    },
+    "target_applicability": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "没有注入任何记忆文本，不存在适用性判断对象。"
+    },
+    "visible_use": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        }
+      ],
+      "reason": "无注入内容，可见轨迹中的动作只能归因于模型自身策略，不能判为记忆复用或误用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The action is not recognized. Please check valid actions."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Goal: go to a red door"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"correct\": false"
+        },
+        {
+          "section": "target_visible",
+          "quote": "You cannot go through green closed door 1, as it is closed. You should toggle it first."
+        }
+      ],
+      "reason": "轨迹显示模型先尝试未提供的裸 toggle、随后反复转向/前进、并用“toggle and go through red closed door 1”后继续游走，最后在前进后提交，终局正确性为 false；这只说明目标执行本身失败，不涉及任何记忆内容。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "本题既未启用记忆策略也无任何注入，因而不存在可被复用的源经验机会；该记录不能证明记忆库为空或源经验不存在。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "环境动作空间接口限制（初始可用动作列表不含裸 toggle，且目标物初始不可见）可能放大探索成本，与模型策略共同导致失败。",
+    "无源题与记忆库证据，无法排除目标失败与记忆系统无关之外的其它配置差异。"
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "初始观测中无红门、红门仅在转向后出现，是否影响题意与判定的严格一致性无法确认。",
+    "提交时是否真正位于红门目标处、correct=false 的具体判定依据未给出。",
+    "是否存在未选中的记忆库、以及本题是否曾被提供源经验，均不可由现有证据回答。"
+  ],
+  "minimal_intervention": {
+    "change": "在环境未提供裸 toggle 时，改用列表中的“go to red closed door 1 / toggle and go through red closed door 1”类动作直接趋近目标并在提交前确认红门已到达，而不是反复转向确认。",
+    "fixed": "保持同一 BabyAI 任务、同一初始布局、同样 20 次动作预算与 memory_policy=disabled（无注入）。",
+    "falsifier": "若可见轨迹或元数据中出现任何被注入的记忆文本（injected_count>0 或 injection_metadata 非空），则 TASK_EXECUTION 作为唯一主因的候选被削弱。"
+  },
+  "causal_claim": false
+}

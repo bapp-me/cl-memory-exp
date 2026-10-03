@@ -1,0 +1,136 @@
+{
+  "case_id": "c-5101161ffdbb",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "The task is completed."
+        },
+        {
+          "section": "injection/1",
+          "quote": "Goal: go to a red door"
+        }
+      ],
+      "reason": "Injected source trajectories are successful door-navigation episodes, but they cover go-to-door goals rather than the target open-left-door goal."
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "No red door is visible, so I'll explore through the green door."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Goal: open the door on your left"
+        }
+      ],
+      "reason": "A source supplies a door-searching/toggle pattern relevant to target navigation, but no source states the target's open-left-door requirement; no contradiction is shown."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/2",
+          "quote": "Goal: go to a green door"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Goal: open the door on your left"
+        }
+      ],
+      "reason": "Source and target share door interaction, but the source goals are go-to-color-door while the target requires opening a left-relative door."
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "toggle and go through green closed door 1"
+        },
+        {
+          "section": "target_visible",
+          "quote": "toggle and go through green closed door 1"
+        }
+      ],
+      "reason": "The target repeats the same source door-traversal macro, but exact action overlap is only a visible proxy and does not prove retrieval or causal reuse."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The visible door is to my right, but the goal is the door on my left. Let me turn left to look for it."
+        },
+        {
+          "section": "target_visible",
+          "quote": "toggle and go through green closed door 1"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"correct\": false"
+        }
+      ],
+      "reason": "Direct trace shows the agent chose a green-door toggle/traversal and the run was scored incorrect, so execution failed; this does not prove memory caused the failure."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "toggle and go through green closed door 1"
+        },
+        {
+          "section": "target_visible",
+          "quote": "toggle and go through green closed door 1"
+        }
+      ],
+      "reason": "The exact source action appears in the target after the target sees no initial left door, suggesting possible reuse of an exploratory source pattern; overlap alone cannot prove retrieval or transfer."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Goal: go to a red door"
+        },
+        {
+          "section": "injection/2",
+          "quote": "Goal: go to a green door"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Goal: open the door on your left"
+        }
+      ],
+      "reason": "Available D1 sources offer navigation experience but no demonstrated source solving the target open-left-door contract; coverage is partial, not proof of absence in the full library."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "The matching green-door traversal may be coincidental action overlap rather than memory retrieval.",
+    "The agent may have independently misinterpreted the ambiguous left-relative door description.",
+    "The environment reports submitted=true and correct=false, so termination/submission semantics may not directly reflect the agent's last action."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "No counterfactual or controlled intervention is available, so memory causality cannot be established.",
+    "It is unknown whether the agent attended to or retrieved any injected D1 source during the target episode.",
+    "It is unknown whether the green door was the intended left door and why the run terminated with submitted=true but correct=false.",
+    "No source_update or target_update details are provided, and the unselected complete memory library is not shown."
+  ],
+  "minimal_intervention": {
+    "change": "Replace or augment the injected D1 memories with a successful source episode for 'open the door on your left' that identifies the correct left-relative door and uses the appropriate open action.",
+    "fixed": "Keep the same target instance, observations, action interface, history, and injection budget.",
+    "falsifier": "If the target still chooses the green-door traversal and fails despite the corrected open-left-door source, the source-applicability/use-transfer hypothesis is weakened; if it succeeds with no memory change, the injected memory was not necessary."
+  },
+  "causal_claim": false
+}

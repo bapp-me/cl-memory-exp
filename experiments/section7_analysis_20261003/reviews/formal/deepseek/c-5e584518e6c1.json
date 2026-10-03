@@ -1,0 +1,118 @@
+{
+  "case_id": "c-5e584518e6c1",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"tests_run\": 9,"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true,"
+        }
+      ],
+      "reason": "源题自身 9 项测试全过，但那是单集合 task_func 契约，只部分覆盖目标的多集合报告需求。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Reject invalid inputs with explicit errors before performing the main computation."
+        },
+        {
+          "section": "source_prompt",
+          "quote": "modification is insensitive to the case of the letters."
+        }
+      ],
+      "reason": "注入工作流保留了校验与采样骨架，但源经验中的大小写不敏感/小写化细节未在注入内容中出现。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "process multiple sets of target_words, n_sentences, and vocabulary"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(target_words, n_sentences, vocabulary):"
+        }
+      ],
+      "reason": "源是单集合函数，目标要多集合编排并保持输入键，只有随机采样与校验部分直接适用。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "if not isinstance(n_sentences, int) or isinstance(n_sentences, bool) or n_sentences <= 0:"
+        }
+      ],
+      "reason": "可见提交复用校验守卫、10 词采样与空格替换骨架，属一致改编；但可见行为不能证明记忆带来收益或造成失败。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "for i, item in enumerate(data, start=1):"
+        }
+      ],
+      "reason": "最终提交把 data 当作序列枚举成 set_N 键，直接导致报告键与要求不符；这是执行层面的直接记录。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "for key, value in data.items():"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "The generated report does not match the expected output."
+        }
+      ],
+      "reason": "参考解按输入字典键返回，题面只说“keys are identifiers for each set”，未声明 data 容器类型，属可能的题意/测试不一致，仅标候选。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/7",
+          "quote": "Confirm correctness of an implementation against the task's stated examples before submitting."
+        },
+        {
+          "section": "target_visible",
+          "quote": "words = random.sample(vocab, 10)"
+        }
+      ],
+      "reason": "目标可见行为沿用源经验的“先校验再验证后提交”骨架，方向一致；但注入内容不含多集合字典键处理，无法据此认定记忆导致失败。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "题面未说明 data 的容器类型（list of tuples 还是 dict），失败也可能主要源于契约歧义而非实现能力",
+    "注入记忆为通用工作流、不含多集合键约定，记忆对本题结果的作用无法由本证据判定"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "data 在题面中到底是 dict 还是 list of tuples 无法从证据独立确认",
+    "参考解的大小写不敏感与小写化在题面未要求，是否为隐藏测试判定项不可知",
+    "无法判断注入记忆是否实际被模型读取或影响本次决策"
+  ],
+  "minimal_intervention": {
+    "change": "将最终提交的报告构造改为遍历 data.items() 并直接使用输入键（即假设 data 为 dict）",
+    "fixed": "保持相同的注入记忆、相同预算与相同的随机采样/校验骨架",
+    "falsifier": "若隐藏测试实际传入 list of tuples 并接受 set_N 键，则本改动会反向失败，说明问题在题意而非执行"
+  },
+  "causal_claim": false
+}

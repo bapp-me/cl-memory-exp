@@ -1,0 +1,135 @@
+{
+  "case_id": "c-af1fad3cc92b",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "The sandbox verification confirms the docstring example reproduces exactly. Key points:"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true,\n  \"scorable\": true"
+        }
+      ],
+      "reason": "源题离线评估通过且沙箱验证docstring示例与空表边界均复现；但其针对的是固定 item1..item5 单表设定。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "df['combination'] = list(df[columns].itertuples(index=False, name=None))\n    counter = Counter(df['combination'])\n    return dict(counter)"
+        },
+        {
+          "section": "injection/4",
+          "quote": "count with Counter, then return dict(counter) when the docstring's return type is 'dict' AND the doctest shows a plain-dict repr"
+        }
+      ],
+      "reason": "sai-00079/sai-00080 的内容与源题实际提交代码及验证行为一致，未见失真。"
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "calculate the overall frequency of combinations of elements across all DataFrames. The function should add a 'combination' column to each DataFrame"
+        },
+        {
+          "section": "injection/5",
+          "quote": "when the docstring explicitly says the function 'adds a <column> column to the DataFrame' (or otherwise documents mutation), in-place modification of the input df IS the documented contract"
+        }
+      ],
+      "reason": "行元组+Counter+dict 模式与原地变异契约直接适用于目标；目标新增的多 DataFrame 聚合与无固定列名两个条件记忆未覆盖，由 agent 自行扩展。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "tuple(row) for row in df.itertuples(index=False, name=None)"
+        },
+        {
+          "section": "injection/4",
+          "quote": "df[columns].itertuples(index=False, name=None) yields one plain hashable tuple per row (index=False excludes the row index; name=None guarantees a plain tuple"
+        }
+      ],
+      "reason": "提交代码在 itertuples/Counter/dict 与原地变异上与注入的 sai-00079/00080 结构一致，并适配为 *dfs 循环；这是行为代理，非因果证明。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"type\": \"ADD\",\n      \"section\": \"STRATEGIES & INSIGHTS\",\n      \"content\": \"Canonical pattern for 'frequency of combinations of elements in each row' tasks: df[columns].itertuples(index=False, name=None)"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": [\n    \"sai-00079\",\n    \"sai-00080\"\n  ]"
+        }
+      ],
+      "reason": "源题成功结束时写入了与目标高度同族的规范化模式；来源在目标处可追溯。来源通过不保证其全部陈述对目标正确。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": [\n    \"sai-00073\",\n    \"sai-00075\",",
+          "note": "injected_ids 列表包含 sai-00079 与 sai-00080（injected_count 52）"
+        }
+      ],
+      "reason": "sai-00079/00080 确实进入最终注入包并对 agent 可见（injection/4、injection/5 即其全文）；预算淘汰的更早条目不构成检索失败证据。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "df['combination'] = combinations\n        counter.update(combinations)"
+        },
+        {
+          "section": "injection/4",
+          "quote": "assign it via df['combination'] = [...], count with Counter, then return dict(counter) when the docstring's return type is 'dict'"
+        }
+      ],
+      "reason": "目标一次提交的代码结构与注入记忆可见重合（itertuples 行元组、原地加列、Counter 计数、dict 返回），且适配到多 DataFrame；仅是语义候选，无反事实不能证明记忆导致成功。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"tools_by_name\": {\n    \"SUBMIT\": 1\n  },\n  \"working_tool_calls\": 0"
+        }
+      ],
+      "reason": "目标仅一次 SUBMIT、零次沙箱工具调用即提交，符合其事后新增的'template-match 即提交、未验证'描述；但 target_update 发生在本题结束之后，不能作为本题行为的解释，只作为过程观察。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "itertuples+Counter+dict 是该任务族的常见写法，模型可能无需记忆独立产出同一解法（无反事实）。",
+    "离线评估 'Ran 0 tests' 且仅 2 项检查，成功信号部分依赖有限检查；reference 用 sorted(row) 而提交未排序，展示的测试对二者不可区分，排序契约歧义未被检验。",
+    "注入包含 52 条记忆，其中大量与本题无关，无法排除其他条目或模型自身能力为主要因素。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "私有推理被移除，无法确认 agent 是否实际参考了 sai-00079/00080 或仅是趋同。",
+    "隐藏测试完整契约未知；sorted-vs-unsorted 行元组约定在本题不可区分。",
+    "未注入完整未选中记忆库，检索候选之外的库内容未知。"
+  ],
+  "minimal_intervention": {
+    "change": "在相同历史/环境/预算下重跑目标，但从注入包中剔除 sai-00079 与 sai-00080，比较提交代码是否仍呈现相同 itertuples/原地变异结构。",
+    "fixed": "源题经历与写入（sai-00079/00080 已存在）、检索候选集、注入预算与目标题面保持一致。",
+    "falsifier": "若剔除后提交代码结构与本次高度一致，则 USE_TRANSFER 候选被削弱；若结构显著不同或失败，则候选增强。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,142 @@
+{
+  "case_id": "c-635136a1607e",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"tests_run\": 7"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Create a Pandas DataFrame with random alphabets in each cell."
+        }
+      ],
+      "reason": "源题以 7 项测试通过且与目标同域，属合法经验来源；但它只覆盖单个 DataFrame 的生成与列名，未覆盖目标新增的纵向 concat 与退化输入，故只算有边界的通过。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "sample with np.random.choice(list('abcdefghijklmnopqrstuvwxyz'), size=(rows, columns))"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "build them generically with [chr(ord('a') + i) for i in range(n_columns)]"
+        }
+      ],
+      "reason": "源沉淀的抽样与列名内容与源行为一致、对目标可用；但目标新增的 concat 空列表要求在该记忆中缺席，故只覆盖必要内容的一部分。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "concatenates them vertically to form a single large DataFrame"
+        },
+        {
+          "section": "injection/0",
+          "quote": "itertools.permutations(seq, 2) vs itertools.product(seq, repeat=2)"
+        }
+      ],
+      "reason": "源经验可迁移到逐 DataFrame 的采样与列命名；目标新增加的多次生成+concat 及 num_dataframes=0 属于源未覆盖的新条件，且注入集多为计数/日期/绘图题，与本题无关。"
+    },
+    "visible_use": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "与目标相关的源记忆（sai-00009/00010）并未注入，可见轨迹中空列表 guard 来自沙箱自证失败，无法区分这是独立发现还是任何记忆的潜在影响。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "No objects to concatenate"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "agent 自建探针触发 pd.concat 空列表 ValueError，加 guard 后重跑 exit 0 并提交，离线评测判 correct。只说明本题执行路径自洽，不能证明记忆促成该修复。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Create a Pandas DataFrame with random alphabets in each cell."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "存在同域且通过评测的源题，构成合法学习机会；但该机会只涵盖单 DataFrame 生成，不覆盖目标新增的 concat 语义。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"memory_id\": \"sai-00009\""
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_block_byte_budget\""
+        }
+      ],
+      "reason": "源自 source_index 2 的 sai-00009/00010 在 selected_before_packing 中，却因字节预算在打包阶段被淘汰、未出现在 injected_ids —— 属打包淘汰而非检索失败，也不能据此判断内容无用。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_text_utf8_bytes\": 44006"
+        },
+        {
+          "section": "injection/0",
+          "quote": "itertools.permutations(seq, 2) vs itertools.product(seq, repeat=2)"
+        }
+      ],
+      "reason": "注入 50 条约 44KB，多为 bigram 计数、日期、绘图等与本题无关的内容，说明存在上下文开销；不足以断言本题收益为零或性价比差。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "PACKING_VISIBILITY：与目标同域的源记忆在打包阶段被整体淘汰，本题可能根本没有任何可复用的源内容，成功完全独立于记忆。",
+    "注入的通用条目（如 err-00058 退出码纪律、err-00057 提交内需自含导入）可能间接强化验证习惯，但可见轨迹无法区分其影响。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "注入的 50 条文本中未见与 pd.concat 空列表/退化参数直接相关的条目，但无法排除其他注入内容的间接影响。",
+    "离线目标评测 stdout 为 EVALUATOR_RESULT=3:True:0，stderr 却显示 Ran 0 tests，checks_executed=3 与 tests_run=0 的契约细节无法据现有证据判读。",
+    "source_provenance_injected=false 且仅有 memory_ids 记录，无法确认 agent 上下文是否包含 sai-00009/00010 的正文。",
+    "反馈为 'Hidden correctness is not available'，本题正确性仅由离线评测给出。"
+  ],
+  "minimal_intervention": {
+    "change": "在打包预算中为与目标同域的源经验（sai-00009/sai-00010 这类随机字母 DataFrame 生成/列命名条目）保留位置，而不是按最旧块整体淘汰。",
+    "fixed": "相同目标 prompt、相同历史与环境、相同 50 条注入与字节预算上限、相同工具与评测掩码。",
+    "falsifier": "若注入该源经验后，目标仍出现同一 'No objects to concatenate' 失败并沿相同自修复路径得到相同结果，则说明该源经验对本结果无影响。"
+  },
+  "causal_claim": false
+}

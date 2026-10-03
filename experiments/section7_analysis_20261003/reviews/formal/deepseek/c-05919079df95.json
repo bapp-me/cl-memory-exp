@@ -1,0 +1,146 @@
+{
+  "case_id": "c-05919079df95",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Raises:\n    ValueError: If start_date is not a datetime object or is after end_date."
+        }
+      ],
+      "reason": "源题通过且可评分，但源契约要求单区间列表并对非 datetime/逆序抛 ValueError。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_retained\": false"
+        }
+      ],
+      "reason": "目标未注入或保留源 provenance，无目标记忆内容可评 fidelity。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "the total count of business days across all provided date ranges"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Create a list of business days between two dates"
+        }
+      ],
+      "reason": "共享工作日/假日领域，但目标改为多区间总计数、不同签名和错误处理，源只能部分适用。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "无实际注入，因而看不到记忆适配或误用；仅能说明可见层面无使用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "\"returncode\":0,\"stdout\""
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "目标代码运行并提交，离线评分通过；这证明可见执行成功，不证明记忆作用。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Create a list of business days between two dates, excluding weekends and specified country's public holidays."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "the total count of business days across all provided date ranges"
+        }
+      ],
+      "reason": "源是相关语义候选，但目标新增多区间聚合、总计数和不同参数契约，故只具部分机会。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "source_visible",
+          "quote": "holidays=list(country_holidays)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "total += sum(1 for d in bdays if d.normalize() not in holiday_dates)"
+        }
+      ],
+      "reason": "无注入且目标用后过滤假日，而非源的特有 bdate_range holidays 写法；无可验证迁移，但不能证明潜在记忆不存在。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"tests_run\": 0,"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"checks_executed\": 4"
+        }
+      ],
+      "reason": "评分报告为 4 项检查、0 个 unittest，且 correct=true；契约可评分，未暴露隐藏测试细节。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "目标成功可能完全来自目标内直接实现，因 injected_count=0 且 memory_policy=disabled。",
+    "源与目标共享工作日/假日领域，即使存在潜在概念影响，当前无可见代码复用证据。",
+    "内部推理不可见，无法排除未注入的模型内部知识或隐式记忆影响。"
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "无法判断是否存在未注入的潜在记忆或内部知识影响。",
+    "隐藏目标测试细节未提供，只能依据离线检查 correct=true。",
+    "源 episode 是否曾在模型上下文中可用，不能由现有 packet 确定。"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "保持相同目标提示、工具预算、离线检查与无记忆策略。",
+    "falsifier": "若相同条件下目标提交失败或离线检查不通过，则 TASK_EXECUTION 主判断不成立。"
+  },
+  "causal_claim": false
+}

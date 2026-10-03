@@ -1,0 +1,130 @@
+{
+  "case_id": "c-55180e716b5c",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "本包内没有提供任何源任务经验内容或源配对材料，只有目标题与更新哈希，无法评价源是否合法可用。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": [],"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0,"
+        }
+      ],
+      "reason": "本轮注入为空（injected_utf8_bytes 为 2，即空数组），没有任何与目标相关的记忆内容进入上下文，因而不存在可判定的保真内容。"
+    },
+    "target_applicability": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"observable_candidates\": [],"
+        }
+      ],
+      "reason": "检索没有返回任何候选，也就没有任何记忆条目可谈对目标是否适用。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0,"
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        }
+      ],
+      "reason": "可见轨迹中只有环境交互（turn left、toggle and go through），没有可归因于记忆的适应行为；这只是行为代理，不等于记忆无用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": false,"
+        },
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"toggle and go through green closed door 1\""
+        }
+      ],
+      "reason": "离线评测判 incorrect、progress 0.5，可见动作只完成一次开门/穿门即终止；说明任务本身未被完成，但不能据此说记忆导致失败。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "\"submitted\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"submit_calls\": 0,"
+        }
+      ],
+      "reason": "agent 在可见文本中宣称 \"The task is complete\"，却没有任何提交调用、submitted 为 false；这是任务契约层面的缺口，但无法从本包确认 harness 是否要求显式提交。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"observable_candidates\": [],"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": [],"
+        }
+      ],
+      "reason": "memory_policy 为 enabled 但检索返回候选为空、注入为空；无法区分记忆库为空、无匹配还是检索失败，也不能据此认定存在干扰或遗忘。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0,"
+        },
+        {
+          "section": "target_update_operations",
+          "quote": "\"operations\": [],"
+        }
+      ],
+      "reason": "本题没有可用的源经验被注入，事后更新也没有写入操作，因此不存在可评估的源→目标迁移机会；目标结束后的更新不能解释本次行为。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "失败可能主要来自未显式提交（EVAL_CONTRACT），而非开门动作本身错误",
+    "0.5 进度也可能反映选错门或 BabyAI 中 'on your left' 的语义与 agent 解释不一致，而本包未给 gold 轨迹",
+    "检索为空也可能意味着记忆库本就为空，而非记忆机制失效"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "harness 是否要求显式 submit 动作才能记为成功",
+    "记忆存储中是否存在与 BabyAI 相关的条目（本包只给本目标检索快照）",
+    "'open the door on your left' 期望的是哪一扇门、以及是否允许穿门",
+    "target_update_operations 中空 operations 但前后哈希不同代表什么"
+  ],
+  "minimal_intervention": {
+    "change": "在开门动作之后增加一次显式的提交/完成动作，其余提示、场景与预算不变",
+    "fixed": "相同 seed、相同布局与动作预算、相同（空）记忆注入",
+    "falsifier": "若加上显式提交后评测仍为 incorrect 且 progress 不变，则 EVAL_CONTRACT 不是失败主因，应回到门选择/动作语义"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,138 @@
+{
+  "case_id": "c-cf38732bb461",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=30:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Generate a random poker hand consisting of five cards, and count the frequency of each card rank."
+        }
+      ],
+      "reason": "源题正确且可评分（5 项测试全过），但只覆盖单人手牌生成与 Counter，不含多人发牌、胜负与平局逻辑。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "each card is drawn independently with `random.choice(HAND_RANKS) + random.choice(SUITS)`, and ranks are extracted as `card[:-1]`"
+        },
+        {
+          "section": "target_visible",
+          "quote": "the deal matches the previously verified pattern (`random.choice(HAND_RANKS) + random.choice(SUITS)` per card, with ranks extracted via `card[:-1]`"
+        }
+      ],
+      "reason": "源中被验证的取牌方式与 card[:-1] 取点数写法在目标提交里原样保留，未被曲解；仅覆盖这一必要片段，不代表源全部结论。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "simulates a game of poker with 4 players. Each player is dealt 5 cards"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Generate a random poker hand consisting of five cards"
+        }
+      ],
+      "reason": "源片段适用于发牌与计频部分；目标新增 4 人、返回结构、最高频点数比较与平局判定等条件不在源中。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "the deal matches the previously verified pattern (`random.choice(HAND_RANKS) + random.choice(SUITS)` per card, with ranks extracted via `card[:-1]`"
+        }
+      ],
+      "reason": "可见文本显式沿用源模式并把它嵌入新任务，属适配而非误用；这只是行为代理，不能证明必然因果。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "the deal matches the previously verified pattern (`random.choice(HAND_RANKS) + random.choice(SUITS)` per card, with ranks extracted via `card[:-1]`"
+        },
+        {
+          "section": "source_visible",
+          "quote": "The example reproduces exactly: each card is drawn independently with `random.choice(HAND_RANKS) + random.choice(SUITS)`"
+        }
+      ],
+      "reason": "目标显式复用源中被验证的发牌与取点数写法并扩展出胜负逻辑，支持正向复用候选；无对照臂，不能证明成功由记忆造成。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"working_tool_calls\": 1"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"checks_executed\": 4"
+        }
+      ],
+      "reason": "目标本体的执行与提交在本地完成并通过评测，说明可见行为链完整；该标签只描述执行，不区分记忆贡献。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Calculate the Euclidean distances between consecutive points in a provided"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 3"
+        }
+      ],
+      "reason": "同批注入包含与目标无关的距离与随机字符串任务，说明上下文里存在无关内容；存在本身不证明干扰或未被使用。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should return a list of tuples, where each tuple contains the player's hand and a Counter dictionary"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "Player {winner + 1} wins with {max_rank} of frequency {max_freq}"
+        }
+      ],
+      "reason": "题面措辞（返回“list of tuples”）与参考解的返回字符串格式不一致，且参考测试用概率性断言；只标候选，不影响本题 scoring mask。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "题面已给出 HAND_RANKS/SUITS 常量与示例输出，目标可能直接从题面示例推出 card[:-1] 取点数，而非复用源轨迹。",
+    "本题逻辑简单，任何等价实现都能通过，源经验可能是冗余的。",
+    "同批另两条无关注入未被使用，但也无证据显示它们造成干扰或挤占。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "没有反事实臂，无法判断去掉源经验后是否仍成功。",
+    "未提供完整未选中记忆库，不能推断是否存在其他更相关的检索结果。",
+    "参考解与测试的断言（如非平局断言）在题面下是否一致，无法由现有证据裁定。"
+  ],
+  "minimal_intervention": {
+    "change": "在保持题面常量、预算与工具不变的前提下，仅从注入中移除源单人扑克手牌片段，观察是否仍出现 `card[:-1]` 取点数与独立取牌写法。",
+    "fixed": "相同目标题面、相同随机种子与执行工具、相同注入预算与顺序。",
+    "falsifier": "若移除源片段后目标仍以 `card[:-1]` 独立取牌并同样通过评测，则 USE_TRANSFER 候选被削弱。"
+  },
+  "causal_claim": false
+}

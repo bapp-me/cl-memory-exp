@@ -1,0 +1,130 @@
+{
+  "case_id": "c-ba473882226a",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "源经历离线评测全部通过，属合法经验来源；但源题仅单个字符串生成，泛化到多长度合并计数时关键约束（字母表、逐长度重播种）未随经验保留。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "invoking the appropriate sampling primitive with abstract parameters"
+        }
+      ],
+      "reason": "注入工作流在播种与 Counter 层面与源一致，但字符池被写成抽象占位符 <pool>，源 docstring 的“仅 ASCII 字母”与逐长度重播种语义未保留。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Workflow Input Validation Guard"
+        }
+      ],
+      "reason": "播种、频率计数、输入校验等通用工作流适用于目标；但决定隐藏用例输出的池内容与播种粒度不能直接照搬。"
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "rng = random.Random(seed)"
+        },
+        {
+          "section": "injection/0",
+          "quote": "using either `random.seed(<seed>)` for the `random` module"
+        }
+      ],
+      "reason": "可见代码采用记忆中的“播种+choice+Counter”骨架，但换成独立 Random 实例且池含 digits，与记忆所述方式偏离；这仅是行为代理。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": false"
+        },
+        {
+          "section": "target_submission",
+          "quote": "pool = string.ascii_letters + string.digits"
+        }
+      ],
+      "reason": "提交实现在字符池（含数字）与播种粒度上与隐藏断言不符，导致断言失败；该证据不能说明模型是否读取或使用了任何记忆。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "invoking the appropriate sampling primitive with abstract parameters"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "The generated string consists only of ASCII letters."
+        }
+      ],
+      "reason": "注入表示把池与播种细节抽象化，源中显式约束未进入可复用表示；不能据此断定目标因该表示而选择数字池。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "rng = random.Random(seed)"
+        },
+        {
+          "section": "injection/2",
+          "quote": "Feed the items into `collections.Counter(...)`"
+        }
+      ],
+      "reason": "可见迁移了计数与播种模式，但迁移变体未匹配目标期望；无对照实验，不能断言记忆导致失败或成功。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "generating multiple random strings of varying lengths"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "The generated string consists only of ASCII letters."
+        }
+      ],
+      "reason": "可见题面未给字母表约定或期望示例，隐藏参考却要求仅 ASCII 字母并逐长度重播种，契约相对测试欠定；仅标候选，不重打分。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "可见题面未规定字符池且无期望输出示例，失败可能源于题面欠定而非记忆复用",
+    "无对照条件，无法判断不注入这些记忆时是否同样提交数字池与不同播种粒度的实现",
+    "对示例进行变体验证的记忆流程因题面缺少期望输出而无法实际执行"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "模型是否实际读取并采纳了注入的 8 条记忆",
+    "源经历中更具体的 variant-matching 内容是否仍在库中却未被检索",
+    "目标失败在何种程度上归因于记忆表示、题面欠定或模型自身先验"
+  ],
+  "minimal_intervention": {
+    "change": "在目标可见题面中补充与隐藏测试一致的期望输出示例并说明字符池，使记忆中的示例验证流程可判别 RNG 变体",
+    "fixed": "保持相同的记忆库、注入集合与预算",
+    "falsifier": "若题面给出期望示例后仍提交数字池或不同播种粒度的实现并失败，则该干预解释被削弱"
+  },
+  "causal_claim": false
+}

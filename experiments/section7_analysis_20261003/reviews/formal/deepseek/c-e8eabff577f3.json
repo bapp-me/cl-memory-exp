@@ -1,0 +1,118 @@
+{
+  "case_id": "c-e8eabff577f3",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "target_update_operations",
+          "quote": "\"source_event_ids\": ["
+        }
+      ],
+      "reason": "仅出现源事件 ID，未提供源经验内容或源评分，无法判定源质量，也不能虚构 gold source。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": []"
+        }
+      ],
+      "reason": "目标提示与执行轨迹中没有任何合法记忆内容注入，故无与目标有关的记忆保真度可评。"
+    },
+    "target_applicability": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"selected_before_packing\": []"
+        }
+      ],
+      "reason": "没有候选记忆被选中或注入，目标适用性无从体现；完整库未提供，不能据此推断不存在可适用记忆。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"go to purple closed door 1\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "可见轨迹是直接环境交互，无记忆片段出现；这只能说明本轨迹未见使用，不能证明记忆无效或有害。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"go to purple closed door 1\""
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "任务通过五次环境动作直接完成；支持成功来自可见执行，不能证明记忆库状态或是否曾提供候选。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"observable_candidates\": []"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"selected_before_packing\": []"
+        }
+      ],
+      "reason": "该查询的可见检索集合为空且无选中项；不能由此断定持久库中没有记忆或检索机制失败，因为完整库快照未包含。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"go to purple closed door 1\""
+        }
+      ],
+      "reason": "无注入内容出现在后续动作中，故无可观察的迁移/复用；缺少反事实，不能判断记忆若被注入是否会造成成功或负迁移。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "记忆库可能未被本次查询命中，也可能存在但未出现在提供的 Qdrant top-5 快照中；无法判断。",
+    "目标后 target_update_operations 为空，不能解释本题之前为何成功；也没有源经验内容可做配对。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "完整持久记忆库未提供，无法知道是否存在相关经验。",
+    "源事件 stream.task-001.attempt-1 的内容和质量不可见。",
+    "没有 memory-off 反事实，无法断言记忆对本次行为有无因果作用。"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "保持相同的 BabyAI 环境、动作预算和已观察到的无注入条件。",
+    "falsifier": "若发现实际注入非空，或目标可见轨迹中出现未列出的记忆片段，则 no_visible_use 候选被反驳。"
+  },
+  "causal_claim": false
+}

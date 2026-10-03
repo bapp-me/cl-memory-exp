@@ -1,0 +1,122 @@
+{
+  "case_id": "c-1c687ed51a4a",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "AssertionError: Expected 'show' to have been called once. Called 0 times."
+        }
+      ],
+      "reason": "Source episode was scorable but failed offline due to plotting/show behavior, so it is not a clean passing source."
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "Memory policy is disabled and no memory text was injected, so there is no legitimate source memory content in this target to assess for fidelity."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "return greater_avg, count"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "return the total count of values greater than the specified value across all sublists and the combined numpy.ndarray"
+        }
+      ],
+      "reason": "Source logic for per-list average/count is relevant, but the target extends to multiple sublists and has an ambiguous/contradictory return order versus the source's array-first return."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "No memory was injected, so the visible implementation cannot be attributed to memory use."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Additionally, return the total count of values greater than the specified value across all sublists and the combined numpy.ndarray"
+        },
+        {
+          "section": "target_submission",
+          "quote": "return total_count, np.array(above_avg_combined)"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(np.array_equal(new_task_func([[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]], 6)[0], np.array([4, 5, 9, 10])))"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "return total_greater_than_avg, total_count"
+        }
+      ],
+      "reason": "The prompt lists total count first and the submission follows that order, while the hidden assertion/reference expect the combined array at index 0; this supports a return-order contract mismatch. It does not prove memory caused the failure."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The function works correctly, including edge cases (empty list, no values above the threshold). Submitting:"
+        },
+        {
+          "section": "target_submission",
+          "quote": "return total_count, np.array(above_avg_combined)"
+        }
+      ],
+      "reason": "Visible local execution passed, but the final artifact returns the count first, exposing the order mismatch as an execution artifact. It is not evidence of memory retrieval or transfer."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "A source pair exists, but the raw source episode and provenance were not retained or injected, so the target had no observable source-memory opportunity. This cannot show that memory was missing but available."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "TASK_EXECUTION: the agent may have simply chosen the prompt-listed return order while hidden tests follow the reference order, so no memory mechanism is needed.",
+    "No memory was injected, so the observed failure is independent of retrieval, packing, or transfer mechanisms.",
+    "Only the first hidden assertion is visible; other hidden assertions could fail even if return order is fixed."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "Whether the target prompt intended count-first return or the reference array-first order is not resolvable from the visible prompt alone.",
+    "Whether any source memory content was available beyond the paired metadata cannot be determined from this packet.",
+    "Whether all hidden assertions would pass after reordering the return values is unknown."
+  ],
+  "minimal_intervention": {
+    "change": "Swap the final return to array-first: return np.array(above_avg_combined), total_count.",
+    "fixed": "Keep the same prompt, function name, imports, data semantics, and no-memory environment.",
+    "falsifier": "If array-first submission still fails the hidden assertions, then return-order mismatch is not the sole cause."
+  },
+  "causal_claim": false
+}

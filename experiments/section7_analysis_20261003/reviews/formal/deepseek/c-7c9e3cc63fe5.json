@@ -1,0 +1,143 @@
+{
+  "case_id": "c-7c9e3cc63fe5",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=14:True:5"
+        },
+        {
+          "section": "source_visible",
+          "quote": "random.choices('abcde', k=length)"
+        }
+      ],
+      "reason": "Source task `task_func(length, count, seed)` passed 5 tests/14 checks, so it is a legitimate source experience, but it is a single-length/single-count Counter task whose mechanism (`random.choices` per string) differs from the target's paired-list interface."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "Counter.__repr__ (Python 3.9+) ALWAYS displays items in most_common() descending order"
+        },
+        {
+          "section": "injection/21",
+          "quote": "Canonical pattern for 'generate multiple random strings and compute combined character frequency' tasks"
+        }
+      ],
+      "reason": "The source-derived bullet (err-00052) and the injected family pattern (sai-00097) faithfully encode their own verified scope; nothing in the memory content is contradicted by the target evidence. Fidelity here does not assert the memory covers the target's decisive parameter semantics."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of random strings generated from a fixed set of letters ('a', 'b', 'c', 'd', 'e'), each with a specified length"
+        },
+        {
+          "section": "injection/21",
+          "quote": "build each string as ''.join(random.choice(string.ascii_letters) for _ in range(length))"
+        }
+      ],
+      "reason": "The family pattern (generate random strings, count combined frequency, seed inside, Counter) matches the target family, but its interface (hardcoded alphabet, single length) does not cover the target's new conditions: paired `lengths`/`counts` lists over the fixed universe 'a'-'e' plus most/least-frequent output."
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "random.choice(counts) for _ in range(length)"
+        },
+        {
+          "section": "injection/21",
+          "quote": "one choice call per character consumes the stream per character"
+        }
+      ],
+      "reason": "The submission visibly adopts structural elements of the family pattern (internal seed, per-character choice, Counter accumulation) while filling the pool slot with the ambiguous `counts` parameter; this is a behavioral proxy of misapplication, not proof that memory caused the failure."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "TypeError: sequence item 0: expected str instance, int found"
+        },
+        {
+          "section": "target_visible",
+          "quote": "random.choice(counts) for _ in range(length)"
+        }
+      ],
+      "reason": "The submitted function feeds `counts` (the hidden test passes [2,3] as integers) into `random.choice`, so generation crashes before any counting; this is a concrete execution/interpretation error. It says nothing about whether memory content was correct or causal."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "def new_task_func(lengths, counts, seed=0):"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "for length, count in zip(lengths, counts):"
+        }
+      ],
+      "reason": "The prompt names `counts` but never defines it, while the reference/tests pin it as the per-length number of strings; the contract is under-specified, making a prompt/test ambiguity a candidate (not an established inconsistency)."
+    },
+    {
+      "tag": "SCOPE_INTERFERENCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/21",
+          "quote": "Canonical pattern for 'generate multiple random strings and compute combined character frequency' tasks"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of random strings generated from a fixed set of letters ('a', 'b', 'c', 'd', 'e'), each with a specified length"
+        }
+      ],
+      "reason": "The injected same-family pattern is scoped to a hardcoded alphabet and one length, whereas the target adds paired lengths/counts and most/least-frequent output; the memory only partially applies and does not encode the decisive `counts` semantics. This is a scope/applicability statement, not proof of interference."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "random.choice(counts) for _ in range(length)"
+        },
+        {
+          "section": "injection/21",
+          "quote": "one choice call per character consumes the stream per character"
+        }
+      ],
+      "reason": "Visible structural overlap (per-character choice, internal seed, Counter) suggests the family template was carried over, but the pool slot was bound to `counts`, so at most a misapplication candidate is observable. Overlap is a proxy and cannot establish causation."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "SCOPE_INTERFERENCE: the target's added conditions (paired lengths/counts over fixed 'a'-'e', most/least frequent) were not covered by the injected family pattern, so the memory only partially applied.",
+    "EVAL_CONTRACT: the prompt leaves `counts` undefined, so the failure could be task under-specification rather than memory misuse.",
+    "No counterfactual/private reasoning: no injected memory prescribes `random.choice` over a parameter, so the memory's role in the misreading is unverifiable."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether any injected memory influenced the mapping of `counts` to the character pool (no counterfactual, private reasoning removed).",
+    "Whether the returned plain dict plus full-key zero skeleton would have matched the hidden Counter equality assertion; the run crashed before the return value was exercised.",
+    "Whether the source pair's err-00052 (Counter repr/reordering) had any bearing on the target's failure.",
+    "Post-target update operations cannot explain prior target behavior."
+  ],
+  "minimal_intervention": {
+    "change": "Replace the counting block with a zip over (lengths, counts), generating `count` strings of `length` from the fixed alphabet 'a'-'e', while keeping the memory's seed-inside/Counter/frequency structure.",
+    "fixed": "Same injected memory set (including sai-00097/err-00052), same retrieval budget, same prompt/signature, same hidden tests.",
+    "falsifier": "If the corrected zip interpretation still fails the hidden tests, or if the same `counts`-as-pool misreading occurs absent the family-pattern memory, the SCOPE_INTERFERENCE/USE_TRANSFER candidate is refuted."
+  },
+  "causal_claim": false
+}

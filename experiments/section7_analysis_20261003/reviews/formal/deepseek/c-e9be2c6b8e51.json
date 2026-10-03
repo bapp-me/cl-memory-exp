@@ -1,0 +1,126 @@
+{
+  "case_id": "c-e9be2c6b8e51",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "All verified. Submitting:"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=14:True:5"
+        }
+      ],
+      "reason": "源题自身通过隐藏测试且可见验证完整，是合法可用的源；但其契约只返回单个随机选取的值，与目标返回整列表不同。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Generate the random data by invoking the appropriate sampling primitive with abstract parameters"
+        },
+        {
+          "section": "injection/7",
+          "quote": "3. Fix any mismatch and repeat the verification, then finalize the function with the full docstring and issue SUBMIT."
+        }
+      ],
+      "reason": "注入工作流保留了「逐项采样/取整/提交前验证」等抽象步骤，但未保留源题 struct 十六进制↔浮点转换这一目标关键内容，故为部分保真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Produce reproducible random data (numbers, samples, strings, choices) using a deterministic random seed."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "generate a list of rounded float numbers by converting each hexadecimal string to a float and rounding it to 2 decimal places"
+        }
+      ],
+      "reason": "种子随机生成的工作流对目标已不适用（目标要求确定性转换全部给定键），仅取整与提交前验证部分可迁移。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "injection/7",
+          "quote": "run multiple variants in one call and pick the one matching the expected output"
+        },
+        {
+          "section": "target_visible",
+          "quote": "# alternative: int(h,16) interpretation"
+        }
+      ],
+      "reason": "目标先在单次 PYTHON 中并排试两种解释再定型、补边界用例后 SUBMIT，与注入的验证工作流形态一致；这是行为代理，不构成因果证据。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/7",
+          "quote": "exploratory PYTHON call(s) → full-function PYTHON verification → SUBMIT"
+        },
+        {
+          "section": "target_visible",
+          "quote": "# alternative: int(h,16) interpretation"
+        }
+      ],
+      "reason": "目标可见的「变体探测→整函数验证→提交」序列与记忆工作流吻合，属可能复用；但源题与基线模板本身也含该序列，不能证明成功由记忆造成。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"distance\": 71"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "# Constants\nKEYS = ['470FC614', '4A0FC614', '4B9FC614', '4C8FC614', '4D7FC614']"
+        }
+      ],
+      "reason": "存在同模板、同 KEYS 常量的近邻成功源，构成合法经验机会；但其接口（单值 + random.choice）与目标（整列表、确定性）不同，仅部分适用。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "EVALUATOR_RESULT=1:True:0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"submitted\": true"
+        }
+      ],
+      "reason": "目标自行完成转换、验证并提交，离线评分为正确；这只记录任务执行与产物状态，不说明记忆贡献。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "该验证性多轮模式可能是本基准模板固有习惯（源题同样如此），与注入记忆无因果关系。",
+    "成功可能主要来自目标提示中已给出的 struct/round 说明以及直接记录 D0，而非语义记忆内容。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法确认模型实际读取了哪几条注入工作流内容，只能看到全部 8 条被选中并注入。",
+    "隐藏正确性仅由离线评测给出，缺少无记忆对照，无法测量记忆带来的增益。",
+    "注入库未含 struct 十六进制转换细节，因此真正被复用的具体记忆内容不可辨识。"
+  ],
+  "minimal_intervention": {
+    "change": "移除或替换「提交前验证/变体探测」工作流注入，观察目标是否仍保留并排试解释再提交的行为。",
+    "fixed": "保持相同目标提示、源码历史、注入预算与工具集不变。",
+    "falsifier": "若在没有该工作流注入时目标行为完全相同，则 USE_TRANSFER 候选被削弱。"
+  },
+  "causal_claim": false
+}

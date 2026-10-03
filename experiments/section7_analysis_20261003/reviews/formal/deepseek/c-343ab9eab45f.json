@@ -1,0 +1,147 @@
+{
+  "case_id": "c-343ab9eab45f",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=19:True:5"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": [],"
+        }
+      ],
+      "reason": "源题是同一视觉统计域且离线判定正确，但源结束时没有产生任何 fact/记忆写入，因此它能提供的机会未转化为可注入的合法目标相关内容。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": [],"
+        },
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "\"role\": \"001-writer\""
+        }
+      ],
+      "reason": "被注入内容全部是 pandas 计数柱状图描述，不属于本题源片段所支持的内容；源侧 writer 输出为空，无法证明任何目标相关记忆的保真。"
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "The process is known to follow a normal distribution with a given mean and standard deviation."
+        }
+      ],
+      "reason": "注入内容针对 DataFrame value_counts 柱状图，而目标要求多样本正态抽样、直方图加 PDF 与总体均值/标准差，二者条件不重叠。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "rng = np.random.RandomState(seed)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "stats.norm.pdf(x, loc=means[-1], scale=stds[-1])"
+        }
+      ],
+      "reason": "提交代码中没有 pandas、value_counts 或计数柱状图痕迹，只有按目标语义写的抽样与拟合曲线；这仅是行为代理，不能证明注入未产生内部影响。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": [],"
+        },
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "\"role\": \"001-writer\""
+        }
+      ],
+      "reason": "存在直接可核验的同域源题，但源末未产出任何事实条目，故目标侧不存在由该源派生的可检索内容；来源覆盖不等于信息保真或适用。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"observable_candidates\": ["
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "观测到的候选集合只有两个 DataFrame 柱状图类记忆，与数值分布任务不同域；这只能说明检索到的内容，不能证明干扰或未被使用。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"injected_utf8_bytes\": 342"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_text_utf8_bytes\": 148"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"token_count\": null"
+        }
+      ],
+      "reason": "两条候选均被注入且无 dropped，但字节统计不一致且 token 计量不可用，因此预算驱动的淘汰与可见性开销无法判定；不写入不等于已存未检回。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "target_submission",
+          "quote": "rng = np.random.RandomState(seed)"
+        }
+      ],
+      "reason": "最终提交未出现注入内容对应的 pandas/柱状图写法，样本用 RandomState 与逐样本拟合 PDF 直接实现目标；无可见复用不等于证明记忆无效，共享 numpy/scipy/matplotlib 只是字符串层面代理。"
+    }
+  ],
+  "primary_hypothesis": "OPPORTUNITY_SOURCE",
+  "competing_explanations": [
+    "模型凭自身知识完成目标，注入的无关记忆没有可观测影响（无干预无法证实）。",
+    "matplotlib/numpy 的工具层重合可能带来不可测的弱提示，虽无 pandas 痕迹也不能排除。",
+    "源题未产出事实，因此目标注入被无关库项占据，可能属于来源缺失而非检索/打包失败。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "没有反事实，无法判断两条注入记忆是否影响过任何内部决策。",
+    "若源侧产出了派生记忆，是否会被检索、打包并正确迁移，本包无法回答。",
+    "token 预算与打包行为不可核：token_count 缺失且字节计数在 section 间不一致。",
+    "隐藏测试仅 5 项检查、0 条单测，绘图语义与总体统计的深层正确性未被覆盖。"
+  ],
+  "minimal_intervention": {
+    "change": "让源题结束时的 writer 至少产出一条关于正态抽样与直方图叠加 PDF 的可用事实，再走同一检索路径。",
+    "fixed": "相同源片段、相同目标提示、相同检索/打包管线与预算。",
+    "falsifier": "若注入该源派生事实后提交出现与目标无关的改写或质量下降，则“无关注入无可观测影响”的解读被反驳。"
+  },
+  "causal_claim": false
+}

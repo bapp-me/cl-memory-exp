@@ -1,0 +1,129 @@
+{
+  "case_id": "c-c86edbcae72f",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=27:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "The dataframe should also include a column 'Mean' which is the average value of each component value per row"
+        }
+      ],
+      "reason": "单矩阵 PCA 源题自身通过离线评测（correct true, 5 tests OK），是合法成功经验；但其契约（每行均值列 'Mean'、单矩阵、返回 (df, ax)）与目标的多矩阵/返回顺序需求并非完全一致，故只算有限可用。"
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "实际注入的 6 条 episode 全是统计/KMeans/十六进制/双字母频率等无关题，唯一与目标相关的单矩阵 PCA 源（source_provenance_injected=false）并未进入上下文，因此不存在可判定的目标相关记忆保真内容。"
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "perform K-Means clustering on each set separately and then determine the overall centroids"
+        },
+        {
+          "section": "injection/0",
+          "quote": "calculate the mean, median, and mode for each list"
+        }
+      ],
+      "reason": "被写入注入包的候选内容涉及 KMeans 聚类、字典统计、欧氏距离、浮点解码等，与“多矩阵 PCA + 累计解释方差绘图”无结构对应关系。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "mean_evr = np.vstack(all_evr).mean(axis=0)"
+        }
+      ],
+      "reason": "目标轨迹完全是自写的 PCA 循环、解释方差平均与绘图代码，未见对任何注入 episode 的模式、命名或步骤的引用，只是行为代理而非因果证据。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "TypeError: object of type 'Axes' has no len()"
+        },
+        {
+          "section": "target_submission",
+          "quote": "    return ax, dataframes"
+        }
+      ],
+      "reason": "提交把返回顺序写成 (ax, dataframes)，而评测执行 `len(dfs)` 时期望第一个返回值是 dataframe 列表，直接 TypeError 使 checks_executed=0、correct=false；这只能证明签名/结构不符，不能证明记忆导致。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "return a list of dataframes, each containing the PCA transformed data and the mean of each component for the corresponding matrix"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert 'Mean' in df.columns, 'Each dataframe should have a Mean column'"
+        }
+      ],
+      "reason": "题面“各矩阵每个分量的均值/单一累计图”与参考测试“'Mean' 为列、df.shape[1]==3、len(ax.lines)==3（每矩阵一条线）”存在解释歧义，提交用了 mean 行 + 单条平均曲线；这是题意/测试可能不一致的候选，不表示提交在此点上已被判错。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_episode_byte_budget"
+        },
+        {
+          "section": "mechanical",
+          "quote": "injected_count"
+        }
+      ],
+      "reason": "检索候选 90 条中被丢弃 1–84 名（含与目标相关的单矩阵 PCA 来源），只注入 rank 85–90 的 6 条新无关 episode，说明预算淘汰发生在打包可见性层；不相关内容存在不等于干扰，也不证明检索失败。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true"
+        }
+      ],
+      "reason": "存在一个合法且通过的 PCA 源经验，它在可观察检索候选中（source_provenance_in_observable_retrieval_candidates=true）却未被注入，因此“可复用的机会”未被兑现；这不等于该源一定能避免本次失败。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "未注入任何相关经验时，返回顺序错位可能只是普通实现失误，与记忆无关（无对照，无法归因）。",
+    "题面对返回顺序与 DataFrame/绘图结构含糊，即便注入源经验（(df, ax) 顺序、'Mean' 列）也可能仍与测试的 3 条线断言不符。",
+    "源经验被源题自身测试验证，但其单矩阵语义迁移到多矩阵目标需重构，属于部分适用而非直接复用。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "源 episode 未被注入的具体原因是打包预算还是有意的相关性选择，证据只能看到 reason 字段。",
+    "若源经验被注入，其契约是否会改变返回顺序或 DataFrame 结构，无从判断（无反事实）。",
+    "测试期望的 'Mean' 列与 'len(ax.lines)==3' 是否与题面原意一致，无法从给定证据裁定。"
+  ],
+  "minimal_intervention": {
+    "change": "让与目标配对且已通过的单矩阵 PCA 源 episode 进入注入上下文（替换无关 episode），并保持题面原样。",
+    "fixed": "相同的目标题面、相同数据与随机种子、相同注入字节预算与评分 mask。",
+    "falsifier": "若注入该源经验后提交仍返回 (ax, dataframes) 并在同一断言处崩溃，则说明该失败与可用经验无关。"
+  },
+  "causal_claim": false
+}

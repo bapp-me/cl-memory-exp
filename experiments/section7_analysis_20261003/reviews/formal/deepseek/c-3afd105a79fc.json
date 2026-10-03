@@ -1,0 +1,143 @@
+{
+  "case_id": "c-3afd105a79fc",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=36:True:6"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Describe a dataframe and draw a distribution chart for each numeric column after replacing the NaN values with the average of the column."
+        }
+      ],
+      "reason": "Source episode passed offline checks and covers the same per-dataframe mean-fill/describe/plot operations, but only for a single dataframe and a different return shape."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "df_filled = df.fillna(df.mean(numeric_only=True))"
+        },
+        {
+          "section": "target_visible",
+          "quote": "df[col] = df[col].fillna(df[col].mean())"
+        }
+      ],
+      "reason": "Relevant source operation—mean-fill then describe/plot numeric columns—is preserved; target adds a list wrapper and stats concatenation required by its own contract."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of dataframes, each containing numeric columns with potential NaN values"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Describe a dataframe and draw a distribution chart for each numeric column"
+        }
+      ],
+      "reason": "Core per-dataframe operations apply, but target requires iterating a list and returning tuples containing processed dataframe with statistics, which source does not directly provide."
+    },
+    "visible_use": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "target_visible",
+          "quote": "if len(numeric_cols) > 0:"
+        }
+      ],
+      "reason": "Source provenance was not injected; target behavior is consistent with source-like operations, but this cannot establish actual memory use without counterfactual evidence."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Describe a dataframe and draw a distribution chart for each numeric column after replacing the NaN values with the average of the column."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=36:True:6"
+        }
+      ],
+      "reason": "A legal, passing source episode exists for the same core pandas/seaborn operations; this shows an opportunity, not that it was injected or reused."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_episode_byte_budget"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "The retrieval candidate set is broad, but packing dropped the oldest 74 and source provenance was not injected; this is a visibility/budget effect, not proof the source was useless."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "ValueError: Cannot describe a DataFrame without columns"
+        },
+        {
+          "section": "target_visible",
+          "quote": "if len(numeric_cols) > 0:"
+        }
+      ],
+      "reason": "Target visibly tested, failed on an empty DataFrame, added a guard, and then submitted a passing artifact; this explains the successful execution without proving any memory effect."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "if len(df.columns) == 0:"
+        },
+        {
+          "section": "target_visible",
+          "quote": "if len(numeric_cols) > 0:"
+        }
+      ],
+      "reason": "Target's empty-data guard is behaviorally consistent with source's edge-case handling, but source was not injected, so this is a transfer candidate and not causal evidence."
+    }
+  ],
+  "primary_hypothesis": "unknown",
+  "competing_explanations": [
+    "Target may be solved from general pandas/seaborn knowledge; the paired source provenance was not injected into the target context.",
+    "The six injected memory items are unrelated CodeEval tasks and show no visible use, so their presence may be redundant context rather than a cause.",
+    "The target empty-DataFrame guard may come from direct test feedback during target execution rather than source transfer."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the source episode was available to the target through a non-injected memory state.",
+    "Whether removing or explicitly injecting the source episode would change target behavior or score.",
+    "Whether the six unrelated injected memories consumed budget or attention in a way that affected the target.",
+    "The exact hidden contract for 'processed dataframe with statistics' beyond the visible passing checks."
+  ],
+  "minimal_intervention": {
+    "change": "Run the same target with the paired source episode explicitly injected versus not injected, holding all else equal.",
+    "fixed": "Same target prompt, tools, packing budget, and no other memory changes.",
+    "falsifier": "If source injection/removal produces no behavioral or score difference, the transfer hypothesis is weakened; if target fails only on source-covered operations without the source, transfer is supported."
+  },
+  "causal_claim": false
+}

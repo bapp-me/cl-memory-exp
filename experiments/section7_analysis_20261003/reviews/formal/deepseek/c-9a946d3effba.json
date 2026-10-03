@@ -1,0 +1,143 @@
+{
+  "case_id": "c-9a946d3effba",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        }
+      ],
+      "reason": "Source episode passed and was scorable, but no source update operations or facts were produced, so retained source experience is not evidenced."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": []"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        }
+      ],
+      "reason": "No target-relevant source-derived memory content appears; injected candidates are unrelated to business-day counting."
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "calculating the total number of business days across multiple date ranges for a given country"
+        }
+      ],
+      "reason": "Injected memories concern DataFrame/bar-chart work, while the target requires date-range and holiday logic."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "pd.bdate_range(start, end, holidays=holiday_list, freq='C')"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "Final submitted code contains date/holiday logic and no visible trace of the injected bar-chart memories; this is a behavior proxy, not a causal conclusion."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Create a list of business days between two dates, excluding weekends and specified country's public holidays."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "calculating the total number of business days across multiple date ranges for a given country"
+        }
+      ],
+      "reason": "Source and target share weekday/holiday counting, but target adds multi-range aggregation and empty/reversed-range handling; this shows an opportunity source, not that any memory was stored or reused."
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        },
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "{\"facts\": []}"
+        }
+      ],
+      "reason": "No source memory update or facts were admitted from the source episode; this does not prove the unshown library lacked pre-existing relevant entries."
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": ["
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "Two candidates were retrieved and injected, but their content is off-domain for the target; evidence of retrieval/injection, not of usefulness."
+    },
+    {
+      "tag": "SCOPE_INTERFERENCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "excluding weekends and public holidays"
+        }
+      ],
+      "reason": "Injected semantic candidates are out of scope for business-day calculations; no visible interference appears, so this remains a scope-mismatch candidate only."
+    }
+  ],
+  "primary_hypothesis": "unknown",
+  "competing_explanations": [
+    "The target likely succeeded from the model's own coding and visible test execution, with no demonstrated memory effect.",
+    "The off-domain injected memories may have been ignored, but the evidence cannot show they were not internally relevant.",
+    "A relevant source-derived memory may not have been written, selected, or injected; absence from this packet does not prove absence from the full library."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "No counterfactual or controlled intervention is available for causal memory effect.",
+    "The complete unselected memory library is not presented, so relevant pre-existing memories cannot be ruled out.",
+    "Token counts are unavailable; injected text byte size alone cannot establish cost or utility.",
+    "Source memory content and fidelity after source_update are not evidenced because operations and facts lists are empty."
+  ],
+  "minimal_intervention": {
+    "change": "Record and inject a source-derived semantic candidate about single-range business-day counting with holidays instead of the off-domain bar-chart memories.",
+    "fixed": "Same target prompt, model, tools, hidden tests, and budget.",
+    "falsifier": "If target behavior and success remain identical with no trace of the injected business-day candidate, transfer remains unsupported; if performance degrades, the candidate may be harmful."
+  },
+  "causal_claim": false
+}

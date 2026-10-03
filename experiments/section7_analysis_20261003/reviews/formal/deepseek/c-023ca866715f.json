@@ -1,0 +1,142 @@
+{
+  "case_id": "c-023ca866715f",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        }
+      ],
+      "reason": "Source task is solved and scorable, but its run produced no update operations/facts, so reusable source experience is only the visible single-array episode."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": []"
+        }
+      ],
+      "reason": "The injected memories concern pandas/value-count plotting, not the source PCA row-sum procedure; source provenance is not retained or injected, so no faithful source-derived content is observed."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "perform Principal Component Analysis (PCA) on the sum of rows of each array and plot the explained variance ratio for each array"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Performs Principal Component Analysis (PCA) on the sum of rows of a 2D numpy array and plots the explained variance ratio."
+        }
+      ],
+      "reason": "Both tasks share PCA on row sums, but target adds a list of arrays, per-array subplots, indexed titles, and a Figure return, so source procedure only partly covers target."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "target_visible",
+          "quote": "row_sums = np.sum(arr, axis=1).reshape(-1, 1)"
+        }
+      ],
+      "reason": "Visible target code does PCA on numpy row sums and never adopts the injected pandas/value-count content; this is a behavioral proxy, not proof that no latent memory influenced it."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "perform Principal Component Analysis (PCA) on the sum of rows of each array and plot the explained variance ratio for each array"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Performs Principal Component Analysis (PCA) on the sum of rows of a 2D numpy array and plots the explained variance ratio."
+        }
+      ],
+      "reason": "A legal related source exists for PCA on row sums, but it covers one array and returns an Axes, while target needs a list, subplots, and Figure; it cannot prove retrieval or use."
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        },
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "\"facts\": []"
+        }
+      ],
+      "reason": "No source-derived update or fact was admitted from the source run, so no stored source rule can be cited for the target; this does not rule out other library contents."
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"observable_candidates\": ["
+        },
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        }
+      ],
+      "reason": "Retrieval surfaced and injected two candidates, but their visible semantics concern pandas DataFrames/bar charts, not the target PCA subplot task; retrieval alone does not show interference or benefit."
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "The injected memory texts are high-level topic summaries lacking PCA row-sum, n_components, subplot, or title details, so they cannot faithfully carry the source procedure."
+    }
+  ],
+  "primary_hypothesis": "WRITE_ADMISSION",
+  "competing_explanations": [
+    "Target success may be task-native or pretraining-based and independent of any memory.",
+    "The retrieved pandas/value-count memories may have been unused noise rather than interfering or helpful.",
+    "A source-derived memory could exist in the unselected library or in latent state, even though this packet shows no source write or provenance retention."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether any latent memory influenced the target solution; no counterfactual or memory-off control exists.",
+    "Whether hidden target checks inspected title text and return type beyond the visible two checks.",
+    "Full memory library and token counts are not presented, so retrieval coverage and true cost are unknown."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Keep the same source history, target prompt, tool environment, retrieval configuration, and scoring mask.",
+    "falsifier": "A source-derived memory entry that is retrievable/injected and visibly consulted, or a no-memory control whose behavior differs on this target, would challenge the no-admitted-source explanation."
+  },
+  "causal_claim": false
+}

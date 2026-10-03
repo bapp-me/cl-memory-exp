@@ -1,0 +1,122 @@
+{
+  "case_id": "c-af0525793cc3",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "Lists differ: ['Height', 'Weight'] != ['const', 'Height', 'Weight']"
+        }
+      ],
+      "reason": "Source submission omitted sm.add_constant, and the source evaluator failed 3 of 5 checks requiring a const coefficient."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "standardize the numeric columns in each DataFrame and return a combined heatmap"
+        }
+      ],
+      "reason": "The five injected D1 episodes are unrelated heatmap/DTM/sampling/scramble tasks; no target-relevant source memory was actually presented."
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "generate a combined pair plot and covariance matrix for all these DataFrames"
+        }
+      ],
+      "reason": "Injected candidates do not contain per-DatasetID OLS filtering or intercept handling relevant to this target."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "X = sm.add_constant(X)"
+        }
+      ],
+      "reason": "Target contains correct task-specific OLS logic, but no injected D1 content appears in the visible run; this is only a behavioral proxy, not proof of non-use."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "X = sm.add_constant(X)"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "Lists differ: ['Height', 'Weight'] != ['const', 'Height', 'Weight']"
+        }
+      ],
+      "reason": "Source submission omitted the intercept and failed source checks; target added the intercept and passed target checks. Shows execution difference, not memory causation."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_episode_byte_budget"
+        },
+        {
+          "section": "retrieval",
+          "quote": "injected_ids\": ["
+        }
+      ],
+      "reason": "Retrieval packet shows many older candidates dropped for byte budget and only late unrelated episodes injected; source provenance is not among injected ids. This is packing/visibility, not retrieval failure."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": false"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df: pd.DataFrame, height: int, weight: int, columns: list)"
+        }
+      ],
+      "reason": "A legitimate, scorable source episode exists in the same OLS/height-weight domain but failed; provenance retention alone does not prove applicability or use."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/2",
+          "quote": "create a combined document-term matrix for all documents"
+        }
+      ],
+      "reason": "Injected memories are different tasks; no visible adaptation from them to per-DatasetID OLS is seen, so no transfer can be claimed."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "Target may have succeeded from model's own statsmodels/pandas knowledge rather than any memory.",
+    "Source failure may reflect its own incomplete implementation/testing, not memory quality.",
+    "The unrelated injected episodes may have no effect, positive or negative, on this target."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "No counterfactual run with/without source memory.",
+    "Full unselected memory library and exact packed prompt text are unavailable.",
+    "Whether source, if injected, would have changed target code or outcome is unknown."
+  ],
+  "minimal_intervention": {
+    "change": "Inject the retained source episode, or a corrected source episode with sm.add_constant, under the same prompt and hidden target tests.",
+    "fixed": "Same target task, hidden tests, tool environment, sampling, and packing budget.",
+    "falsifier": "If the target still writes sm.add_constant and passes, source injection is not necessary for success; if it omits the intercept or fails, source content may influence behavior."
+  },
+  "causal_claim": false
+}

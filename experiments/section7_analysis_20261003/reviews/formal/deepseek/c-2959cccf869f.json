@@ -1,0 +1,105 @@
+{
+  "case_id": "c-2959cccf869f",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "target_update_operations",
+          "quote": "stream.task-004.attempt-1"
+        }
+      ],
+      "reason": "仅出现源事件 id，没有源题内容或结果文本，无法判断源经验质量。"
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "本次注入为空，没有可供评估保真度的记忆内容。"
+    },
+    "target_applicability": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "没有候选记忆被注入，无法评估其对目标的适用性。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": []"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "提示、工具结果和注入元数据均无记忆文本，行为中未见可归因于记忆的适配。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "\"submitted\": false"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": false"
+        }
+      ],
+      "reason": "运行结束时未提交且目标判为错误；可见这是执行与终止问题，但不能说明记忆是否有效或有害。"
+    },
+    {
+      "tag": "INFRA_PROTOCOL",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"response_timed_out\": true"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"solver_error\": \"Request was aborted\""
+        }
+      ],
+      "reason": "响应超时且请求被中止，可能阻止了最终提交；但它不能反推记忆机制，也不能证明超时源于模型循环。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"observable_candidates\": []"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": []"
+        }
+      ],
+      "reason": "可观察候选与注入列表均为空，说明本次没有 D1 内容进入上下文；这不能证明记忆不存在、检索失败或对结果有因果影响。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "最终提交缺失可能是基础设施超时/请求中止造成，而非单纯任务执行失败。",
+    "无注入记忆，因此记忆无法解释本次失败；目标结束后的更新也不能解释此前行为。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "源题内容缺失，无法判断是否存在本可帮助的合法记忆。",
+    "没有反事实或受控干预，不能推断记忆的因果效果。",
+    "无法确定超时是外部基础设施问题还是 agent 反复验证导致。",
+    "未提交是否因缺少可用 submit 动作或协议限制，现有证据不足。"
+  ],
+  "minimal_intervention": {
+    "change": "在确认右侧门已打开后立即触发提交，而不是继续转向和验证。",
+    "fixed": "保持相同的 BabyAI 布局、注入为空、工具预算和历史。",
+    "falsifier": "若同样提交的受控运行仍判错或仍超时，则说明关键阻塞不是提交时机。"
+  },
+  "causal_claim": false
+}

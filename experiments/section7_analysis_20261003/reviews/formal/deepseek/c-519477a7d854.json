@@ -1,0 +1,143 @@
+{
+  "case_id": "c-519477a7d854",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"tests_run\": 6,\n  \"checks_executed\": 23,\n  \"correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(n, seed=0):"
+        }
+      ],
+      "reason": "配对源题通过 6 项测试，但它是单张散点图任务，不覆盖目标新增的 rows×cols 网格与逐行嵌套聚合要求。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "np.random.seed(seed)\n    x = np.random.rand(n)\n    y = np.random.rand(n)\n    points = list(zip(x, y))"
+        },
+        {
+          "section": "injection/1",
+          "quote": "np.random.seed(seed)\n    x = np.random.rand(n)\n    y = np.random.rand(n)\n    points = list(zip(x, y))"
+        }
+      ],
+      "reason": "被注入的源经验（injection/1）与源题代码一致，其中的播种/坐标/标签做法在子图中被原样沿用；仅指该相关片段，不含目标新增结构。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should return a list of matplotlib figures, each representing a scatter plot"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "points_row = []\n        for j in range(cols):"
+        }
+      ],
+      "reason": "源经验只适用于单个子图的生成；目标新增了按行分组的网格返回契约，属于源未覆盖的新条件。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "np.random.seed(seed)\n    x = np.random.rand(n)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "seed = i * cols + j\n            np.random.seed(seed)"
+        }
+      ],
+      "reason": "源中“seeded 随机点 + scatter + X/Y 标签”的做法被合理改造成每子图独立种子；可见行为代理，失败点在源未覆盖的聚合结构上，不能据此断定负迁移。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "and a list of lists containing the points for each scatter plot."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert all(len(points) == 5 for row in points_grid for points in row), 'Each scatter plot should have 5 points'"
+        }
+      ],
+      "reason": "可见题意只写“list of lists”，可被读成“按子图的点列表（展平）”，而隐藏测试要求 rows×cols 的逐行嵌套；判定为契约歧义候选，不足以归因于记忆。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "            figures.append(fig)\n            all_points.append(points)"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AssertionError: Each scatter plot should have 5 points"
+        }
+      ],
+      "reason": "提交把每个子图的点直接 append 到一个扁平列表，没有按行分组，随后在隐藏断言的嵌套遍历上失败；这是目标自身的执行/结构问题。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "points = list(zip(x, y))"
+        },
+        {
+          "section": "target_visible",
+          "quote": "seed = i * cols + j\n            np.random.seed(seed)"
+        }
+      ],
+      "reason": "源题的散点生成配方在目标中被改写为按子图播种，是可观察的迁移代理；无对照条件，不能证明它促成成功或造成失败。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Generates a simple scatter plot with 'n' points."
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true"
+        }
+      ],
+      "reason": "存在通过且技能重叠的合法源，其来源已被注入；但来源覆盖不等于足以覆盖目标新契约，不能保证适用。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "目标轨迹中没有可见的检索事件，被复用的配方也可能来自任务本身或通用知识，而非注入的源经验。",
+    "题意中“list of lists containing the points for each scatter plot”可被合理读作按子图的扁平列表，失败可能主要是契约歧义产物（见 EVAL_CONTRACT）。",
+    "三项注入中两项（欧氏距离、Voronoi）与本题无关，可能完全未被使用，属惰性内容。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "源经验是否实际进入目标上下文并被读取，证据中不可见。",
+    "无记忆的反事实运行缺失，无法判断同一扁平列表错误是否与记忆无关地出现。",
+    "source_update/target_update 只有哈希，无法评估后续保留或更新。",
+    "隐藏测试之外，评分方对返回形状的期望是否与可见题意一致，无法确认。"
+  ],
+  "minimal_intervention": {
+    "change": "在返回前按行分组构造嵌套结构（每行一个内层点列表），而非把所有子图点追加进单一扁平列表。",
+    "fixed": "相同的目标题面、隐藏测试、注入记忆包与 token 预算。",
+    "falsifier": "若改为按行嵌套后同一断言仍失败，或同题无记忆运行也产出扁平列表，则削弱“执行误读为主因”的候选。"
+  },
+  "causal_claim": false
+}

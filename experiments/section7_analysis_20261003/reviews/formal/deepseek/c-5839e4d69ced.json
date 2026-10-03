@@ -1,0 +1,142 @@
+{
+  "case_id": "c-5839e4d69ced",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "Ran 5 tests in 0.012s"
+        }
+      ],
+      "reason": "源题被判 correct/scorable，有 5 个测试执行；但仅 5 项检查、无反事实对照，故只算 pass_with_limits。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        },
+        {
+          "section": "mechanical",
+          "quote": "disabled"
+        }
+      ],
+      "reason": "目标上下文无任何注入内容，memory_policy 为 disabled，源经验（df→CSV→base64 配方）并未以记忆形式进入本题。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Encodes a dict of list as a Base64 string"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "returns a list of Base64 encoded strings corresponding to each dataset"
+        }
+      ],
+      "reason": "源经验的核心编码管线对本题单个数据集的编码仍适用，但调用签名、批量列表返回、标量字典等新条件需要额外处理。"
+    },
+    "visible_use": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "injected_count"
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        }
+      ],
+      "reason": "提交代码的管线与源题写法相似，但本题零注入、无对照，相似不能归因于记忆复用，故无法判定。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_state_summary",
+          "quote": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        }
+      ],
+      "reason": "源题前后状态哈希相同且为缓存空 JSON 的哈希，加上零注入，说明本题没有来自源题的记忆被写入或准入；这只能说明无记忆内容，不能说明记忆机制无效。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "ValueError: If using all scalar values, you must pass an index"
+        },
+        {
+          "section": "target_visible",
+          "quote": "if isinstance(dataset, pd.DataFrame):"
+        }
+      ],
+      "reason": "目标可见轨迹是先崩溃后自行加保护分支并重跑通过，表现为按题面自行调试实现；不证明任何记忆来源。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "Ran 0 tests in 0.000s"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert process_datasets([{'name': ['Alice', 'Bob'], 'age': [25, 30]}"
+        }
+      ],
+      "reason": "离线判分报 0 个测试却 correct=true，reference 断言只覆盖 dict-of-list 情形，目标代码新增的标量字典/DataFrame 分支其实未被检查；这是评分边界候选，不是对错结论。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "csv_bytes = df.to_csv(index=False).encode('utf-8')"
+        },
+        {
+          "section": "source_visible",
+          "quote": "csv_bytes = df.to_csv(index=False).encode('utf-8')"
+        }
+      ],
+      "reason": "提交写法与源题解法逐字重合，构成同构迁移的可见候选；但零注入且无对照，重合也可能来自题面描述或先验知识，不能证明迁移因果。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "提交代码与源题写法高度重合，可能来自模型先验/题面公开描述，而与本方法记忆无关。",
+    "离线判分只执行 1 项检查、0 个测试，correct=true 的覆盖面有限，真实隐藏正确性无法从现有证据确认。",
+    "包内未包含未选中的完整记忆库，无法排除存在未被展示的记忆内容。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试是否覆盖标量字典、DataFrame 输入等新条件不可知。",
+    "模型是否有可用的隐式/历史记忆不在本包可见范围内。",
+    "不能判断相同写法是记忆复用还是题面推导，因为没有反事实运行。"
+  ],
+  "minimal_intervention": {
+    "change": "在同一目标上开启记忆并显式注入源题经验，与本题零注入基线对照提交代码与判分结果。",
+    "fixed": "相同的目标提示、相同的工具预算与判分掩码、相同的可见执行协议。",
+    "falsifier": "若注入条件下出现源题未含的补丁式改动或结果差异，或发现任何本题记忆写入/注入记录，则“无记忆准入、由题面自行实现”的候选被推翻。"
+  },
+  "causal_claim": false
+}

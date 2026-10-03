@@ -1,0 +1,142 @@
+{
+  "case_id": "c-abd281d82528",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "Ran 5 tests in 0.046s"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "- The dataframe should also include a column 'Mean' which is the average value of each component value per row"
+        }
+      ],
+      "reason": "源题在自身 5 个测试上判为正确，说明其单矩阵契约成立；但源通过只证明它自己的契约，不能证明其表示选择（Component i / Mean 列）适用于已改变的目标契约。"
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0,"
+        }
+      ],
+      "reason": "记忆通道禁用且注入计数为 0，没有可评保真度的 D1 记忆内容；源 episode 未被保留也提示不存在可核对的注入文本。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Apply PCA with n_components components to a 2D data matrix"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Given a dataset consisting of multiple 2D data matrices"
+        }
+      ],
+      "reason": "共享 PCA、xlabel/ylabel 约定，但目标把单矩阵改成多矩阵聚合、返回 list of dfs 并改变了均值语义（每分量均值 vs 逐行 Mean），故只部分适用。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "target_submission",
+          "quote": "cols = [f'PC{i+1}' for i in range(transformed.shape[1])]"
+        }
+      ],
+      "reason": "无注入记录，且提交未复现源解特征性的 Component i / Mean 列写法，属可见层面无复用；但这只是缺少证据，不等于已存却检索失败。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "return a list of dataframes, each containing the PCA transformed data and the mean of each component"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "dfs, ax = new_task_func(data_matrices, n_components=2)"
+        }
+      ],
+      "reason": "隐藏测试按 (dfs, ax) 二元解包并要求 'Mean' 列，而题面只提 plot 与 list of dataframes、未提列名与 axes 返回，属题意/测试不一致的候选；不能据此断言题面本身错误。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ValueError: too many values to unpack (expected 2)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "return transformed_dfs"
+        }
+      ],
+      "reason": "提交只返回 list，调用侧解包失败，tests_run 为 0，属可见执行与契约不匹配；错误发生在解包阶段，无法说明记忆影响。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "df.loc['mean'] = means"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "- The dataframe should also include a column 'Mean' which is the average value of each component value per row"
+        }
+      ],
+      "reason": "目标把均值放成一行且列名用 PCn，与隐藏测试要求的 'Mean' 列与 Component i 列不符，是可导致断言失败的表征偏差；无注入证据，故非记忆失真证据。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0,"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "无任何实际注入或复用痕迹，无法把本次失败归因于记忆复用或负迁移；未写入/未注入不得解释为已存但未检索到。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "仅因 agent 误读返回契约（应回 (dfs, ax) 且 'Mean' 为列）而未通过，与记忆无关",
+    "隐藏测试取自包裹式 reference_solution（逐矩阵调用 task_func 后返回 dfs, plt.gca()），题面未同步该返回约定",
+    "记忆通道禁用、无注入，任何关于检索与迁移的推断在本包内都不可判定"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "题面是否本意要求返回 axes（plot 对象）无法由现有文本确定",
+    "源 episode 是否曾进入方法状态不可知（raw_source_episode_retained_in_method_state 为 false，未给出候选库）",
+    "未提供目标端任何写入/更新记录，无法评估 UPDATE_RETENTION 或写入门控"
+  ],
+  "minimal_intervention": {
+    "change": "在目标题面显式写明返回 (list_of_dfs, ax) 与 'Mean' 列语义（或让测试接受本次的 list 返回），记忆通道保持不变",
+    "fixed": "同一源 episode、同一目标提示、同一预算与工具环境，保持 D0/D1 证据水平",
+    "falsifier": "若契约明确后仍失败，或若无注入条件下提交复现源的 Component i / Mean 列模式，则 EVAL_CONTRACT/TASK_EXECUTION 归因被反驳"
+  },
+  "causal_claim": false
+}

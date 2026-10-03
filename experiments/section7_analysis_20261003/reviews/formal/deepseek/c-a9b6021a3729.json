@@ -1,0 +1,144 @@
+{
+  "case_id": "c-a9b6021a3729",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "Ran 5 tests in 0.000s"
+        },
+        {
+          "section": "source_visible",
+          "quote": "strings = [''.join(random.choices(letters, k=length)) for _ in range(count)]"
+        }
+      ],
+      "reason": "源题通过且可评分，覆盖同域生成+计数；但它只处理单一 length/count，未包含目标新增的 lengths/counts 列表、most/least 频次和返回元组。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/5",
+          "quote": "random.choice(string.ascii_lowercase)"
+        },
+        {
+          "section": "source_visible",
+          "quote": "random.choices(letters, k=length)"
+        }
+      ],
+      "reason": "到达目标的注入候选与任务形状相近，却在字母集与生成方法（random.choice vs random.choices）上偏离目标所需内容；精确源记录仅在候选名单内、未注入。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(length, count, seed=0):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of random strings generated from a fixed set of letters ('a', 'b', 'c', 'd', 'e')"
+        }
+      ],
+      "reason": "同字母集、同种子与计数核心可直接迁移，但目标改了签名（lengths/counts）并新增 most/least 要求，源不完整覆盖。"
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "''.join(random.choice(LETTERS) for _ in range(length))"
+        },
+        {
+          "section": "injection/5",
+          "quote": "random.choice(string.ascii_lowercase)"
+        }
+      ],
+      "reason": "可见实现采用逐字符 random.choice + 单次种子，与注入候选模式一致、与源的 random.choices 不同，并与确定性频率不匹配相关；只是行为代理。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(length, count, seed=0):"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "Ran 5 tests in 0.000s"
+        }
+      ],
+      "reason": "存在高度相关的合法源且已验证正确，构成可用机会；但这只说明机会存在，不证明其被注入或被复用。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_episode_byte_budget"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "50 条候选先被全量选中，再按字节预算淘汰最旧 43 条，只注入 7 条 D1；源直录未进入注入，属打包可见性而非检索失败。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "''.join(random.choice(LETTERS) for _ in range(length))"
+        },
+        {
+          "section": "injection/5",
+          "quote": "random.choice(string.ascii_lowercase)"
+        }
+      ],
+      "reason": "目标可见代码与注入候选的低层生成写法重合，而与源写法不同；此为可见代理，不能证明记忆导致该写法或导致失败。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(new_task_func([3, 4], [2, 3], 0) == (Counter({'c': 9, 'e': 3, 'd': 3, 'b': 3}), 'c', 'b'))"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "total_counter.update(task_func(length, count, seed))"
+        }
+      ],
+      "reason": "提交的频率与隐含期望不一致而断言失败；期望取决于源式的 random.choices 与逐对重设种子，目标的生成/种子策略未复现。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "目标是自然实现（逐字符 random.choice 本身合理），失败源于题面未指定 RNG 而隐藏测试要求特定确定输出（EVAL_CONTRACT），与记忆无关。",
+    "精确源直录未被注入（PACKING_VISIBILITY），缺少参考导致按其他方式实现，而非记忆内容有害。",
+    "目标代码与 injection/5 相似可能只是同域任务的自然写法重合，不足以证明来自该语义候选。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "源直录在候选中的具体排名及其是否进入模型上下文（仅知 source_provenance_injected=false）。",
+    "没有推理轨迹，无法确认目标可见写法源自哪条注入候选。",
+    "未注入的 43 条候选内容未知，无法判断是否存在更贴合的源。",
+    "隐藏测试是否仅接受与源完全一致的 RNG 实现（题面未规定 RNG 方法）。",
+    "target_update 之后的状态未提供，不能用于解释本次目标行为。"
+  ],
+  "minimal_intervention": {
+    "change": "改为复用源直录的生成方式——按每个 (length,count) 对调用 random.choices('abcde', k=length) 并逐对重设种子，再聚合计数。",
+    "fixed": "保持相同历史、相同注入预算与 7 条候选集合、相同隐藏测试与种子约定。",
+    "falsifier": "若采用与源一致的生成方式后仍出现同样的频率不匹配，或注入源直录前后行为无差异，则否定该候选。"
+  },
+  "causal_claim": false
+}

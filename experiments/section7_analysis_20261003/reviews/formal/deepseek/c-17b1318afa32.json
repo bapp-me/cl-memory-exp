@@ -1,0 +1,124 @@
+{
+  "case_id": "c-17b1318afa32",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"checks_executed\": 32,"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true,"
+        }
+      ],
+      "reason": "源题自身评测通过（10 项测试、32 次检查），可作为合法经验来源；但其契约是单文本 task_func(text, seed)，对多文本目标只有部分可迁移性。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Seed the random number generator for reproducibility, using either `random.seed(<seed>)` for the `random` module"
+        }
+      ],
+      "reason": "注入内容只抽象出“用参数 seed 播种”等通用工作流，未保留源题中“每次调用重新播种/单文本处理”的关键语义，因此对目标所需内容只算部分保真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should output a list of scrambled texts, one for each input text."
+        },
+        {
+          "section": "injection/7",
+          "quote": "Confirm correctness of an implementation against the task's stated examples before submitting."
+        }
+      ],
+      "reason": "通用工作流（播种、示例验证、输入校验）适用于目标，但源经验的作用域是单文本，目标改成列表输入后需要新的粒度处理，故只部分适用。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "if not isinstance(texts, (list, tuple)):"
+        },
+        {
+          "section": "injection/1",
+          "quote": "If a check fails, `raise ValueError` (or `TypeError` for wrong-type cases) with a descriptive message naming the offending parameter."
+        }
+      ],
+      "reason": "提交中出现了与注入的输入校验工作流一致的 isinstance/ValueError 守卫，属可见的一致适配；但提交里与源解相似的 scramble 片段同样可由题面直接推出，不能据此证明记忆被复用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Scramble the letters in each word of a given text, keeping the first and last letters of each word intact."
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"distance\": 31,"
+        }
+      ],
+      "reason": "源题与目标共享同一核心算法（词内乱序、保留首尾、>3 字符），且源 episode 可见、可评分、provenance 被注入，构成一次真实的可迁移机会；机会存在不等于被使用，也不保证内容仍完整保留。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "    return [re.sub(r'\\w+', scramble_word, text) for text in texts]"
+        },
+        {
+          "section": "target_visible",
+          "quote": "\"name\": \"SUBMIT\""
+        }
+      ],
+      "reason": "提交把源题的单文本 scramble 辅助函数直接搬到列表上，只播种一次便处理所有文本，而参考实现按文本重新调用 task_func（每个文本重置 RNG 状态），呈现粒度上的部分迁移/误配候选；无对照实验，不能断言记忆导致失败。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "return [task_func(text, seed) for text in texts]"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AssertionError"
+        }
+      ],
+      "reason": "目标题面只要求“输出与输入文本一一对应的乱序列表”，未给示例、未说明 seed 应在每个文本上重置；隐藏测试却按每文本重新播种取值，存在题意欠定/测试假设不一致的候选，仅标记不重判。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "失败更可能是模型对欠定题意（全局播种 vs 每文本播种）的自行推断错误，与记忆内容无关。",
+    "提交中与源解相似的代码同样能由目标题面描述直接推导，因此片段重合不构成记忆复用的证据。",
+    "注入的 8 条工作流均未包含源题实现细节，无法排除记忆对该失败无任何作用。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "没有反事实运行，无法判断移除注入工作流后提交结果是否改变。",
+    "seed 的预期作用域（每文本重置还是全局流）在题面中未定义，只能由隐藏测试推断。",
+    "未选择的完整记忆库未提供，不能据此推断其他经验不存在。",
+    "post-task target_update 为空操作，且其 before/after 哈希与本题执行无因果关联，不能解释本次失败。"
+  ],
+  "minimal_intervention": {
+    "change": "按输入逐条处理并在每条文本前重置随机状态，例如 return [task_func(text, seed) for text in texts]",
+    "fixed": "保持相同的题面、相同的 seed 参数语义、相同的注入记忆与工具预算",
+    "falsifier": "若对整列表只播种一次的实现仍能通过隐藏测试，则“每文本重新播种”这一失败归因被反驳。"
+  },
+  "causal_claim": false
+}

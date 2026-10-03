@@ -1,0 +1,132 @@
+{
+  "case_id": "c-29779beb64a9",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "FAILED (failures=1, errors=4)"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": false"
+        }
+      ],
+      "reason": "源题可评分但提交失败；它作为先前的直接经验并非干净通过，只能视为部分/失败源。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "A DataFrame containing the two lists as columns."
+        },
+        {
+          "section": "source_visible",
+          "quote": "df = pd.DataFrame([a, b], index=['A', 'B'])"
+        }
+      ],
+      "reason": "源题文档提到列 'A'/'B'，但可见实现把 A/B 当行索引；与目标相关的 DataFrame 方向内容是矛盾或不一致的，只能算部分保真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of pairs of lists, compute the Euclidean distance for each pair"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(a, b):"
+        }
+      ],
+      "reason": "源题处理单个 pair 的欧氏距离、DataFrame 和绘图；目标扩展到多个 pair 并返回列表，源经验只覆盖部分结构，且源实现方向本身失败。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "def new_task_func(list_of_pairs):"
+        },
+        {
+          "section": "injection/0",
+          "quote": "def total_elapsed_seconds(date_list):"
+        }
+      ],
+      "reason": "目标可见代码自行实现 pair 循环；注入的后续任务（日期、菜单、回归、统计、KMeans）内容未出现在目标代码中，且源题 episode 未被注入，因此看不出对相关记忆的可见复用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "create a Pandas DataFrame for each pair with indices 'A' and 'B'"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "df = pd.DataFrame({'A': a, 'B': b})"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "DataFrame shape mismatch"
+        }
+      ],
+      "reason": "目标提示说 indices 'A' 和 'B'，但离线参考/测试构造列 'A'/'B'；目标按字面做行索引，形成题面与隐藏合同的歧义候选，不能据此断言测试错误。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "df = pd.DataFrame([list(a), list(b)], index=['A', 'B'])"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "DataFrame shape mismatch"
+        }
+      ],
+      "reason": "目标把两个列表作为行、A/B 作行索引，得到形状 (2,n)；隐藏参考期望 A/B 为列，形状 (n,2)。这是直接可见的实现/表示不匹配。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"history_index\": 0,"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_episode_byte_budget\""
+        }
+      ],
+      "reason": "源题 episode 在 observable candidates 中被选中，但因 byte budget 被丢弃；实际注入的是后续五个无关 episode。相关源经验未进入目标可见上下文，属打包可见性；不证明若注入会改变结果。"
+    }
+  ],
+  "primary_hypothesis": "REPRESENTATION",
+  "competing_explanations": [
+    "题面 'indices' 可被理解为行索引，而隐藏参考测试要求列 'A'/'B'，因此合同歧义也是竞争解释。",
+    "源题 episode 未被注入，目标与源题相似的错误 DataFrame 写法可能只是独立误读，不能证明记忆迁移或复用。",
+    "现有证据没有反事实运行；无法判断若注入源题或采用不同 mask 是否会成功。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试的完整内容和评分 mask 不在证据中，无法确认 'indices' 是否应被解释为行索引还是列标签。",
+    "没有源题注入目标或目标不使用记忆的对照运行，不能判断源经验对目标失败的影响。",
+    "完整未选记忆库未提供，不能推断不存在其他相关记忆或打包候选。",
+    "token_count 为 unavailable，无法评估预算淘汰的精确 token 压力。"
+  ],
+  "minimal_intervention": {
+    "change": "把每个 DataFrame 改为列方向构造，例如 pd.DataFrame({'A': list(a), 'B': list(b)})，而不是用 index=['A','B']。",
+    "fixed": "保持相同目标提示、相同注入的五个后续 episode、相同打包预算和相同隐藏测试。",
+    "falsifier": "若同样用行索引 A/B 仍通过隐藏测试，或仅改为列 'A'/'B' 后依旧因其他原因失败，则 REPRESENTATION 候选被削弱。"
+  },
+  "causal_claim": false
+}

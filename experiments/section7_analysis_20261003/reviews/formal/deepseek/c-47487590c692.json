@@ -1,0 +1,133 @@
+{
+  "case_id": "c-47487590c692",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "then calculates the length of the words in the filtered column and returns"
+        }
+      ],
+      "reason": "源题5个测试全过且可评分，但其契约(pandas + 字母前缀过滤 + 'Word' 列)与目标契约不同，只有“统计词长频次”这一子技能可迁移。"
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "注入元数据为空、memory_policy 为 disabled 且源经验未保留，本 case 中不存在被注入的记忆内容可供保真度评估。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "to find the most common word lengths in the 'Content' field for each category"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "It first convert the dict to Datafrome, then calculates the length of the words in the filtered column and returns"
+        }
+      ],
+      "reason": "两者共享“词长→计数”思路，但目标新增了按 Category 分组、list-of-dicts 输入与 'Content' 字段，源方案不可直接套用。"
+    },
+    "visible_use": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "上下文中不存在任何注入记忆，目标实现是自写的 re+Counter 方案，既不构成复用也不构成误用证据。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        },
+        {
+          "section": "source_state_summary",
+          "quote": "\"after_source_hash\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\""
+        }
+      ],
+      "reason": "源经验未被写入可观察方法状态、前后 hash 相同，说明下游根本没有候选可用；不能据此推断存在“已存但未检索”的情况。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The function works correctly. Let me submit the final version:"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "成功来自目标自身直接编写并在沙箱验证的纯 Python 解；这只能说明任务被独立完成，不能证明任何记忆复用。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"tests_run\": 0"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"checks_executed\": 1"
+        },
+        {
+          "section": "target_visible",
+          "quote": "Submission recorded. Hidden correctness is not available."
+        }
+      ],
+      "reason": "评测契约显示执行了0个单测但1个自定义 check，且运行期隐藏正确性不可见，因此 pass 判定完全依赖该单一 check，属契约细节候选而非目标失败。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "returns\n    a dictionary of word lengths and their respective counts"
+        }
+      ],
+      "reason": "源题确实提供了与目标部分重合的“词长计数”语义候选，构成潜在机会；但重叠是通用编程子技能，不能说明该候选被采用或会带来收益。"
+    }
+  ],
+  "primary_hypothesis": "WRITE_ADMISSION",
+  "competing_explanations": [
+    "memory_policy 为 disabled，说明本 case 可能本就是无记忆对照，而非一次写入准入事件",
+    "源目标仅共享通用的词长统计子技能，表面适用性可能是巧合",
+    "报告中 tests_run=0 可能只是评测 harness 的记账方式，而非契约缺陷"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试的实际覆盖面与判定细则",
+    "目标注入条件下行为是否会变化（无反事实）",
+    "是否存在未展示的记忆库中已写入但未注入的 D1 候选",
+    "源题原回合内容是否曾以任何非注入形式留在环境中"
+  ],
+  "minimal_intervention": {
+    "change": "让源题的“词长→计数”思路以带来源标签的语义候选形式进入目标上下文一次",
+    "fixed": "目标提示、工具与预算、评测 harness、源题历史保持不变",
+    "falsifier": "若注入后目标仍产出与当前等价的自写纯 Python 解且无可观察差异，则“该候选可被有效复用”不成立"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,133 @@
+{
+  "case_id": "c-0e2d60932380",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"checks_executed\": 20,\n  \"correct\": true,\n  \"scorable\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Calculates the sum of elements in each row of the array."
+        }
+      ],
+      "reason": "源题是合法且通过自测（5 tests OK）的经验，但其范围是单数组、按行和归一化、单数标题，比目标契约窄，不能整段照搬。"
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "本题上下文没有任何记忆内容被写入或注入（策略 disabled、injected_count 0），无与目标相关的记忆保真度可评。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Plots a histogram of normalized data from an input 2D numpy array alongside the probability density function (PDF)"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "The figure should have as many subplots as there are arrays in the list."
+        }
+      ],
+      "reason": "绘图配方（30 bins、density、alpha 0.6 绿色、红色 lw=2 PDF、ppf(0.005)/ppf(0.995) 99% 区间）可迁移；但列表→多子图结构、复数 suptitle，以及目标“normalized data”的口径（整数组 vs 行和）是源题未覆盖的新条件。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0,\n  \"injected_text_utf8_bytes\": 0,\n  \"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "目标上下文无任何注入记忆，目标代码只能视为独立重建；与源代码的表面重合不能算作可见复用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0,\n  \"injected_text_utf8_bytes\": 0,\n  \"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        }
+      ],
+      "reason": "目标可见上下文没有记忆条目、源情节也未保留在方法状态中，属于“未打包/未注入”；这只能说明可见性为空，不能推出“已存但检索失败”，也不能说明记忆无益。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"checks_executed\": 20,\n  \"correct\": true,\n  \"scorable\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Overlays the PDF of a standard normal distribution on the histogram for comparison."
+        }
+      ],
+      "reason": "存在一个通过评测、主题高度相关的源经验，构成潜在机会；但源仅证明其自身正确，不证明其内容已保真保留或适用于本目标的列表/子图要求。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"tests_run\": 0,\n  \"checks_executed\": 2,\n  \"correct\": true"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "ax, _ = task_func(arr)"
+        }
+      ],
+      "reason": "判定为 correct 但实际未运行测试、仅执行 2 项检查，且参考解仍以单数组 task_func 为载体；因此“通过”不等于目标的归一化口径（行和 vs 展平整数组）被验证，只标记为契约/测试可能不一致的候选。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "ax.hist(normalized_data, bins=30, density=True, alpha=0.6, color='green')"
+        },
+        {
+          "section": "target_submission",
+          "quote": "ax.hist(data.ravel(), bins=30, density=True, alpha=0.6, color='green')"
+        }
+      ],
+      "reason": "源与目标存在参数级表面重合（bins/density/alpha/color 等），但在零注入条件下这只是可见代理，不构成迁移证据，更不能做因果归因。"
+    }
+  ],
+  "primary_hypothesis": "PACKING_VISIBILITY",
+  "competing_explanations": [
+    "目标与源代码的重合可能只是同一绘图 API 的常规写法（独立重建），而非记忆复用。",
+    "隐藏检查极薄（0 tests），本目标的归一化语义是否真正符合题意无法由现有证据确认。",
+    "源情节未保留在方法状态且注入为空，因此任何“记忆帮助/损害本题”的说法都缺少反事实支撑。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试集的具体断言内容（是否检查行和归一化或 99% 区间端点）未知。",
+    "源经验在源 episode 之后是否被部分保留或改写，现有字段只给出布尔值，无法判断内容细节。",
+    "目标是否曾接触未记录在案的其他提示或环境状态，无法由本证据包回答。"
+  ],
+  "minimal_intervention": {
+    "change": "在目标上下文中注入源 episode（或据其派生的“列表→多子图 + 每数组 norm 数据”配方）后重跑同一目标。",
+    "fixed": "保持相同目标 prompt、相同评测器/预算与相同无其它记忆的环境。",
+    "falsifier": "若注入后目标代码与提交产物相对无注入基线毫无变化（或明确忽略注入内容），则反驳“该源经验可被复用/影响本题行为”的候选。"
+  },
+  "causal_claim": false
+}

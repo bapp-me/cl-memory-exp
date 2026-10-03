@@ -1,0 +1,142 @@
+{
+  "case_id": "c-08e97db05c6a",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=14:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Generate a random float number from a list of hexadecimal strings and then round the float number to 2 decimal places."
+        }
+      ],
+      "reason": "Source episode is correct and scorable, but its contract returns one randomly chosen rounded float while the target requires a list over all supplied hex keys."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "The interpretation is confirmed: unpack the hex string as a big-endian 32-bit float, then round to 2 decimals."
+        },
+        {
+          "section": "injection/1",
+          "quote": "float_value = struct.unpack('>f', bytes.fromhex(hex_key))[0]"
+        }
+      ],
+      "reason": "The target-relevant conversion content is preserved accurately in the source trace; random selection and signature details are separate from that technique."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "converting each hexadecimal string to a float and rounding it to 2 decimal places"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Generate a random float number from a list of hexadecimal strings and then round the float number to 2 decimal places."
+        }
+      ],
+      "reason": "The big-endian unpack and rounding method applies, but the source's single optional random-key contract and scalar output differ from the target's list-input/list-output contract."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "return [round(struct.unpack('>f', bytes.fromhex(k))[0], 2) for k in hex_keys]"
+        },
+        {
+          "section": "target_submission",
+          "quote": "round(struct.unpack('>f', bytes.fromhex(hex_key))[0], 2)"
+        }
+      ],
+      "reason": "Visible final code uses the same big-endian unpack-and-round pattern as the source and adapts it to a list comprehension; this is behavioral evidence, not causal proof."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Generate a random float number from a list of hexadecimal strings and then round the float number to 2 decimal places."
+        },
+        {
+          "section": "injection/1",
+          "quote": "float_value = struct.unpack('>f', bytes.fromhex(hex_key))[0]"
+        }
+      ],
+      "reason": "A correct, relevant source episode was present/injected, giving an opportunity to reuse its conversion pattern; the differing source contract means this does not prove reuse."
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "float_value = struct.unpack('>f', bytes.fromhex(hex_key))[0]"
+        },
+        {
+          "section": "source_visible",
+          "quote": "The interpretation is confirmed: unpack the hex string as a big-endian 32-bit float, then round to 2 decimals."
+        }
+      ],
+      "reason": "The injected trace carries an exact reusable representation of the conversion and rounding step, but no retrieval log shows the target consulted it."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "return [round(struct.unpack('>f', bytes.fromhex(k))[0], 2) for k in hex_keys]"
+        },
+        {
+          "section": "target_submission",
+          "quote": "round(struct.unpack('>f', bytes.fromhex(hex_key))[0], 2)"
+        }
+      ],
+      "reason": "The submitted solution visibly reproduces the source's conversion technique adapted to the target list contract; without an ablation it remains only a transfer candidate."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 3"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Generate a JSON object from employee data based on given department codes and their employee counts."
+        }
+      ],
+      "reason": "The packed memory packet visibly contains unrelated items in addition to the source trace; this shows what was presented, not that those items interfered or were retrieved."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The agent may have solved independently because the target prompt already names struct, random, KEYS, and the conversion requirement.",
+    "The source task had a different scalar/random contract, so the agent may have adapted from general Python knowledge rather than the injected source trace.",
+    "The target succeeded with unrelated injected items present, so irrelevant memory presence is not evidence of interference or causal harm."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "No counterfactual run without the source experience; cannot establish that memory caused the correct solution.",
+    "No retrieval/attention log showing whether the agent read injection/1 or the source provenance at generation time.",
+    "Unselected memory library and post-target updates are absent; cannot assess retrieval failures or later retention."
+  ],
+  "minimal_intervention": {
+    "change": "Ablate the source conversion trace (injection/1) while keeping the target prompt, other injections, and budget constant.",
+    "fixed": "Same target contract, hidden tests, available tools, and injected context except the source trace.",
+    "falsifier": "If the ablated run still produces the same correct big-endian unpack-and-round list solution, the visible-transfer candidate is not supported."
+  },
+  "causal_claim": false
+}

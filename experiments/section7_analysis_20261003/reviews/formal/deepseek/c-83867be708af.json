@@ -1,0 +1,127 @@
+{
+  "case_id": "c-83867be708af",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_visible",
+          "quote": "return [float(distance.euclidean(a, b)) for a, b in zip(pts, pts[1:])]"
+        }
+      ],
+      "reason": "Source solution passed its own 5 tests and normalizes single/bare points correctly, but returns consecutive distances rather than the target's total round trip, so only limited."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "source_state_summary",
+          "quote": "\"source_provenance_retained\": false"
+        }
+      ],
+      "reason": "No memory content was injected or retained in method state, so there is no target-relevant memory content whose fidelity can be assessed."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "calculate the total travel distance for a path that starts at the first point, visits each consecutive point, and returns to the starting point"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Calculate the Euclidean distances between consecutive points in a provided"
+        }
+      ],
+      "reason": "Both tasks share coordinate normalization and Euclidean distance, but source returns pairwise distances while target requires a closed-loop total and different empty/single return."
+    },
+    "visible_use": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "Memory policy is disabled and no memory was injected, so visible memory use is not assessable."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "p = list(zip_longest(p, p[:1], fillvalue=None))"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "TypeError: float() argument must be a string or a real number, not 'tuple'"
+        }
+      ],
+      "reason": "The submitted _as_xy wraps a coordinate sequence in zip_longest and then indexes the result as scalars, causing a TypeError on an ordinary 2-tuple; this is a direct execution defect, not proof of memory effect."
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "return (float(p[0]), float(p[1]))"
+        },
+        {
+          "section": "target_submission",
+          "quote": "p = list(zip_longest(p, p[:1], fillvalue=None))"
+        }
+      ],
+      "reason": "p is converted from a flat coordinate sequence into a list of pairs, but the return line still treats p[0] and p[1] as scalar coordinates; the representation mismatch is visible in the submitted artifact."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "If a tuple contains just one number it is assumed that both coordinates are equal to this number."
+        },
+        {
+          "section": "source_visible",
+          "quote": "pts.append((p[0], p[0]))"
+        }
+      ],
+      "reason": "The source task contained correctly implemented normalization for one-element and bare coordinates, directly relevant to the target's _as_xy; however no injection occurred, so this only establishes an opportunity, not retrieval or use."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "The failure is an independent target-code defect; with memory disabled and no injection, no memory transfer or misuse is demonstrated.",
+    "A hidden eval-contract gap may exist around bare-number inputs because the prompt mentions tuples with one number, but the observed crash is on a standard 2-tuple and does not require that explanation.",
+    "Visible test comments expected 6.0 and 8.0 for single-number points, but the executed code's outputs were 8.485 and 11.314; this suggests test-comment noise rather than the hidden failure cause."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "Whether any source experience was written, stored, or retrievable; memory_policy is disabled and source_provenance_injected is false.",
+    "Whether the hidden target suite includes other coordinate forms beyond the offline assertion observed.",
+    "Whether fixing only _as_xy would pass all hidden tests."
+  ],
+  "minimal_intervention": {
+    "change": "Make _as_xy normalize directly without wrapping p first, e.g. if len(p)==1 return (float(p[0]), float(p[0])) else return (float(p[0]), float(p[1])).",
+    "fixed": "Same target prompt, same source history, memory policy disabled, and same budget.",
+    "falsifier": "If the same direct normalization still fails the hidden tests, TASK_EXECUTION alone is insufficient; if failure disappears, the direct execution bug is supported."
+  },
+  "causal_claim": false
+}

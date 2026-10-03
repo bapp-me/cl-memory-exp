@@ -1,0 +1,135 @@
+{
+  "case_id": "c-d231bcdef79d",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "All checks pass, including the exact docstring example. Submitting:"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "源任务通过可见校验与离线评估，故属可用经验；但源语义含随机计数，迁移到目标时需适配。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "目标上下文中没有注入记忆内容，因此没有可评估的源记忆保真度。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "random integer between 1 and max_count (inclusive)"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "count the occurrences of each predefined animal name across all groups"
+        }
+      ],
+      "reason": "源任务处理单字典并生成随机计数，目标任务处理字典列表并统计真实出现次数；反字典与Counter结构可部分复用。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "没有记忆进入可见上下文，目标行为不能被归因于记忆复用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "count the occurrences of each predefined animal name across all groups"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "animal_counter = collections.Counter(itertools.chain.from_iterable([[v] * random.randint(1, max_count) for v in ANIMALS]))"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "目标题面要求真实出现次数，参考解却使用随机计数；目标按题面实现仍通过离线评估，提示题意/参考/测试可能不完全一致，但证据只够标候选。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "存在正确源经验，但该源未被保留注入且记忆策略关闭，因此本目标没有实际记忆机会；不能据此判断源内容无价值。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The implementation works as expected. Now submitting the final solution."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "目标完成执行并提交，离线评估为正确；这证明任务执行成功，但不证明任何记忆使用或迁移。"
+    }
+  ],
+  "primary_hypothesis": "unknown",
+  "competing_explanations": [
+    "目标可能是独立解题，代码中的通用Python习惯不足以证明来自源记忆。",
+    "离线评估可能未严格校验计数语义，因此通过并不能证明目标符合参考解的随机计数行为。",
+    "记忆库可能存在于未展示状态中，但本包没有可见注入，不能推断目标使用了记忆。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法得知未选中的完整记忆库或目标之前的检索候选。",
+    "无法得知隐藏测试是否实际运行或是否严格检查动物计数语义。",
+    "无法确定目标代码与源代码的相似是否来自模型内部先验而非记忆注入。"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "保持相同目标题面、源历史、禁用记忆策略和相同评估预算",
+    "falsifier": "若后续证据显示目标上下文中注入了源内容，则no_visible_use不成立；若测试改为断言真实出现次数，则可检验题意/参考不一致候选。"
+  },
+  "causal_claim": false
+}

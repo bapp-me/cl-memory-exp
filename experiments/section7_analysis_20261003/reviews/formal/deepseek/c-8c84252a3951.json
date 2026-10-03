@@ -1,0 +1,130 @@
+{
+  "case_id": "c-8c84252a3951",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "target_update_operations",
+          "quote": "\"source_event_ids\": [\n    \"stream.task-003.attempt-1\""
+        }
+      ],
+      "reason": "只给出一个源事件 id，没有源题内容或配对 gold，无法判断源经验本身质量。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": [],"
+        }
+      ],
+      "reason": "没有任何与目标相关的记忆内容进入上下文，无法评估其保真度；也不能据此推断记忆库为空。"
+    },
+    "target_applicability": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"observable_candidates\": [],"
+        }
+      ],
+      "reason": "检索与注入集合均为空，没有针对本目标可用的语义候选被带入。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0,"
+        },
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"go to green closed door 1\""
+        }
+      ],
+      "reason": "行为由题面观察直接驱动，未见任何记忆内容被引用或改写。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"go to green closed door 1\""
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Goal: go to a green door"
+        }
+      ],
+      "reason": "仅凭首帧观察即两次动作到达绿色关闭门并完成；支持任务是直接执行而非记忆驱动，但不能证明记忆无效。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true,"
+        },
+        {
+          "section": "target_submission",
+          "quote": "\"submitted\": true"
+        }
+      ],
+      "reason": "提交状态与离线评分（correct/进度 1.0）一致，任务契约满足；仅说明本题可计分。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"observable_candidates\": [],"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"dropped\": [],"
+        }
+      ],
+      "reason": "本目标可见代理集合为空且无预算淘汰，无法区分“库中无相关经验”与“有经验但未匹配”。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"injected_utf8_bytes\": 2,"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"enabled\""
+        }
+      ],
+      "reason": "记忆启用但注入开销近零，只能描述开销，不能据此断言收益或性价比。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "检索结果为空可能因为记忆库中本就没有 BabyAI 相关经验，而非匹配失败。",
+    "本题目标可由题面观察直接解出，成功与记忆是否存在无因果关系。",
+    "target_update_operations 的 operations 为空却 before/after hash 不同，可能只是事后记账，与本目标行为无关。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "记忆库中是否存有与本任务相关的 D1 语义候选。",
+    "为何 target_update 没有操作但哈希发生变化。",
+    "token_count 不可用，无法衡量记忆或上下文开销。"
+  ],
+  "minimal_intervention": {
+    "change": "在相同环境下向注入槽位加入一条与“绿色门目标/可达关闭门”相关的语义候选，观察动作序列是否改变。",
+    "fixed": "相同 BabyAI 关卡与初始观察、相同提示、相同动作预算与记忆策略。",
+    "falsifier": "若加入相关候选后动作序列与完成度仍与本次完全一致，则否定该候选对行为有可见影响。"
+  },
+  "causal_claim": false
+}

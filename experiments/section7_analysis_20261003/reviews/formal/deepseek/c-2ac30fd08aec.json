@@ -1,0 +1,137 @@
+{
+  "case_id": "c-2ac30fd08aec",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=26:True:9"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        }
+      ],
+      "reason": "源题同题（task_func）离线通过 26 项检查、9 个测试，故源本身合法；但源回合内容未被保留，源通过不等于其细节可用。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": [],"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": []"
+        }
+      ],
+      "reason": "源回合没有记录任何记忆操作、目标侧也没有源 provenance id，因此与本题相关的必要内容（data 为 dict、键名、小写化）没有可核对的记忆载体。"
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "两条注入记忆描述 pandas/matplotlib 任务，与随机采样句子并替换下划线的本题无覆盖关系。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "target_submission",
+          "quote": "def generate_report(data):"
+        }
+      ],
+      "reason": "提交代码只含 random、字符串替换与 try/except，没有任何 DataFrame/绘图痕迹，注入内容在可见执行中未被引用；这只是行为代理，不能作因果结论。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "key = f\"set_{idx + 1}\""
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AssertionError: The generated report does not match the expected output."
+        }
+      ],
+      "reason": "agent 把 data 当作元组列表枚举并自造键 set_1…，而评分端比较的是 dict 键集（set1 等），且未按契约做小写输出，直接触发断言；这只说明执行与隐藏契约不符，不能说明记忆导致失败。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "return a dictionary where keys are identifiers for each set of target_words"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "for key, value in data.items():"
+        }
+      ],
+      "reason": "可见题面未写明 data 是 dict、也未给出键名格式与全小写要求，而评分期望这些细节，属于题面/测试可能不一致的候选点；它可解释部分差异，但不能确定必然导致失败。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": [],"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": []"
+        }
+      ],
+      "reason": "源回合结束时写入操作列表为空，目标侧也无源记忆 id，说明没有针对本题的可复用经验被准入；这只覆盖“未写入”，不能证明库中完全不存在其他内容。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"score\": 0.14928966363218812"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        }
+      ],
+      "reason": "召回的 top-2 分数偏低且内容与本任务无关，被选中的两条全部注入，未见覆盖输入结构或小写化要求的内容；在无相关写入的前提下，这不能证明“已存但未检索到”。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "题面缺少 data 容器类型、键名格式与全小写要求，失败可能源于契约模糊而非纯执行失误。",
+    "源回合相似题（task_func）通过但未保留，无法排除 agent 在无相关记忆时独立犯错；本包无干预，不能评估记忆的实际作用。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试的具体用例与键名期望未完整呈现，无法判定 set1/set_1 之外是否还有其它不匹配点。",
+    "未展示完整记忆库，不能断言不存在其他可被检索的本题相关内容。",
+    "无对照运行，无法判断若注入正确源内容是否会改变结果。"
+  ],
+  "minimal_intervention": {
+    "change": "在题面中明确 data 为 key→(target_words,n_sentences,vocabulary) 的映射、键名格式，并要求输出全小写（或让 agent 改用 data.items() 迭代）。",
+    "fixed": "保持同一模型、同一注入记忆、同一工具预算与同一隐藏测试。",
+    "falsifier": "若在补齐输入结构与大小写契约后仍出现键集/输出不匹配，则执行假设被反驳，指向测试本身或环境问题。"
+  },
+  "causal_claim": false
+}

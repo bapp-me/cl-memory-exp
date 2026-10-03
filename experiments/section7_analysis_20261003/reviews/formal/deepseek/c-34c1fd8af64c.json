@@ -1,0 +1,148 @@
+{
+  "case_id": "c-34c1fd8af64c",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Goal: go to the yellow door"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Goal: go to the purple door"
+        }
+      ],
+      "reason": "Both are successful same-family BabyAI go-to-door source trajectories. Only two sources and no gold pairing are shown, so quality is pass with limits."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "There's no purple door visible in this room, so it's likely behind one of the doors. Let me explore."
+        },
+        {
+          "section": "injection/0",
+          "quote": "go to yellow closed door 1"
+        }
+      ],
+      "reason": "The shown source records preserve direct and explore patterns with terminal completion. This covers only visible memory content, not unshown items."
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Goal: go to a red door"
+        },
+        {
+          "section": "injection/1",
+          "quote": "There's no purple door visible in this room, so it's likely behind one of the doors. Let me explore."
+        }
+      ],
+      "reason": "Same go-to-door task family; color change does not invalidate direct/explore strategies. Hidden source details could still limit applicability."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "No red door is visible, so I'll explore through the green door."
+        },
+        {
+          "section": "injection/1",
+          "quote": "There's no purple door visible in this room, so it's likely behind one of the doors. Let me explore."
+        }
+      ],
+      "reason": "Target reasoning and actions adapt the source exploration pattern to red/green. This is a behavioral proxy, not proof of memory causation."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Goal: go to the yellow door"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Goal: go to the purple door"
+        }
+      ],
+      "reason": "Successful same-benchmark source trajectories exist as legal experience. They do not prove these exact records were retrieved or used in target."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 2"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_text_utf8_bytes\": 4693"
+        }
+      ],
+      "reason": "Mechanics confirms two memory items and 4693 bytes were injected. It does not show retrieval, attention, or use by the target."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "No red door is visible, so I'll explore through the green door."
+        },
+        {
+          "section": "injection/1",
+          "quote": "There's no purple door visible in this room, so it's likely behind one of the doors. Let me explore."
+        },
+        {
+          "section": "target_visible",
+          "quote": "go to red closed door 1"
+        }
+      ],
+      "reason": "Target's no-red-visible explore choice mirrors source exploration, and later direct go matches source direct-go pattern. Without ablation, this only shows consistent adaptation, not that memory caused success."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Goal: go to a red door"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "Scored contract is satisfied with submitted completion. Success alone cannot validate memory or rule out intrinsic exploration."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "Model might intrinsically explore when the goal object is not visible, independent of memory.",
+    "Source colors differ (yellow/purple vs red), so visible similarity could reflect generic task structure rather than memory transfer.",
+    "Target transcript omits memory context, so retrieval and attention remain unverified.",
+    "Success could occur with redundant or irrelevant memory content."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether injection/0 or injection/1 was actually retrieved and attended in the target context.",
+    "Whether the same exploration behavior would occur without these injections.",
+    "Whether other unshown memory items or gold source pairings exist.",
+    "Exact token/latency effect of injected memory on this run beyond totals."
+  ],
+  "minimal_intervention": {
+    "change": "Ablate or replace injection/1, the exploration source, while holding injection/0 and all else fixed.",
+    "fixed": "Same target prompt, model, tools, token budget, scoring mask, BabyAI environment, and success criterion.",
+    "falsifier": "If the ablated run still produces the same no-red-visible explore pattern and succeeds, the USE_TRANSFER candidate weakens."
+  },
+  "causal_claim": false
+}

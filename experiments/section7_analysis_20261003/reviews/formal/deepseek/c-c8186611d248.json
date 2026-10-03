@@ -1,0 +1,135 @@
+{
+  "case_id": "c-c8186611d248",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "The dictionary containing keys 'Student' and 'Score'."
+        }
+      ],
+      "reason": "源题离线评测 5 测试全过且可评分，故为 pass；但它只覆盖单学生查询这一窄契约，通过不等于其接口可迁移。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "perform K-Means clustering on each pair and visualize the clusters"
+        }
+      ],
+      "reason": "实际注入的四段内容是 K-Means/PCA/直方图/随机 JSON 等无关任务，包内没有与目标（按学生聚合均值/标准差）相关的合法来源内容可供保真判断。"
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "perform K-Means clustering on each pair and visualize the clusters"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "被注入的经验来自完全不同的任务域，未提供目标所需的 dict-of-lists 输入或 pandas 统计口径；真正部分适用的源路径并未注入。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "student_id = result.get('student_id')"
+        }
+      ],
+      "reason": "提交代码按可见题面（list of dicts）自行设计接口，未见任何来自被注入 K-Means/PCA 经验的痕迹或改编，仅为行为代理而非因果判断。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of dictionaries containing test results for multiple students, create a function that calculates the average test score and the standard deviation for each student."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "result1 = calculate_stats_for_students({'Student': [1, 2, 1, 1], 'Score': [10, 1, 1, 1]})"
+        }
+      ],
+      "reason": "可见题面声明输入为“list of dictionaries”，而隐藏测试传入 dict-of-lists，二者契约不一致，故只标为题面/测试不一致候选，不当成绝对真值。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AttributeError: 'str' object has no attribute 'get'"
+        },
+        {
+          "section": "target_submission",
+          "quote": "student_id = result.get('student_id')"
+        }
+      ],
+      "reason": "提交函数在 dict 输入上遍历键名导致 AttributeError，隐藏测试 0 项执行；这直接解释可见失败，但该接口选择是对可见题面的忠实实现而非记忆误用。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_episode_byte_budget"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 4"
+        }
+      ],
+      "reason": "93 条候选全部先被选中，随后按字节预算淘汰最旧 89 条，只注入最新 4 条无关 episode；这是打包/预算淘汰，不是检索失败，也不证明相关经验一定存在或未被召回。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_in_observable_retrieval_candidates\": true"
+        }
+      ],
+      "reason": "源题（dict-of-lists + pandas 统计）与隐藏目标契约部分重合，其 provenance 曾出现在可观察候选中却未被注入，构成一个未被利用的机会；无干预故不能据此断言其注入会改变结果。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "隐藏评测所需的 dict-of-lists 接口可能被题目设计者视为默认契约，agent 未能从可见题面推断出这一点，属 TASK_EXECUTION 层面的解读偏差。",
+    "源经验虽部分适用，但即使被注入也可能仍需改造（源函数只算单个学生并返回 DataFrame），失败未必由未注入造成。",
+    "评测器可能在离线脚本中对输入格式做了与题面不同的假定，无法排除评测脚本本身与题意不一致。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏正确性标准与题面作者意图是否把 dict-of-lists 视为唯一合法输入，无法由现有证据确定。",
+    "被淘汰的源 provenance 内容在包内是否仍完整保留、是否含目标所需的 pandas ddof 细节，不可知。",
+    "retrieval 所有 score 为 null、rank 为顺序编号，无法判断检索相关性是否真实生效。",
+    "无对照运行，无法评估注入无关记忆对本次解法是否有任何影响。"
+  ],
+  "minimal_intervention": {
+    "change": "让目标题面输入契约与隐藏测试一致（明确 dict-of-lists），或在注入中保留源题（dict-of-lists + pandas）经验。",
+    "fixed": "保持相同的历史、环境、工具与注入预算不变。",
+    "falsifier": "若在契约对齐或注入源经验后，函数仍在同样的 dict 输入上抛出 AttributeError，则支持 EVAL_CONTRACT/OPPORTUNITY_SOURCE 的候选被削弱。"
+  },
+  "causal_claim": false
+}

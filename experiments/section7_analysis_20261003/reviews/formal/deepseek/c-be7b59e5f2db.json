@@ -1,0 +1,147 @@
+{
+  "case_id": "c-be7b59e5f2db",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_visible",
+          "quote": "return wave, fig, ax"
+        }
+      ],
+      "reason": "Source task passed its hidden tests, but it is a single-harmonic Hann-window task returning three objects; target asks for multiple harmonics and different title."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": []"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        }
+      ],
+      "reason": "No target-relevant source content appears among the injected memories or retained source state; the visible injected candidates are unrelated pandas/bar-chart summaries."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(amplitude, frequency, time):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def generate_complex_wave_with_harmonics(amplitudes, frequencies, time):"
+        }
+      ],
+      "reason": "The source Hann-window complex-wave pattern and three-object return partially apply, but the target changes to multiple harmonics, title, and possibly the return contract."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "return combined_wave, fig"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        }
+      ],
+      "reason": "Injected memories concern pandas/bar charts and are absent from the target code, so there is no visible use of those candidates; this does not prove no latent memory effect."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should return the combined complex wave and a plot displaying both the real and imaginary parts of the combined wave."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ValueError: not enough values to unpack (expected 3, got 2)"
+        }
+      ],
+      "reason": "Hidden evaluator unpacks three return values while the visible prompt asks for the combined wave and a plot, not explicitly an axes object; this supports a contract/ambiguity candidate, not proof that the prompt intended three."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "return combined_wave, fig"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ValueError: not enough values to unpack (expected 3, got 2)"
+        }
+      ],
+      "reason": "The submitted function visibly returns two objects, directly causing the unpacking error when the evaluator calls it. This does not identify memory as the cause."
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": []"
+        }
+      ],
+      "reason": "The passing source task produced no update operations and its provenance is absent from target memory candidates, suggesting the source experience was not admitted or retained as target-injectable content. This does not show that admission would have changed the target."
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"candidate_scope\": \"Native Qdrant top-5 returned set; complete persisted point pool separately snapshotted\""
+        },
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "Retrieved/injected semantic candidates are unrelated pandas/bar-chart summaries, with no source-code memory among them. This does not prove interference or that better retrieval would have been available."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "TASK_EXECUTION: the agent simply omitted the axes object returned by the source and expected by the hidden tests.",
+    "WRITE_ADMISSION/RETRIEVAL: the relevant source experience was not admitted or not injected, so the agent worked without it.",
+    "No counterfactual exists here: even if irrelevant memories were injected, this packet cannot show they caused the missing return value."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the hidden tests intentionally require an axes object despite the visible prompt only saying 'a plot'.",
+    "Whether the source experience was ever stored outside the observable candidate set; full unselected memory state is not presented.",
+    "Whether the irrelevant injected memories affected the target behavior at all.",
+    "Whether other hidden checks beyond the return-arity failure would pass or fail, since tests_run was 0."
+  ],
+  "minimal_intervention": {
+    "change": "Return combined_wave, fig, ax from the target function, matching the hidden evaluator's unpacking expectation.",
+    "fixed": "Keep the same prompt, source history, injected memories, environment, and budget.",
+    "falsifier": "If returning ax still fails hidden tests, or if the evaluator accepts a two-object return, the EVAL_CONTRACT candidate is weakened."
+  },
+  "causal_claim": false
+}

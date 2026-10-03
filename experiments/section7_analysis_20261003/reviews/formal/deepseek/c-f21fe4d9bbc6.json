@@ -1,0 +1,133 @@
+{
+  "case_id": "c-f21fe4d9bbc6",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "injection/4",
+          "quote": "Goal: open a door on your right"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Goal: go to the yellow door"
+        }
+      ],
+      "reason": "注入的是已完成的 BabyAI 成功轨迹（观察出现 The task is completed），因此是可用的合法源经验；但任务族混杂（go to X door 与 open a door on your X），与目标契约只有部分重叠，属通过但有局限。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/4",
+          "quote": "The grey door is 1 step to my right, so that's the target. Let me check available actions."
+        }
+      ],
+      "reason": "与目标相关的核心内容（按相对方位确定门、导航到门、toggle 开门）在源中出现且无自相矛盾，未见被篡改或失真的记录。"
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "injection/4",
+          "quote": "Goal: open a door on your right"
+        },
+        {
+          "section": "injection/6",
+          "quote": "I need to find a door behind me. The red door is in front of me, so I'll turn around to look behind."
+        }
+      ],
+      "reason": "存在与目标同构的相对方位开门任务（right / behind），其“先判定方位、再转向定位、最后 toggle”的结构可直接迁移到 left 任务。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "I need to open a door on my left. The visible red door is on my right, so I'll turn left to look for a door on that side."
+        }
+      ],
+      "reason": "目标先转向、再按原始朝向判断门在左侧并 toggle，与源中相对方位门任务的行为模式一致；这只是行为代理，不能证明记忆造成该行为。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/4",
+          "quote": "Goal: open a door on your right"
+        },
+        {
+          "section": "injection/5",
+          "quote": "Goal: open a door behind you"
+        }
+      ],
+      "reason": "注入集合中存在与目标契约高度同族的相对方位开门经验，构成可迁移机会。仅说明来源覆盖与机会，不证明这些内容在本题被复用或有效。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The visible red door is on my right, so I'll turn left to look for a door on that side."
+        },
+        {
+          "section": "injection/4",
+          "quote": "The grey door is 1 step to my right, so that's the target. Let me check available actions."
+        }
+      ],
+      "reason": "目标可见行为（按相对方位判定门→转向→导航→toggle）与源示范结构吻合，是可迁移的可见迹象。无反事实，不能据此断定记忆导致了成功或避免了错误。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"dropped\": []"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 7"
+        }
+      ],
+      "reason": "7 个候选全部被选中且无淘汰，说明本题未发生预算淘汰，属打包可见性层面的结构事实而非检索机制证据。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_text_utf8_bytes\": 17568"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"actions\": 3"
+        }
+      ],
+      "reason": "为 3 步完成的任务注入约 17.5KB 历史轨迹，说明上下文开销的存在；不据此断言无收益或性价比差。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "目标任务简单（3 个动作），即使不注入任何记忆也可能直接成功，故成功不能归因于记忆。",
+    "目标行为可能来自模型自身的 BabyAI 先验而非注入轨迹，检索与注入记录只能证明可获取性，不能证明读取与使用。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无消融/反事实，无法判断 7 条注入记忆中哪一条（若有）被使用。",
+    "token_count 为 null，无法按 token 度量注入开销。",
+    "未提供未选中记忆全集，不能推断库中是否存在更贴合的 left 门经验。"
+  ],
+  "minimal_intervention": {
+    "change": "在相同目标上做记忆消融：不注入任何记忆，或只注入最同族的 injection/4（open a door on your right）。",
+    "fixed": "保持相同房间布局/随机种子、相同动作预算、相同工具接口与观察格式。",
+    "falsifier": "若消融条件下目标仍以相同 3 个动作成功，则 USE_TRANSFER 的可见迁移候选被反驳。"
+  },
+  "causal_claim": false
+}

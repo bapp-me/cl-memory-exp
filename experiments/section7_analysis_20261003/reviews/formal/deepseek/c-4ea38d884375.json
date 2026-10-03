@@ -1,0 +1,143 @@
+{
+  "case_id": "c-4ea38d884375",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=27:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(data_matrix, n_components=2):"
+        }
+      ],
+      "reason": "源题通过其单矩阵 PCA 测试并返回 df, ax，是合法经验；但目标扩展到多矩阵、列表和聚合图，适用性有限。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "第一句只忠实覆盖 pandas/matplotlib 宽泛领域，未保留源题的返回 tuple 与 Mean 列；第二句与源题 PCA 内容不符。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "pandas/matplotlib 领域提示宽泛可用，但没有多矩阵 PCA、返回 ax 或 Mean 列等目标关键信息；另一条偏题。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "return transformed_dfs"
+        },
+        {
+          "section": "target_visible",
+          "quote": "The implementation works. Now I'll submit the final solution."
+        }
+      ],
+      "reason": "最终代码只返回列表并依赖本地 smoke test；注入记忆无具体可复用内容，且 pandas/matplotlib 已在目标题面出现，不能证明实际复用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Additionally, return a list of dataframes, each containing the PCA transformed data and the mean of each component for the corresponding matrix."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert 'Mean' in df.columns, 'Each dataframe should have a Mean column'"
+        }
+      ],
+      "reason": "题面强调返回 dataframe 列表但未明确要求 tuple/ax 或 Mean 列，而隐藏测试按 dfs, ax 解包并要求 Mean 列，存在题意/测试不一致候选；不是确定结论。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "return transformed_dfs"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ValueError: too many values to unpack (expected 2)"
+        }
+      ],
+      "reason": "提交的解只返回列表，且把均值作为行而非 Mean 列，隐藏评估在解包时即失败；这是直接可见执行问题，不能证明由记忆造成。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "注入记忆是通用/偏题摘要，缺少源题返回 tuple、Mean 列等契约信息；只能说明注入表示贫乏，不能证明检索或负迁移。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        }
+      ],
+      "reason": "源题结束更新为空且源 episode 未保留在方法状态中，说明源详细解未写入/保留；但未提供的完整库不能由此推断，也不能单独解释目标失败。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "EVAL_CONTRACT：题面可能未明确要求 tuple/ax 或 Mean 列，隐藏测试契约更严格。",
+    "WRITE_ADMISSION/REPRESENTATION：源题详细经验未写入，注入的只是宽泛摘要，目标没有可操作迁移内容。",
+    "无对照干预，不能排除注入记忆被忽略或与本次失败无因果关系。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "题面是否真意要求返回 (dfs, ax) 与 Mean 列，只能由离线 reference/tests 推断。",
+    "未选中的完整记忆库是否含更忠实的源内容，当前包无法判断。",
+    "注入记忆是否实际影响模型决策，无反事实或注意力证据。",
+    "若只修正返回结构，隐藏测试是否全部通过仍未验证，target tests_run 为 0。"
+  ],
+  "minimal_intervention": {
+    "change": "令 new_task_func 返回 (transformed_dfs, ax)，每个 DataFrame 含逐行均值 'Mean' 列，并针对 tuple 解包与 Mean 列做本地验证。",
+    "fixed": "同一目标题面、源历史、注入记忆、数据、n_components 与预算。",
+    "falsifier": "若在相同注入记忆下修正返回/Mean 结构仍失败，或题面被澄清为只返回列表，则 TASK_EXECUTION/EVAL_CONTRACT 候选被削弱。"
+  },
+  "causal_claim": false
+}

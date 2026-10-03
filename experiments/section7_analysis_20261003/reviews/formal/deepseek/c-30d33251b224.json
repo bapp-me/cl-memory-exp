@@ -1,0 +1,139 @@
+{
+  "case_id": "c-30d33251b224",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=14:True:6"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "- TypeError: If the DataFrame contains non-numeric data types."
+        }
+      ],
+      "reason": "源题 6 项测试全部通过，且其 docstring 明确给出非数值→TypeError 的契约，属于合法可用经验；限制在于源为单次成功、其轨迹与来源未被保留。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        }
+      ],
+      "reason": "注入文本在主题层面与源一致且无可核实失真，但目标所需的关键映射（非数值列应抛 TypeError）完全没有被保留下来。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "第一条与 pandas 数据处理任务同域，勉强相邻；第二条是 value_counts 柱状图，与 pairplot/协方差及异常契约无关，二者均不含目标所需规则。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "raise ValueError(f\"DataFrame at index {i} contains non-numeric data.\")"
+        }
+      ],
+      "reason": "可见执行中没有任何可追溯到注入文本的适配动作，而注入内容本身也不含可应用的规则，故只能记为无可见使用，不能推断负迁移或遗忘。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "raise ValueError(f\"DataFrame at index {i} contains non-numeric data.\")"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ValueError: DataFrame at index 0 contains non-numeric data."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "except TypeError:"
+        }
+      ],
+      "reason": "提交代码对非数值列抛 ValueError，而隐藏检查在非数值用例上期待 TypeError，这正是离线评测唯一可见的失败点；只说明提交本身的异常类型选择，不证明该选择来自记忆。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "- TypeError: If the DataFrame contains non-numeric data types."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=14:True:6"
+        }
+      ],
+      "reason": "源题通过且其接口文档恰好写明本题失败点所需的异常类型映射，所以存在可学习的合法来源；但只证明机会存在，不证明该经验被写入或注入。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        }
+      ],
+      "reason": "源题结束时没有任何记忆写入操作，源轨迹也未保留在方法状态中，因此决定性的异常契约没有被接纳为候选；这不等于“已存储但未检索到”。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "实际注入的两条候选只是主题级摘要，既无异常类型也无 pairplot/协方差实现细节，无法提供可复用规则；同时也不构成错误记忆或干扰证据。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "目标 prompt 只要求“raise the appropriate exception”，未指明类型，而隐藏测试要求非数值时抛 TypeError，失败可能源于题面欠规范（EVAL_CONTRACT 候选），而非记忆机制。",
+    "注入内容过于概括，可能对行为毫无影响；抛 ValueError 也可由模型对“不合法输入”的默认习惯解释。",
+    "源轨迹与来源均未保留，无法反事实检验“若该契约已被写入并注入，结果是否会不同”。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试除该非数值用例外是否还有其他失败点（tests_run=0，未执行到计数）。",
+    "TypeError 的期望能否仅从目标 prompt 推出，仍不可判定。",
+    "完整未选中记忆库未提供，不能断言不存在其他可帮助的候选。",
+    "模型是否真正读取了那两条注入文本，无直接证据。"
+  ],
+  "minimal_intervention": {
+    "change": "在提交前把非数值列的异常改为 TypeError（保留空 DataFrame 用 ValueError），或把源题 docstring 的异常映射作为一条事实写入记忆",
+    "fixed": "相同的源题历史与状态、相同的检索/注入候选与预算、相同的目标 prompt 与工具集",
+    "falsifier": "若隐藏检查实际接受任意异常类型而非仅 TypeError，则 TASK_EXECUTION 判断被推翻；若在注入含该契约的候选后行为仍不变，则“记忆缺失解释失败”不成立。"
+  },
+  "causal_claim": false
+}

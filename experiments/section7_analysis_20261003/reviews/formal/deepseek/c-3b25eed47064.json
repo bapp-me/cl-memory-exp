@@ -1,0 +1,111 @@
+{
+  "case_id": "c-3b25eed47064",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=12:True:4"
+        }
+      ],
+      "reason": "源题离线评测通过（12 项检查、returncode 0），属合法可用源经验；但其可复用内容绑定源题（单 DataFrame、标题逐字），对目标只部分可用。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "model = LinearRegression().fit(x, df['value'].values); predictions = model.predict(x)"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "set the docstring's exact title/xlabel/ylabel verbatim"
+        }
+      ],
+      "reason": "回归主体模式忠实反映源解，但标题\"逐字\"约定是源题特有，不承载目标所需的 'Aggregated Predictions vs Date'。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/41",
+          "quote": "sklearn fit/transform pipelines are degenerate-intolerant like pd.concat"
+        }
+      ],
+      "reason": "退化输入/回归家族模式部分适用（空列表 pd.concat 崩溃确为目标实际遇到的），但标题类内容不适用目标。"
+    },
+    "visible_use": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "I'll add an explicit empty guard and re-verify."
+        }
+      ],
+      "reason": "可见到一次防御式修补，但无证据表明该行为或最终标题来自某条记忆。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ax.get_title() == 'Aggregated Predictions vs Date'"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "The final plot should show the overall trend of the aggregated predictions."
+        }
+      ],
+      "reason": "隐藏测试把标题钉为 'Aggregated Predictions vs Date'，而题面从未规定标题，属题意/测试可能不一致的候选；这不证明记忆有害。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "ax.set_title('Aggregated Linear Regression Predictions Over Time')"
+        }
+      ],
+      "reason": "agent 自行拟定标题并与自写断言自洽，构成与隐藏测试的可见分歧；不能证明任何记忆促成该选择。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/47",
+          "quote": "Reproduce title strings exactly as specified, including LaTeX escaping in Python format strings"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "set the docstring's exact title/xlabel/ylabel verbatim"
+        }
+      ],
+      "reason": "记忆只提供\"按规格逐字复现标题\"的家族约定，目标无规格标题故无从迁移；无反事实，不能断定记忆造成失败或本可避免。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "TASK_EXECUTION：题面未给标题锚点，agent 任选标题，失败可归因于无约束的自由选择而非记忆。",
+    "隐藏测试的 'Aggregated Predictions vs Date' 可能是测试作者承袭 reference_solution 的产物，题面未文档化，现有证据无法排除。",
+    "记忆未被注入或与标题无关（source_provenance_injected=false），失败可能完全独立于记忆。"
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "隐藏测试是否要求标题与其他未文档化属性（如列名 'predicted_value'、坐标轴标签）一致，无法从题面判断。",
+    "源题派生的记忆内容是否实际注入目标，未知。",
+    "若给定标题，目标是否会成功，无反事实可答。"
+  ],
+  "minimal_intervention": {
+    "change": "将输出图标题改为隐藏测试要求的 'Aggregated Predictions vs Date'（或在题面中明确标题契约）。",
+    "fixed": "保持相同的历史/记忆、相同的数据与回归逻辑、相同预算。",
+    "falsifier": "若按该标题重跑评测仍失败，或题面本已包含该标题，则 EVAL_CONTRACT 候选被反驳。"
+  },
+  "causal_claim": false
+}

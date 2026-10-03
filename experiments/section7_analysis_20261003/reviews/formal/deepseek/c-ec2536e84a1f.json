@@ -1,0 +1,144 @@
+{
+  "case_id": "c-ec2536e84a1f",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Raises:\n    - ValueError: If the DataFrame is empty.\n    - TypeError: If the DataFrame contains non-numeric data types."
+        }
+      ],
+      "reason": "Source task passed its tests, but it explicitly named exception types and the raw source episode is not retained at target; only provenance and derived memories remain, so transfer is limited."
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "Do not over-generalize the guidance that sandbox scaffolding like matplotlib.use('Agg') 'does not need to appear in submitted code' to actual data-library imports."
+        },
+        {
+          "section": "injection/19",
+          "quote": "any module whose attributes the function body references (especially `pd.api.types.is_numeric_dtype`, `pd.DataFrame`, `np.xxx` after `import numpy as np`) MUST be imported inside the submission"
+        }
+      ],
+      "reason": "Some injected relevant memories, such as err-00057, match the source update text, but the most failure-relevant memory err-00040 has no source text shown here, so fidelity is only partially verifiable."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "If any DataFrame is empty or contains non-numeric data, raise the appropriate exception."
+        },
+        {
+          "section": "injection/14",
+          "quote": "TypeError for wrong argument type (non-ndarray input), ValueError for wrong shape/value"
+        }
+      ],
+      "reason": "Exception-mapping memory is relevant to the target's unspecified 'appropriate exception' clause, but the target changes a single DataFrame into a combined list and omits the source's named exception types."
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "raise ValueError(\"DataFrame contains non-numeric data\")"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "raise TypeError(\"One of the DataFrames contains non-numeric data. Only numeric data types are supported.\")"
+        }
+      ],
+      "reason": "The visible guard maps non-numeric data to ValueError while the fixed reference/hidden test expects TypeError; this is a behavior proxy for possible misapplication, not causal proof that memory produced it."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "raise ValueError(\"DataFrame contains non-numeric data\")"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": false"
+        }
+      ],
+      "reason": "The submitted guard directly raises ValueError for non-numeric data, and the fixed offline evaluation marks the run incorrect. This proves a proximate execution/contract failure, not why that type was chosen."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "If any DataFrame is empty or contains non-numeric data, raise the appropriate exception."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "raise TypeError(\"One of the DataFrames contains non-numeric data. Only numeric data types are supported.\")"
+        }
+      ],
+      "reason": "The prompt does not name exception types, while the fixed reference/hidden test catches TypeError for non-numeric data. This is a contract ambiguity candidate, not a basis for rescoring."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Per err-00091/err-00120, I recompute the oracle from the actual combined data"
+        },
+        {
+          "section": "injection/20",
+          "quote": "A verification run that exits non-zero is not a passing run, even when the printed lines look correct"
+        }
+      ],
+      "reason": "The transcript cites injected memory IDs when correcting its oracle and runs an exit-0 battery with expected-exception probes, consistent with semantic memory uptake. It does not establish that memory caused the final exception-type choice or outcome."
+    },
+    {
+      "tag": "SCOPE_INTERFERENCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Raises:\n    - ValueError: If the DataFrame is empty.\n    - TypeError: If the DataFrame contains non-numeric data types."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "If any DataFrame is empty or contains non-numeric data, raise the appropriate exception."
+        }
+      ],
+      "reason": "The source task names the exact exception for non-numeric data, while the target omits names and changes from one DataFrame to a combined list; direct transfer of the source exception contract is risky. It cannot prove interference without a counterfactual."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "EVAL_CONTRACT: the phrase 'appropriate exception' may be read as permitting ValueError, so the failure could be a grader-contract choice rather than a semantic error.",
+    "USE_TRANSFER: injected err-00040/err-00051 may have shaped the exception mapping, but no counterfactual shows the model read or followed them for this decision.",
+    "SCOPE_INTERFERENCE: the source task named TypeError for non-numeric data, whereas the target omitted names and changed the input structure.",
+    "Ordinary task execution without memory influence could also produce the same ValueError choice."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "Whether the offline hidden tests are exactly the same mask as the reference tests; tests_run is 0 and failure occurs at import-time guard execution.",
+    "Whether err-00040 or err-00051 was actually read or influenced the ValueError choice; visible memory citations mention err-00091/err-00120 only.",
+    "Whether the raw source episode was available at target; mechanical source_pair says raw_source_episode_retained_in_method_state is false.",
+    "Whether any reading of 'appropriate exception' could be accepted by the fixed grader; the fixed mask prevents rescoring."
+  ],
+  "minimal_intervention": {
+    "change": "In combined_task's non-numeric guard, raise TypeError instead of ValueError, while keeping ValueError for empty input cases.",
+    "fixed": "Same target prompt, same injected memory/retrieval state, same offline hidden test mask, and otherwise identical code.",
+    "falsifier": "If rerunning the offline evaluation with the non-numeric guard changed to TypeError still yields correct=false, or if the grader accepts ValueError for non-numeric data, this candidate is wrong."
+  },
+  "causal_claim": false
+}

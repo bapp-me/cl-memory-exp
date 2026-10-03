@@ -1,0 +1,103 @@
+{
+  "case_id": "c-eedc9e196c27",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "只给出注入条目的 helpful/harmful 计数与 section 归属，没有源任务轨迹或配对源题，无法核验这些经验来自哪些合法源事件；不虚构 gold source。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "没有源侧原文可供比对，无法判断注入文本是否忠实于其来源，也无法区分保真与改写。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/7",
+          "quote": "When the goal contains a spatial qualifier (e.g., 'the door behind you')"
+        },
+        {
+          "section": "target_update_operations",
+          "quote": "Spatial qualifiers referring to side regions (e.g., 'the door on your left' or 'on your right') follow the same exclusion principle as 'behind you'"
+        }
+      ],
+      "reason": "高层 go-to、check available actions、plain toggle 等条目直接适用；但目标的空间限定词是侧向（left），旧记忆只覆盖 'behind you' 的 180 度情形，侧向 90 度属目标新增/改变条件（事后 ADD 也承认需补写）。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "I need to open the door on my left. The red door is on my right, so I must rotate to see what's on my left."
+        },
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"toggle\""
+        }
+      ],
+      "reason": "先排除对侧红门、单次转向、用直接 go-to 动作接近、最后 plain toggle，与注入策略方向一致且无可见违背；这只是行为代理，不能证明记忆导致成功。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Before acting, check the available actions list first: if the goal object appears as a direct action"
+        },
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"check available actions\""
+        },
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"go to green closed door 1\""
+        }
+      ],
+      "reason": "可见轨迹依次出现 check available actions、直接 go-to、plain toggle，与注入的高层动作优先/先查可用动作条目同向，支持“复用候选”；无消融对照，不能证明因果、也不能证明是记忆而非模型先验所驱动。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 11"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"totalTokens\": 17215"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"injected_utf8_bytes\": 5335"
+        }
+      ],
+      "reason": "为单门小任务注入 11 条、约 5.3KB 记忆并消耗约 1.7 万 token；这只说明上下文/开销规模，不能据此断言无收益或性价比差（本题仍成功）。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "任务极简（一次转向+一个可见门的 go-to/toggle），无记忆基线可能同样成功，行为一致可能来自模型先验而非记忆复用。",
+    "11 条注入中多条（探索、锁门、两门并列取舍）在本题未被触发，属冗余上下文，成功不能反推这些条目有效。",
+    "侧向空间限定词是目标新增条件，旧记忆只覆盖 'behind you'，观察到的转向更可能是通用策略而非该条记忆迁移。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无源任务配对，source_quality/memory_fidelity 无法判定。",
+    "无 no-memory 或单条记忆消融，无法给出任何因果或负迁移结论。",
+    "retrieval 报告 5335 字节与 mechanical 4493 字节的口径差异原因未知。",
+    "事后 COUNTER_TAGS 与 ADD 不能解释本题过程内行为。"
+  ],
+  "minimal_intervention": {
+    "change": "在同一目标上做一次无注入（或仅保留 sai-00002 一条）的对照运行。",
+    "fixed": "保持相同的初始观察、环境随机性、动作预算与提交判定。",
+    "falsifier": "若无注入基线的动作序列与结果基本一致，则 USE_TRANSFER 候选被削弱。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,146 @@
+{
+  "case_id": "c-bfb842c69780",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Analyze a column of a pandas DataFrame, find the values that are larger than the average"
+        },
+        {
+          "section": "source_visible",
+          "quote": "ax = pd.Series(greater_avg).hist()"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=15:True:6"
+        }
+      ],
+      "reason": "源题通过其离线评测，但源实现把直方图画在 greater_avg 上，且使用 dropna/bisect 的特定处理，对目标任务只部分吻合。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Given multiple DataFrames, each containing a set of items in rows"
+        },
+        {
+          "section": "mechanical",
+          "quote": "source_provenance_injected"
+        }
+      ],
+      "reason": "注入的六条记忆是无关任务轨迹，目标相关源内容未在可见注入中出现，因此无法评估其保真度，判为 absent。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of pandas DataFrames, analyze each DataFrame's specified column"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Analyze a column of a pandas DataFrame, find the values that are larger than the average"
+        }
+      ],
+      "reason": "源题覆盖单 DataFrame 的均值比较与计数核心，但目标要求 DataFrame 列表、逐表返回 tuple，并对每表整列画直方图，适用性为 partial。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "larger_than_value_count = int(np.sum(col_values > value))"
+        },
+        {
+          "section": "source_visible",
+          "quote": "num_greater_value = len(data) - bisect.bisect_right(sorted_data, value)"
+        }
+      ],
+      "reason": "目标实现用 np.sum 计数、ax.hist 整列画图，未见源记忆特有的 bisect 或 pd.Series(greater_avg).hist 复用代理；成功不等于因果复用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_episode_byte_budget"
+        },
+        {
+          "section": "mechanical",
+          "quote": "source_provenance_injected"
+        }
+      ],
+      "reason": "候选先被选中再按最旧完整 episode 字节预算淘汰，最终只注入较新的六条无关 episode；支持 packing 而非 retrieval 失败，但不能证明源内容若注入必有用。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "source_provenance_in_observable_retrieval_candidates"
+        },
+        {
+          "section": "mechanical",
+          "quote": "source_provenance_injected"
+        }
+      ],
+      "reason": "源 provenance 出现在可观察检索候选中但未进入注入；目标没有可见的源经验复用机会，不能据此断言正迁移或负迁移。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "larger_than_value_count = int(np.sum(col_values > value))"
+        },
+        {
+          "section": "source_visible",
+          "quote": "num_greater_value = len(data) - bisect.bisect_right(sorted_data, value)"
+        }
+      ],
+      "reason": "可见代码路径与源实现不同，未显示源经验的直接适配；只能作为行为代理，不是因果结论。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "injected_utf8_bytes"
+        },
+        {
+          "section": "mechanical",
+          "quote": "known_usage_subtotal"
+        }
+      ],
+      "reason": "注入六条无关 episode 占用约 43.8KB 且总 token 用量可测，只描述上下文开销，不能凭本题断言无收益或性价比差。"
+    }
+  ],
+  "primary_hypothesis": "PACKING_VISIBILITY",
+  "competing_explanations": [
+    "目标 agent 可能仅凭预训练知识独立写出正确解，源 episode 未注入不等于其信息不可得",
+    "没有同环境无记忆反事实，无法判断若注入源 episode 会改善、无变化或损害行为",
+    "离线隐藏 correctness 只执行 6 项检查，外部有效性有限"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "不能从现有证据识别被淘汰的 52 条中最旧 episode 是否包含本题源题",
+    "无受控无记忆基线，不能回答源经验对目标成功是否必要",
+    "私有推理缺失，无法核实目标 agent 是否回忆或引用了未显示的历史"
+  ],
+  "minimal_intervention": {
+    "change": "在相同检索与字节预算下优先保留/注入与目标同族的源 episode，而不是只保留最新六条无关 episode",
+    "fixed": "同一 solver、同一评估 mask、同一注入格式与相同总字节预算",
+    "falsifier": "若同预算显式注入源 episode 后目标仍无可见行为差异且正确率不变，则该 packing 候选不被支持"
+  },
+  "causal_claim": false
+}

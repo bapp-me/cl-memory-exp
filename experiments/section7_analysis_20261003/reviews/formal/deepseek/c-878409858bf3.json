@@ -1,0 +1,143 @@
+{
+  "case_id": "c-878409858bf3",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"checks_executed\": 15,"
+        },
+        {
+          "section": "source_visible",
+          "quote": "series = pd.to_numeric(df[column], errors='coerce').dropna()"
+        }
+      ],
+      "reason": "源题可评分且通过（15 项检查、6 个测试），但其实现细节（coerce+dropna、bisect 计数、df.hist）只是其自身选择，不构成对目标契约的绝对真值，故视为带限度的通过。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "source_visible",
+          "quote": "ax.hist(data, bins=10, edgecolor='black')"
+        }
+      ],
+      "reason": "注入条目只是极短主题摘要，其中“bar chart of value counts”与源/目标的直方图不符，且不含列校验、错误类型、返回结构等必要内容；因 provenance 未绑定，只能判为部分保真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Return a list of tuples, where each tuple contains the numpy array of values greater than the average"
+        }
+      ],
+      "reason": "仅在“pandas+matplotlib 编程任务”这一高层主题上适用，目标新增的多 DataFrame 批量契约、ValueError 条件等未被覆盖。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "count_greater_than_value = int((col_data > value).sum())"
+        },
+        {
+          "section": "target_visible",
+          "quote": "The function works correctly. Submitting the final version:"
+        }
+      ],
+      "reason": "提交代码自写实现并自测，未见注入内容（尤其“value counts bar chart”）的痕迹，也未沿用源的 bisect 计数；这是行为代理，不能证明记忆无影响。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        },
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "{\"facts\": []}"
+        }
+      ],
+      "reason": "源题结束后没有任何写入操作，注入的两条摘要因此没有可核对的源派生内容；这不等于注入无效，也不等于已存但未检索。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "候选以一句主题摘要表示，缺乏可复用的接口/边界细节，且第二条与实际图形类型不符；表示粗糙只能说明候选信息量低，不能证明成功或负迁移。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "col_data = df[column].dropna()"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"checks_executed\": 6,"
+        }
+      ],
+      "reason": "目标在无对照情况下自写成实现并通过 6 项隐藏检查；可见轨迹中没有任何迁移或误用的具体痕迹，因此不能建立记忆致因。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "Native Qdrant top-5 returned set; complete persisted point pool separately snapshotted"
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "\"memory_id\": \"046fecd0-bb97-4487-aea7-9105b37efe5a\","
+        }
+      ],
+      "reason": "检索命中并注入了 2 条候选，dropped 为空，可排除“未检索到/被预算淘汰”这一替代解释；这不说明候选内容适用。"
+    }
+  ],
+  "primary_hypothesis": "unknown",
+  "competing_explanations": [
+    "任务本身对当代模型较简单，成功可能完全与注入记忆无关（无对照运行）。",
+    "两条注入摘要的 provenance 未在目标处绑定（memory_ids 为空），其真实来源与抽象过程无法判断。",
+    "两条候选分数几乎相同（0.5591 vs 0.5584），无法据此判断哪条（若有）参与了推理。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "注入内容是否影响推理与成败，无对照或反事实证据。",
+    "未选中的完整记忆库未提供，不能从本包推断缺失或遗忘。",
+    "注入摘要的生成来源未知，无法确认是否派生自本配对源题。",
+    "隐藏正确性只给出聚合检查结果，无法定位具体断言。"
+  ],
+  "minimal_intervention": {
+    "change": "在相同任务与预算下做一次不注入记忆的对照运行",
+    "fixed": "相同模型、相同题面与初始代码骨架、相同工具与预算上限",
+    "falsifier": "若关闭注入后仍同样通过全部检查，则本目标的成功不依赖这两条注入记忆；若转为失败，才支持注入内容有实质作用。"
+  },
+  "causal_claim": false
+}

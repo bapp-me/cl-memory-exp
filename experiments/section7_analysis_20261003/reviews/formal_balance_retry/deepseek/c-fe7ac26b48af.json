@@ -1,0 +1,139 @@
+{
+  "case_id": "c-fe7ac26b48af",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=12:True:4"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        }
+      ],
+      "reason": "Source task passed its own evaluation, but no source update operations were admitted, limiting reusable source-specific content for target transfer."
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": []"
+        }
+      ],
+      "reason": "Injected memory IDs are not mapped to the source IDs at target, so whether the two injected summaries faithfully reflect the paired source cannot be verified."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "The generic pandas/matplotlib memory only weakly overlaps the target, while the bar-chart/value-count memory is unrelated to multi-dataset regression and aggregation."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "target_submission",
+          "quote": "ax.set_title('Aggregated Predictions Trend')"
+        }
+      ],
+      "reason": "The visible solution contains no bar-chart/value-count behavior, and generic pandas/matplotlib use is already required by the prompt, so memory use is not observable."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The final plot should show the overall trend of the aggregated predictions."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AssertionError: Plot title should be 'Aggregated Predictions vs Date'."
+        }
+      ],
+      "reason": "The prompt does not state the exact required title, while the offline evaluator asserts one, indicating a contract/test inconsistency candidate. This does not show memory caused the failure."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "ax.set_title('Aggregated Predictions Trend')"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AssertionError: Plot title should be 'Aggregated Predictions vs Date'."
+        }
+      ],
+      "reason": "The submitted code sets a different title and fails the hidden title assertion. It is direct execution evidence, but not evidence that memory influenced the error."
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": ["
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "Retrieval selected and injected two candidates, one describing an unrelated bar-chart/value-count task, with low scores. This shows weak relevance, not interference or negative transfer."
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "The injected memories are compressed into generic or incorrect summaries and lack actionable details such as aggregation logic, date ordinal conversion, or exact title. This cannot prove the solver used or was harmed by them."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "The failure may be only an unspecified-title contract issue, unrelated to memory.",
+    "The injected memories are too generic or irrelevant to establish any causal memory effect; the solver may have ignored them.",
+    "No controlled intervention exists, so source-to-target transfer or interference cannot be isolated."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the solver actually attended to the injected memory content; private reasoning removed.",
+    "Whether source memory would have contained the target-required title; the source task used a different title.",
+    "The full persisted memory library and source-to-memory mapping are unavailable, so retrieval completeness and fidelity cannot be judged.",
+    "Token counts are unavailable, so cost/utility cannot be evaluated."
+  ],
+  "minimal_intervention": {
+    "change": "Specify the exact required plot title 'Aggregated Predictions vs Date' in the target prompt.",
+    "fixed": "Same model, environment, memory injection, and budget.",
+    "falsifier": "If the target still fails the title assertion after explicit specification, or if the hidden evaluation accepts 'Aggregated Predictions Trend'."
+  },
+  "causal_claim": false
+}

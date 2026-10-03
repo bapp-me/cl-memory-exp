@@ -1,0 +1,143 @@
+{
+  "case_id": "c-b45a0397d509",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "If a tuple contains just one number it is assumed that both coordinates are equal to this number."
+        },
+        {
+          "section": "source_visible",
+          "quote": "All examples pass. Submitting the verified implementation:"
+        }
+      ],
+      "reason": "源题与目标同族（连续点欧氏距离、单数字点归一化），且源题离线判定通过；但源经历被蒸馏成通用工作流时，恰好丢掉了这条与目标最相关的单元素归一化规则，因此只能算带限度的合法来源。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/7",
+          "quote": "Write a PYTHON tool call that defines the candidate function and executes it on the docstring example inputs"
+        },
+        {
+          "section": "source_visible",
+          "quote": "All examples pass. Submitting the verified implementation:"
+        }
+      ],
+      "reason": "注入的“示例验证循环”确实与源题可观察的“验证后提交”宏模式一致，属小范围保真；但它是跨 47 个查询聚合的通用描述，不含源题真正需要的单数字点归一化/闭合回路语义，相关必要内容在注入集中缺失。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/7",
+          "quote": "Fix any mismatch and repeat the verification, then finalize the function with the full docstring and issue SUBMIT."
+        },
+        {
+          "section": "injection/0",
+          "quote": "Produce reproducible random data (numbers, samples, strings, choices) using a deterministic random seed."
+        }
+      ],
+      "reason": "8 条注入记忆中只有“验证循环”这一条对本题可套用，其余随机数、DataFrame、模型拟合、直方图等与几何距离计算无关；核心归一化/闭合段需求无记忆内容覆盖。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "injection/7",
+          "quote": "typically as the multi-call pattern: exploratory PYTHON call(s) → full-function PYTHON verification → SUBMIT."
+        },
+        {
+          "section": "target_visible",
+          "quote": "All tests pass. Now finalizing with `zip_longest` used properly for padding:"
+        }
+      ],
+      "reason": "目标轨迹呈现“实现→打印示例对比→发现不匹配→修正→SUBMIT”的同形模式，与注入的验证循环描述一致；这只是行为代理，无法排除模型自身习惯或提示词自带导入导致的同形表现。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "If a tuple contains just one number it is assumed that both coordinates are equal to this number."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "The function should handle cases where a tuple contains just one number, assuming both coordinates are equal to this number."
+        }
+      ],
+      "reason": "源题与目标共享同一子问题（单数字点视为 (n,n)）且同属连续点欧氏距离族，说明本应存在合法复用机会；但注入的语义集里没有这条规则的任何表述，机会未被 D1 内容覆盖，这不等于检索失败。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "selected_before_packing"
+        },
+        {
+          "section": "retrieval",
+          "quote": "observable_candidates"
+        }
+      ],
+      "reason": "8 个候选全部被选中并注入、dropped 为空，说明检索与打包阶段未丢弃任何候选；这只证明候选进入了上下文（D1 可见），不证明其中内容与目标语义相关或被执行采用。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/7",
+          "quote": "Write a PYTHON tool call that defines the candidate function and executes it on the docstring example inputs"
+        },
+        {
+          "section": "target_visible",
+          "quote": "All tests pass. Now finalizing with `zip_longest` used properly for padding:"
+        }
+      ],
+      "reason": "唯一可见对应是通用“示例验证循环”工作流与目标的试探—验证—提交序列同形，可作为弱转移候选；它既不能证明记忆导致成功，也不能说明源题的具体归一化知识被复用。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "TypeError: float() argument must be a string or a real number, not 'tuple'"
+        },
+        {
+          "section": "target_submission",
+          "quote": "elif len(p) == 1:"
+        }
+      ],
+      "reason": "目标自身两次因 zip_longest 误用报错，最终改用显式单元素分支并通过离线判定，说明关键修复来自自身调试；注意目标提示词本身已预置 zip_longest 导入，首次失败更像提示词驱动而非记忆误用。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "目标的“验证—修正—提交”模式可能只是基座模型习惯或提示词自带导入的自然结果，与注入记忆无关（无无记忆对照）。",
+    "7/8 条注入工作流与几何任务无关，若存在干扰也是冗余而非可用知识；不相关内容的存在不构成干扰证据。",
+    "源题中被保留的原始 episode（D0）含正确的单元素归一化经验，但该内容未出现在本次注入文本里，因此无法判断是写入时未生成专门经验还是内容在聚合中被抽象掉。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法确认检索查询/排序是否命中与归一化有关的记忆，score 全为 null 且 token 计量不可用。",
+    "未展示未选中的完整记忆库，不能据本包断言某条经验不存在。",
+    "没有无记忆反事实运行，无法判断记忆对成功或对两次 zip_longest 失败的作用。",
+    "injected_utf8_bytes(6512) 与 retrieval 记录的 injected_utf8_bytes(7329) 不一致，原因未知。"
+  ],
+  "minimal_intervention": {
+    "change": "仅调整注入集：加入一条源自该源题的具体工作流（单数字/单元素点归一化为 (n,n)、闭合回路需补最后一点回起点的距离），其余保持不变，观察是否改变轨迹。",
+    "fixed": "保持同一目标题面、同一候选库与排序、同一工具集与预算（PYTHON/SUBMIT 调用次数、上下文）。",
+    "falsifier": "若移除“示例验证循环”这条记忆后，目标仍出现同样的验证—修正—提交序列并取得相同成功，则 USE_TRANSFER 候选被反驳。"
+  },
+  "causal_claim": false
+}

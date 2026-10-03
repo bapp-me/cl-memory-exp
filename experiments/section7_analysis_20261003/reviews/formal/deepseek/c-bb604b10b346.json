@@ -1,0 +1,129 @@
+{
+  "case_id": "c-bb604b10b346",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        }
+      ],
+      "reason": "源题在离线评测中通过（correct true, 5 tests OK），但其契约是单日期、返回 int 的 task_func；对列表目标只能算部分适用。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "## Workflow: Verification and Submission"
+        }
+      ],
+      "reason": "可见的源侧更新内容是一组领域通用的工作流卡片，没有任何卡片承载闰秒/按日期取整的契约；源 episode 的存储内容未展示，无法判断保真度。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(date_str):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def total_elapsed_seconds(date_list):"
+        }
+      ],
+      "reason": "单日期的闰秒计算可平移到列表目标，但必须补上保持“逐日期取整”的聚合步骤，否则契约不同。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection/7",
+          "quote": "Confirm correctness of an implementation against the task's stated examples before submitting."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def total_elapsed_seconds(date_list):"
+        }
+      ],
+      "reason": "注入的 8 张卡片（随机种子、校验、Counter、统计、绘图、DataFrame、模型、示例验证）在本题可见行为中均无落地痕迹，且目标 docstring 没有示例可供验证；这是行为代理，不构成“未使用记忆”的因果结论。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "total += elapsed + n_leaps"
+        },
+        {
+          "section": "target_visible",
+          "quote": "The function works as expected. Submitting the final implementation:"
+        }
+      ],
+      "reason": "提交实现累加浮点 elapsed，未做源题已有的取整，返回 1414007417.817384 之类非整数；只能说明可见实现的差别，不能证明记忆导致了失败。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(total_elapsed_seconds(['1972-01-01', '2000-01-01', '2020-01-01']) == sum([task_func('1972-01-01'), task_func('2000-01-01'), task_func('2020-01-01')]))"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "total_seconds += task_func(date_str)"
+        }
+      ],
+      "reason": "隐藏测试把列表结果定义为逐日期 task_func 取整值之和，而题面只说“sum of all these elapsed seconds”，严格整数契约未在题面声明；此为题面/测试一致性候选，不重打分。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "return int(elapsed + num_leap_seconds)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "total += elapsed + n_leaps"
+        }
+      ],
+      "reason": "源解按日期 int 截断，目标代码保留同一闰秒计数公式却改为浮点累加，逐日期取整契约未迁移；代码/公式重合仅为可见代理，无反事实，不能断言记忆造成该缺失。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_pair\": {\n    \"distance\": 55,\n    \"source_correct\": true,"
+        }
+      ],
+      "reason": "存在通过评测的同族源题（单日期版本）作为合法机会，其做法逐日求和即可通到参考解；存在机会不等于目标必然利用或利用正确。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "EVAL_CONTRACT：题面未要求逐日期取整，浮点求和是合理读法，失败可能源于契约欠定而非记忆问题。",
+    "记忆归因不可证：注入卡片均不含日期/取整内容，本次失误可能与存储经验无关。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "目标的记忆里是否真的存有源题返回 int 的 task_func（卡片内容未提供）。",
+    "隐藏评测是否确实要求逐日期 int 截断，还是仅复用参考函数的自然结果。",
+    "token/预算计量缺失（token_count 为 null），无法判断打包/预算影响。"
+  ],
+  "minimal_intervention": {
+    "change": "对每个日期把 (elapsed + 闰秒数) 取整后再求和，即复用源题返回 int 的逐日期函数并累加其结果。",
+    "fixed": "保持相同的注入记忆、题面、工具与预算。",
+    "falsifier": "若把逐日期结果转为 int 后再求和仍无法通过隐藏断言，则 TASK_EXECUTION 候选被反驳。"
+  },
+  "causal_claim": false
+}

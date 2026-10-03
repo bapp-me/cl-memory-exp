@@ -1,0 +1,160 @@
+{
+  "case_id": "c-be3d46ba4c01",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=35:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "count the occurrences of each predefined animal name with a random count"
+        }
+      ],
+      "reason": "源题记录显示通过且可评分，但源题的计数语义是每个动物随机计数、反向值为列表，因此对目标题只是有限可迁移的合法来源。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/2",
+          "quote": "Feed the items into collections.Counter(...)"
+        },
+        {
+          "section": "source_visible",
+          "quote": "{animal: random.randint(1, max_count) for animal in ANIMALS}"
+        }
+      ],
+      "reason": "注入的工作流是通用语义摘要，保留了 Counter/校验/示例验证等模式，但没有完整保留源题中 random.randint 逐动物计数和列表式反向等具体语义。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "count the occurrences of each predefined animal name across all groups"
+        },
+        {
+          "section": "injection/4",
+          "quote": "Produce a matplotlib histogram/bar chart and return the Axes (and optionally Figure) object."
+        }
+      ],
+      "reason": "目标题的实际跨组计数可由 Counter 工作流部分覆盖，但同一注入集合里的统计、绘直方图、DataFrame、模型拟合等流程与本题无关。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "rng = random.Random(seed)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "animal_counter = collections.Counter()"
+        },
+        {
+          "section": "target_visible",
+          "quote": "raise TypeError(\"list_of_animal_dicts must be a list of dictionaries\")"
+        }
+      ],
+      "reason": "目标可见代码把种子随机生成、输入校验和 Counter 计数等注入模式落实到本题；这是行为代理，不能证明记忆造成成功。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "rng = random.Random(seed)"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Seed the random number generator for reproducibility"
+        },
+        {
+          "section": "target_visible",
+          "quote": "animal_counter = collections.Counter()"
+        },
+        {
+          "section": "injection/2",
+          "quote": "Feed the items into collections.Counter(...)"
+        }
+      ],
+      "reason": "目标可见实现复现了被注入的种子随机、校验和 Counter 工作流模式；没有反事实，不能证明是记忆导致正确或提升。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "EVALUATOR_RESULT=6:True:0"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert all_reversed_dicts[0] == {'Cat': ['Alice', 'Charlie'], 'Dog': ['Bob']}"
+        }
+      ],
+      "reason": "离线目标评估判对且 checks_executed=6，但参考测试片段断言列表式反向字典且调用源 task_func，和目标提交的单值反向实现不一致；只能标为可能的评测契约不一致。"
+    },
+    {
+      "tag": "SCOPE_INTERFERENCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "count the occurrences of each predefined animal name with a random count"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "count the occurrences of each predefined animal name across all groups"
+        },
+        {
+          "section": "source_visible",
+          "quote": "reversed_dict[animal].append(name)"
+        }
+      ],
+      "reason": "源题要求随机计数且反向值为列表，目标题要求跨组实际计数；源特有语义不能直接复用，但通用 Counter/校验工作流仍可能部分适用。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 8"
+        },
+        {
+          "section": "injection/3",
+          "quote": "Compute descriptive statistics (mean, median, mode, standard deviation) over a collection of numeric values."
+        }
+      ],
+      "reason": "注入了 8 条工作流，其中统计摘要等与本题无关，形成可见上下文开销；这只能说明开销，不能据此断言记忆无收益或性价比差。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "没有无记忆对照，目标题也可能仅凭 prompt 和自身能力生成相同实现；可见模式重合不足以证明记忆因果。",
+    "离线评测判对但 tests_run=0，且参考测试与目标提交语义不一致，正确性可能来自宽松/不同的评测 mask，而非完整满足参考契约。",
+    "源题与目标题的随机计数/实际计数语义不同，当前注入的通用工作流可能只是恰好与解法风格重合，而非源经验被有效复用。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法从现有证据判断隐藏测试究竟要求列表式反向、随机计数还是实际跨组计数。",
+    "retrieval score 为 null，无法评估检索排序质量或候选是否本应被截断。",
+    "完整未选记忆库未提供，不能推断其他记忆是否存在或缺失。",
+    "token_count 不可用，只有 utf8 字节数，无法精确评估预算开销。",
+    "无法判断可见 USE_TRANSFER 是否是记忆造成，反事实缺失。"
+  ],
+  "minimal_intervention": {
+    "change": "若做因果检验，唯一关键改动是运行匹配的无注入/无记忆消融；对当前成功结果本身无需改动。",
+    "fixed": "保持相同目标 prompt、模型配置、工具预算、评测 mask 和源题历史。",
+    "falsifier": "无注入消融仍产生同样的随机种子、校验和 Counter 模式并得到相同得分，则可见迁移归因被削弱。"
+  },
+  "causal_claim": false
+}

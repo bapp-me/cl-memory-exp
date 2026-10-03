@@ -1,0 +1,147 @@
+{
+  "case_id": "c-3cdcabd382fd",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=30:True:5"
+        },
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "\"facts\": []"
+        }
+      ],
+      "reason": "源题通过自身 5 项测试（30 checks，OK），故源经验载体本身合法；但源侧辅助写入产出空 facts 且无 update operations，说明作为可复用经验其覆盖有限。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": []"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        }
+      ],
+      "reason": "两条注入记忆与源题 index 5 无 provenance 关联，也没有配对源文本可核对，保真度无法核验；不把未呈现的库推断为不存在。"
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "注入内容全为 pandas/matplotlib 柱状图经验，与扑克发牌、Counter 计数、胜者判定无语义重叠。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "deck = [(rank, suit) for suit in SUITS for rank in HAND_RANKS]"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "可见代码完全按题面自建牌堆与 Counter，无任何 DataFrame/绘图痕迹；这只是行为代理，不能证明记忆零影响。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should return a list of tuples, where each tuple contains the player's hand and a Counter dictionary of card ranks with their frequencies in the hand."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AssertionError: There should be 4 players in the game."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "return players, f\"Player {winner + 1} wins with {max_rank} of frequency {max_freq}\""
+        }
+      ],
+      "reason": "题面只要求返回 (hand, Counter) 元组列表，而隐藏测试用 poker_game()[0] 当 4 人列表、poker_game()[1] 当结果文案，参考解返回 (players, message)：题面与评分契约存在不一致候选（按规则只标候选，不重打分）。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "    return results"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(len(poker_game()[0]) == 4), 'There should be 4 players in the game.'"
+        }
+      ],
+      "reason": "提交函数最终只返回 results 列表，首元素是 (hand, Counter)，在现有测试下触发断言失败；这只说明可见执行结果不符合该测试，不解释成因。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "Native Qdrant top-5 returned set; complete persisted point pool separately snapshotted"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        }
+      ],
+      "reason": "两条候选经检索、selected_before_packing 后原样注入（dropped 为空），且内容与目标无关；检索覆盖与内容适用性无关，也不证明造成干扰。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "rank_counter = Counter(rank for rank, suit in hand)"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "可见轨迹中未见任何来自注入条目的迁移或改写痕迹，源码元素均可在题面常量与要求中找到对应；无变化不等于负迁移，只是可见代理。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "TASK_EXECUTION：若隐藏契约确为返回 (players, message) 二元组，则失败纯属代码实现层面，与契约歧义无关",
+    "注入的两条无关记忆可能改变了行为，但无反事实，无法排除也无法确认",
+    "完整持久库未呈现，可能还有其他与目标相关的记忆未被观察到"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "题面与隐藏测试/参考解的返回契约何者为官方要求，离线证据无法裁决",
+    "两条注入记忆的真实来源与保真度（无配对源，provenance 为空）",
+    "源题经验是否以其他形式存在（源侧 facts 为空、无 update operations，只能说明本包内不可见）",
+    "无干预条件下无法量化记忆对最终代码的因果贡献"
+  ],
+  "minimal_intervention": {
+    "change": "把目标题的返回契约与隐藏测试对齐，即在题面中明确要求返回 (players, winner_message)（或反之放宽测试只取 4 人列表）",
+    "fixed": "保持相同的注入记忆集合、评分 mask、预算与工具环境",
+    "falsifier": "若隐藏测试或参考解同样接受只返回 4 个 (hand, Counter) 元组的列表，则题面/测试契约不一致这一候选被推翻"
+  },
+  "causal_claim": false
+}

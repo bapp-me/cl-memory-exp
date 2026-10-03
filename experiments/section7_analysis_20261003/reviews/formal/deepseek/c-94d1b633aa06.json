@@ -1,0 +1,133 @@
+{
+  "case_id": "c-94d1b633aa06",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=23:True:6"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Generates a simple scatter plot with 'n' points."
+        }
+      ],
+      "reason": "源任务在离线评测中通过（6 tests/23 checks），但其经验是单个散点图函数，不含网格与嵌套返回结构，覆盖面窄。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "目标上下文中没有任何与网格散点图相关的记忆内容被注入（注入的 8 条均为其他任务），保留的源 episode 在目标可见上下文中不可见，无法评估所用记忆的保真度。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Generates a simple scatter plot with 'n' points."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Create a function that generates a grid of scatter plots"
+        }
+      ],
+      "reason": "源经验与目标共享 matplotlib/numpy 散点图与种子用法，但目标新增了行×列网格与嵌套返回结构，源经验只部分匹配。"
+    },
+    "visible_use": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "目标代码与源单图写法高度重合，但源内容未被注入、无对照实验，代码重合只能算可见代理，不能判定复用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should return a list of matplotlib figures, each representing a scatter plot, and a list of lists containing the points for each scatter plot."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "return figures, points_grid"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AssertionError: Each scatter plot should have 5 points"
+        }
+      ],
+      "reason": "题面只要求“list of lists”（按图分组的点列表），而隐藏测试与参考解要求按行×列嵌套的 points_grid，属题意/测试可能不一致，仅作候选；未重打分。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "points.append(list(zip(x.tolist(), y.tolist())))"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"correct\": false"
+        }
+      ],
+      "reason": "提交产物把各图点列表压成一层扁平列表，隐藏断言取样结构时失败；可见执行只显示 agent 自测（6 6 100）通过，不能说明契约满足。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_episode_byte_budget"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Performs the following operations on the input dictionary 'data_dict'"
+        }
+      ],
+      "reason": "字节预算按最旧整集淘汰了 0–44 号候选并注入 8 条无关任务，属打包/可见性裁剪；注入不相关内容的存在不证明干扰，也不说明检索不到。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Generates a list representing a color pattern."
+        }
+      ],
+      "reason": "目标上下文里只有与散点图无关的颜色模式、字典统计等注入内容，源散点经验未被注入；无对照故不能断言记忆造成成功或失败。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "TASK_EXECUTION：agent 可能只是误解了返回结构应嵌套为行×列，而非题面/测试不一致。",
+    "注入的 8 条记忆与本题任务无关，失败可能完全与记忆机制无关（无因果证据）。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "哪个 history_index 对应源散点图 episode，以及它是否曾以任何形式进入目标上下文。",
+    "observable_candidates/selected 的 score 全为 null，检索排序质量无法评估。",
+    "隐藏正确性未公开，除结构断言外的其他要求是否满足未知。",
+    "1–2 层 'list of lists' 究竟是题面歧义还是 agent 误读，现有证据不能定论。"
+  ],
+  "minimal_intervention": {
+    "change": "把返回的 points 改为按行×列嵌套的 points_grid（外层行的列表，内层为该行各图的点列表），figures 仍保持扁平列表。",
+    "fixed": "保持相同题面、相同注入记忆集合、相同字节预算与相同隐藏测试。",
+    "falsifier": "若隐藏测试接受扁平的“按图分组点列表”（两层结构），则题意/测试不一致这一候选被反驳。"
+  },
+  "causal_claim": false
+}

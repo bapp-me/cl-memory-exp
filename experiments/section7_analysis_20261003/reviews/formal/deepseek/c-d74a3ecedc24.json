@@ -1,0 +1,126 @@
+{
+  "case_id": "c-d74a3ecedc24",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "Source episode fully passed its own hidden tests, so it is a legitimate related source experience, but its contract (single flat list, fill counted in the only statistic) differs from the target's dict + per-list/overall split."
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "source_provenance_at_target",
+          "quote": "source ID coverage is not content fidelity; entire unselected library is not presented"
+        }
+      ],
+      "reason": "No origin traces are given for the injected err-*/misc-* lessons, so their fidelity cannot be checked; the source-provenance bullets are faithful to the source trace but were not injected."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Calculate the mean, median, and mode of values in a list of lists."
+        }
+      ],
+      "reason": "Same statistics-with-random-fill family, but the target adds a keyed dict, an empty-dict case, and an unpinned question of whether filled values enter the overall aggregate."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "same seed reproducibility is tautological (internal reseed) -> cross-seed divergence instead"
+        },
+        {
+          "section": "target_visible",
+          "quote": "recompute oracle by replicating"
+        }
+      ],
+      "reason": "The visible battery mirrors injected mistakes-list guidance (cross-seed divergence over a tautological same-seed check, scalar normalization), a behavioral proxy only; no counterfactual shows memory caused the outcome."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "all_values.extend(values)"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(new_task_func({'a': [1, 2, 3], 'b': [], 'c': [4, 5, 6]}, size=5, seed=0) == {'mean': 3.5, 'median': 3.5, 'mode': 1})"
+        }
+      ],
+      "reason": "The submitted code appends the generated fill values into all_values, so the overall mean is taken over 11 values while the hidden check expects the 6 pre-existing values; this is observed divergence, not proof of a memory cause."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Finally, calculate the overall mean, median, and mode of all the values across all lists."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "overall_values.extend(value)"
+        }
+      ],
+      "reason": "The prompt's 'all the values across all lists' arguably includes the values just generated to fill empty lists, whereas the reference/test count only pre-existing values — a possible spec/test mismatch, flagged as a candidate only."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"memory_id\": \"sai-00047\","
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "The source-provenance memories (sai-00047/48/49, the source episode's own added rules) were selected before packing but dropped for byte budget and never injected; this is budget eviction, and does not show that injecting them would have changed the result or that retrieval failed."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "same seed reproducibility is tautological (internal reseed) -> cross-seed divergence instead"
+        }
+      ],
+      "reason": "Visible verification choices track injected mistakes-list content (cross-seed divergence, scalar casting), so memory-shaped behavior is observable, but that guidance never probed the include/exclude aggregation semantics and cannot be shown to cause the failure."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "EVAL_CONTRACT: if 'all the values across all lists' is read literally (fills included), the hidden expectation of mean 3.5 is an unpinned interpretation and the failure is a contract gap rather than an agent error.",
+    "No counterfactual: the same include-fill implementation could have been produced without any memory, so memory influence on the semantic choice is unproven.",
+    "The source's own new rules were dropped at packing, so the most target-adjacent source experience may never have reached the agent."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the hidden tests genuinely intend filled values to be excluded from the overall statistics (only one failing assert is visible).",
+    "Content fidelity of the injected err-*/misc-* lessons relative to their origin episodes (sources not provided).",
+    "Whether any injected memory influenced the include-fill decision."
+  ],
+  "minimal_intervention": {
+    "change": "Compute the overall statistics over the original pre-fill values only (extend all_values with the input list contents, not the generated fill values), matching the reference.",
+    "fixed": "Same dict inputs, same size/seed defaults (5, 0), same numpy/scipy environment and memory budget.",
+    "falsifier": "If the hidden check still fails after excluding fill values (e.g., it expects the fills included), the TASK_EXECUTION candidate is refuted."
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,139 @@
+{
+  "case_id": "c-ca20e0a17dc9",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=61:True:5"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"tests_run\": 5"
+        }
+      ],
+      "reason": "源 episode 在可见评测中通过 5 个测试/61 项检查且 scorable；仅单个源、单次运行，故为 pass_with_limits。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": []"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        }
+      ],
+      "reason": "通过源题的内容未在注入集中出现（provenance 为空、原始 episode 未保留），两条注入记忆讲的是别的 pandas 任务，没有与目标相关的源内容可评估保真度。"
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        }
+      ],
+      "reason": "被注入的两条记忆描述 DataFrame/条形图类任务，与本目标“部门-级别 JSON 分布”的输入输出契约无交集。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The core function works; only my test's assertion dict had wrong keys."
+        }
+      ],
+      "reason": "目标轨迹中求解者只谈自己的实现与自测，未见引用或改写注入记忆内容；只能说明行为上无可见复用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "TypeError: Employee count for EMP$$ must be an integer"
+        },
+        {
+          "section": "target_submission",
+          "quote": "if isinstance(entry, (list, tuple)) and len(entry) == 2:"
+        }
+      ],
+      "reason": "提交把每个元素当成计数或 (code,count) 对，遇到隐藏测试传入的 dict 元素即抛 TypeError，首个测试即失败；这是直接可见的执行/接口误读，不证明记忆导致。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of department codes and their respective employee counts, generate a JSON object that represents the distribution of employee levels"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "for department_data in department_data_list:"
+        }
+      ],
+      "reason": "题面只说“list of department codes and their counts”，未钉死元素为 dict、输出为级别字符串列表；隐藏测试/reference 采用 list-of-dict + 级别列表，存在题意与测试口径不匹配的候选，仅标记不重打分。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": [],"
+        },
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "{\"facts\": []}"
+        }
+      ],
+      "reason": "源题通过却未产生任何记忆操作/writer facts，说明这条合法经验没有进入可用记忆；这不等于“已存但未检索到”。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": [\n    \"046fecd0-bb97-4487-aea7-9105b37efe5a\",\n    \"96e021ae-d807-4ddf-ae9c-de2d36854446\"\n  ]"
+        }
+      ],
+      "reason": "可观察候选池的两条内容在主题上与目标无关且全量注入；未展示完整库，因此不能断言近似源经验不在库中，也不能由无关内容断言干扰。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "题面输入/输出结构本身含糊，失败可能主要是契约歧义（EVAL_CONTRACT 候选），而非单纯执行失误",
+    "近乎相同的源经验未被写入/注入，无法反事实检验若复用源方案能否避免失败",
+    "注入记忆是否被模型阅读无日志证据；无可见引用不等于未被隐式影响，反之亦然"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试与题面谁更“正确”无法在离线证据内判定",
+    "完整未选记忆库内容未提供，不能推断源派生经验是否曾经存在",
+    "token_count 与 COST_UTILITY 相关计量不可用（token_measurement_method=unavailable）",
+    "无法判断两条 pandas 记忆的来源题是否本身正确"
+  ],
+  "minimal_intervention": {
+    "change": "让 new_solution 接受 dict 元素列表（每个 dict 为 部门码->人数）并返回 部门码->级别名列表 的合并 JSON；或在题面中明确元素/输出结构",
+    "fixed": "保持相同题面、相同历史与注入集合、相同工具与预算",
+    "falsifier": "若原提交在隐藏测试下通过，或轨迹显示求解者实际采纳了注入记忆内容，则 TASK_EXECUTION/无可见复用 的判断被反驳"
+  },
+  "causal_claim": false
+}

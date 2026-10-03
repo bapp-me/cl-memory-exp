@@ -1,0 +1,143 @@
+{
+  "case_id": "c-83cd62c73fc8",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": false"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "KeyError: 'A'"
+        }
+      ],
+      "reason": "源题隐藏评测 same-orientation 失败(correct=false, KeyError 'A'),却被反思写成 clean success,故其经验只具备失败的、带限的来源合法性。"
+    },
+    "memory_fidelity": {
+      "value": "contradicted",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "the canonical patterns are scipy.spatial.distance.euclidean(a, b) for the metric and pd.DataFrame([a, b], index=['A', 'B'])"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "DataFrame shape mismatch"
+        }
+      ],
+      "reason": "该记忆把行索引 'A'/'B' 断言为 canonical pattern,而隐藏契约要求列 'A'/'B',两者直接冲突。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "When the spec says to 'draw ... with a line displaying the Euclidean distance', embed the computed distance in the plot"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "[left]:  (2, 3)"
+        }
+      ],
+      "reason": "任务族(距离+DataFrame+绘图)与标题注记建议对目标适用,但核心的 DataFrame 方向断言不适配目标契约。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Per err-00094 the probe was wrong, not the code."
+        },
+        {
+          "section": "target_visible",
+          "quote": "My mental arithmetic slipped again (err-00120)"
+        }
+      ],
+      "reason": "目标显式引用并正确套用了注入的验证方法学条目(err-00094/err-00120);但这只涉及测试编排,不涉及源题方向记忆,不能证明因果。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "create a Pandas DataFrame for each pair with indices 'A' and 'B'"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "df = pd.DataFrame({'A': a, 'B': b})"
+        }
+      ],
+      "reason": "题面用 'indices' 措辞,而隐藏契约要求 'A'/'B' 为列,契约措辞与测试期望可能不一致;这只能标为候选,不能断言评分错误。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "df = pd.DataFrame(pair, index=['A', 'B'])"
+        },
+        {
+          "section": "target_visible",
+          "quote": "assert df.values.tolist() == pair"
+        }
+      ],
+      "reason": "目标自选行方向并让自写探针把该方向固化(值对比只对行解释成立),整套验证从未构造能区分行/列的探针;这是执行侧观察,非记忆因果。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_block_byte_budget"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "源题派生的语义候选 sai-00037/sai-00038 被检索到却按字节预算淘汰、未注入,属打包可见性而非检索失败;也说明目标的同向错误不可能来自该记忆。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "The reflection reports a clean success:"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": false"
+        }
+      ],
+      "reason": "源题隐藏评测失败却按成功反思,随后把未验证的方向判读作为 canonical pattern 写入;这只能说明该写入的质量边界,不能证明它影响了本目标。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "TASK_EXECUTION:目标可独立地把 'indices' 读作行索引,且其自建探针无区分力,未必与任何记忆有关。",
+    "源题派生记忆 sai-00037/sai-00038 与目标写法一致,但未被注入(预算淘汰),因此负迁移无法成立。",
+    "隐藏评测可能只按列式参考解比对,题面措辞与评分口径不一致只应是候选,不能重打分。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏正确性未公开(target_visible 只回 'Hidden correctness is not available').",
+    "未见完整未选记忆库,不能由本包推断缺失。",
+    "若 sai-00037/sai-00038 被注入,目标行为是否改变不得而知(无反事实)。",
+    "题面在 agent 侧的完整措辞(是否含 'as columns')无法确认。"
+  ],
+  "minimal_intervention": {
+    "change": "在题面/契约中明确 DataFrame 必须是列 'A'/'B'(或令目标探针同时检验行/列两种读法);记忆层无需改动。",
+    "fixed": "保持相同的检索/注入集合、相同的打包字节预算、相同的历史与工具环境。",
+    "falsifier": "若在明确列式契约下目标仍返回 (2,N) 行式 DataFrame,则归因转向 TASK_EXECUTION;若注入 sai-00037/sai-00038 后行为改变,则才可讨论记忆归因。"
+  },
+  "causal_claim": false
+}

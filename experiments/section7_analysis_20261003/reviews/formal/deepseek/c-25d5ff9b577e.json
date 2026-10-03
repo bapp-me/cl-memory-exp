@@ -1,0 +1,119 @@
+{
+  "case_id": "c-25d5ff9b577e",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "No source-memory pairing or injection is present for this target, so there is no legitimate source experience to rate."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "No target-relevant memory content was injected or visible, so fidelity is absent rather than partial or contradicted."
+    },
+    "target_applicability": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "There is no memory content available to apply to the target, and the target was solved without it."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "go to yellow closed door 1"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "The visible action is a direct task action with no injected memory, so no memory-specific adaptation is visible."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "go to yellow closed door 1"
+        },
+        {
+          "section": "target_visible",
+          "quote": "The task is completed."
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "The visible action directly reaches the stated goal and is scored correct. This supports direct execution only; it does not prove memory was unavailable or ineffective."
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "Memory admission/injection is disabled for this target, so no D1 memory was written or injected in the visible run. This does not show that retrieval failed or that the library lacked relevant memories."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Goal: go to the yellow door"
+        },
+        {
+          "section": "target_submission",
+          "quote": "\"submitted\": true"
+        }
+      ],
+      "reason": "The task contract is fulfilled and submitted successfully. This shows the target was scorable and solved, not that memory contributed."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "Success may reflect the BabyAI baseline policy alone; no matched memory-on versus memory-off comparison is available.",
+    "The complete unselected memory library and any source-task pairing are absent from this packet, so a relevant D1 memory could have existed without being injected here.",
+    "The check-available-actions call could be generic exploration rather than adaptation from memory."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "Whether any source-task experience existed and was not selected or injected.",
+    "Why memory policy was disabled and whether that is part of the fixed protocol.",
+    "No counterfactual run shows what would happen with target-relevant memory injected."
+  ],
+  "minimal_intervention": {
+    "change": "Add a controlled target-relevant D1 memory injection in a matched run.",
+    "fixed": "Keep the same BabyAI goal, observation, action budget, tool set, and base memory policy otherwise unchanged.",
+    "falsifier": "A matched injected run that changes the action path or outcome would challenge the direct-execution-only account."
+  },
+  "causal_claim": false
+}

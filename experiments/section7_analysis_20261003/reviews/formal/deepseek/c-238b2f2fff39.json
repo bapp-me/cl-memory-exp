@@ -1,0 +1,127 @@
+{
+  "case_id": "c-238b2f2fff39",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(value_range=(0, 100)):"
+        }
+      ],
+      "reason": "Source task passes its own five offline tests and is scorable, but its contract is only a single-dataset two-column Category/Count DataFrame."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        }
+      ],
+      "reason": "No target-visible memory content or source raw episode is retained/injected, so there is no memory content whose fidelity can be assessed."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "CATEGORIES = ['A', 'B', 'C', 'D', 'E']"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "The DataFrame should have three columns: 'Dataset', 'Category', and 'Count'."
+        }
+      ],
+      "reason": "Shared categories plus pandas/random logic would partially transfer, but target adds multi-dataset merging and a Dataset column."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "No memory artifact appears in the target transcript and policy is disabled; the submitted solution is visible direct task execution."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"distance\": 82"
+        }
+      ],
+      "reason": "A paired source task existed and was correct/scorable, so a legal source experience opportunity existed; this alone does not show retention, injection, or transfer."
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "The source raw episode/provenance was not retained and memory policy is disabled, indicating no memory write/admission; this does not show retrieval missed an existing memory."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "def generate_report(datasets):"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "Target produced a correct standalone solution using similar CATEGORIES/random/pandas patterns, but with no injected source record visible; similarity is only a proxy and success does not prove semantic transfer."
+    }
+  ],
+  "primary_hypothesis": "WRITE_ADMISSION",
+  "competing_explanations": [
+    "The target may have been solved by the model's direct task execution ability from the prompt alone, with no memory involvement.",
+    "Any resemblance to the source task may come from shared pretraining conventions (CATEGORIES, pandas, random) rather than from stored or transferred experience.",
+    "Because the unselected complete memory library is not shown, the packet cannot rule out other memory content that was unavailable or not injected."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether any unshown memory library contained source-related content and why it was not injected.",
+    "Whether the target behavior would differ under a controlled memory-injection counterfactual.",
+    "Whether the source episode's non-retention is due to the disabled policy or an additional write filter."
+  ],
+  "minimal_intervention": {
+    "change": "Enable retention/injection of the correct source task_func experience as the only memory change for the same target.",
+    "fixed": "Same target prompt, hidden evaluator, model, and token/tool budget.",
+    "falsifier": "A controlled run with the source experience injected producing different target behavior would challenge the current no-visible-use/no-transfer assessment."
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,138 @@
+{
+  "case_id": "c-369f632a6fef",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "AssertionError: Expected 'show' to have been called once. Called 0 times."
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": false"
+        }
+      ],
+      "reason": "Same-family source (single-list counting+plotting) is legitimate and scorable, but its own submission failed a plotting-display assertion, so the extracted experience is partial; this does not license treating its statements as ground truth."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": [\n    \"err-00096\","
+        }
+      ],
+      "reason": "The source's derived content (sai-00025/26) was retained only as provenance and not injected; the injected set is generic err-*/misc-* mistake notes, so no source-grounded guidance on the return contract reached the target. Absence of content is not evidence of its usefulness if it had been present."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "identify values greater than the average for each sublist"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "implement it as an early guard BEFORE computing statistics: if not data: return (np.array([]), 0)"
+        }
+      ],
+      "reason": "Target changes the data shape (list of sublists, per-sublist averages, combined array, total count) and does not document empty-input behavior, so the source's empty-guard rule is only partially applicable while the histogram-of-sorted rule remains roughly applicable."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "My hand-derived oracle for the negative-values case was wrong (-5 > -6 is True, so count is 2, not 1) — recompute exactly"
+        },
+        {
+          "section": "injection/12",
+          "quote": "Do not ESTIMATE hand-derived numeric oracles by mental arithmetic or intuition — compute them exactly with the formula in the sandbox."
+        }
+      ],
+      "reason": "The model ran an assert-based battery and repaired its own oracle while leaving the implementation unchanged, matching injected guidance; this is a behavior proxy only and does not show memory caused the outcome."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "return the total count of values greater than the specified value across all sublists and the combined numpy.ndarray"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "np.array_equal(new_task_func([[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]], 6)[0], np.array([4, 5, 9, 10]))"
+        }
+      ],
+      "reason": "The prompt's return phrasing places the count before the array, while the hidden test requires the combined array at index [0]; even a literal reading of the prompt cannot satisfy the test, so the contract is a prompt/test mismatch candidate. The test mask is fixed and gold is not absolute truth, so this is flagged, not asserted."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "return per_sublist_counts, total_count, combined_above_avg"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": false"
+        }
+      ],
+      "reason": "The submitted function returns a 3-tuple with the per-sublist counts first, so positional comparisons fail; this is the direct observable divergence but does not by itself establish why the signature was chosen."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Analyzes a list of numerical data, identifies values greater than the average"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "A legitimate same-family source existed (single-list counting/plotting with array-first return order), yet its derived content was not injected, so a relevant transfer opportunity was limited. Provenance retention alone does not show the content was present or faithful."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_block_byte_budget\""
+        }
+      ],
+      "reason": "All selected sai-* strategy blocks were evicted by byte budget so only err-*/misc-* bullets were injected; this is post-selection packing, not retrieval failure, and the evicted content cannot be shown to have addressed the return contract."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "The model may simply have over-added per-sublist counts without checking return arity (TASK_EXECUTION), independent of any prompt ambiguity.",
+    "No counterfactual exists, so the failure cannot be attributed to memory presence/absence or to the packed-out sai blocks.",
+    "Without the full hidden tests, the single visible failing assertion may not represent the whole contract mismatch."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Content of the dropped sai-* bullets and of the unselected memory library is not available.",
+    "Whether the target tests also require a plotting display (plt.show) as the source test did is unknown; the target eval halted at the return-shape check.",
+    "No counterfactual run shows whether injecting the source-derived bullets would have changed the return signature."
+  ],
+  "minimal_intervention": {
+    "change": "Pin the return contract in the task statement to match the hidden test — return (combined_above_avg ndarray, total_count) with no per-sublist counts element.",
+    "fixed": "Same multi-sublist data, value parameter, histogram requirement, memory budget and reference tests.",
+    "falsifier": "If the same model still emits a 3-tuple under a clarified contract, prompt ambiguity is not the cause and TASK_EXECUTION dominates."
+  },
+  "causal_claim": false
+}

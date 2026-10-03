@@ -1,0 +1,137 @@
+{
+  "case_id": "c-57cbf111b993",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"tests_run\": 5,\n  \"checks_executed\": 20,\n  \"correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "- The generated string consists only of ASCII letters."
+        }
+      ],
+      "reason": "源题通过 5 项测试且其文档明确要求 ASCII 字母集，属合法可用经验；但它只覆盖单串生成，不含多长度合并语义。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false,\n    \"source_provenance_retained\": false,\n    \"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "方法态未保留源片段或来源，且注入数为 0，无法判断记忆内容是否保真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "random_string = ''.join(random.choice(string.ascii_letters) for _ in range(length))"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "generating multiple random strings of varying lengths and calculating the combined frequency of each character"
+        }
+      ],
+      "reason": "源经验的字符集与计数逻辑对目标部分适用，但目标新增了多长度合并这一条件。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0,"
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        }
+      ],
+      "reason": "目标上下文中没有可见的注入候选或记忆文本，行为代理显示未使用任何记忆内容。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should accept a list of lengths and a seed for random generation."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(combined_frequency([10, 20], 0) == {'y': 2, 'W': 3, 'A': 2, 'c': 2, 'q': 2, 'G': 3"
+        }
+      ],
+      "reason": "目标 prompt 未指定字符集与随机流粒度，隐藏断言却要求含大写字母的 ascii_letters 结果；支持契约缺口候选，不能据此断定测试有误或题意必然不一致。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "s = ''.join(random.choice(string.ascii_lowercase) for _ in range(length))"
+        },
+        {
+          "section": "target_visible",
+          "quote": "The function works correctly — it's deterministic for a given seed, sums to the total of all lengths, and handles empty input."
+        }
+      ],
+      "reason": "可见实现只取小写字母并仅用自造样例自检，与断言大写键冲突，足以解释失败；不能说明记忆或外部因素造成。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true,\n  \"scorable\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "- The generated string consists only of ASCII letters."
+        }
+      ],
+      "reason": "存在已通过且同域的源经验，若可用本可提供缺失的字符集规则；但未写入/未注入，仅表明机会存在，不证明会被复用。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0,\n  \"injected_text_utf8_bytes\": 0,\n  \"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_in_observable_retrieval_candidates\": null"
+        }
+      ],
+      "reason": "目标上下文里没有可观察的 D1 语义候选或注入项，检索未被行使；不能由此断定完整库中不存在相关条目。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "EVAL_CONTRACT：目标 prompt 未规定字符集及每个长度是否用同一 seed 重新播种，隐藏断言按 ascii_letters 且逐串复用 seed 生成期望，失败可能源于题意/测试细节不一致而非记忆或用例行为。",
+    "没有注入发生（memory_policy=disabled，injected_count=0），因此成功或失败的因果都不能归因于记忆内容。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "未提供的完整记忆库中是否存在与本题相关的其它条目。",
+    "源经验是否曾写入任何持久状态、以及写入内容是否保留字符集规则，均不可见。",
+    "隐藏测试的期望输出是否可由与题面一致的自然实现达成（逐长度重新播种语义未被明文规定）。"
+  ],
+  "minimal_intervention": {
+    "change": "在目标题面或注入中明确字符集为 string.ascii_letters（含大小写）以及每个长度沿用同一 seed 重新播种。",
+    "fixed": "保持相同的 seed 取值、工具集合、提交预算与环境。",
+    "falsifier": "若按 ascii_letters 且逐长度重新播种实现后仍不满足该隐藏断言，则失败另有来源，字符集/契约候选被反驳。"
+  },
+  "causal_claim": false
+}

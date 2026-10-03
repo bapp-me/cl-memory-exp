@@ -1,0 +1,164 @@
+{
+  "case_id": "c-5133aa578f29",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "All checks pass: 2 patches for the example, empty bar chart for an empty DataFrame, and ValueError for non-DataFrame input."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "pre-registered scorer defect; task retained, excluded from scores"
+        }
+      ],
+      "reason": "The source episode is real and sandbox-visible, but hidden source correctness is unavailable because of a scorer defect. Thus the source can only be treated as pass_with_limits, not confirmed pass."
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "Do not add gratuitous transformations like counts.index.astype(str) after value_counts() when plotting"
+        },
+        {
+          "section": "source_visible",
+          "quote": "ax.bar(counts.index.astype(str), counts.values)"
+        },
+        {
+          "section": "injection/6",
+          "quote": "Keep default library behavior unless the spec explicitly requires a transformation."
+        }
+      ],
+      "reason": "The injected err-00044 bullet is a curator-derived correction to source behavior; the source run itself used the cast, so fidelity to a confirmed source outcome is only partial/interpretive."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "bar chart showing the distribution of transaction counts across categories"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Draw a bar chart of the counts of each unique value in the 'value' column"
+        },
+        {
+          "section": "injection/6",
+          "quote": "when plotting"
+        }
+      ],
+      "reason": "The generic value_counts/plotting lesson partly applies, but the target changes to list-of-dicts, groupby aggregation, and an explicit summary-key contract. Source chart metadata and empty-DataFrame guards are only partially applicable."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "ax = transaction_counts.plot(kind='bar')"
+        },
+        {
+          "section": "injection/6",
+          "quote": "Keep default library behavior unless the spec explicitly requires a transformation."
+        }
+      ],
+      "reason": "The target visibly used canonical value_counts bar plotting and did not add astype(str), which is consistent with injected err-00044. This is a behavioral proxy only and does not prove memory caused the choice."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of dictionaries, each representing a transaction with keys 'date', 'amount', and 'category', create a function that generates a summary report."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "KeyError: 'total_amount_per_category'"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert summary_report['total_amount_per_category'] == {'food': 150, 'travel': 350, 'shopping': 300}"
+        }
+      ],
+      "reason": "The target prompt never names required dictionary keys or exact chart metadata, while the hidden test asserts exact reference names. This directly supports a contract-mismatch candidate and cannot establish memory causation."
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "'total_per_category': total_per_category,"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert summary_report['total_amount_per_category'] == {'food': 150, 'travel': 350, 'shopping': 300}"
+        }
+      ],
+      "reason": "The target chose different summary key names and Series values, while the reference expects different key names. This is a concrete representation divergence supporting the failure, but it does not show memory harm or benefit."
+    },
+    {
+      "tag": "SCOPE_INTERFERENCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "This function use \"Value Distribution\" for the plot title."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert ax.get_title() == 'Value Distribution'"
+        },
+        {
+          "section": "target_submission",
+          "quote": "ax.set_title('Transaction Counts by Category')"
+        }
+      ],
+      "reason": "Source-task chart metadata appears in the target hidden test even though the target task changed to transaction-category counts. This is a scope-leakage candidate, not proof that memory caused the target failure."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df):"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "ax = task_func(pd.DataFrame({'value': category_counts.index, 'count': category_counts.values}))"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def generate_summary_report(transactions):"
+        }
+      ],
+      "reason": "The reference solution reuses the source task_func, but the target prompt exposes only generate_summary_report. The source opportunity was not exposed, so this supports an interface/contract explanation rather than a blameworthy execution failure."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "The target may simply have guessed different but reasonable dictionary keys and chart labels because the prompt was underspecified.",
+    "The hidden test may be reusing source-task chart metadata (title/labels) and task_func in a way the target prompt did not expose, making the failure a scope/interface artifact.",
+    "err-00044 alignment is visible but not causal; without a counterfactual, memory may have been irrelevant to both the passing checks and the failing key-name contract.",
+    "The unselected memory library is not fully presented, so a memory that did specify key names could exist outside the packet."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the target prompt originally or elsewhere exposed task_func or expected summary key names.",
+    "Whether the hidden evaluator's 'total_amount_per_category' and 'Value Distribution' expectations are the intended target contract or an artifact of source-task reuse.",
+    "Whether any injected memory actually influenced the target's choice to use canonical value_counts plotting without astype(str).",
+    "Whether source-task correctness, unavailable due the scorer defect, would change the assessment of source memories."
+  ],
+  "minimal_intervention": {
+    "change": "Specify the target contract exactly: required dict keys such as 'total_amount_per_category' and 'average_amount_per_category', plus expected chart title/labels, or expose/reuse the source task_func in the target prompt.",
+    "fixed": "Keep the same source history, same injected memory budget, same environment, and same target solution logic apart from the contract clarification.",
+    "falsifier": "If the same solution passes hidden tests once exact keys/title are specified, or if a memory bullet naming those keys was actually injected and ignored, the contract-mismatch account is weakened."
+  },
+  "causal_claim": false
+}

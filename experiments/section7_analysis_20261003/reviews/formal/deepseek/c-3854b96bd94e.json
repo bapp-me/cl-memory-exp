@@ -1,0 +1,145 @@
+{
+  "case_id": "c-3854b96bd94e",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=32:True:10"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(text, seed=None):"
+        }
+      ],
+      "reason": "Source episode passed 10 tests, so it is a legal source, but its contract is single-text and may be overgeneralized to the target list-of-texts task."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "function seeds the RNG INTERNALLY from its own seed parameter"
+        },
+        {
+          "section": "injection/20",
+          "quote": "Do not use a same-seed double-call comparison as a 'reproducibility check'"
+        }
+      ],
+      "reason": "Injected err-00066 text matches the source update addition; the discrepancy is in target application, not in the recorded bullet itself."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(text, seed=None):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "The function should output a list of scrambled texts, one for each input text."
+        }
+      ],
+      "reason": "The word-scrambling core applies, but the target changes the input/output from one text to a list of texts, leaving seeding scope over the collection ambiguous."
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "called internally per err-00066, so the same-seed double-call check is meaningful here"
+        },
+        {
+          "section": "target_submission",
+          "quote": "random.seed(seed)\n\n    def scramble_word(match):"
+        }
+      ],
+      "reason": "The agent visibly cites err-00066 to justify internal seeding and calls the same-seed double-call meaningful, while its submitted code seeds once for the whole list; this is a behavior proxy, not causal proof."
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "function seeds the RNG INTERNALLY from its own seed parameter"
+        },
+        {
+          "section": "target_visible",
+          "quote": "called internally per err-00066, so the same-seed double-call check is meaningful here"
+        }
+      ],
+      "reason": "Supports visible transfer of the source internal-seeding idea into the target list task; it cannot show that this memory caused the wrong per-list seeding scope."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "random.seed(seed)\n\n    def scramble_word(match):"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "Photyn is fun and pfwuoerl."
+        }
+      ],
+      "reason": "The submitted code seeds once before processing all texts, producing a mismatch with hidden expected output; this is direct execution evidence, not proof of memory influence."
+    },
+    {
+      "tag": "SCOPE_INTERFERENCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(text, seed=None):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "The function should output a list of scrambled texts, one for each input text."
+        }
+      ],
+      "reason": "Source experience is scoped to one text, while the target requires a collection whose seed-reset behavior per element is not stated; this scope change is a candidate for the mismatch, but no counterfactual isolates it."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should output a list of scrambled texts, one for each input text."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "return [task_func(text, seed) for text in texts]"
+        }
+      ],
+      "reason": "Target prompt specifies list output but not whether seed resets per text; the reference solution resets per text via repeated task_func calls, so a contract-reading gap is a candidate."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The agent may have chosen one global seed independently of memory, making this a plain TASK_EXECUTION error.",
+    "The target prompt may be under-specified about seed reset per element, so the failure may reflect EVAL_CONTRACT ambiguity rather than memory transfer.",
+    "The visible reference to err-00066 may be post-hoc verification commentary instead of the cause of the submitted seeding placement.",
+    "The source memory actually warns that same-seed double-call is tautological when internally seeded, so the target agent may have misread the memory rather than transferring its content faithfully."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "The exact hidden expected second output and whether the first output matched are not fully shown.",
+    "The full content of source-derived memory sai-00067 is not in the provided injection text.",
+    "No no-memory control or counterfactual run is available to separate memory influence from independent implementation choice.",
+    "It is unclear whether per-text reseeding is an intended target contract or only a reference-solution artifact.",
+    "Post-target updates cannot explain the target failure and are not treated as its cause."
+  ],
+  "minimal_intervention": {
+    "change": "Reset the RNG per text element, e.g. call random.seed(seed) inside the per-text loop or delegate each text to a single-text helper that seeds before scrambling.",
+    "fixed": "Keep the same target prompt, source history, injected memory budget, and hidden tests.",
+    "falsifier": "If per-text reseeding still fails the hidden list comparison, or if a no-memory control with the same once-per-list seed also fails, the USE_TRANSFER candidate is weakened or refuted."
+  },
+  "causal_claim": false
+}

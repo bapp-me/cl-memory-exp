@@ -1,0 +1,126 @@
+{
+  "case_id": "c-1ff096c10a3c",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "只有注入记忆元数据和目标结束后的更新记录，没有源题结果、源观察或源执行内容可核验，因此不能判断该工作流是否来自合法成功经验。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "未提供源侧记忆文本或源任务上下文，无法比较注入内容相对于原始经验的保真度。"
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Once `target_door` is visible"
+        },
+        {
+          "section": "target_visible",
+          "quote": "go to green locked door 1"
+        }
+      ],
+      "reason": "注入内容正是导航到可见目标门的工作流，目标环境在动作列表中给出了绿色门上锁/关闭门的可导航动作。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Check available actions"
+        },
+        {
+          "section": "target_visible",
+          "quote": "You can take the following actions: turn left, turn right, move forward, toggle and go through green closed door 1, go to green locked door 1, go to green closed door 1, check available actions"
+        }
+      ],
+      "reason": "可见轨迹先检查可用动作，再直接前往可见绿色门，符合记忆的条件分支，且无需扫描步骤；这只是行为代理，不能证明记忆造成成功。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "`target_door`: the color/name of the door to reach"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Once `target_door` is visible"
+        }
+      ],
+      "reason": "注入记忆是参数化工作流，含目标门参数与可见性条件分支，能直接映射到目标任务形态；但表示适用不等于源内容正确或已被采用。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"rank\": 1"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": ["
+        }
+      ],
+      "reason": "该候选在打包前被选中并出现在注入 id 列表中，说明实际进入了上下文；这不能证明检索内容必要、相关或有效。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Once `target_door` is visible"
+        },
+        {
+          "section": "target_visible",
+          "quote": "go to green locked door 1"
+        }
+      ],
+      "reason": "可见动作与记忆的直接导航分支一致，且跳过了不需要的扫描步骤；没有反事实，不能据此断言记忆造成成功。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The task is completed."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "直接记录显示两个 ACTION 后提交且环境判定任务完成，这是执行成功证据，不是记忆因果证据。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "目标状态本身已清晰可见，agent 可能无需记忆也能直接选择绿色门并成功。",
+    "注入工作流可能只是与通用 BabyAI 导航策略重合，实际动作可能来自模型独立解题。",
+    "源题结果与源记忆内容缺失，无法排除该工作流来自不完整或不适用的源经验。",
+    "目标结束后的更新记录不能解释目标执行前的行为，不能作为源质量或因果依据。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "没有无记忆对照，无法判断记忆是否必要或是否有独立正向作用。",
+    "没有源任务观察、动作和评估，不能判断合法源经验的质量与保真度。",
+    "agent 为何在多个绿色门中选择绿色上锁门而非绿色关闭门，现有证据只能看到结果，无法确定内部依据。",
+    "token_count 为 null，无法进一步分析注入成本。"
+  ],
+  "minimal_intervention": {
+    "change": "在相同目标、相同模型与解码条件下移除该注入工作流并重跑一次。",
+    "fixed": "保持相同目标提示、环境种子、动作预算、模型与工具协议不变。",
+    "falsifier": "若无记忆重跑仍在两步内直接前往绿色上锁门并成功，则 USE_TRANSFER 的可见使用候选被削弱。"
+  },
+  "causal_claim": false
+}

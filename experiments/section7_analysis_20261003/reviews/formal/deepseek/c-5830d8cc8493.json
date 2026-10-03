@@ -1,0 +1,137 @@
+{
+  "case_id": "c-5830d8cc8493",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=27:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "create a Pandas DataFrame from these lists"
+        }
+      ],
+      "reason": "源题通过其隐藏测试且与目标同域，是合法源；但源题 docstring 同样用含混的 \"indices 'A' and 'B'\" 表述而实现为列，含混点未被消解。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "注入的是抽象单句摘要，域描述与目标相符，但不含决定正确性的 DataFrame 构造方式（列 'A'/'B'）；没有可判为失真的具体断言，故为部分。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "一条与目标域（pandas+matplotlib）相关，另一条描述计数条形图任务，与目标具体契约无关；故整体只是部分适用。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "        df = pd.DataFrame([a, b], index=['A', 'B'])"
+        }
+      ],
+      "reason": "提交代码中无可追溯到注入摘要的元素，两条记忆都未提及 DataFrame 的行/列取向；行为代理显示未见复用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "        df = pd.DataFrame([a, b], index=['A', 'B'])"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "DataFrame shape mismatch\\n[left]:  (2, 3)\\n[right]: (3, 2)"
+        }
+      ],
+      "reason": "提交把 'A'/'B' 实现为行索引，产出 (2,3)，与隐藏测试期望的 (3,2) 列结构不符，直接导致判定失败；这是可见执行错误，但不能说明记忆造成该错误。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "create a Pandas DataFrame for each pair with indices 'A' and 'B'"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})"
+        }
+      ],
+      "reason": "目标题面写 \"indices 'A' and 'B'\"，而参考解/测试要求 'A'、'B' 为列名，存在题意与测试可能不一致的候选；仅标记，不作为定论，也不能证明失败全由题面引起。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": [\\n    \"046fecd0-bb97-4487-aea7-9105b37efe5a\",\\n    \"96e021ae-d807-4ddf-ae9c-de2d36854446\"\\n  ]"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"dropped\": []"
+        }
+      ],
+      "reason": "两条候选在检索后均被选中且注入、无淘汰，说明检索/注入链路正常工作，不是本题失败环节；注入成功不等于内容有用。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Calculate the Euclidean distance between two lists, create a Pandas DataFrame from these lists"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        }
+      ],
+      "reason": "存在通过测试且同域的合法源经验，构成可复用机会；但源题的原始实现未被保留在方法状态中，且未注入目标，故不能据此断言源经验被复用或造成迁移。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "EVAL_CONTRACT：题面 \"indices 'A' and 'B'\" 与隐藏测试要求的列结构不一致，失败可能部分归因于契约表述含混而非执行失误。",
+    "注入摘要只含域级描述，既无代码也无 DataFrame 取向细节，无法证明记忆帮助或损害；不存在反事实，故记忆因素不可判定。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无对照/消融，无法判断若注入不同记忆结果是否改变。",
+    "未提供完整未选中记忆库，不能从本包含有推断记忆缺失。",
+    "隐藏测试只暴露一个断言，无法判断题面对 'indices' 的解读口径是否一致。"
+  ],
+  "minimal_intervention": {
+    "change": "把 DataFrame 构造改为按列写入，如 pd.DataFrame({'A': a, 'B': b})，使形状为 (3,2)。",
+    "fixed": "保持同一目标题面、同一注入的两条记忆、同一预算与执行环境。",
+    "falsifier": "若改用列式构造后仍出现同样的 (2,3) 形状断言失败，则 TASK_EXECUTION 作为主因被反驳。"
+  },
+  "causal_claim": false
+}

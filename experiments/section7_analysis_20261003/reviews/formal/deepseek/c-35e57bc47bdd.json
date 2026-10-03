@@ -1,0 +1,154 @@
+{
+  "case_id": "c-35e57bc47bdd",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "[sai-00001] helpful=5 harmful=0"
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "\"memory_id\": \"sai-00010\""
+        }
+      ],
+      "reason": "注入条目带有正向 helpful 计数，说明来源题曾被记为成功；但包内没有任何源题轨迹或配对，来源覆盖不等于内容保真或对本题适用。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "没有源题轨迹可比对，只有计数与正文；无法判断记忆语句相对于源经验的保真程度，故不作断言。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/7",
+          "quote": "When the goal contains a spatial qualifier (e.g., 'the door behind you')"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Goal: open a door behind you"
+        },
+        {
+          "section": "target_update_operations",
+          "quote": "do not over-filter by color"
+        }
+      ],
+      "reason": "sai-00010 描述的正是“身后门”这一目标形态，程序层面匹配；但当多个无颜色限定门同时满足时，注入集缺少选择规则，目标题结束后的新规则恰好补这一空缺，说明适用性只到部分。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The door in front of me is the red door, but the goal is a door *behind* me. I'll turn around to scan what's behind."
+        },
+        {
+          "section": "target_visible",
+          "quote": "A plain \\\"toggle\\\" action is available now, which will open the door while keeping it in view."
+        }
+      ],
+      "reason": "可见行为与 sai-00010（先排除前方物体、转 180°、用 go to 接近后用 plain toggle）及 sai-00002（先查可用动作）一致；这只是行为代理，不能证明记忆带来该选择或导致结果。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Goal: open a door behind you"
+        },
+        {
+          "section": "target_visible",
+          "quote": "The task is completed."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": false,"
+        },
+        {
+          "section": "target_submission",
+          "quote": "\"submitted\": false"
+        }
+      ],
+      "reason": "环境观测明确回报任务完成，而离线评分为 correct=false、progress=0.5，且 submitted=false。这只说明题面目标与评分判定之间可能存在口径/提交要求不一致，是候选而非定论。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/7",
+          "quote": "When the goal contains a spatial qualifier (e.g., 'the door behind you'), first EXCLUDE all objects explicitly described as being in front of you"
+        },
+        {
+          "section": "target_visible",
+          "quote": "I'll start by checking what actions are available, since the goal is about a door behind me."
+        }
+      ],
+      "reason": "目标轨迹中的动作序列与注入的空间限定词策略逐条对应（先查动作、转 180°、go to 后 toggle）。这证明内容被看见并被沿用，不能证明它是成功或失败的成因，也无反事实支持因果。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"selected_before_packing\": ["
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": ["
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"dropped\": []"
+        }
+      ],
+      "reason": "10 条候选全部被选中并注入、无淘汰，说明检索/打包环节不是限制点；这不评价这些条目的内容是否相关或有用。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 10,"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_text_utf8_bytes\": 3980"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"injected_utf8_bytes\": 4746,"
+        }
+      ],
+      "reason": "单房间任务里注入了 10 条、约 4KB 文本，确实存在上下文开销；本证据无法说明收益为零或负收益，故只描述开销。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "真实目标可能是某个特定颜色/编号的门，题面 'open a door behind you' 未表达该约束，因此蓝门被开而评分判 0.5 属于任务执行选择错误。",
+    "评分可能要求显式 submit（submit_calls=0、submitted=false），失败来自提交流程而非记忆或导航。",
+    "转 180° 后开蓝门可能只是模型自身常识推断，与注入记忆无关，记忆对结果既无益也无害。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "评分的真实目标对象是什么，以及为何 progress=0.5",
+    "correct=false 是否由缺少 submit 调用导致",
+    "注入的 10 条记忆中是否有任一条实际改变了本轨迹的动作选择",
+    "源题轨迹内容未知，无法核对记忆保真度"
+  ],
+  "minimal_intervention": {
+    "change": "对齐契约：要么让评分目标与题面 'open a door behind you' 一致（任一身后门即满分），要么在题面中显式给出被评分的门（颜色/编号）或显式要求 submit。",
+    "fixed": "保持相同的历史、注入记忆集合（10 条，4746 字节）、环境与动作预算不变。",
+    "falsifier": "若在题面显式写出被评分门后重跑仍以同样方式失败，或补 submit 后 correct 仍为 false，则契约/提交口径假设被反驳。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,142 @@
+{
+  "case_id": "c-439ab8c69e16",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "pre-registered scorer defect; task retained, excluded from scores"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Draw a bar chart of the counts of each unique value in the 'value' column of a pandas DataFrame and return the Axes object."
+        }
+      ],
+      "reason": "源题规格清晰且源提交看似满足其文档（标题/坐标轴/空表处理），但评分器缺陷使其得分为 null，源正确性无法确认。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        }
+      ],
+      "reason": "两则语句关于源题为真，但只保留泛化描述，未保留源文档中的标题/坐标轴等可操作细节；不证明全部源经验保真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "create a function that generates a summary report"
+        }
+      ],
+      "reason": "记忆领域（pandas/matplotlib）与目标部分重合，但目标新增了交易字典输入与按类别汇总字典的契约，记忆未覆盖这些条件。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "ax.set_title('Distribution of Transaction Counts Across Categories')"
+        },
+        {
+          "section": "target_visible",
+          "quote": "counts.plot(kind='bar', ax=ax, color='steelblue', edgecolor='black')"
+        }
+      ],
+      "reason": "目标是自拟命名与自拟绘图调用，未见采用源特有的标题/坐标轴/调用形式；无可见复用，也无反事实故不能判定因果。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "KeyError: 'total_amount_per_category'"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert summary_report['total_amount_per_category'] == {'food': 150, 'travel': 350, 'shopping': 300}"
+        }
+      ],
+      "reason": "隐藏测试要求精确键名与图表标题/坐标轴文本，而目标题面未规定键名或标题，故失败首因是契约/测试与题面不一致（候选，非重打分）。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "This function use \"Value Distribution\" for the plot title."
+        }
+      ],
+      "reason": "写入记忆只是来源级泛化摘要，未保留源任务的具体命名/标题等可迁移内容；仅说明表示粒度，不证明该粒度导致本题失败。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "a bar chart showing the distribution of transaction counts across categories"
+        }
+      ],
+      "reason": "源题与目标同属 pandas 计数柱状图主题，存在部分机会；但目标把输入改为交易字典列表并新增汇总报告要求，适用面收窄。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "ax.set_title('Distribution of Transaction Counts Across Categories')"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "两条记忆确实注入（injected_count=2）但可见轨迹没有采纳源细节；仅能判为无可见复用，不能断言记忆造成成功、负迁移或遗忘。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "失败也可单纯由目标自身命名选择（模型未按未明示的期望键名/标题实现）解释，与记忆无关。",
+    "记忆内容过于泛化，即使存在也没有可被误用或复用的具体条目，因此失败不能归因于记忆内容。",
+    "源题不涉及 'total_amount_per_category' 这类键与 'Value Distribution' 之外的汇总需求，源经验本身无法提供该契约信息。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "源题真实正确性（offline_source_evaluation 为 pre-registered scorer defect，unscorable）。",
+    "若记忆保留源代码或标题/键名细节，模型是否会改变输出（缺反事实）。",
+    "目标题面与隐藏测试的期望命名是否属有意考察，还是题目/测试不一致。"
+  ],
+  "minimal_intervention": {
+    "change": "在目标题面中明确汇总报告的键名与图表标题/坐标轴文本，或让测试接受同义键名与自拟标题。",
+    "fixed": "保持同一记忆注入内容、同一模型、同一工具链与预算不变。",
+    "falsifier": "若明确键名与标题后模型仍以同样方式失败（或仍产出不同命名），则契约歧义解释被反驳。"
+  },
+  "causal_claim": false
+}

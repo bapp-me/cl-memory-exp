@@ -1,0 +1,131 @@
+{
+  "case_id": "c-a1280cc384b7",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true,\n  \"scorable\": true"
+        }
+      ],
+      "reason": "源题同族（pandas 分组统计）且在离线评测中通过；局限是其契约是列字典 'Student'/'Score' 加样本标准差，与目标提示词的 list-of-dicts 表述不同。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "pandas Series/DataFrame .std() (default ddof=1, SAMPLE std) and np.std(x) (default ddof=0, POPULATION std) are silently different conventions"
+        }
+      ],
+      "reason": "库内确实存在与目标直接相关的 ddof 约定条目，但这些由源新增的知识在目标处未被注入，注入的是通用 oracle 校验类条目。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/43",
+          "quote": "StandardScaler uses ddof=0 POPULATION std (identical to np.std), NOT pandas .std() which defaults to ddof=1"
+        }
+      ],
+      "reason": "注入条目对 oracle 编写/诊断部分适用，但决定成败的输入契约与 std 约定未被覆盖到。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Per the err-00145 pattern, I need a fixture with non-degenerate spread."
+        }
+      ],
+      "reason": "可见轨迹显式引用被注入的 err-00145 并据此修复退化方差探针，属行为代理，不构成因果结论。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of dictionaries containing test results for multiple students"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "calculate_stats_for_students({'Student': [1, 2, 1, 1], 'Score': [10, 1, 1, 1]})"
+        }
+      ],
+      "reason": "提示词描述的是按 'student_id' 组织的字典列表，而隐藏测试传入列字典 'Student'/'Score'；题意与测试疑似不一致，仅标候选，因 reference 并非绝对真值。不能证明 agent 违反契约。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "if 'student_id' not in entry:"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ValueError: Each test result must contain a 'student_id' key"
+        }
+      ],
+      "reason": "提交实现逐字执行提示词，自建电池 exit-0，但隐藏调用在取键阶段即抛错；这只说明执行对齐了提示词文本，不证明提示词正确。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_block_byte_budget"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "sai-00081"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "never assume either; sandbox-compute BOTH ddof variants and commit only to the one reproducing the docstring values"
+        }
+      ],
+      "reason": "源新增的 ddof 约定条目（源关联 id sai-00081/sai-00082）在 selected_before_packing 内却被字节预算淘汰、未注入，属打包可见性而非检索失败；不能证明若注入就会避免失败。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Per the err-00145 pattern, I need a fixture with non-degenerate spread."
+        },
+        {
+          "section": "target_visible",
+          "quote": "where std_dev is the population standard deviation (ddof=0,"
+        }
+      ],
+      "reason": "注入记忆明显影响了 oracle 修复习惯，但最终提交仍取 numpy 默认 ddof=0；仅可见代理，无反事实，不能断言记忆造成成功或负迁移。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "若题意以提示词为准、隐藏测试为错配生成，则失败源于题意/测试不一致而非 agent 选择。",
+    "即使输入形状正确，提示词未规定 std 约定，ddof=0 与期望的样本标准差仍会分歧。",
+    "源侧 ddof 约定条目在打包阶段被丢弃，无法判断若被注入 agent 是否会改用 pandas .std()。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试的输入形状是否为预期契约，提示词是否为改写/截断版本，无法由现有证据判定。",
+    "retrieval 中 score 均为 null，无法量化 sai-00081/sai-00082 的原始相似度。",
+    "被丢弃条目之外未选中的完整记忆库未提供，不能据本包推断记忆库缺失。",
+    "无法确定 agent 是否读到 misc-00069 并因此坚持 ddof=0。"
+  ],
+  "minimal_intervention": {
+    "change": "唯一关键改动：明确目标契约——输入为含 'Student'/'Score' 列的字典并规定返回样本标准差（pandas .std(), ddof=1），或令隐藏测试与 list-of-dicts 题意一致。",
+    "fixed": "保持相同的历史、环境、工具与注入预算（同一批被选/被丢弃的记忆与字节上限）。",
+    "falsifier": "若在完全相同的字面提示词下，agent 仍产出列字典、样本标准差的参考一致输出并通过隐藏测试，则契约不一致假设被削弱。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,134 @@
+{
+  "case_id": "c-4b06e3323406",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true,\n  \"scorable\": true"
+        },
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "no sandbox run, no edge-case probes, no comparison against the docstring examples"
+        }
+      ],
+      "reason": "源任务评分通过且可评分，但可见轨迹显示其首动作直接 SUBMIT、无沙箱验证，源解正确性缺少可核验证据。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "Order the guards so the emptiness check (and any column-existence check, e.g., `not df.empty and all(c in df.columns for c in columns)`) fires BEFORE any df[column] access"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"memory_id\": \"sai-00077\",\n      \"reason\": \"oldest_complete_block_byte_budget\""
+        }
+      ],
+      "reason": "与目标相关的 guard 次序规则（err-00078）被忠实写入并注入；但与目标同样相关的 statsmodels 截距约定条目（sai-00077）在打包时被丢弃，覆盖不完整。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/23",
+          "quote": "Do not access named columns before checking the documented empty-input guard"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Canonical pattern for 'combined pair plot and covariance matrix over a list of DataFrames' tasks"
+        }
+      ],
+      "reason": "部分注入条目（空输入 guard 次序、验证/错误归因类）可迁移到本题的按组回归；大量条目（pairplot、DTM、ddof 等）与本题无关。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The `add_constant` gotcha surfaced because my synthetic subset had constant columns (collinear with the intercept)."
+        },
+        {
+          "section": "target_visible",
+          "quote": "All verification checks pass (exit 0): exact coefficient recovery against a hand-pinned linear ground truth"
+        }
+      ],
+      "reason": "目标轨迹把失败断言归因为自建合成数据退化并重造满秩数据复核，且按 DatasetID 分组、先判 group.empty 再取列，行为与可用条目方向一致；但这是行为代理，非因果证据。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"correct\": true,\n  \"scorable\": true,\n  \"submitted\": true"
+        },
+        {
+          "section": "target_visible",
+          "quote": "All verification checks pass (exit 0): exact coefficient recovery against a hand-pinned linear ground truth"
+        }
+      ],
+      "reason": "目标 agent 自行完成分组过滤、add_constant 拟合与沙箱验证并提交，离线评分正确；属直接执行成功的基线解释。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"distance\": 26,\n    \"source_correct\": true"
+        }
+      ],
+      "reason": "存在同族（OLS）且通过的同源任务，距离很近，具备迁移机会；但这只说明来源可得，不说明其内容被保留或复用。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/28",
+          "quote": "a probe failure may be evidence about the oracle, not the implementation"
+        },
+        {
+          "section": "target_visible",
+          "quote": "The `add_constant` gotcha surfaced because my synthetic subset had constant columns (collinear with the intercept)."
+        }
+      ],
+      "reason": "轨迹中“断言失败先怀疑自建 oracle 而非实现”的处理与注入的验证类条目同向，且用了独立 lstsq/闭式 oracle 交叉核对；不能据此断定成功由记忆造成。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"memory_id\": \"sai-00077\",\n      \"reason\": \"oldest_complete_block_byte_budget\""
+        }
+      ],
+      "reason": "源相关条目 sai-00077 在选中后因按最旧整块字节预算被淘汰，属打包可见性限制；无法证明它若在上下文中会改变本题行为。"
+    }
+  ],
+  "primary_hypothesis": "unknown",
+  "competing_explanations": [
+    "无对照条件：不能排除目标在无记忆条件下也会写出同样的分组回归与独立 oracle 验证，故成功不能归因于记忆复用。",
+    "注入条目绝大多数与本题无关，成功也可能主要来自任务本身的直读实现（D0），记忆仅为冗余上下文。",
+    "可见轨迹中未见对任何记忆条目的显式引用，覆盖/注入存在不等于被读取或采纳。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法确定 err-00078 / err-00094 等条目在实际决策时是否已被模型读取或采纳。",
+    "无法判断被淘汰的 sai-00077（截距约定）内容是否在本轮被需要。",
+    "缺少反事实或 A/B，无法量化记忆对本题结果与开销的净影响。"
+  ],
+  "minimal_intervention": {
+    "change": "增加一次无记忆（关闭注入）的同题对照运行，比较分组回归实现与独立 oracle 验证行为是否仍出现。",
+    "fixed": "保持相同题目、相同模型、相同工具与预算、相同历史与源配对。",
+    "falsifier": "若无记忆对照同样产出相同验证行为并通过，则 USE_TRANSFER 候选被削弱；若对照明显退化（如未验证直接提交或漏掉空组处理），则支持记忆可迁移。"
+  },
+  "causal_claim": false
+}

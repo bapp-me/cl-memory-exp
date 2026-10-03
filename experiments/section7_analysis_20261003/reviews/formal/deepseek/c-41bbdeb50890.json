@@ -1,0 +1,143 @@
+{
+  "case_id": "c-41bbdeb50890",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "    return description, axes"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=36:True:6"
+        }
+      ],
+      "reason": "源题 6 测试全过且返回 (description, axes)，但只处理单个 df，未覆盖目标新增的 list-of-df 包装与元组顺序契约。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/4",
+          "quote": "Return the `ax` (and `fig` when required) object."
+        },
+        {
+          "section": "source_visible",
+          "quote": "    return description, axes"
+        }
+      ],
+      "reason": "注入的是通用绘图/校验流程，与源做法方向一致，但没有把源里 (stats_df, plots) 的输出形状写进记忆，故对目标关键契约只是部分保真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "def process_dataframes(dataframes):"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df):"
+        }
+      ],
+      "reason": "源处理单个 DataFrame 并返回二元组；目标要求遍历列表并返回 list of tuples，且 results[i][0] 必须是统计表，属新增/改变条件。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "        raise TypeError(\"dataframes must be a list of pandas DataFrames\")"
+        },
+        {
+          "section": "injection/1",
+          "quote": "with a descriptive message naming the offending parameter."
+        }
+      ],
+      "reason": "提交里的显式类型守卫与注入的校验流程逐点吻合（TypeError+点明参数），另可见 plt.subplots/标题标签与验证后 SUBMIT 的同构痕迹；这只是行为代理，不覆盖导致失败的结构选择。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "        results.append((processed_df, stats, plots))"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "KeyError: 'count'"
+        }
+      ],
+      "reason": "提交返回三元组且 [0] 是被填充后的 DataFrame，测试按 results[i][0].loc['count'] 取统计行故 KeyError；这证明执行/输出结构错误，不能证明是记忆导致。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should return a list of tuples, where each tuple contains a processed dataframe with statistics and a list of distribution plots"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert np.allclose(results[i][0].loc[stat], description.loc[stat])"
+        }
+      ],
+      "reason": "题意措辞可被读成“处理后的 df + 统计 + 图”，而测试/参考把 [0] 固定为 describe() 统计表且只校统计行；仅标为契约歧义候选，不断言测试有错。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "    if not isinstance(df, pd.DataFrame):"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Reject invalid inputs with explicit errors before performing the main computation."
+        }
+      ],
+      "reason": "输入校验、subplots+set_title/set_xlabel 与先 PYTHON 验证后 SUBMIT 的模式与注入流程一致，说明部分记忆被复用；但复用的部分均非失败点，不能据此说记忆造成成功或失败。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/4",
+          "quote": "Return the `ax` (and `fig` when required) object."
+        },
+        {
+          "section": "injection/7",
+          "quote": "Fix any mismatch and repeat the verification, then finalize the function with the full docstring and issue SUBMIT."
+        }
+      ],
+      "reason": "注入内容停留在“如何画图/如何提交”的流程层，没有承载源里 (description, plots) 的返回形状；这只说明记忆表示粒度对目标契约不足，不能证明缺少该表示必然导致失败。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "题意措辞本可被读成“处理后的 df 与统计并列”，三元组可能是契约解读差异而非粗心，故失败点也可能落在 EVAL_CONTRACT。",
+    "注入记忆是流程库而非源码，目标所需的 (stats, plots) 顺序本就未被注入，因此该失败或许与记忆完全无关（无记忆也会发生）。",
+    "无对照运行，无法判断去除记忆后提交是否改变；只能确认可见行为与失败结果。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏正确性未返回，只知离线评测在首个断言即抛 KeyError，未知后续检查项（如 bins=10、图对象数量）是否也失败。",
+    "无法确认 agent 是否见到源题最终代码，还是只见到聚合后的流程条目。",
+    "token_count 为 null，开销大小无法量化。",
+    "target_update 的 before/after hash 变化无法与本题行为关联（属目标结束之后）。"
+  ],
+  "minimal_intervention": {
+    "change": "把返回结构改为每个 df 追加 (stats, plots)，即 results[i][0] 为 df.describe() 的统计表",
+    "fixed": "保持同一目标题面、同一注入记忆集合与顺序、同一离线评测脚本",
+    "falsifier": "若改为 (stats, plots) 后离线评测仍在同一断言或同等统计行比较上失败，则本候选被反驳"
+  },
+  "causal_claim": false
+}

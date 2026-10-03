@@ -1,0 +1,153 @@
+{
+  "case_id": "c-c92a2d79d63a",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=18:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(test_scores, student):"
+        }
+      ],
+      "reason": "Source passes its own 5 tests, but its contract covers one student from a dict with Student/Score, not target's all-student list-of-dicts wording."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "return np.array([student_scores.mean(), student_scores.std()]), df"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "The retained source record's pandas sample-std/DataFrame behavior matches its passing source evaluation; no contradiction is visible."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(test_scores, student):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of dictionaries containing test results for multiple students"
+        }
+      ],
+      "reason": "The stats/ValueError concepts overlap, but source's single-student signature and output do not match target's stated all-student/list-of-dicts interface."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "result[student_id] = (np.mean(vals), np.std(vals))"
+        },
+        {
+          "section": "source_visible",
+          "quote": "return np.array([student_scores.mean(), student_scores.std()]), df"
+        }
+      ],
+      "reason": "Target visibly uses numpy population std on iterated entry dicts, not source's pandas/DataFrame sample-std pattern; no source adaptation is shown."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of dictionaries containing test results for multiple students"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "calculate_stats_for_students({'Student': [1, 2, 1, 1], 'Score': [10, 1, 1, 1]})"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "for student in set(test_results['Student']):"
+        }
+      ],
+      "reason": "Prompt says list of dictionaries, while hidden evaluator/reference pass a dict with Student/Score keys and expect pandas-style per-student stats. This contract mismatch alone explains the scorable failure, without proving memory influence."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "student_id = entry['student_id']"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "TypeError: string indices must be integers"
+        }
+      ],
+      "reason": "The submitted code assumes each loop entry is a dict, but hidden evaluation passes a dict of lists whose iteration yields string keys, causing the observed TypeError. This is downstream of the contract mismatch, not a memory-effect conclusion."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "student_scores = df[df['Student'] == student]['Score']"
+        },
+        {
+          "section": "target_visible",
+          "quote": "result[student_id] = (np.mean(vals), np.std(vals))"
+        }
+      ],
+      "reason": "The legitimate source uses pandas DataFrame selection and pandas sample std, while target visibly uses per-entry numpy aggregation; hidden reference aligns with the source's pandas pattern. However source_provenance_injected is false, so this only indicates no visible transfer, not that retrieval failed or memory caused the failure."
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "generate a combined pair plot and covariance matrix for all these DataFrames"
+        },
+        {
+          "section": "injection/2",
+          "quote": "identify the outliers in each group based on the Z score"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "The actually injected candidates are off-domain for the target's per-student average/std task, and no visible use of them appears. This is a retrieval/injection candidate, but cannot prove a relevant candidate existed, was evicted, or interfered."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "Hidden evaluator may conflict with the target prompt; the prompt's list-of-dicts wording could itself be the defect rather than a memory failure.",
+    "The legitimate source episode may not have been injected or visible to the target agent, so the lack of visible transfer does not establish retrieval failure.",
+    "Using numpy population std instead of pandas sample std would independently fail if input shape were corrected; offline evaluation stops before testing this.",
+    "Three off-domain injections could add context overhead or distraction, but their presence alone does not show interference or negative transfer."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "Whether the legitimate source episode was present in the target agent's context.",
+    "Whether off-domain injected candidates displaced any relevant memory or changed target behavior.",
+    "Exact hidden tests and expected std semantics for a list-of-dicts interpretation; offline evaluation stops at first call.",
+    "Whether target intended list-of-dicts or dict-of-lists.",
+    "No post-target update evidence is available."
+  ],
+  "minimal_intervention": {
+    "change": "Align target prompt with hidden evaluator/reference: specify input as a dict with 'Student'/'Score' keys (or change evaluator to accept list of dicts) and specify pandas sample std (ddof=1).",
+    "fixed": "Same source history, injected candidates, environment, and budget.",
+    "falsifier": "If the clarified hidden contract still fails identically, or hidden tests actually accept the submitted list-of-dicts/population-std behavior, EVAL_CONTRACT is refuted."
+  },
+  "causal_claim": false
+}

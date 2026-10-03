@@ -1,0 +1,129 @@
+{
+  "case_id": "c-16045845f65c",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "包内没有源任务、源 prompt 或源轨迹配对，只有注入文本本身；无法判断这些 workflow 是否来自合法源经验，也无法核对源条件。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "无源侧内容可比对；注入文本与目标动作接口一致只能说明其在本题环境自洽，不能证明它忠实反映源经验。"
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Goal: go to a red door"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Find a target door that is not initially visible in the observation."
+        }
+      ],
+      "reason": "目标初始观测正可见灰门/绿门而无红门，注入的两条 workflow 恰好覆盖“先扫描定位不可见目标门、再 go to 该门”的需求。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Issue `ACTION` with \"check available actions\" to list the valid moves and any doors that can be targeted."
+        },
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"check available actions\""
+        },
+        {
+          "section": "target_visible",
+          "quote": "No red door visible yet, so I'll scan the room by turning."
+        }
+      ],
+      "reason": "可见轨迹（check available actions → turn right → go to red closed door 1）与注入 workflow 的步骤顺序一致；但这是行为代理，非因果证明，也不能排除 agent 自身策略。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"selected_before_packing\": ["
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"memory_id\": \"b7eea40edb4181ada0ae1a75d0b330a110a38e642a4671982cc5e2862048c7c6\","
+        }
+      ],
+      "reason": "两条候选被选中且 injected_ids 与 selected 相同、dropped 为空，说明检索与注入确实发生；它不能说明内容被复用或产生效果。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Issue `ACTION` with \"go to {target door identifier}\"."
+        },
+        {
+          "section": "target_visible",
+          "quote": "A red door is now visible. I'll go to red closed door 1."
+        }
+      ],
+      "reason": "可见动作与注入流程字面步骤吻合，构成复用候选；无对照条件下不能断言记忆造成成功，也不能排除天然策略。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"terminal_state\": \"completed\""
+        },
+        {
+          "section": "target_submission",
+          "quote": "\"submitted\": true"
+        }
+      ],
+      "reason": "D0 记录显示环境内提交完成、评估正确，属可见执行成功；不涉及记忆是否有效。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_text_utf8_bytes\": 1100"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"injected_utf8_bytes\": 1312,"
+        }
+      ],
+      "reason": "注入了两条约 1.1–1.3KB 文本、无 token 计数；只能记开销，不能由本题断言无收益或性价比差。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "任务极简（3 步、turn 后目标门就在正前方），agent 自身探索策略即可完成，与记忆无关。",
+    "“check available actions”也可能来自 agent 自身习惯或环境工具发现，不必来自注入提示。",
+    "注入文本与目标接口一致也可能只是同构分布下的通用描述，而非对该目标的适用经验。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "源任务与源轨迹未提供，无法评估源质量、保真度与源条件差异。",
+    "无记忆关闭/替换的反事实运行，无法确定记忆的因果贡献。",
+    "retrieval 与 mechanical 的 injected 字节数不一致（1312 vs 1100），原因不明。",
+    "token_count 为 null，无法量化上下文成本。"
+  ],
+  "minimal_intervention": {
+    "change": "在相同环境下用无关 workflow 替换这两条注入并重跑该目标",
+    "fixed": "保持相同随机种子/关卡、相同 goal 文本、相同动作与预算上限、相同工具集",
+    "falsifier": "若移除或替换记忆后仍以相同三步顺序（含 check available actions 首次调用）成功，则 USE_TRANSFER 候选被削弱"
+  },
+  "causal_claim": false
+}

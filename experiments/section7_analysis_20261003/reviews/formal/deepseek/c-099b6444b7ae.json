@@ -1,0 +1,152 @@
+{
+  "case_id": "c-099b6444b7ae",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(goals, penalties, rng_seed=None):"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"EVALUATOR_RESULT=11:True:5\""
+        }
+      ],
+      "reason": "A legal source episode exists and passed, but its function signature and pinned-docstring contract differ from the target's simulate_league(num_matches, ...) setup."
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"Do not build sandbox candidate-enumeration harnesses with placeholder/None entries"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_block_byte_budget\""
+        }
+      ],
+      "reason": "The injected source-derived harness-bug memory matches the source update, but the two target-relevant source strategy additions were selected before packing and then dropped, so observable target fidelity is only partial."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "def simulate_league(num_matches, rng_seed=None):"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(goals, penalties, rng_seed=None):"
+        }
+      ],
+      "reason": "The domains overlap in seeded football simulation plus LinearRegression, but the target changes the signature to num_matches/distinct-match simulation and removes the pinned docstring example, so source specifics only partly apply."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "\"different seeds differ:\""
+        },
+        {
+          "section": "target_visible",
+          "quote": "\"all invariant checks passed\""
+        }
+      ],
+      "reason": "Visible target verification uses cross-seed divergence and aggregate invariants, which fits falsifiable seeded-generation checking; however a same-seed double-call is tautological under internal seeding, and no citation proves memory transfer."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(goals, penalties, rng_seed=None):"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "A legal, scorable source task exists and passed, so source experience was available; this only shows opportunity, not that its content was injected or transferred."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"sai-00053\",\n    \"sai-00054\","
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_block_byte_budget\""
+        }
+      ],
+      "reason": "The source strategic memories were selected before packing but dropped by the byte-budget rule, so their absence from injection is a packing-visibility issue, not proof of failed retrieval or uselessness."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "def simulate_league(num_matches, rng_seed=None):"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "match_data, _ = task_func(goals, penalties, rng_seed)"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert df.shape == (5, 3), 'DataFrame should have 5 rows and 3 columns.'"
+        }
+      ],
+      "reason": "The visible target contract and the supplied reference/tests appear underspecified or mismatched: the reference calls task_func while the prompt defines simulate_league, and the shown tests only pin shape/columns, allowing different seeded-match semantics."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "\"different seeds differ:\""
+        },
+        {
+          "section": "injection/15",
+          "quote": "\"two DIFFERENT seeds produce different outputs\""
+        },
+        {
+          "section": "injection/14",
+          "quote": "\"Do not use a same-seed double-call comparison as a 'reproducibility check' when the function seeds the RNG INTERNALLY\""
+        }
+      ],
+      "reason": "Visible checks resemble the cross-seed/invariant guidance in injected memories, but the same-seed double-call is the very pattern err-00066 flags as tautological; this is only a behavior proxy and cannot establish causal memory use."
+    }
+  ],
+  "primary_hypothesis": "PACKING_VISIBILITY",
+  "competing_explanations": [
+    "The source-derived strategic memories may have been irrelevant or unnecessary for this simpler target, so dropping them had no observable effect.",
+    "The target's visible verification battery may be task-general practice rather than evidence of memory transfer.",
+    "The target may have succeeded because the visible/hidden checks only pin shape and columns, not exact seeded RNG values."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "The full hidden test suite is not provided, so whether exact seeded match values are checked is unknown.",
+    "No controlled intervention shows whether injecting sai-00053/sai-00054 would change target behavior.",
+    "The target's visible actions do not directly cite or quote any injected memory.",
+    "The unselected complete memory library is absent, so absence of other relevant memories cannot be inferred.",
+    "Post-target update operations cannot explain prior target behavior."
+  ],
+  "minimal_intervention": {
+    "change": "To test the packing candidate, force the dropped source-derived strategy memories sai-00053/sai-00054 into the injected context while changing nothing else.",
+    "fixed": "Keep the same source and target prompts, seeds, hidden evaluation, tool environment, and injected byte budget.",
+    "falsifier": "If adding those source strategies does not alter verification behavior or outcomes, the packing drop did not matter for this target."
+  },
+  "causal_claim": false
+}

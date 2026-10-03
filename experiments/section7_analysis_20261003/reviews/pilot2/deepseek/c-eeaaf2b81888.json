@@ -1,0 +1,153 @@
+{
+  "case_id": "c-eeaaf2b81888",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"tests_run\": 5,\n  \"checks_executed\": 14,\n  \"correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(length, count, seed=0):"
+        }
+      ],
+      "reason": "源题自身测试通过，但其函数只处理单个 length/count 并返回 Counter；目标扩展为列表输入并额外要求 most/least，因此源经验仅部分覆盖目标契约。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": []"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "可见注入集中没有任何源题相关派生内容，源题结束也没有记录源记忆操作；未观察到与目标有关的合法源内容进入记忆。"
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        }
+      ],
+      "reason": "实际注入的两个 D1 候选都是 pandas/matplotlib 柱状图任务，与随机字符串频次统计目标无关；源题经验若存在会部分适用，但未出现在注入中。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "from collections import Counter\nimport random"
+        },
+        {
+          "section": "target_visible",
+          "quote": "rng = random.Random(seed)"
+        }
+      ],
+      "reason": "目标提交和可见工具调用中未出现 pandas、matplotlib 或注入文本内容，只看到自行实现的 Counter/random 方案，因此没有可见的注入记忆复用或误用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "rng = random.Random(seed)"
+        },
+        {
+          "section": "source_visible",
+          "quote": "s = ''.join(random.choices(letters, k=length))"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(new_task_func([3, 4], [2, 3], 0) == (Counter({'c': 9, 'e': 3, 'd': 3, 'b': 3}), 'c', 'b'))"
+        }
+      ],
+      "reason": "目标用 random.Random(seed).choice 逐字符生成，而源题/参考路径用 random.seed 配合 random.choices；隐藏断言失败，显示可见执行层面的 RNG 语义差异。它不能证明注入记忆导致了失败。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of random strings generated from a fixed set of letters ('a', 'b', 'c', 'd', 'e'), each with a specified length, determine the total frequency of each letter across all strings.",
+          "section_note": ""
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(new_task_func([3, 4], [2, 3], 0) == (Counter({'c': 9, 'e': 3, 'd': 3, 'b': 3}), 'c', 'b'))"
+        }
+      ],
+      "reason": "题面没有规定 RNG 调用、是否按每个 (length,count) 重置 seed、返回 Counter 还是 dict、以及并列如何打破；隐藏断言要求精确 tuple。这是可能的题意/测试契约候选，而非已证实的记忆缺陷。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": []"
+        }
+      ],
+      "reason": "源题虽然正确结束，但源更新操作为空，且目标注入集中无源 provenance ID；在本包可见范围内没有源经验进入目标的证据。不能据此断言完整未展示库也一定不存在源记忆。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "target_submission",
+          "quote": "from collections import Counter\nimport random"
+        }
+      ],
+      "reason": "注入的 D1 候选与目标代码领域不匹配，目标代码中也没有相应字符串；没有可见复用、适配或误用的代理证据。这不能证明注入内容在隐藏推理中毫无影响。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "题面未明确 RNG/seed/返回类型/并列规则，隐藏断言可能测试了题面未给出的精确契约。",
+    "没有受控反事实，无法判断若使用源题式生成语义是否一定通过，也无法判断当前失败是否与记忆无关。",
+    "注入记忆本身与目标代码无关，任何影响只能通过不可见的上下文噪声发生，当前可见证据无法支持或反驳。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "若目标改用源题/参考路径的 random.choices 与按 (length,count) 重置 seed 的累积方式，是否一定通过隐藏测试，没有反事实运行。",
+    "源题经验是否曾以其他形式写入完整记忆库；本包只展示可观察注入与 provenance 快照。",
+    "隐藏测试所要求的 RNG、seed 重置和并列打破语义是否就是目标题面本意。",
+    "注入的无关注解是否在不可见推理中产生了任何影响。",
+    "token_count 为 null，无法评估注入或记忆的精确开销。"
+  ],
+  "minimal_intervention": {
+    "change": "用参考式累积：对每个 (length,count) 调用源题式 task_func(length, count, seed)（内部 random.seed(seed) 且 random.choices(letters, k=length)），再把结果累加到总 Counter。",
+    "fixed": "保持相同目标题面、相同 seed 与隐藏测试、相同注入记忆集合和预算。",
+    "falsifier": "若改用参考式生成后隐藏断言仍失败，或保持当前逐字符 rng.choice 实现反而通过，则 RNG/执行语义差异不是主因。"
+  },
+  "causal_claim": false
+}

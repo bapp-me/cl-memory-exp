@@ -1,0 +1,127 @@
+{
+  "case_id": "c-5de7d52a6711",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=20:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(list_of_lists, size=5, seed=0):"
+        }
+      ],
+      "reason": "源题在离线评测中 5 项测试全过，是合法可用的成功经验；但它是 list_of_lists 接口且只返回整体统计，未覆盖目标新增的字典容器与逐列表统计，故只算有限可用。"
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "本题注入为零字节、记忆策略关闭，没有任何记忆内容进入上下文，故无保真度可评；源 provenance 也未保留。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Given a dictionary where each key maps to a list of integers"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(list_of_lists, size=5, seed=0):"
+        }
+      ],
+      "reason": "空列表填充+展平求统计的核心做法可迁移，但容器由 list_of_lists 变为 dict、并新增“每个列表的 mean/median/mode”与整体聚合范围问题，属部分适用。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        }
+      ],
+      "reason": "上下文中没有任何记忆或检索候选注入，目标代码与源解法的重合只是可见代理，不构成可见的记忆复用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "all_values.extend(values)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "The function works correctly. Submitting:"
+        }
+      ],
+      "reason": "可见实现把为填空列表生成的随机数并入 overall 聚合，自测通过即提交，随后离线断言失败；这只能说明实现与评分期望的口径不一致，不能证明记忆导致失败。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "If a list is empty, fill it with SIZE (default: 5) random integers between 0 and 100."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "'mean': 3.5, 'median': 3.5, 'mode': 1}"
+        }
+      ],
+      "reason": "题意要求空列表先填充，而隐藏断言对含空列表的输入期望 mean 3.5（对应不含填充值），存在题意/测试口径不一致的候选；仅标候选，沿用固定评分 mask 不重打分。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "all_vals = [v for lst in filled for v in lst]"
+        },
+        {
+          "section": "target_visible",
+          "quote": "all_values.extend(values)"
+        }
+      ],
+      "reason": "源解法与目标实现共享“先填充空列表再展平聚合”的形状，是可迁移的语义候选；但注入为空，代码重合不足以证明复用或正/负迁移。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "隐藏断言似把填充随机数排除在 overall 统计之外，若题意与测试本就不一致，则失败属于规格解释问题而非迁移问题",
+    "注入为 0 且记忆策略关闭，目标代码与源解法相似也可能只是同一基础模型在同类统计题上的默认写法"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "未提供完整记忆库与检索候选，无法判断是否存在未被注入的语义候选",
+    "隐藏评测 tests_run=0、checks_executed=0，仅见首个断言失败，无法确认其余断言内容",
+    "无法验证改变空列表聚合口径后是否通过",
+    "目标之后的状态更新（target_update）不可用于解释本次行为"
+  ],
+  "minimal_intervention": {
+    "change": "把 overall 统计口径改为只基于原始（未填充）数值，或在题意中明确填充值是否计入整体统计",
+    "fixed": "相同题意、相同隐藏测试、零注入记忆与相同调用预算",
+    "falsifier": "若排除填充值后仍不满足隐藏断言，或隐藏期望实际包含填充值，则 EVAL_CONTRACT 候选被反驳"
+  },
+  "causal_claim": false
+}

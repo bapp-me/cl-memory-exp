@@ -1,0 +1,147 @@
+{
+  "case_id": "c-ec853286550e",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=18:True:5"
+        },
+        {
+          "section": "source_visible",
+          "quote": "Looking at the examples: for student 1 with scores [10, 1, 1], the mean is 4.0 and std is 5.196 (= ddof=1). So it's sample standard deviation."
+        }
+      ],
+      "reason": "配对源题 5 项测试全过且可见推理自行推出 ddof=1，但它是个体学生函数（返回 array+DataFrame、列名 'Student'/'Score'），与目标“对全体学生聚合”的契约不同，通过不能保证内容可复用。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "注入文本只保留“pandas DataFrame”这一泛化领域线索，且提到 matplotlib/条形图，源题关键内容（'Student'/'Score' 列名、样本标准差 ddof=1、缺学生抛 ValueError）均未保留。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of dictionaries containing test results for multiple students, create a function that calculates the average test score"
+        }
+      ],
+      "reason": "“用 pandas 处理 DataFrame”对目标弱适用，但注入内容不含对象键名与统计口径；且题面说“list of dictionaries”而实际测试传入 {'Student': [...], 'Score': [...]}，适用条件已变。"
+    },
+    "visible_use": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "df = pd.DataFrame(test_results)"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        }
+      ],
+      "reason": "pandas 用法由题面 stub 的 import 已给出，且行为中没有出现源特有的 ddof=1、'Student'/'Score' 等细节，无法把该行为归因于记忆，也无法排除。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of dictionaries containing test results for multiple students, create a function that calculates the average test score"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "result1 = calculate_stats_for_students({'Student': [1, 2, 1, 1], 'Score': [10, 1, 1, 1]})"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "expected1 = {1: (4.0, 5.196152422706632), 2: (1.0, np.nan)}"
+        }
+      ],
+      "reason": "题面描述的输入形态与实际评测用的 dict-of-lists（'Student'/'Score'）以及样本标准差/单值 NaN 口径并未在题面写明；这只表明契约可能不一致，不能证明记忆有效或有害。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "if 'student_id' not in df.columns or 'score' not in df.columns:"
+        },
+        {
+          "section": "target_submission",
+          "quote": "std = float(np.std(scores))"
+        }
+      ],
+      "reason": "提交版本硬编码列名 'student_id'/'score' 并据此抛错，直接导致评测首例失败；同时用 np.std（ddof=0）而非样本标准差。这是可见执行缺陷，不构成记忆因果结论。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "\"score\": 0.346556138984073"
+        }
+      ],
+      "reason": "注入的是粗粒度、面向另一类绘图任务的自然语言摘要，缺少参数级信息（键名、std 口径、异常语义），因此即便被看到也难以支撑目标细节决策。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": [\n    \"046fecd0-bb97-4487-aea7-9105b37efe5a\",\n    \"96e021ae-d807-4ddf-ae9c-de2d36854446\"\n  ]"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        }
+      ],
+      "reason": "两条候选确实被选中并注入，但可见解法未采纳任何源特有知识（ddof=1、'Student'/'Score'、缺学生异常），故只能标为可疑的复用/未复用，不能断言迁移或负迁移。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "失败可由目标自身执行缺陷完全解释：硬编码列名 + np.std(ddof=0) + 单值组抛错，与记忆无关。",
+    "注入文本似乎指向另一个（条形图/count 值）任务，无法确认其与配对源题的来源关系，可能只是无关检索结果。",
+    "题面未指定输入是 dict-of-lists 与样本标准差，agent 依题面自测通过后提交，属契约欠定而非记忆失效。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "注入的两条记忆是否由配对源题（task_func 学生成绩）派生：source_provenance_at_target 的 memory_ids 为空，无来源绑定。",
+    "隐藏测试的完整用例与容差未知，只能看到第一例失败。",
+    "没有反事实（不注入记忆的同题运行），无法判断记忆对结果的影响方向。",
+    "题面是否真的未提示 'Student'/'Score' 与 ddof=1，取决于被截断的原始 prompt 之外的信息。"
+  ],
+  "minimal_intervention": {
+    "change": "在目标题面中明确输入为 {'Student': [..], 'Score': [..]} 形式的字典，并要求样本标准差（ddof=1）、单值学生返回 NaN、学生不存在时抛 ValueError。",
+    "fixed": "保持相同的注入记忆集合、相同预算与相同源题历史（task-041 源、task-093 目标）。",
+    "falsifier": "若在补全契约说明后、记忆不变的情况下仍然在标准差口径或缺失学生语义上失败，则契约欠定不是主要原因。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,124 @@
+{
+  "case_id": "c-51e3e3bcbacb",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=22:True:10"
+        },
+        {
+          "section": "source_visible",
+          "quote": "Complex Wave with Hann Window"
+        }
+      ],
+      "reason": "源 episode 自身通过 10 个测试并正确提交，是合法经验；但它只处理单个 amplitude/frequency 且标题为单谐波版本，故只算有限适用。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": true"
+        }
+      ],
+      "reason": "只知源 episode 被保留、其 provenance 在候选列表中，但包内看不到真正会被注入的记忆文本形态，无法验证保真度。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Complex Wave with Multiple Harmonics and Hann Window"
+        },
+        {
+          "section": "source_visible",
+          "quote": "Complex Wave with Hann Window"
+        }
+      ],
+      "reason": "同域（Hann 窗复波 + 实部/虚部绘图），但目标新增多谐波求和、新标题与新签名，源的单谐波实现只部分可迁移。"
+    },
+    "visible_use": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "return combined, ax"
+        }
+      ],
+      "reason": "可见实现无与注入内容共享的特征串，二元素返回也完全可由题面字面「return the combined complex wave and a plot」解释，无法分离记忆影响与题面直译。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should return the combined complex wave and a plot displaying both the real and imaginary parts."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ValueError: not enough values to unpack (expected 3, got 2)"
+        }
+      ],
+      "reason": "题面要求返回「wave 和一个 plot」，而评分脚本按三值解包，元数不一致直接解释了唯一的失败信息；这只是候选不一致，包内没有目标契约的完整权威描述。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_episode_byte_budget"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Your task is to generate a combined pair plot and covariance matrix for all these DataFrames"
+        }
+      ],
+      "reason": "含 (wave, fig, ax) 返回约定的合法源经验存在于候选列表却未被注入，60 条旧 episode 以字节预算被淘汰，实际打包的 5 条是与目标无关的 combined-* 任务；这只能说明上下文里没有该经验，不能证明注入它就会改变行为。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "print(type(wave), wave.dtype, wave.shape)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "All tests pass. The window suppresses edge effects"
+        }
+      ],
+      "reason": "自测脚本只按自己假设的二值返回写断言，并出现打印 False 仍宣称全部通过，说明验证覆盖不足；这属可见执行观察，不证明评分意图。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "PACKING_VISIBILITY：真正匹配的源经验（返回 wave, fig, ax）被字节预算淘汰，实际注入的是 5 条无关的 combined-* episode，因此没有先例提示返回元数。",
+    "TASK_EXECUTION：agent 从未测试其它返回形状，也没有在 False 打印出现时复核，可能是自验环节缺失而非契约问题。",
+    "结构巧合替代解释：注入的 injection/0 同样返回 (矩阵, 图对象) 二元组，可能存在 misapplication_candidate，但无共享标识符，只能算可见代理，不能作为因果证据。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法从包内得知哪个 memory_id 对应源 wave episode，只能推断其不在注入集合内。",
+    "无对照条件：即使注入源 episode，是否会改变返回元数不可判定。",
+    "离线评估只暴露解包错误，tests_run=0、checks_executed=0，其他正确性维度未知。",
+    "被淘汰的 60 条中是否包含本目标的其他相关经验不可见。"
+  ],
+  "minimal_intervention": {
+    "change": "在目标题面中显式写清返回契约（例如返回 (combined_wave, fig, ax)）",
+    "fixed": "保持相同的历史注入集合、工具集与评分配置",
+    "falsifier": "若在明确三值返回说明下仍返回二值并失败，则 EVAL_CONTRACT 候选被削弱"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,139 @@
+{
+  "case_id": "c-b047f1c75c89",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Goal: go to the yellow door"
+        },
+        {
+          "section": "injection/1",
+          "quote": "The task is completed."
+        }
+      ],
+      "reason": "Both injected episodes are coherent, completed, same-domain BabyAI trajectories, so they are legitimate sources; however, there are only two records and no independent source validation or source_update."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "The purple door isn't visible here. I may need to go through one of the doors to find it."
+        }
+      ],
+      "reason": "The injected source record contains the relevant unseen-goal-door search-and-scan pattern and shows no internal contradiction; original source logs are unavailable, so this is limited to the visible record."
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Goal: go to a red door"
+        },
+        {
+          "section": "injection/1",
+          "quote": "The purple door isn't visible here."
+        }
+      ],
+      "reason": "Both tasks require locating a goal door that is not initially visible, and the source demonstrates the same explore-then-scan approach; exact colors and room layouts differ."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "No red door here. I'll go through the green door to explore another room."
+        },
+        {
+          "section": "injection/1",
+          "quote": "The purple door isn't visible here. I may need to go through one of the doors to find it."
+        }
+      ],
+      "reason": "The target mirrors the source's explore-when-goal-absent strategy and then turns to scan before going to the red door; this is a behavioral proxy, not proof of memory causation."
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "The purple door isn't visible here. I may need to go through one of the doors to find it."
+        },
+        {
+          "section": "target_visible",
+          "quote": "No red door here. I'll go through the green door to explore another room."
+        }
+      ],
+      "reason": "Visible target behavior adapts the same unseen-goal exploration pattern found in the injected source candidate; without a counterfactual this cannot prove the memory caused the choice or success."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Goal: go to the purple door"
+        },
+        {
+          "section": "injection/1",
+          "quote": "The purple door isn't visible here. I may need to go through one of the doors to find it."
+        }
+      ],
+      "reason": "The source episode matches the target's key precondition of an absent goal door and demonstrates finding it through another door; source coverage alone does not prove the target retrieved or used it."
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"selected_before_packing\": ["
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": ["
+        }
+      ],
+      "reason": "Both visible candidates were selected before packing and injected, with no dropped items recorded; scores are null, so ranking mechanism and retrieval quality cannot be assessed."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "I found the red door. Let me go to it."
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"terminal_state\": \"completed\""
+        }
+      ],
+      "reason": "Direct target trace shows four ACTION calls ending in submitted completion; this is an execution record and does not itself show memory influence."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The target may have succeeded through a baseline exploration policy independent of the injected memories.",
+    "Injection/1 is relevant, but the visible behavior could be prompted by the task observation alone and not by memory retrieval.",
+    "One or both retrieved memories could be incidental context; the retrieval scores are null and no counterfactual or attention evidence is available."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "No controlled intervention or no-memory run is available, so memory causality cannot be established.",
+    "Retrieval scores are null, and token_count is unavailable, so retrieval ranking, token pressure, and packing effects cannot be measured.",
+    "No source_update or target_update content is included, so retention and later memory changes cannot be judged.",
+    "The injected memories show only two source episodes; completeness of the full memory library is unknown."
+  ],
+  "minimal_intervention": {
+    "change": "Withhold or replace injection/1, the source that demonstrates searching when the goal door is not visible, while keeping the same target task and budget.",
+    "fixed": "Same target task, environment, model, tools, and action budget.",
+    "falsifier": "If the target still emits the same explore-then-turn-right sequence and succeeds without the relevant source, or if behavior is unchanged with an irrelevant injected memory, the USE_TRANSFER candidate is weakened."
+  },
+  "causal_claim": false
+}

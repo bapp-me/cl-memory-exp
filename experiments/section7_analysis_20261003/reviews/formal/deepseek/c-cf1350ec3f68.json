@@ -1,0 +1,131 @@
+{
+  "case_id": "c-cf1350ec3f68",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "go to yellow closed door 1"
+        },
+        {
+          "section": "injection/2",
+          "quote": "go to green closed door 1"
+        }
+      ],
+      "reason": "Injected source episodes end with completion and valid actions, but they cover go-to-door tasks and at most a toggle-through composite, not open-door-on-right."
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "No original source records are paired with the injected summaries, so their fidelity to the source experience cannot be verified."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Goal: open a door on your right"
+        },
+        {
+          "section": "injection/1",
+          "quote": "toggle and go through green closed door 1"
+        }
+      ],
+      "reason": "Sources supply navigation and one toggle-through example, but no direct open-door-on-right demonstration."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "go to grey closed door 1"
+        },
+        {
+          "section": "injection/0",
+          "quote": "go to yellow closed door 1"
+        }
+      ],
+      "reason": "The target reuses the source go-to-door action template, but this is only a visible action-string proxy and cannot establish memory causation."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The task is completed."
+        },
+        {
+          "section": "target_submission",
+          "quote": "\"submitted\": false"
+        }
+      ],
+      "reason": "The visible observation declares completion while the target artifact remains unsubmitted and mechanical scoring marks it incorrect, suggesting a scoring/submission contract mismatch. This does not prove memory caused the outcome."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The action is not recognized. Please check valid actions."
+        }
+      ],
+      "reason": "The agent first issued an unsupported action and later recovered with plain toggle. This shows execution friction but does not by itself explain the final score."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Goal: open a door on your right"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Goal: go to the yellow door"
+        }
+      ],
+      "reason": "The injected source tasks do not match the target open-door-on-right goal, so the opportunity for relevant transfer is limited. This does not show memory was retrieved or used."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "toggle and go through green closed door 1"
+        },
+        {
+          "section": "target_visible",
+          "quote": "go to grey closed door 1"
+        }
+      ],
+      "reason": "Memory contains a toggle composite and navigation actions, while the target uses a go-to action and later toggle. This is only a visible behavior overlap; without counterfactual evidence it cannot show successful or harmful reuse."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "TASK_EXECUTION: the agent first used an invalid action and may have selected the wrong completion action, though it later opened a door.",
+    "USE_TRANSFER/OPPORTUNITY_SOURCE: injected memories do not demonstrate opening a door on the right, so the agent may have lacked relevant procedural guidance.",
+    "INFRA_PROTOCOL: submitted=false with no submit calls may reflect harness completion handling rather than task or memory failure.",
+    "No counterfactual is available, so memory influence on the observed behavior remains undetermined."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the opened grey door satisfies the hidden BabyAI 'door on your right' criterion.",
+    "Why the visible observation says 'The task is completed.' while mechanical result is correct=false and submitted=false.",
+    "Whether the agent attended to any injected memory item rather than using generic action-space affordances.",
+    "What the unselected memory library contained; absence of a better source cannot be inferred from this packet."
+  ],
+  "minimal_intervention": {
+    "change": "Use an environment-recognized completion action, such as 'toggle and go through grey closed door 1' or an explicit submit path, and verify the right-side door criterion.",
+    "fixed": "Same three injected memories, same target prompt, same tool and token budget.",
+    "falsifier": "If the same injected memories and a recognized completion action still yield submitted=false or correct=false, the failure is contract or protocol level rather than action choice."
+  },
+  "causal_claim": false
+}

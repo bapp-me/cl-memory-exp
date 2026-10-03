@@ -1,0 +1,137 @@
+{
+  "case_id": "c-8bdf547ef011",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        },
+        {
+          "section": "source_visible",
+          "quote": "The function works correctly"
+        }
+      ],
+      "reason": "源题离线评测 correct=true（5 tests），源执行也只用了单次调用验证；没有多调用/深层嵌套探测，因此通过但覆盖有限。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "counts = Counter(items); sns.barplot(x=list(counts.keys()), y=list(counts.values()))"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "since calling sns.barplot with empty data raises instead of returning an Axes"
+        }
+      ],
+      "reason": "召回规则的核心 flatten→Counter→None 守卫与源运行一致，但夹带了未经源验证的断言（空数据必抛异常），且把裸 sns.barplot 当常规路径，缺少目标所需的显式 Axes。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Given a nested list of menu items, this function flattens the list and visualizes the frequency"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "write a function that processes each menu to generate a bar plot visualizing the frequency of each menu item across all menus"
+        }
+      ],
+      "reason": "同族任务（扁平化计数+seaborn 柱状图+无项目返回 None）直接适用；目标新增列表的列表/任意深度嵌套，且目标被反复调用时 Axes 独立性成为新的隐含条件。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "源生规则未进入上下文，可见轨迹中不存在对它的引用或复用；目标自身的验证行为只能视作代理，不能归因。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"memory_id\": \"sai-00016\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "源生经验 sai-00016 已在 selected_before_packing 中被选中，却出现在 dropped（oldest_complete_block_byte_budget）且不在 injected_ids 中，属于预算打包淘汰而非检索失败；这只证明没进上下文，不证明它会有效或有害。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "AssertionError: [1.0, 1.0, 1.0, 2.0, 2.0, 3.0]"
+        },
+        {
+          "section": "target_visible",
+          "quote": "1. multi-menu nested: OK [1.0, 1.0, 2.0, 2.0]"
+        }
+      ],
+      "reason": "首次运行的失败来自共享 Axes 追加柱条，agent 定位到 seaborn 复用 plt.gca 并改用 plt.subplots(ax=...) 后全绿；该失败是自捕获的执行问题，与记忆是否被检索无关。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "Ran 0 tests in 0.000s"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "ax1 = process_menus(menu1)"
+        }
+      ],
+      "reason": "离线评测报 0 tests run 但 correct=true（checks_executed=1），且参考侧函数名/调用与目标 process_menus 不完全对齐，评分的可核查性存疑；这只标记为契约候选，不改动既有 mask 结论。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Case 2 shows 6 patches instead of 2"
+        },
+        {
+          "section": "injection/10",
+          "quote": "do not conclude 'my test was wrong' and rewrite the test to match the implementation"
+        }
+      ],
+      "reason": "可见执行（失败断言→诊断而非削弱测试）与注入的通用验证类经验方向一致，但这是行为代理；失败后在沙箱诊断库行为同样可由自身能力解释，无对照不能归因。"
+    }
+  ],
+  "primary_hypothesis": "PACKING_VISIBILITY",
+  "competing_explanations": [
+    "本次成功可由求解器自身能力解释：最终代码的扁平化/计数/None 守卫是独立推导的，注入的 46 条多为通用库级经验，无对照试验。",
+    "源生规则根本没进上下文，因此它对目标表现（无论正负）都不可评估，也就不能作为任何成功或失败的解释。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试实际执行了什么（离线报告 0 tests run）以及是否真的检验重复调用下的 Axes 独立性。",
+    "若 sai-00016 未被淘汰，它会帮助（提示 None 守卫/柱高校验）还是反而强化裸 sns.barplot 的写法，无法从现有证据判断。",
+    "检索到的 sai-* 候选是否在别处以摘要/来源标签形式影响过上下文，证据不足。"
+  ],
+  "minimal_intervention": {
+    "change": "在相同字节预算下把源生经验 sai-00016 保留进注入集（或略增 packing 预算使最早块不被整块淘汰），其余不变。",
+    "fixed": "同一目标题面、同一批 46 条库级经验、同一预算与同一可见执行历史。",
+    "falsifier": "若注入后可见推理与提交代码逐字不变（仍无任何基于 sai-00016 的复用痕迹），则说明该源的打包淘汰对可见结果无影响。"
+  },
+  "causal_claim": false
+}

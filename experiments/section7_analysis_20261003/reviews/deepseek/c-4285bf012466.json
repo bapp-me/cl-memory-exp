@@ -1,0 +1,143 @@
+{
+  "case_id": "c-4285bf012466",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"checks_executed\": 35,\n  \"correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Given a constant list of animals in ANIMALS, and a dictionary 'animal_dict' with keys as people's names and values"
+        }
+      ],
+      "reason": "源题离线判定正确可评分（35 项检查通过），且源内容就是 task_func 的单字典语义；但它只覆盖单字典，未覆盖目标新增的列表组合与“across all groups”求和条件，故为有限通过。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "The random counts match exactly with `random.seed(seed)` followed by `random.randint(1, max_count)` for each animal in `ANIMALS` order."
+        },
+        {
+          "section": "source_visible",
+          "quote": "The example reproduces exactly. Submitting the solution:"
+        }
+      ],
+      "reason": "注入的源轨迹与 source_prompt/source_visible 中记录的同一任务、同一验证结论一致，关键随机计数协议被原样保留。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "reverse each dictionary and count the occurrences of each predefined animal name across all groups"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "total_animal_counts.update(animal_counts)"
+        }
+      ],
+      "reason": "源经验中的 seed→逐动物 randint 与过滤非 ANIMALS 值可迁移，但目标是列表多字典并在参考解中跨组累加计数，这部分不由源内容提供。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The behavior mirrors the previously verified pattern (per-animal `random.randint(1, max_count)` after seeding, reversal keeping only predefined animals). Submitting:"
+        },
+        {
+          "section": "target_submission",
+          "quote": "{animal: random.randint(1, max_count) for animal in ANIMALS}"
+        }
+      ],
+      "reason": "目标代码结构与自述都与源题核验过的协议一致；这只是可见代理，不能证明是记忆而非题面推理导致该写法。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "The random counts match exactly with `random.seed(seed)` followed by `random.randint(1, max_count)` for each animal in `ANIMALS` order."
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Given a constant list of animals in ANIMALS, and a dictionary 'animal_dict' with keys as people's names and values"
+        }
+      ],
+      "reason": "注入内容中存在与本目标函数语义直接相关的源片段（同一 ANIMALS 列表、同一随机计数协议），构成可用经验机会；但不等于该经验已被选中或使用。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The behavior mirrors the previously verified pattern (per-animal `random.randint(1, max_count)` after seeding, reversal keeping only predefined animals). Submitting:"
+        },
+        {
+          "section": "target_submission",
+          "quote": "{animal: random.randint(1, max_count) for animal in ANIMALS}"
+        }
+      ],
+      "reason": "目标明显沿用源中确立的“先 seed，再按 ANIMALS 顺序逐项 randint”的写法，属于一致的适配行为；无对照条件，不能推断因果增益或有效性。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"checks_executed\": 6,\n  \"correct\": true"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "total_animal_counts.update(animal_counts)"
+        }
+      ],
+      "reason": "离线目标判定“Ran 0 tests”仍给 correct=true，且题面“across all groups”与参考解的逐组累加不同，而提交只算一次计数仍判对；仅标为评分口径候选，不改用固定 mask 的结论。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 3,"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Generate a JSON object from employee data based on given department codes and their employee counts."
+        }
+      ],
+      "reason": "共 3 条注入，其中两条与本目标无关，说明注入预算被非相关内容占用；仅证明打包内容，不证明造成干扰或性能损失。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "目标题面被截断、无示例，理论上难以独立推导出 seed 后逐动物 randint 的精确顺序，但缺少反事实，无法排除模型先验知识的贡献。",
+    "隐藏检查可能很宽松（离线报告 0 个 unittest 且参考解与提交的跨组计数方式不同却判对），因此 success 不能证实复用语义正确。",
+    "另外两条注入（部门 JSON、随机字符串）与目标无关，不能解释该写法，也不能据此推断存在干扰。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "source_provenance_in_observable_retrieval_candidates 为 null，无法看到候选检索集合与预算淘汰过程。",
+    "未提供未选中的完整记忆库，不能从本包推断不存在其他经验。",
+    "目标结束后是否有 memory update 及其内容不可见，且不能用其后状态解释本题行为。",
+    "隐藏检查是否验证跨组求和（参考解行为）无法确认。"
+  ],
+  "minimal_intervention": {
+    "change": "在保持同一题面、模型与预算下移除源题轨迹注入（保留其余两条），重跑目标。",
+    "fixed": "同一 target_prompt、同一 max_count/seed 默认值、同一工具与提交协议、同一注入预算上限。",
+    "falsifier": "若移除源注入后仍产出完全相同的 seed→逐动物 randint 与仅保留 ANIMALS 的写法，则迁移候选被削弱。"
+  },
+  "causal_claim": false
+}

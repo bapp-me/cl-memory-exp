@@ -1,0 +1,141 @@
+{
+  "case_id": "c-3f6b418c99ad",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "包内没有源题 episode 内容或结果，只有 source_event_ids 列表，无法判断被写入的工作流来自成功、失败还是部分成功的源经验。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "缺少任何源 episode 文本可与注入的三条工作流比对，无法确定其是否忠实反映源经验；环境未反驳其内容不等于保真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "If the target is not visible, rotate in place using"
+        },
+        {
+          "section": "injection/2",
+          "quote": "positional criterion (e.g., \"on your right\")"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Goal: open a door behind you"
+        }
+      ],
+      "reason": "扫描与导航工作流对本题可用，但定位工作流的示例判据是“on your right”类相对方位，本题“behind you”需要 180° 重新定向，属部分适用。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Now the blue door that was originally behind me is in front. I'll navigate to it."
+        },
+        {
+          "section": "target_visible",
+          "quote": "toggle and go through blue closed door 1"
+        }
+      ],
+      "reason": "可见动作序列（turn left 两次→go to→toggle and go through）与注入工作流的扫描/导航/开门步骤一致，但这是行为代理，不是因果证明。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"progress\": 0.5"
+        },
+        {
+          "section": "target_visible",
+          "quote": "The action is not recognized. Please check valid actions."
+        },
+        {
+          "section": "target_submission",
+          "quote": "\"submitted\": false"
+        }
+      ],
+      "reason": "首动作为未识别动作“turn around”，最终评估 correct=false、progress=0.5 且从未提交，说明 D0 自身执行/收尾有问题；不能证明记忆导致失败。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "rotate in place using"
+        },
+        {
+          "section": "injection/0",
+          "quote": "to navigate directly to the target door."
+        },
+        {
+          "section": "target_visible",
+          "quote": "toggle and go through blue closed door 1"
+        }
+      ],
+      "reason": "注入的扫描→导航→穿门三步在可见轨迹中都能找到对应动作，构成一致的复用候选；无对照条件，不能断言记忆造成了这一轨迹。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"terminal_state\": \"completed\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"submit_calls\": 0"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": false"
+        }
+      ],
+      "reason": "提交次数为 0、终端状态为 completed，却仍被离线判为 incorrect，说明完成判据（显式提交 vs 环境状态 vs “open”是否允许穿过）在包内无法对齐，只能标为候选不一致。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_update_operations",
+          "quote": "REPLACE_WORKFLOW_LIBRARY"
+        },
+        {
+          "section": "target_update_operations",
+          "quote": "stream.task-000.attempt-1"
+        }
+      ],
+      "reason": "更新操作显示存在多条上游源任务流可作为经验来源，但源文本与结果均未提供，来源覆盖不等于信息保真或适用。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "失败可能来自题面与判据不一致：目标要求“open a door behind you”，而该交互同时执行了“go through”，完成标准是开门还是穿门在此包内无法判定。",
+    "记忆作用无法确定：三条工作流确实与轨迹吻合，但没有无记忆对照，成功/失败都可能与记忆无关。",
+    "源经验质量未知：没有源 episode 内容，无法排除三条工作流来自不适用或部分适用的源条件。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法确定“toggle and go through”是否满足 goal 的“open a door”，以及 progress=0.5 具体扣在哪一步。",
+    "无法确定首步“turn around”未识别是否影响后续朝向或奖励。",
+    "无法确定注入工作流是否在目标上下文中被检索/打包淘汰（dropped 为空，三条全部注入，未见淘汰证据）。",
+    "无法由现有证据判断三条工作流是否真正影响了动作选择。"
+  ],
+  "minimal_intervention": {
+    "change": "在开门后先核验目标是否满足并显式提交/结束，而不是直接改用“go through”并自行宣称完成。",
+    "fixed": "保持同一环境实例、同一三条注入工作流与同一动作预算（5 次 ACTION）。",
+    "falsifier": "若同样轨迹下显式提交后仍判 correct=false，则失败不在收尾/契约而在动作选择本身。"
+  },
+  "causal_claim": false
+}

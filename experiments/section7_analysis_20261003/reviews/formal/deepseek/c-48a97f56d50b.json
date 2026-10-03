@@ -1,0 +1,138 @@
+{
+  "case_id": "c-48a97f56d50b",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=16:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Standardize numeric columns in a DataFrame and return the heatmap of the correlation matrix."
+        }
+      ],
+      "reason": "源题在离线评测中通过（16 项检查、5 个测试），是合法经验；但它只处理单个 DataFrame，覆盖范围小于目标。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        }
+      ],
+      "reason": "针对目标所需内容（列均值填充、StandardScaler、corr、热图绘制方式），注入文本只是主题描述，源题结束时也没有写入操作，源解法配方未被保留。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "standardize the numeric columns in each DataFrame and return a combined heatmap of the correlation matrices for all DataFrames"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Standardize numeric columns in a DataFrame and return the heatmap of the correlation matrix."
+        }
+      ],
+      "reason": "源经验的填充/标准化/相关矩阵热图部分适用，但目标新增的“多个 DataFrame 合并”条件在源题中没有对应内容。"
+    },
+    "visible_use": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "注入内容过于笼统，目标的 select_dtypes/fillna/StandardScaler/heatmap 写法既可用记忆解释，也可用常识解释，无法从可见行为区分。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "combined = sum(corr_list) / len(corr_list)"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(combined_corr.shape == (2, 4))"
+        }
+      ],
+      "reason": "目标实现把多个相关矩阵做逐格平均（测试用例得 2x2），而评分期望按列拼接得到 (2,4)，属于执行层语义不符；不能说明记忆导致该选择。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "return a combined heatmap of the correlation matrices for all DataFrames"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "combined_corr = pd.concat([combined_corr, corr_matrix], axis=1)"
+        }
+      ],
+      "reason": "题面只说“combined”，未规定拼接或平均，评分却锁定拼接形状，存在规格欠定义；仅标候选，不据此重打分。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "\"facts\": []"
+        }
+      ],
+      "reason": "被写入并注入的记忆是无操作步骤的主题概括，无法承载源题可复用配方；不代表更完整的记忆一定会被采用。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "source ID coverage is not content fidelity"
+        }
+      ],
+      "reason": "源题结束没有写入操作、目标处也没有源记忆 id，说明没有可追源的配方被录入；不证明这些通用条目对目标有害或无用。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "题面未定义合并方式即可解释失败，与记忆无关（EVAL_CONTRACT）",
+    "注入的两条文本过于笼统，agent 可能根本未依据它们，行为与无记忆解法难以区分",
+    "隐藏评测除形状外还检查什么不可见，失败点是否唯一不确定"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "注入文本是否被 agent 实际读取或影响措辞，无法由可见证据判断",
+    "离线评测其余断言与用例未给出，无法判断除 shape 外是否还有其它失败点",
+    "target_update_operations 为空意味着什么（是否本就不产生新条目）不可由现有证据判定"
+  ],
+  "minimal_intervention": {
+    "change": "在题面中明确“combine”指按列拼接各 DataFrame 的相关矩阵（期望形状 2x4），或直接给出源题配方；其余保持不变。",
+    "fixed": "同一模型、同一注入的两条记忆、同样的工具与预算",
+    "falsifier": "若在明确要求拼接后 agent 仍做逐格平均并给出 2x2，则规格歧义解释不充分，执行层错误为主因。"
+  },
+  "causal_claim": false
+}

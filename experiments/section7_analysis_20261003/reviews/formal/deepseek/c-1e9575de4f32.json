@@ -1,0 +1,143 @@
+{
+  "case_id": "c-1e9575de4f32",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Determine the outlier indices in a 1D numpy array based on the Z score."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"checks_executed\": 20"
+        }
+      ],
+      "reason": "源题有合法记录且源解通过测试，但源契约是单数组 task_func，目标要求多组 dict 聚合。"
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "目标上下文没有注入或保留源记忆内容，因此没有目标相关记忆保真度可评。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(data: np.ndarray, threshold: float = 2.0) -> list:"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def new_solution(dataset: list, threshold: float = 2.0) -> dict:"
+        }
+      ],
+      "reason": "Z-score/正态拟合核心方法适用于目标每组数据，但源返回单数组 tuple，目标需遍历组并返回 dict，适用性部分重叠。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "无注入记忆候选且 memory_policy disabled；目标代码未显示对源特定 norm.fit 路径的可见复用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "variance = float(np.var(data))"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "2: ([], 14.5, 818.2499999999999)"
+        }
+      ],
+      "reason": "目标用 np.var 计算方差，隐藏断言期望 norm.fit 路径产生的浮点方差，目标执行分歧导致失败；不能证明记忆造成此结果。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "2: ([], 14.5, 818.2499999999999)"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "mean, std_dev = norm.fit(data)"
+        }
+      ],
+      "reason": "严格浮点相等可能拒绝数学等价的 np.var 结果（如 818.25 对 818.2499999999999）；这只是题意/测试可能不一致的候选，不证明目标应通过。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Determine the outlier indices in a 1D numpy array based on the Z score."
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true"
+        }
+      ],
+      "reason": "存在相关且正确的源经验，但 injection_metadata 为空且注入计数为 0，源可得性本身不证明实际使用或迁移。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        },
+        {
+          "section": "source_state_summary",
+          "quote": "\"full_unselected_state_presented\": false"
+        }
+      ],
+      "reason": "源片段未保留在方法状态且未注入；这属于未写入/未准入，不是已存但检索失败的证据。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "EVAL_CONTRACT：严格浮点相等可能拒绝数学等价但最后位不同的 np.var 方差。",
+    "无记忆因果解释：memory_policy disabled、injected_count 0，当前证据不能支持检索或迁移导致目标失败。",
+    "目标可能在可见样例之外还有隐藏检查差异；hidden correctness 不可见，无法确认仅由第一处断言代表全部失败。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "未显示 np.var 与 norm.fit 方差在隐藏执行环境中的逐位实际输出，只能从断言值推断差异。",
+    "没有控制干预，不能确定改用 norm.fit 后目标一定通过。",
+    "未选中的完整记忆库未提供，不能推断其他源是否存在。",
+    "目标结束后的更新不可见，也不能解释当前目标失败。"
+  ],
+  "minimal_intervention": {
+    "change": "将目标实现中的 np.var 方差改为 scipy.stats.norm.fit 拟合后返回 std_dev**2，以匹配参考数值路径。",
+    "fixed": "保持相同目标 prompt、数据集、threshold、隐藏精确断言以及无记忆注入环境。",
+    "falsifier": "若同样使用 np.var 的干净重跑通过相同隐藏断言，则 TASK_EXECUTION/EVAL_CONTRACT 候选被反驳。"
+  },
+  "causal_claim": false
+}

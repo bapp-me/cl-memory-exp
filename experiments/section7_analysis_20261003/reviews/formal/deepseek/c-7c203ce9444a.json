@@ -1,0 +1,124 @@
+{
+  "case_id": "c-7c203ce9444a",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "Ran 5 tests in 0.004s"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Calculate the frequency of combinations of elements in a DataFrame."
+        }
+      ],
+      "reason": "源 episode 通过全部离线测试，是合法源经验；但它只覆盖单个固定 item1..item5 列 DataFrame，与目标的多 DataFrame 变参契约只部分重合。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": true"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "源被保留在方法状态中但未注入，目标上下文里看不到源派生文本，无法核验 tuple-组合这一必要内容是否被保真传递。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Calculate the frequency of combinations of elements in a DataFrame."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "calculate the overall frequency of combinations of elements across all DataFrames"
+        }
+      ],
+      "reason": "源的行组合+Counter+dict 思路对目标部分可用，但目标新增多 DataFrame 变参与逐表写列条件，属新增/改动条件。"
+    },
+    "visible_use": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "lambda row: ', '.join(sorted(str(item) for item in row.values))"
+        }
+      ],
+      "reason": "目标选择的字符串拼接表示与源的 tuple 方案相反，且与注入的 8 个 D1 episode 都无对应；无可见记忆引用，无法判定是否复用了记忆。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_episode_byte_budget\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "52 个候选中 44 个因字节预算被淘汰、仅注入最新 8 个；源 provenance 在候选内却不在注入集，说明直接源未送达目标。这不证明淘汰本身导致了失败。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "lambda row: ', '.join(sorted(str(item) for item in row.values))"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "df['combination'] = pd.Series(df.apply(lambda row: tuple(sorted(row)), axis=1))"
+        }
+      ],
+      "reason": "目标把组合键写成拼接字符串，而参考解/期望输出要求元组键，这是最直接的失配；不能据此推断记忆造成或未造成该选择。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "which is the combination of items in each row"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(overall_combination_frequency(df1, df2, df3) == {(1, 4): 1, (2, 5): 2, (3, 6): 3, (4, 7): 2, (5, 8): 1})"
+        }
+      ],
+      "reason": "可见题面未规定组合键的类型（字符串还是元组），隐藏测试却要求元组，表示法存在契约歧义；仅标为候选不一致，不重打分。"
+    }
+  ],
+  "primary_hypothesis": "PACKING_VISIBILITY",
+  "competing_explanations": [
+    "字符串而非元组可能是求解器自身的设计错误，与记忆无关，故不能断定淘汰直接源导致了失败。",
+    "隐藏测试的元组期望可能属于题面未充分说明的评测契约歧义，失败未必是记忆效应。",
+    "selected_before_packing 含全部 52 个候选，说明检索未做过滤，问题只出现在打包阶段；但仍无反事实证明打包改变了行为。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "源的直接内容是否曾以任何形式进入目标上下文（source_provenance_injected 为 false）。",
+    "直接源在 52 个候选中的具体名次未给出。",
+    "注入的 8 个 D1 episode 是否影响了目标的表示法选择。",
+    "目标结束后更新与反事实不可得，无法判定记忆的因果作用。"
+  ],
+  "minimal_intervention": {
+    "change": "在打包阶段保留/优先注入直接源（组合频率 episode），例如提高打包字节预算或豁免该源。",
+    "fixed": "保持相同的检索排名、相同的 52 个候选、相同的源 episode、相同的目标题面与其余预算。",
+    "falsifier": "若注入该直接源后目标仍输出字符串拼接组合并失败，则打包淘汰假设被反驳。"
+  },
+  "causal_claim": false
+}

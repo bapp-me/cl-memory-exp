@@ -1,0 +1,114 @@
+{
+  "case_id": "c-122bd2fbfdb5",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "The paired source passed (9 tests, though it is a different, narrower task), so it is a legitimate source. Limits: its derived bullets (sai-00007/00008) were not injected, so its evidence value for this target is indirect."
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "No source pair is presented for the injected items, and the source-derived bullets were not injected, so fidelity of any target-relevant memory content cannot be assessed from this packet."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/13",
+          "quote": "Do not use circular verification checks that are guaranteed to pass under your own interpretation"
+        },
+        {
+          "section": "target_visible",
+          "quote": "data = [(['kiwi'], 5, vocab), ([], 3, vocab)]"
+        }
+      ],
+      "reason": "Generic verification/exception-mapping bullets are broadly applicable, but no injected item covers the input-container contract that actually failed; most injected items concern numpy/pandas/matplotlib tasks."
+    },
+    "visible_use": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "data = [(['kiwi'], 5, vocab), ([], 3, vocab)]"
+        }
+      ],
+      "reason": "The visible battery mirrors the agent's own list-shaped assumption and cites a clean exit-0 run, but no memory text is quoted in the transcript; the phrase overlap is only a visible proxy, not proof of memory use."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "return a dictionary where keys are identifiers for each set of target_words"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "for key, value in data.items():"
+        }
+      ],
+      "reason": "The prompt mixes 'a list of target_words' with 'keys are identifiers', while the reference keys the report by the input mapping's keys. This is a candidate contract reading, not a verified test intent."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ValueError: too many values to unpack (expected 3)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "target_words, n_sentences, vocabulary = entry"
+        }
+      ],
+      "reason": "The submitted code enumerates data as a sequence and unpacks each element as a 3-tuple; with mapping input the loop yields key strings, raising the recorded unpack error before any checks run."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/13",
+          "quote": "Do not use circular verification checks that are guaranteed to pass under your own interpretation"
+        },
+        {
+          "section": "target_visible",
+          "quote": "data = [(['kiwi'], 5, vocab), ([], 3, vocab)]"
+        }
+      ],
+      "reason": "Injected verification discipline was exercised only inside a fixture that cannot discriminate the container interpretation; no injected item supplies the dict-keyed contract, so the transfer is at best generic and insufficient."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "The prompt underspecifies the container of data, so this may be a contract coin-flip (EVAL_CONTRACT) rather than an execution error.",
+    "The agent's own list-shaped verification fixture (circular-verification pattern) plausibly contributed to not catching the mismatch.",
+    "With no counterfactual, injected memory cannot be shown to have caused or prevented the failure."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "The hidden test's exact input shape (dict keyed by identifiers) is inferred from the traceback and reference, not directly shown.",
+    "Whether any injected memory (e.g., err-00058/err-00061 wording) actually shaped the agent's verification behavior.",
+    "Whether the non-injected source-derived bullets would have changed the outcome."
+  ],
+  "minimal_intervention": {
+    "change": "Pin the input container and verify against a dict-keyed fixture (e.g., {'set1': (target_words, n_sentences, vocabulary)}) iterated with data.items() before submitting.",
+    "fixed": "Same injected memory set, same prompt, same budget and sandbox tools.",
+    "falsifier": "If the identical implementation passes when the hidden test supplies a list of 3-tuples, the container-reading explanation is refuted and the ambiguity reading is confirmed."
+  },
+  "causal_claim": false
+}

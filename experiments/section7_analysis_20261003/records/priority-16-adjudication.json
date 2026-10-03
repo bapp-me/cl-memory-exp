@@ -1,0 +1,567 @@
+{
+  "records": [
+    {
+      "case_id": "c-0bbc9f0afa05",
+      "task_id": "new:BigCodeBench/325",
+      "index": 48,
+      "diagnostic_category": "seed_scope",
+      "contract_status": "underspecified_candidate",
+      "adjudication": "整批仅 seed 一次，参考逐 length 重设；题面未说明。保留 USE_TRANSFER 候选，删除把已注入本身标为 RETRIEVAL 失败的解释。",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "a seed for random generation",
+          "char_start": 212,
+          "char_end": 240
+        },
+        {
+          "section": "target_visible",
+          "quote": "seed once",
+          "char_start": 171,
+          "char_end": 180
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "combined_counter.update(task_func(length, seed))",
+          "char_start": 109,
+          "char_end": 157
+        }
+      ],
+      "reviewer": "primary Codex agent, source-evidence review",
+      "human_reviewed": false,
+      "level": "D1 diagnostic judgment; quoted mismatch facts D0",
+      "causal_claim": false,
+      "scoring_changed": false,
+      "needs_controlled_intervention": true
+    },
+    {
+      "case_id": "c-7257e3bcb56a",
+      "task_id": "new:BigCodeBench/816",
+      "index": 50,
+      "diagnostic_category": "seed_and_extrema",
+      "contract_status": "underspecified_candidate",
+      "adjudication": "多组 seed 重设与极小值平局规则在题面未定；choices 子步骤复用不能单独说明这些新增规则。",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "least frequent letter",
+          "char_start": 249,
+          "char_end": 270
+        },
+        {
+          "section": "target_submission",
+          "quote": "least_frequent",
+          "char_start": 961,
+          "char_end": 975
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "total_counter.update(task_func(length, count, seed))",
+          "char_start": 114,
+          "char_end": 166
+        }
+      ],
+      "reviewer": "primary Codex agent, source-evidence review",
+      "human_reviewed": false,
+      "level": "D1 diagnostic judgment; quoted mismatch facts D0",
+      "causal_claim": false,
+      "scoring_changed": false,
+      "needs_controlled_intervention": true
+    },
+    {
+      "case_id": "c-ae11c70a9030",
+      "task_id": "new:BigCodeBench/559",
+      "index": 52,
+      "diagnostic_category": "fixed_column_binding",
+      "contract_status": "none",
+      "adjudication": "目标未限定列名，提交仍使用 item1–item5 并报 KeyError。这是条件适配候选；原始 episode 完整保留，不应把未发生抽象的该次差异解释为压缩损失。",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "multiple DataFrames",
+          "char_start": 8,
+          "char_end": 27
+        },
+        {
+          "section": "source_visible",
+          "quote": "item_cols = ['item1'",
+          "char_start": 303,
+          "char_end": 323
+        },
+        {
+          "section": "target_submission",
+          "quote": "item_cols = ['item1'",
+          "char_start": 784,
+          "char_end": 804
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "KeyError: 'item1'",
+          "char_start": 610,
+          "char_end": 627
+        }
+      ],
+      "reviewer": "primary Codex agent, source-evidence review",
+      "human_reviewed": false,
+      "level": "D1 diagnostic judgment; quoted mismatch facts D0",
+      "causal_claim": false,
+      "scoring_changed": false,
+      "needs_controlled_intervention": true
+    },
+    {
+      "case_id": "c-519477a7d854",
+      "task_id": "new:BigCodeBench/394",
+      "index": 53,
+      "diagnostic_category": "nested_return_shape",
+      "contract_status": "underspecified_candidate",
+      "adjudication": "源覆盖单图生成，目标新增 rows/cols；提交扁平列表，测试按行再按图遍历。题面层级有歧义，不把源未提供的新条件称记忆遗失。",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "a list of lists containing the points",
+          "char_start": 418,
+          "char_end": 455
+        },
+        {
+          "section": "target_submission",
+          "quote": "all_points.append(points)",
+          "char_start": 1519,
+          "char_end": 1544
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "for row in points_grid for points in row",
+          "char_start": 262,
+          "char_end": 302
+        }
+      ],
+      "reviewer": "primary Codex agent, source-evidence review",
+      "human_reviewed": false,
+      "level": "D1 diagnostic judgment; quoted mismatch facts D0",
+      "causal_claim": false,
+      "scoring_changed": false,
+      "needs_controlled_intervention": true
+    },
+    {
+      "case_id": "c-e25257e1a20a",
+      "task_id": "new:BigCodeBench/742",
+      "index": 54,
+      "diagnostic_category": "row_vs_global_rng",
+      "contract_status": "underspecified_candidate",
+      "adjudication": "源序列扩为 rows*cols 后 reshape，测试要求每行重建。保留适配/契约候选；没有跨项目或过期经验，撤回 SCOPE_INTERFERENCE 的强定位。",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "each cell in the grid follows",
+          "char_start": 97,
+          "char_end": 126
+        },
+        {
+          "section": "target_submission",
+          "quote": "range(rows * cols)",
+          "char_start": 1937,
+          "char_end": 1955
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "row = task_func(cols, colors, rng_seed)",
+          "char_start": 77,
+          "char_end": 116
+        }
+      ],
+      "reviewer": "primary Codex agent, source-evidence review",
+      "human_reviewed": false,
+      "level": "D1 diagnostic judgment; quoted mismatch facts D0",
+      "causal_claim": false,
+      "scoring_changed": false,
+      "needs_controlled_intervention": true
+    },
+    {
+      "case_id": "c-a9bd9eec0d55",
+      "task_id": "new:BigCodeBench/47",
+      "index": 59,
+      "diagnostic_category": "axes_vs_matrix_return",
+      "contract_status": "underspecified_candidate",
+      "adjudication": "题面要求返回 heatmap，提交返回 Axes，测试读取矩阵 shape。直接失败点可定位，返回对象契约需要澄清。",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "return a combined heatmap",
+          "char_start": 84,
+          "char_end": 109
+        },
+        {
+          "section": "target_submission",
+          "quote": "return ax",
+          "char_start": 2057,
+          "char_end": 2066
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "'Axes' object has no attribute 'shape'",
+          "char_start": 289,
+          "char_end": 327
+        }
+      ],
+      "reviewer": "primary Codex agent, source-evidence review",
+      "human_reviewed": false,
+      "level": "D1 diagnostic judgment; quoted mismatch facts D0",
+      "causal_claim": false,
+      "scoring_changed": false,
+      "needs_controlled_intervention": true
+    },
+    {
+      "case_id": "c-f0ad56dd1a6b",
+      "task_id": "new:BigCodeBench/54",
+      "index": 61,
+      "diagnostic_category": "horizontal_vs_vertical",
+      "contract_status": "explicit_text_tension",
+      "adjudication": "题面明确 horizontally，同时写每行对应原句，内部也存在张力；参考 axis=0、断言 (4,11)。先列契约问题，不能把遵循横向要求判为记忆害处。",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "concatenated horizontally",
+          "char_start": 269,
+          "char_end": 294
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "pd.concat(all_dtm, axis=0, ignore_index=True)",
+          "char_start": 297,
+          "char_end": 342
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "result.shape == (4, 11)",
+          "char_start": 168,
+          "char_end": 191
+        }
+      ],
+      "reviewer": "primary Codex agent, source-evidence review",
+      "human_reviewed": false,
+      "level": "D1 diagnostic judgment; quoted mismatch facts D0",
+      "causal_claim": false,
+      "scoring_changed": false,
+      "needs_controlled_intervention": true
+    },
+    {
+      "case_id": "c-17857f86fdb4",
+      "task_id": "new:BigCodeBench/874",
+      "index": 63,
+      "diagnostic_category": "per_text_seed",
+      "contract_status": "underspecified_candidate",
+      "adjudication": "文本扰动子步骤复用，整批 seed 一次与逐文本相同 seed 的隐藏期望不一致；题面未规定重设范围。",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "one for each input text",
+          "char_start": 368,
+          "char_end": 391
+        },
+        {
+          "section": "target_visible",
+          "quote": "global seed once",
+          "char_start": 1914,
+          "char_end": 1930
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "return [task_func(text, seed) for text in texts]",
+          "char_start": 31,
+          "char_end": 79
+        }
+      ],
+      "reviewer": "primary Codex agent, source-evidence review",
+      "human_reviewed": false,
+      "level": "D1 diagnostic judgment; quoted mismatch facts D0",
+      "causal_claim": false,
+      "scoring_changed": false,
+      "needs_controlled_intervention": true
+    },
+    {
+      "case_id": "c-ba36c481c0a4",
+      "task_id": "new:BigCodeBench/106",
+      "index": 66,
+      "diagnostic_category": "literal_plot_title",
+      "contract_status": "underspecified_candidate",
+      "adjudication": "直接失败为标题多出 Overall Trend；题面未提供精确标题，不能把这次失败归因于记忆或回归计算。",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "show the overall trend",
+          "char_start": 391,
+          "char_end": 413
+        },
+        {
+          "section": "target_submission",
+          "quote": "Aggregated Predictions vs Date (Overall Trend)",
+          "char_start": 1002,
+          "char_end": 1048
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "Plot title should be 'Aggregated Predictions vs Date'",
+          "char_start": 296,
+          "char_end": 349
+        }
+      ],
+      "reviewer": "primary Codex agent, source-evidence review",
+      "human_reviewed": false,
+      "level": "D1 diagnostic judgment; quoted mismatch facts D0",
+      "causal_claim": false,
+      "scoring_changed": false,
+      "needs_controlled_intervention": true
+    },
+    {
+      "case_id": "c-fc23c7de1f50",
+      "task_id": "new:BigCodeBench/868",
+      "index": 74,
+      "diagnostic_category": "dictionary_input_schema",
+      "contract_status": "underspecified_candidate",
+      "adjudication": "函数按序列枚举输入，测试传字典；题面只描述多组数据和标识符，未明确 data 容器结构。",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "keys are identifiers",
+          "char_start": 583,
+          "char_end": 603
+        },
+        {
+          "section": "target_submission",
+          "quote": "enumerate(data, start=1)",
+          "char_start": 2540,
+          "char_end": 2564
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "for key, value in data.items():",
+          "char_start": 48,
+          "char_end": 79
+        }
+      ],
+      "reviewer": "primary Codex agent, source-evidence review",
+      "human_reviewed": false,
+      "level": "D1 diagnostic judgment; quoted mismatch facts D0",
+      "causal_claim": false,
+      "scoring_changed": false,
+      "needs_controlled_intervention": true
+    },
+    {
+      "case_id": "c-8edb734949cd",
+      "task_id": "new:BigCodeBench/897",
+      "index": 81,
+      "diagnostic_category": "leap_boundary_and_time",
+      "contract_status": "underspecified_candidate",
+      "adjudication": "源使用 >start.year，参考使用 >=given_date.year；还存在分别求 current time 后精确相等的竞争解释，不将边界差异视为唯一根因。",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "until the current time",
+          "char_start": 93,
+          "char_end": 115
+        },
+        {
+          "section": "source_visible",
+          "quote": "LEAP_SECONDS > start.year",
+          "char_start": 621,
+          "char_end": 646
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "LEAP_SECONDS >= given_date.year",
+          "char_start": 1721,
+          "char_end": 1752
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "== sum([",
+          "char_start": 234,
+          "char_end": 242
+        }
+      ],
+      "reviewer": "primary Codex agent, source-evidence review",
+      "human_reviewed": false,
+      "level": "D1 diagnostic judgment; quoted mismatch facts D0",
+      "causal_claim": false,
+      "scoring_changed": false,
+      "needs_controlled_intervention": true
+    },
+    {
+      "case_id": "c-a8e146c354e3",
+      "task_id": "new:BigCodeBench/415",
+      "index": 83,
+      "diagnostic_category": "report_schema",
+      "contract_status": "underspecified_candidate",
+      "adjudication": "Dataset_1 与测试 Dataset 1 及嵌套键结构不同；题面只要求 summary report。源元组到目标字典的接口变化，不是写入摘要失真。",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "summary report with the details",
+          "char_start": 507,
+          "char_end": 538
+        },
+        {
+          "section": "target_submission",
+          "quote": "Dataset_",
+          "char_start": 1658,
+          "char_end": 1666
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "KeyError: 'Dataset 1'",
+          "char_start": 430,
+          "char_end": 451
+        }
+      ],
+      "reviewer": "primary Codex agent, source-evidence review",
+      "human_reviewed": false,
+      "level": "D1 diagnostic judgment; quoted mismatch facts D0",
+      "causal_claim": false,
+      "scoring_changed": false,
+      "needs_controlled_intervention": true
+    },
+    {
+      "case_id": "c-bf2f5c0c489b",
+      "task_id": "new:BigCodeBench/280",
+      "index": 84,
+      "diagnostic_category": "empty_list_filling",
+      "contract_status": "explicit_text_tension",
+      "adjudication": "题面明确填空列表后计算所有值，断言均值 3.5 对应未计填充值；可见冲突比负迁移解释更直接。保留原评分，无重跑。",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "If a list is empty, fill it with SIZE",
+          "char_start": 116,
+          "char_end": 153
+        },
+        {
+          "section": "target_submission",
+          "quote": "random.randint(0, 100)",
+          "char_start": 1253,
+          "char_end": 1275
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "'mean': 3.5",
+          "char_start": 244,
+          "char_end": 255
+        }
+      ],
+      "reviewer": "primary Codex agent, source-evidence review",
+      "human_reviewed": false,
+      "level": "D1 diagnostic judgment; quoted mismatch facts D0",
+      "causal_claim": false,
+      "scoring_changed": false,
+      "needs_controlled_intervention": true
+    },
+    {
+      "case_id": "c-2a0792fec437",
+      "task_id": "new:BigCodeBench/598",
+      "index": 85,
+      "diagnostic_category": "coordinate_container",
+      "contract_status": "underspecified_candidate",
+      "adjudication": "目标自选数组转换，隐藏数据为 x/y 字典并报 TypeError；源算法经验不决定新增集合容器。",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "multiple sets of (x, y) coordinates",
+          "char_start": 29,
+          "char_end": 64
+        },
+        {
+          "section": "target_submission",
+          "quote": "np.asarray(data, dtype=float)",
+          "char_start": 1516,
+          "char_end": 1545
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "not 'dict'",
+          "char_start": 447,
+          "char_end": 457
+        }
+      ],
+      "reviewer": "primary Codex agent, source-evidence review",
+      "human_reviewed": false,
+      "level": "D1 diagnostic judgment; quoted mismatch facts D0",
+      "causal_claim": false,
+      "scoring_changed": false,
+      "needs_controlled_intervention": true
+    },
+    {
+      "case_id": "c-645ea8ec980a",
+      "task_id": "new:BigCodeBench/516",
+      "index": 86,
+      "diagnostic_category": "row_index_vs_columns",
+      "contract_status": "explicit_text_tension",
+      "adjudication": "题面称 indices A/B，参考和检查要求列 A/B；提交形成 2×3 而测试要求 3×2。源文本与通过实现也有同样张力。",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "with indices 'A' and 'B'",
+          "char_start": 120,
+          "char_end": 144
+        },
+        {
+          "section": "source_visible",
+          "quote": "pd.DataFrame({'A': a, 'B': b})",
+          "char_start": 531,
+          "char_end": 561
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "DataFrame shape mismatch",
+          "char_start": 545,
+          "char_end": 569
+        }
+      ],
+      "reviewer": "primary Codex agent, source-evidence review",
+      "human_reviewed": false,
+      "level": "D1 diagnostic judgment; quoted mismatch facts D0",
+      "causal_claim": false,
+      "scoring_changed": false,
+      "needs_controlled_intervention": true
+    },
+    {
+      "case_id": "c-ba6a6f3401cc",
+      "task_id": "new:BigCodeBench/42",
+      "index": 90,
+      "diagnostic_category": "one_line_vs_each_matrix",
+      "contract_status": "underspecified_candidate",
+      "adjudication": "题面 single plot 与 across all matrices 未明确线条数量；提交均值一条线而测试要求每矩阵一条。保留契约及聚合适配竞争解释。",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "across all matrices in a single plot",
+          "char_start": 242,
+          "char_end": 278
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "There should be a line for each matrix",
+          "char_start": 263,
+          "char_end": 301
+        },
+        {
+          "section": "target_visible",
+          "quote": "prior PCA task",
+          "char_start": 2722,
+          "char_end": 2736
+        }
+      ],
+      "reviewer": "primary Codex agent, source-evidence review",
+      "human_reviewed": false,
+      "level": "D1 diagnostic judgment; quoted mismatch facts D0",
+      "causal_claim": false,
+      "scoring_changed": false,
+      "needs_controlled_intervention": true
+    }
+  ],
+  "reviewed": 16,
+  "conclusion": "Complete injection is established; failure labels must first separate added target conditions and contract/test tension from causal memory failure.",
+  "limits": [
+    "Adjudicator is an AI agent, not a human annotator.",
+    "No score changes, reruns or D2 claims.",
+    "Contract candidates are not automatic exclusions or proof of test invalidity."
+  ]
+}

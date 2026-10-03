@@ -1,0 +1,150 @@
+{
+  "case_id": "c-87913a848f85",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Generate a random poker hand consisting of five cards"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=30:True:5"
+        }
+      ],
+      "reason": "Source solved its own single-hand card/Counter task, but covers only a component of the target's four-player return/winner contract."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "No memory or source provenance was injected into the target context, so there is no injected memory content whose fidelity can be assessed."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "simulates a game of poker with 4 players"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Generate a random poker hand consisting of five cards"
+        }
+      ],
+      "reason": "Source card-rank counting is a partial component, but target adds four players, per-player result tuples, and winner/tie resolution."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "No memory injection is visible; the target code can be explained from the target prompt, not from demonstrated memory reuse."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "results.append((player_num, hand, rank_counts))"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "where each tuple contains the player's hand and a Counter dictionary"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ValueError: too many values to unpack (expected 2)"
+        }
+      ],
+      "reason": "The submitted player records are 3-tuples while the contract/tests expect 2-tuples, directly explaining the unpacking failure. It does not prove a memory effect."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should return a list of tuples, where each tuple contains the player's hand and a Counter dictionary"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "players.append((hand, rank_count))"
+        }
+      ],
+      "reason": "The target contract and reference/tests align on 2-tuples, so the failure is not from an ambiguous contract. This supports the execution diagnosis rather than memory attribution."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "return hand, rank_count"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Generate a random poker hand consisting of five cards"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "simulates a game of poker with 4 players"
+        }
+      ],
+      "reason": "A legal prior source covers single-hand card/Counter and a 2-tuple return, but not 4-player lists or winner/tie logic. Source success cannot validate target applicability or transfer."
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_retained\": false"
+        }
+      ],
+      "reason": "The source provenance was not retained or injected, so the target failure cannot be attributed to stored/injected source experience in this packet. It does not itself explain the code error."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "No memory injection occurred (`injected_count` 0, memory policy disabled), so the visible failure is independent of source-memory use.",
+    "The target tool feedback only says hidden correctness is unavailable; the actual error is visible only in offline evaluation.",
+    "The source task is a different, narrower contract and cannot by itself explain the target's extra `player_num` field without a counterfactual."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "Whether fixing the tuple shape would make all hidden target checks pass is not shown.",
+    "Whether any unselected or non-injected memory library content exists is not in this packet.",
+    "No counterfactual can establish whether the source episode influenced the target code."
+  ],
+  "minimal_intervention": {
+    "change": "Return 2-tuples `(hand, rank_counts)` from the per-player result list, matching the target contract and reference solution.",
+    "fixed": "Same target prompt, same source history, same memory-disabled setting, and no additional injected memory.",
+    "falsifier": "If replacing the 3-tuples with 2-tuples still fails hidden tests, or if hidden tests require a player number inside each tuple."
+  },
+  "causal_claim": false
+}

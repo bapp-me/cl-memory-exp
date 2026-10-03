@@ -1,0 +1,150 @@
+{
+  "case_id": "c-8232ef6a1822",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": false"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "FAILED (errors=1)"
+        }
+      ],
+      "reason": "The paired source episode was scorable but its solution failed hidden tests, so it is a legitimate but flawed/partial source rather than a clean pass."
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "Input data must be a pandas DataFrame"
+        },
+        {
+          "section": "target_visible",
+          "quote": "Dataset at index {i} is not a pandas DataFrame"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "TypeError: Input data must be a pandas DataFrame"
+        }
+      ],
+      "reason": "The target visibly reproduces the source's TypeError validation pattern and random-column style, but the source was itself failed/partial and did not supply the target's list/uniqueness/exception contract requirements."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(data, key, min_value, max_value):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def process_datasets(datasets, key_prefix, min_value, max_value):"
+        }
+      ],
+      "reason": "The source covers single-DataFrame random-column addition and validation, while the target adds list processing, per-dataset unique column names, and a different exception contract."
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Dataset at index {i} is not a pandas DataFrame"
+        },
+        {
+          "section": "source_visible",
+          "quote": "Input data must be a pandas DataFrame"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "TypeError: Dataset at index 1 is not a pandas DataFrame"
+        }
+      ],
+      "reason": "The target visibly reuses a source-like TypeError for non-DataFrames, while the hidden target reference expects ValueError; this is a behavioral misapplication candidate, not proof of memory causation."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "raise an appropriate exception"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "TypeError: Dataset at index 1 is not a pandas DataFrame"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "Expected ValueError"
+        }
+      ],
+      "reason": "The target prompt only asks for an appropriate exception, but the hidden reference/test expects ValueError; raising TypeError caused the scorable failure. This direct contract mismatch does not by itself prove a memory cause."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "Input data must be a pandas DataFrame"
+        },
+        {
+          "section": "target_visible",
+          "quote": "Dataset at index {i} is not a pandas DataFrame"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "TypeError: Input data must be a pandas DataFrame"
+        }
+      ],
+      "reason": "The source-visible solution also used TypeError and failed on the same exception-type check; the target repeats that pattern, making negative transfer a candidate. Without a no-memory counterfactual, this cannot prove memory caused the failure."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": true"
+        },
+        {
+          "section": "injection/0",
+          "quote": "def task_func(data, key, min_value, max_value):"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "The function will raise an error if the input data is not pandas DataFrame"
+        }
+      ],
+      "reason": "A relevant source task and its provenance were present in the injection set, so a transfer opportunity existed. Provenance coverage alone does not show retrieval, correct applicability, or actual causal use."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "The target may have chosen TypeError independently of the injected source, because the target prompt only says 'raise an appropriate exception'.",
+    "The source-derived TypeError pattern may be coincidental with the target's choice rather than evidence of retrieval or reuse; no no-memory counterfactual is available.",
+    "Hidden target evaluation stopped at the first non-DataFrame test, so later issues such as inclusive range semantics or column-uniqueness expectations could also exist but are not shown.",
+    "Two unrelated injected tasks are present, but the evidence does not show they interfered with the target's solution."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the target agent actually retrieved and used the source provenance rather than independently choosing TypeError.",
+    "Whether ValueError versus TypeError is the only hidden target failure, since target evaluation reports tests_run 0 and stops at the first error.",
+    "Whether the source memory content was exactly retained beyond what is visible, since source_state_summary provides only hashes.",
+    "What other unselected memory items existed; the packet does not include the full memory library.",
+    "Whether hidden range semantics require inclusive max_value + 1 as in the reference, since the target evaluator did not reach that point."
+  ],
+  "minimal_intervention": {
+    "change": "Specify or enforce ValueError for non-DataFrame input in the target contract/visible memory while keeping the rest of the implementation.",
+    "fixed": "Same source experience, same three injected items, same token budget, same target hidden tests.",
+    "falsifier": "If the target raises ValueError and still fails hidden checks, or if hidden tests actually accept TypeError, then EVAL_CONTRACT alone is not sufficient."
+  },
+  "causal_claim": false
+}

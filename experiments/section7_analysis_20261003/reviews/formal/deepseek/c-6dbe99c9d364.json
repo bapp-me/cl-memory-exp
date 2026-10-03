@@ -1,0 +1,99 @@
+{
+  "case_id": "c-6dbe99c9d364",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": false"
+        }
+      ],
+      "reason": "源任务运行以 returncode 1 结束、correct=false（TypeError 未被期望的 ValueError 捕获），因此该源经验只是失败/部分成功的样本。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "implement the documented input guard as isinstance(data, pd.DataFrame) raising TypeError for non-DataFrame inputs"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "raise ValueError(f\"Dataset at index {i} is not a pandas DataFrame.\")"
+        }
+      ],
+      "reason": "源衍生记忆的随机列/类型守卫内容基本忠实，但其异常类型主张（TypeError）与目标参考解契约（ValueError）冲突，故仅部分成立。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/6",
+          "quote": "map conventionally: TypeError for wrong argument type (non-ndarray input), ValueError for wrong shape/value"
+        }
+      ],
+      "reason": "异常映射建议适用于提示里的“appropriate exception”子句，但与该基准隐藏契约要求的 ValueError 相冲突，故为部分适用。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "raise a `TypeError` for non-DataFrame entries"
+        }
+      ],
+      "reason": "可见守卫选用了 TypeError，与注入的常规映射一致；这只是行为代理，不能证明记忆导致结果。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "TypeError: All datasets must be pandas DataFrames; dataset at index 1 is dict"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "raise ValueError(f\"Dataset at index {i} is not a pandas DataFrame.\")"
+        }
+      ],
+      "reason": "隐藏测试要求 ValueError，而提示只说“appropriate exception”，目标抛 TypeError 即崩溃——契约未在题意中给出；不能据此判定目标其余逻辑有错。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/6",
+          "quote": "map conventionally: TypeError for wrong argument type (non-ndarray input), ValueError for wrong shape/value"
+        },
+        {
+          "section": "target_visible",
+          "quote": "raise a `TypeError` for non-DataFrame entries"
+        }
+      ],
+      "reason": "可见执行正好采用了注入记忆的常规映射（类型错→TypeError），方向一致；无反事实，不能证明记忆造成失败或负迁移。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "目标用 np.random.uniform（连续值）而参考解用 np.random.randint（整数），隐藏测试若比较具体列值可能独立致败——但离线运行在异常处即崩溃，值检查未执行。",
+    "无对照干预：TypeError 选择可能与该记忆无关，且源自身记忆（source_provenance 记为 sai-00041）在机械记录中 source_provenance_injected=false，未被注入。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试是否还断言整数/浮点列值或具体异常消息字符串。",
+    "若源衍生记忆被注入，是否改变目标行为（无对照）。",
+    "隐藏 ValueError 期望属于基准不一致，还是提示可推出的契约，无法由现有证据判定。"
+  ],
+  "minimal_intervention": {
+    "change": "把非 DataFrame 守卫改为抛 ValueError，以匹配参考/隐藏契约。",
+    "fixed": "相同的 datasets 列表、函数签名与隐藏评测器的异常类型期望。",
+    "falsifier": "若改抛 ValueError 后仍失败（例如在列值或消息字符串上），则异常类型假设被反驳。"
+  },
+  "causal_claim": false
+}

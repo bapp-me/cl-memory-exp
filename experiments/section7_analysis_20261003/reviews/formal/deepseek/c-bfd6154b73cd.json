@@ -1,0 +1,147 @@
+{
+  "case_id": "c-bfd6154b73cd",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "sanitized = ''.join(re.findall(r'[A-Za-z]', word))"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=14:True:7"
+        }
+      ],
+      "reason": "Source episode passed its own tests and contains reusable sanitize/overlapping-bigram logic, but scope is a single word and does not cover target list aggregation or case normalization."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "No memory content was injected or retained for the target, so there is no delivered memory content whose fidelity can be assessed."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(word: str) -> dict:"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def new_task_func(words: list) -> dict:"
+        }
+      ],
+      "reason": "The source subproblem partly applies to sanitization and bigram counting, but the target adds list aggregation and possible case handling not covered by the source."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "No observable memory delivery occurred; target code similarity may come from prompt scaffolding or native model behavior and cannot be attributed to memory."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "EVALUATOR_RESULT=3:True:0"
+        },
+        {
+          "section": "target_visible",
+          "quote": "cleaned = re.sub(r'[^a-zA-Z]', '', word).lower()"
+        }
+      ],
+      "reason": "The target agent wrote and submitted a list-aggregation implementation that the offline evaluator marks correct; this supports native task execution as the visible success path, not memory transfer."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(word: str) -> dict:"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        }
+      ],
+      "reason": "A related legal source episode exists and passed, but its raw episode/provenance was not retained; this marks only a semantic opportunity, not proof that source experience was available to or used by the target."
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_retained\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "The source was not written or admitted into method state under a disabled memory policy; absence of memory content here is not evidence of a retrieval miss or interference."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "where only alphabetic characters are considered"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "sanitized_word = re.sub('[^A-Za-z]', '', word)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "cleaned = re.sub(r'[^a-zA-Z]', '', word).lower()"
+        }
+      ],
+      "reason": "Reference preserves case while the target lowercases, yet offline target evaluation is correct; this is a candidate case-normalization contract ambiguity, not a proven failure."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "Prompt scaffolding, imports, and the required function signature may be sufficient for the target agent to generate the solution natively without any memory injection.",
+    "The lowercasing choice may reflect ordinary model assumption rather than memory transfer, and offline correctness leaves the case contract unresolved.",
+    "No counterfactual or injected memory is present, so latent historical state, if any, cannot be inferred from this packet."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether hidden tests are case-sensitive; offline evaluation says correct, but the reference solution preserves case.",
+    "Whether any unlogged memory state existed despite injected_count 0 and memory_policy disabled.",
+    "Whether the shared sanitize/bigram logic indicates transfer or merely common idiom and prompt structure.",
+    "What exact hidden checks were executed by the target evaluator."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "same target prompt, source history, disabled memory policy, zero injected bytes, and scoring harness",
+    "falsifier": "A documented memory injection, or a counterfactual run without the source failing while the source-injected run succeeds, would support memory transfer; hidden case-sensitive tests failing would support an evaluation-contract issue."
+  },
+  "causal_claim": false
+}

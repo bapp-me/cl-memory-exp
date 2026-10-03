@@ -1,0 +1,113 @@
+{
+  "case_id": "c-53a33990f146",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=13:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Calculate the Euclidean distances between consecutive points in a provided"
+        }
+      ],
+      "reason": "源题离线评测正确且可评分，但其契约是返回相邻点距离列表，不含回环闭合，且只覆盖(2)==(2,2)式归一化这一子集，属有限通过。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "包内只给出 6 条被注入记忆与若干源题轨迹，未给出历史索引 70 等候选记忆的实际内容，无法核对源经验是否保真保留。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Calculate the Euclidean distances between consecutive points in a provided"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "returns to the starting point"
+        }
+      ],
+      "reason": "源经验只覆盖标量/单元素归一化与相邻点距离，目标新增了回到起点的闭合路径与返回 float 的要求，只能部分适用。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "create a function that generates a summary report"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "被注入的 6 条经验都是 pandas/绘图/随机句子等无关任务，目标提交代码只呈现距离路径逻辑；这只是行为代理，不能证明记忆未被使用，也不能证明成功源于记忆。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_episode_byte_budget"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 6"
+        }
+      ],
+      "reason": "79 个候选中有 73 个因 'oldest_complete_episode_byte_budget' 被丢弃，只有 6 条进入上下文，属选中后的预算淘汰；不能据此推断检索失败或记忆不存在，也不能归因目标成败。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=13:True:5"
+        },
+        {
+          "section": "source_state_summary",
+          "quote": "\"source_provenance_retained\": true"
+        }
+      ],
+      "reason": "存在通过评测的合法源经验且来源被保留，但其函数范围是相邻点距离列表，与目标的闭合路径不同；来源覆盖不等于内容对目标保真或可用。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_text_utf8_bytes\": 44785"
+        }
+      ],
+      "reason": "约 44KB 与本任务无关的完整回合占据了上下文预算；这只能说明开销存在，本证据不能断言无收益或性价比差。"
+    }
+  ],
+  "primary_hypothesis": "PACKING_VISIBILITY",
+  "competing_explanations": [
+    "目标成功可能完全由目标提示本身解释：提示已写明单数字/单元素元组按 (x,x) 处理以及需回到起点，无需任何记忆参与。",
+    "源经验在方法状态中的实际内容不在包内，无法验证其保真度与适用性，因此其被淘汰对此目标可能没有任何可观察影响。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "历史索引 70 及其他候选记忆的实际文本内容未知，无法确认源经验是否与被注入集合相关。",
+    "无法确认被丢入预算淘汰的候选是否就是与目标同源的条目。",
+    "token_count 为 null，token_measurement_method 为 unavailable，无法量化注入内容的真实上下文占用。"
+  ],
+  "minimal_intervention": {
+    "change": "调整打包策略，使最近的完整同源回合（而非最旧回合）保留到注入集合中",
+    "fixed": "保持相同的检索查询、相同的历史与字节预算、相同的 6 个注入位基线",
+    "falsifier": "若证明被丢弃的候选中并不含同源经验，或该源内容其实已被完整注入，则 PACKING_VISIBILITY 对本题不成立"
+  },
+  "causal_claim": false
+}

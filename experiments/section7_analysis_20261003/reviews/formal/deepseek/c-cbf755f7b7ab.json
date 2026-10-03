@@ -1,0 +1,143 @@
+{
+  "case_id": "c-cbf755f7b7ab",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Generates a simple scatter plot with 'n' points."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "The paired source task is scorable and passed, but it covers only a single scatter plot, not the target grid with row/column nesting."
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": []"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        }
+      ],
+      "reason": "Injected memories describe pandas/bar-chart tasks, while the paired source is a single scatter plot; the unselected library is not shown, so fidelity of any relevant source content cannot be established."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "points (list of tuples): List containing the (x, y) coordinates of the plotted points."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "The function should return a list of matplotlib figures, each representing a scatter plot, and a list of lists containing the points for each scatter plot."
+        }
+      ],
+      "reason": "The source supplies the same libraries, seed, and scatter pattern, but does not cover multiple plots or the target's row/column nested output."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "target_submission",
+          "quote": "def generate_grid_of_plots(rows, cols, n):"
+        }
+      ],
+      "reason": "The injected summaries mention pandas/bar charts, while the visible target implementation is scatter-grid code and shows no trace of those summaries; this is a behavioral proxy, not proof the model ignored them internally."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "all_points.append([list(p) for p in points])"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AssertionError: Each scatter plot should have 5 points"
+        }
+      ],
+      "reason": "The submission returns a flat all_points list rather than a rows-by-cols nested points_grid, so the hidden test's nested iteration fails. This is a direct target artifact, not evidence that memory caused the failure."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "a list of lists containing the points for each scatter plot"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert all(len(points) == 5 for row in points_grid for points in row)"
+        }
+      ],
+      "reason": "The hidden test requires row-nested lists, while the prompt wording is compatible with a flat per-plot list of lists. This is a candidate contract ambiguity, not a proven evaluation defect."
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": [\"046fecd0-bb97-4487-aea7-9105b37efe5a\", \"96e021ae-d807-4ddf-ae9c-de2d36854446\"]"
+        }
+      ],
+      "reason": "The injected candidates concern pandas/bar-chart work, not the target grid-scatter and nested output contract. This shows off-target retrieved content was injected, but the complete pool is not shown, so retrieval error is not established."
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        }
+      ],
+      "reason": "The source episode passed but no source memory write or retention is shown, so no legitimate paired-source experience was available for injection. This does not prove that a written memory would have been retrieved or would have fixed the target failure."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "The hidden test may impose a row-nested points_grid contract that the target prompt does not make explicit, making EVAL_CONTRACT a plausible alternative.",
+    "Only off-target pandas/bar-chart memories were visibly injected, and no source memory was retained, so the target may simply have had no relevant memory opportunity; this does not prove memory absence globally.",
+    "Without a controlled intervention, the failure could have occurred even with a correct source memory, or the target could have needed only a prompt clarification rather than memory reuse."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "The complete unselected memory library is not presented, so absence of a relevant stored memory cannot be concluded.",
+    "There is no counterfactual, so no causal claim about memory effect on the target result can be made.",
+    "Token accounting is unavailable and the hidden tests are visible only via the provided reference, limiting utility and contract assessment.",
+    "Post-target updates cannot explain prior target behavior."
+  ],
+  "minimal_intervention": {
+    "change": "Rewrite the target return to a rows-by-cols nested points_grid matching the hidden test, or make the target prompt explicitly require row/column nesting; keep the same memory injections.",
+    "fixed": "Same task, memory history, injections, tool budget, and environment.",
+    "falsifier": "If returning row-nested points_grid still fails the same hidden tests, or if the hidden tests accept the flat list, then the TASK_EXECUTION/EVAL_CONTRACT candidate is weakened."
+  },
+  "causal_claim": false
+}

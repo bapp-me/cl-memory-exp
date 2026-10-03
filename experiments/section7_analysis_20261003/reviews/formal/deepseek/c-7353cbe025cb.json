@@ -1,0 +1,135 @@
+{
+  "case_id": "c-7353cbe025cb",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Each column is named with a string from the list ['a', 'b', 'c', ...]"
+        },
+        {
+          "section": "source_visible",
+          "quote": "column_names = list(string.ascii_lowercase[:columns])"
+        }
+      ],
+      "reason": "源题是合法的、通过评测的单 DataFrame 生成器（source_scorable/correct 为真），其随机字母与列命名写法有效；但源题不含多表拼接、不同签名与 num_dataframes=0 / columns>26 等目标新增条件。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "letters = np.array(list(string.ascii_lowercase))"
+        },
+        {
+          "section": "target_submission",
+          "quote": "letters = np.array(list(string.ascii_lowercase))"
+        }
+      ],
+      "reason": "与目标相关的必要经验（随机字母取值用 np.array(list(string.ascii_lowercase)) 后 np.random.choice）在被注入的源轨迹与目标提交中以相同形式出现；只能说明该片段未被失真，不能说明源经验整体仍然完整。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "generates multiple Pandas DataFrames, each with random alphabets in each cell, and then concatenates them vertically to form a single large DataFrame"
+        }
+      ],
+      "reason": "源经验只覆盖目标的内层单表生成部分，目标新签名（num_dataframes/rows_per_df/columns_per_df）、垂直 concat 与空输入边界是新增条件，源未覆盖。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "data = np.random.choice(letters, size=(rows_per_df, columns_per_df))"
+        },
+        {
+          "section": "target_visible",
+          "quote": "if not dfs:\\n        return pd.DataFrame(columns=column_names)"
+        }
+      ],
+      "reason": "目标把源式随机生成搬到循环内并对空列表增加保护，属于可见的行为代理式适配（工具调用层面的行为代理，不是因果结论），无证据显示误用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Create a Pandas DataFrame with random alphabets in each cell."
+        },
+        {
+          "section": "source_visible",
+          "quote": "return pd.DataFrame(data, columns=column_names)"
+        }
+      ],
+      "reason": "源 episode 提供了通过的、可复用的单表生成实现，构成目标内层逻辑的合法先验；这只证明机会存在，不证明目标阶段实际读用或受益。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "letters = np.array(list(string.ascii_lowercase))"
+        },
+        {
+          "section": "injection/0",
+          "quote": "letters = np.array(list(string.ascii_lowercase))"
+        }
+      ],
+      "reason": "目标内部生成写法和被注入源提交的写法一致，是可见的复用代理；共同惯用法可由独立写码产生，且目标另加了源中不存在的空列表分支，故不能证明记忆造成成功。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "ValueError: No objects to concatenate"
+        },
+        {
+          "section": "target_visible",
+          "quote": "if not dfs:"
+        }
+      ],
+      "reason": "目标自行跑边界用例、触发并修复 num_dataframes=0 的运行时错误，属目标侧执行与调试证据，与是否存在记忆无关。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"tests_run\": 0,\n  \"checks_executed\": 3"
+        }
+      ],
+      "reason": "离线评分以 3 项 checks（0 个 unittest tests）判定正确，且题目对超出字母表的列数是否在契约内未定，agent 自行声明 28 列越界；这只说明评分面/契约边界，不说明记忆效果。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "np.array(list(string.ascii_lowercase)) + np.random.choice 是常见惯用法，目标可能独立写出，未读 injection/0。",
+    "即使读到源轨迹，目标的成功也可能主要来自本任务内的边界调试与校验逻辑，而非记忆复用。",
+    "injection/1、injection/2（组合频次任务）与目标无关，但仅凭其存在不能判定造成干扰。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法确认注入时的源 episode 内容是否被完整保留、是否有截断或重排。",
+    "无法知道隐藏测试是否覆盖 columns_per_df>26（agent 判定为越界）以及 0 行/0 列情形。",
+    "无反事实运行，无法判断去掉源注入后写法是否改变，也无法比较成本收益。",
+    "两次无关注入是否被读取、是否影响注意力，现有证据无法回答。"
+  ],
+  "minimal_intervention": {
+    "change": "在保持相同题面、种子与预算下重跑一次目标，仅移除 source episode（injection/0），观察是否仍出现同样的数组式 np.random.choice 内层实现。",
+    "fixed": "目标题面与参数、injection/1 与 injection/2 及其顺序、工具调用预算与评测方式保持不变。",
+    "falsifier": "若移除源 episode 后目标仍写出同样结构的 np.random.choice(letters, size=(rows_per_df, columns_per_df)) 内层生成代码，则复用候选被削弱。"
+  },
+  "causal_claim": false
+}

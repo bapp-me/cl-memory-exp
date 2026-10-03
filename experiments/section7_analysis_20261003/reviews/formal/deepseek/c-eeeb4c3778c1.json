@@ -1,0 +1,152 @@
+{
+  "case_id": "c-eeeb4c3778c1",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "The function filters rows in a dict of list in which the values of the 'Word' column begin with a specified letter."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        }
+      ],
+      "reason": "Source episode passed its own tests, but its contract filters by a letter and uses a Word column; relevance to target is limited."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "filtered = dframe[dframe['Word'].str.startswith(letter)]"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        }
+      ],
+      "reason": "Source visible submission matches the source prompt's pandas filter/count behavior, so the source-derived word-length-counting content is faithful; this does not show it was injected or used."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "each representing a document with 'Title', 'Content', and 'Category' fields"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "The function filters rows in a dict of list in which the values of the 'Word' column begin with a specified letter."
+        }
+      ],
+      "reason": "Core word-length counting is shared, but target changes input to list-of-dicts, adds per-category aggregation, and removes the letter filter."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "for word in content.split():"
+        },
+        {
+          "section": "target_submission",
+          "quote": "length_counts[category][len(word)] += 1"
+        }
+      ],
+      "reason": "Target code uses a raw split/defaultdict implementation and shows no source-specific pandas startswith/value_counts trace; this is absence of visible reuse, not proof of non-use."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "calculates the length of the words in the filtered column and returns"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "A successful legal source covers counting word lengths, and it remains in observable retrieval candidates; however, source provenance was not injected, so opportunity alone cannot show the target saw it."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "for word in content.split():"
+        },
+        {
+          "section": "target_submission",
+          "quote": "length_counts[category][len(word)] += 1"
+        }
+      ],
+      "reason": "The visible target implementation is generic per-category counting rather than the source's pandas filter/value_counts pattern; this supports no visible transfer candidate, but absence of overlap does not prove non-use."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_episode_byte_budget\""
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": ["
+        }
+      ],
+      "reason": "Retrieval selected candidates before packing but only a subset was injected and oldest entries were dropped by a byte budget; this is a visibility/packing outcome, not a retrieval failure and not evidence of harm."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "Ran 0 tests in 0.000s"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "def task_func(df, letter):"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert process_documents(doc) == expected_output"
+        }
+      ],
+      "reason": "Target evaluation reports one check with zero tests, while the reference test snippet defines a different signature; this is a candidate contract/test inconsistency, not a proven effect on target correctness."
+    }
+  ],
+  "primary_hypothesis": "unknown",
+  "competing_explanations": [
+    "Base coding ability alone can solve the target; source similarity and absence of visible source pattern do not establish retrieval or use.",
+    "Only seven unrelated episodes were injected; their presence does not show SCOPE_INTERFERENCE or negative transfer.",
+    "Source provenance was not injected and remains an observable candidate, so lack of source trace may be a packing/visibility artifact rather than non-retrieval.",
+    "Offline target evaluation reports zero tests and reference tests use a different signature, so hidden-correctness confidence is limited."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the source episode was retrieved or seen by the target agent is unknown.",
+    "Whether any injected unrelated memory affected target behavior cannot be determined without counterfactual evidence.",
+    "Whether the reference tests actually match the target contract is unresolved; only a candidate inconsistency is observed.",
+    "No controlled intervention or per-step memory-access log is available."
+  ],
+  "minimal_intervention": {
+    "change": "Replace the seven injected unrelated episodes with the source episode while keeping the same target, budget, and history.",
+    "fixed": "Same target prompt, tool budget, seed, retrieval candidates, and packing policy.",
+    "falsifier": "If the target still shows only the same pure-Python defaultdict structure with unchanged evaluation, source reuse is not supported; if source-specific pandas startswith/value_counts or letter-filter traces appear, a USE_TRANSFER candidate is supported."
+  },
+  "causal_claim": false
+}

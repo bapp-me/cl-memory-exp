@@ -1,0 +1,115 @@
+{
+  "case_id": "c-7aeaf5cc1260",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "Ran 6 tests in 0.011s"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Each sub-list should have exactly 5 elements"
+        }
+      ],
+      "reason": "源题(task-007)通过且可评分，但源契约是固定5列/返回(df, results)元组，与本题可变列/dict报告契约不同，经验只是部分适用。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "source_provenance_at_target 的 memory_ids 为空，注入集合中也没有关于 report 键名/结构的条目，无法核查与目标相关的必要内容是否被保真保留。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Each sub-list should have exactly 5 elements"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "You are given multiple 2D lists representing different datasets."
+        }
+      ],
+      "reason": "OLS/DataFrame/add_constant 通用管道可用于本题，但源的固定列与元组返回契约在本目标被改为变列与多键报告，返回结构经验不适用。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Per err-00094/err-00137 I fix the test fixtures (not the code) and re-run"
+        },
+        {
+          "section": "target_visible",
+          "quote": "err-00120: compute, never estimate"
+        }
+      ],
+      "reason": "agent 按注入的语义候选修 fixture 而非改被验代码，并用 lstsq 精确计算 R²，属可见的一致复用行为代理，不构成因果结论。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should return a summary report with the details of each regression analysis."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "KeyError: 'Dataset 1'"
+        }
+      ],
+      "reason": "隐藏测试要求 report['Dataset 1']['DataFrame'] 等具体键名，prompt 只写“summary report”而未固定键名与层级；agent 自创 'dataset_0'/'dataframe' 结构故 KeyError。只说明契约歧义，不证明记忆造成失败。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "All 23 checks pass on a clean exit-0 run"
+        },
+        {
+          "section": "target_visible",
+          "quote": "Submitting the verified code unchanged"
+        }
+      ],
+      "reason": "agent 自建 23 项检查通过即提交，检查只覆盖自己假设的返回结构，未对隐藏契约的键名/层级做核对。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Per err-00094/err-00137 I fix the test fixtures (not the code) and re-run"
+        }
+      ],
+      "reason": "可见 agent 采纳注入语义候选把失败归因到 fixture 并精确重算，与 err-00094/err-00137/err-00120 指引一致；仅证明可见复用，不能证明记忆带来成功或避免失败。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "失败也可能源于求解者自创键名（dataset_0/小写键）的独立实现选择；prompt 措辞本身允许多种返回结构解读，非记忆所致。",
+    "注入集合中无任何 report 键名/结构内容，故记忆既不能被归因成功也不能被归因失败。",
+    "无法判断若源经验（最小校验+OLS管道）被注入是否会改变结果，因为失败点在键名而非管道。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "只能看到 KeyError 'Dataset 1'，无法得知隐藏测试完整的键名/结构要求。",
+    "源题(task-007)经验是否/如何进入本题不可见，source_provenance_at_target 的 memory_ids 为空。",
+    "agent 额外加的输入校验是否触发隐藏失败，未被本题评估覆盖。",
+    "无受控对照，不能判断记忆对结果的影响。"
+  ],
+  "minimal_intervention": {
+    "change": "在目标 prompt 中明确 report 的键名与结构（如 'Dataset {i+1}' 及 'DataFrame'/'Regression Results'/'R-squared'）。",
+    "fixed": "相同源题、相同注入记忆集合与预算、相同 sandbox。",
+    "falsifier": "若 agent 产出与隐藏测试一致的键名仍失败，或 prompt 已固定键名，则 EVAL_CONTRACT 解释被反驳。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,143 @@
+{
+  "case_id": "c-0bbc9f0afa05",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=20:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(length, seed=0):"
+        }
+      ],
+      "reason": "Source task passed, but it defines single-string generation only; it does not specify how to seed across a target list of lengths."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "random.choice(string.ascii_letters) for _ in range(length)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "random.choice(string.ascii_letters) for _ in range(length)"
+        }
+      ],
+      "reason": "The retained source primitives (random.choice over ASCII letters and Counter-like counting) are carried into the target implementation without evident corruption; this is not a claim that full target semantics were preserved."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(length, seed=0):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "The function should accept a list of lengths and a seed for random generation."
+        }
+      ],
+      "reason": "Source covers one length per call, while target requires combining multiple lengths; the list and reseeding contract is new or under-specified."
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Following the same pattern as the previous tasks (seed once, then use `random.choice` over `string.ascii_letters`, count with `collections.Counter`)"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(combined_frequency([10, 20], 0) =="
+        }
+      ],
+      "reason": "The agent visibly adapts the source pattern but uses one seed across all lengths; hidden evaluation fails, yet no counterfactual shows memory caused the failure."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should accept a list of lengths and a seed for random generation."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "combined_counter.update(task_func(length, seed))"
+        }
+      ],
+      "reason": "The prompt does not state whether the seed is reset per generated string, while the hidden reference appears to expect calling task_func(length, seed) for each length. This supports a contract-ambiguity candidate, not proof of a test error."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Following the same pattern as the previous tasks (seed once, then use `random.choice` over `string.ascii_letters`, count with `collections.Counter`)"
+        },
+        {
+          "section": "source_visible",
+          "quote": "`random.choice` over `string.ascii_letters` reproduces the example exactly"
+        }
+      ],
+      "reason": "The visible trace explicitly reuses source primitives, but applies one seed rather than per-string reseeding. It supports visible adaptation, not a causal claim that memory produced the failure."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Same as generating one string of combined length sequentially"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(combined_frequency([10, 20], 0) =="
+        }
+      ],
+      "reason": "Direct execution generated one continuous random sequence across lengths and failed the hidden expected output. This records the execution failure without explaining why the seed scope was chosen."
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": true"
+        },
+        {
+          "section": "target_visible",
+          "quote": "matches the earlier task's known output for seed 0 (starting with `y W A c q`)"
+        }
+      ],
+      "reason": "Source provenance was injected and the visible output references the earlier task, so relevant source content was in play. No observable retrieval-candidate list is provided, so ranking and selection cannot be assessed."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "The failure may instead be visible misapplication of the source pattern: the source seeds inside task_func, while the target seeds once before the lengths loop, so calling task_func per length would have matched the hidden expected output.",
+    "The failure may be a model implementation choice independent of memory; no counterfactual run without the source memory is available.",
+    "Unrelated injected candidates (department JSON, abcde letters) were present but show no visible use, so they are not supported as causes."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the target prompt/test should be read as per-length reseeding or one global seed.",
+    "Whether the source memory was necessary or sufficient for the observed seed-once adaptation.",
+    "Which injected candidate was selected or visible beyond the referenced prior task.",
+    "Hidden test contents beyond the failed assertion are not available."
+  ],
+  "minimal_intervention": {
+    "change": "Make the target prompt or reference contract explicit about seed scope, e.g. state whether each requested length restarts from the same seed or whether one seed initializes the whole generation.",
+    "fixed": "Keep the same source memory, target prompt, hidden tests, and submission budget.",
+    "falsifier": "An agent given the same memory but an explicit per-length-reseed contract produces the hidden expected output; or a no-memory control shows the same seed-once failure."
+  },
+  "causal_claim": false
+}

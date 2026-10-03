@@ -1,0 +1,142 @@
+{
+  "case_id": "c-805acbb1f505",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "Both docstring examples reproduce exactly, and edge cases behave correctly."
+        },
+        {
+          "section": "source_prompt",
+          "quote": "spaces within those words are replaced with underscores"
+        }
+      ],
+      "reason": "源题 episode 自身通过（离线 9 项测试全 OK，且可见复现两个 docstring 例），实现的用例不敏感替换与校验合理；但它只是单集合函数，未覆盖目标的多集合报告契约。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "sentence = re.sub(pattern, replacement, sentence, flags=re.IGNORECASE)"
+        }
+      ],
+      "reason": "与该目标相关且有来源支持的必要内容（随机采样 10 个词、目标词空格替下划线、大小写不敏感）在源可见轨迹中一致且经自测验证，未见被曲解。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(target_words, n_sentences, vocabulary):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "process multiple sets of target_words, n_sentences, and vocabulary"
+        }
+      ],
+      "reason": "源只处理单个 (target_words, n_sentences, vocabulary)，目标新增了多集合容器、键命名与 ValueError 传播等条件，源经验可覆盖句生成部分但不覆盖容器契约。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "target_words, n_sentences, vocabulary = item"
+        },
+        {
+          "section": "injection/0",
+          "quote": "remove all special characters, punctuation marks, and spaces from each string"
+        }
+      ],
+      "reason": "注入的 7 条片段属于哈希、扑克、pandas、Z 分数等无关域，提交代码中无可归属于它们的独有内容；list-of-tuples 假设可直接由题意得出。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "target_words, n_sentences, vocabulary = item"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ValueError: too many values to unpack (expected 3)"
+        }
+      ],
+      "reason": "提交把 data 当作 list-of-tuples 迭代解包，隐藏测试传入 dict，运行即抛错、0 项测试执行，这是可见执行层缺陷；不能说明记忆导致失败。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_episode_byte_budget"
+        },
+        {
+          "section": "injection/0",
+          "quote": "remove all special characters, punctuation marks, and spaces from each string"
+        }
+      ],
+      "reason": "全部 74 条都进入 selected_before_packing，唯一近邻源（rank 1）因 oldest episode 字节预算被淘汰，实际注入的是 7 条与句子生成无关的近期片段，属打包/选择可见性而非检索失败；不能证明注入源会改变结果。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "return a dictionary where keys are identifiers for each set of target_words, n_sentences, and vocabulary"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "for key, value in data.items():"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert set(report) == set(expected_output)"
+        }
+      ],
+      "reason": "题意未明确 data 的容器类型与键取值，参考解要求 dict 输入并保留原 key；代理自行选择 list-of-tuples 与 set_i 键，属题意欠定/可能不一致的候选，非断言测试错误。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "spaces within those words are replaced with underscores"
+        },
+        {
+          "section": "source_visible",
+          "quote": "Both docstring examples reproduce exactly, and edge cases behave correctly."
+        }
+      ],
+      "reason": "存在合法且正确的源经验（句生成＋目标词下划线替换），与目标核心逻辑相关，说明可选源经验存在；但源为单集合函数，不含报告容器契约，故缺失它不必然解释本题崩溃。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "题意对 data 容器（dict 键→三元组）与报告键名欠定，单独就足以造成本次失败，与记忆无关。",
+    "即使源 episode 被注入，其内容只覆盖单集合句生成，不覆盖 dict 输入契约，失败可能依旧发生。",
+    "无法排除被注入的 enumerate＋索引命名片段（如 injection/2、injection/4）对 list-of-tuples 假设有影响，但仅是通用代码模式，属可见代理。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "未提供注入后实际呈现给 agent 的完整提示与记忆文本，无法核验模型看到了哪些片段。",
+    "存储侧记忆内容不可见（full_unselected_state_presented=false），无法核验写入保真度。",
+    "隐藏测试的具体数据、键命名要求与大小写/示例细节不可见。"
+  ],
+  "minimal_intervention": {
+    "change": "仅改输入契约处理：把 data 视为 dict（key -> (target_words, n_sentences, vocabulary)），按输入键生成报告并保留原键名。",
+    "fixed": "相同的目标题面、注入的 7 条片段、相同字节预算与打包策略。",
+    "falsifier": "若按 dict 输入与保留原键实现后隐藏评测仍失败（例如因大小写不敏感替换或报告结构不符），则该候选不成立。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,133 @@
+{
+  "case_id": "c-c4d5716f6941",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=15:True:6"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df, column, value):"
+        }
+      ],
+      "reason": "The source episode passed its hidden checks, but it is a single-DataFrame bisect/statistics solution, so its coverage of the target's list-based contract is only partial."
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "Memory was disabled for this target and zero bytes were injected, so there is no delivered memory content whose fidelity could be scored."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "analyze each DataFrame's specified column to find the values that are larger than the average"
+        },
+        {
+          "section": "target_submission",
+          "quote": "if len(dfs) != len(columns):"
+        }
+      ],
+      "reason": "Column check, mean, count and Axes return carry over, but the target adds per-DataFrame iteration and a length-mismatch guard absent from the source."
+    },
+    "visible_use": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "Nothing was injected, so no memory-driven behavior is observable; the code's resemblance to the source is confounded with an independent reimplementation."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=15:True:6"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df, column, value):"
+        }
+      ],
+      "reason": "A legitimate passing source experience exists (single-DataFrame task_func), which is the opportunity condition; it does not show the source record or its semantics reached the target."
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        },
+        {
+          "section": "source_state_summary",
+          "quote": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      ],
+      "reason": "No dedicated record is shown written: episode retention is false and the before/after state hash is identical (empty-state hash). This does not prove what any wider library holds."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "count_greater_than_value = int(np.sum(data > value)) if data.size > 0 else 0"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "EVALUATOR_RESULT=6:True:0"
+        }
+      ],
+      "reason": "The agent implemented, sanity-ran and submitted a working solution; the observed success is fully explained by its own execution rather than any injected experience."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "Ran 0 tests in 0.000s"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "results.append(task_func(df, column, value))"
+        }
+      ],
+      "reason": "The offline target run reports 0 tests yet 6 checks, and the reference snippet wraps a per-DataFrame helper while the tests call analyze_dataframes; flagged as a contract-ambiguity candidate only, not rescored."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "Source and target share the same analytic steps, so code similarity may reflect task structure rather than reuse; with zero injections this cannot be separated.",
+    "Submit-time hidden correctness was unavailable and the target episode ended historical_committed, so the offline pass may not mirror the submit-time contract."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "What the memory library holds beyond the shown method state (no retrieval candidate list provided; source_provenance_in_observable_retrieval_candidates is null).",
+    "Which checks produced EVALUATOR_RESULT=6:True:0, given the same run reports 0 tests.",
+    "Whether bisect/statistics were ever required for the target, since the prompt keeps those imports but the reference does not use a bisect-based count."
+  ],
+  "minimal_intervention": {
+    "change": "none for this packet; a discriminating test would inject only a source-derived semantic candidate (the per-DataFrame helper contract) and compare against this disabled-memory baseline",
+    "fixed": "same target prompt, same hidden evaluation, same budget, and the same no-injection baseline episode",
+    "falsifier": "If the submitted code or step sequence changes under the identical prompt with memory off, or an injected candidate is visibly reproduced, the reading that no memory was involved is refuted."
+  },
+  "causal_claim": false
+}

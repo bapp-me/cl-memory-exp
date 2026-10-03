@@ -1,0 +1,132 @@
+{
+  "case_id": "c-f0ad56dd1a6b",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=19:True:5"
+        },
+        {
+          "section": "source_visible",
+          "quote": "ValueError: empty vocabulary; perhaps the documents only contain stop words"
+        }
+      ],
+      "reason": "源题 5 项测试全通过，属合法可评经验；但首轮自测在空文本上抛 empty vocabulary 错误，最终以返回空 DataFrame 收口，是源自身的边界取舍而非题面明示规格。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Analyze a text by creating a document term matrix with CountVectorizer. The text contains several sentences, each separated by a period."
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Analyze a text by creating a document term matrix with CountVectorizer. The text contains several sentences, each separated by a period."
+        }
+      ],
+      "reason": "注入的源题文本与轨迹和 source_prompt/source_visible 内容一致（单文档 DTM、按句点切分、空句忽略），未发现与合法来源相矛盾的表述；但保真只覆盖源题本身，不覆盖目标的多文档拼接要求。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(text):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of documents, each containing multiple sentences separated by periods"
+        }
+      ],
+      "reason": "源记忆可覆盖子步骤（句点切分、忽略空句、CountVectorizer→DataFrame），但目标新增了“每个文档各自成矩阵再拼接”的批量结构与轴向契约，源题完全没有对应条件。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "# Document contained no usable vocabulary (e.g., only stop words)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "# Concatenate horizontally: columns from all documents side by side"
+        }
+      ],
+      "reason": "目标把源题遇到的空词表报错改造成每文档 try/except 跳过，属对源经验的一致适配；但决定成败的轴向选择来自目标题面文字，不是记忆内容，故只是行为代理而非因果证据。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "and then all these matrices should be concatenated horizontally to form a single combined matrix"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(result.shape == (4, 11))"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "combined_df = pd.concat(all_dtm, axis=0, ignore_index=True)"
+        }
+      ],
+      "reason": "题面明确写“horizontally”，而参考解与隐藏断言要求纵向堆叠（两文档各两句→4 行 11 列），实现按题面做 axis=1 必然撞 shape 断言；这只能标为题意/测试不一致候选，不能据此认定记忆有害。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "# Align all per-document matrices to the same number of sentence rows"
+        },
+        {
+          "section": "target_visible",
+          "quote": "All cases handled. Submitting:"
+        }
+      ],
+      "reason": "目标 Agent 自测全过（returncode 0）后提交，但它自造的用例检查的是横向对齐行为，未覆盖隐藏断言的行数期望；失败点在实现的拼接语义，而非工具或提交环节。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Analyze a text by creating a document term matrix with CountVectorizer."
+        },
+        {
+          "section": "target_submission",
+          "quote": "# Document contained no usable vocabulary (e.g., only stop words)"
+        }
+      ],
+      "reason": "同域子技能（句点切分、忽略空句、空词表防御）在目标可见地沿用并扩展到多文档，属语义候选；源经验不含任何轴向信息，故无法证明记忆造成本次成功或失败。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "若隐藏测试的 task_func/断言与 reference 片段并不一致，则失败可能只是实现未匹配另一版规格，EVAL_CONTRACT 候选会被削弱。",
+    "若在相同环境下不使用注入记忆的反事实运行仍以 axis=1 提交并同样触发 shape 断言，则记忆与本次失败无因果关系（当前无对照，不能断言）。",
+    "注入内容里含两个与目标无关的任务（组合频率、pairplot），但目前没有任何证据表明它们挤占或干扰了源经验的使用。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试全文与其 task_func 定义不可见，无法确认除 (4,11) 外是否还有其他轴向无关的隐含要求。",
+    "未提供未选中的完整记忆库与检索候选清单，无法判断当时有哪些候选、是否发生预算淘汰。",
+    "无法判断源经验在写入时是否被截断或改写（仅有哈希与布尔标志）。",
+    "题面“horizontally”是笔误还是刻意规格，现有证据无法裁定。"
+  ],
+  "minimal_intervention": {
+    "change": "让输出的行/列语义与固定评测一致：把多文档拼接改为纵向（axis=0, ignore_index=True）并去掉行 reindex；或保持实现不变而修正题面中的 “horizontally”。",
+    "fixed": "相同的目标题面、同一隐藏测试与评分 mask、相同的历史注入内容与 token 预算。",
+    "falsifier": "若改为纵向拼接后 (4,11) 断言仍失败，或反事实的无记忆运行也做出同样的横向选择并同样失败，则 EVAL_CONTRACT 候选需重估。"
+  },
+  "causal_claim": false
+}

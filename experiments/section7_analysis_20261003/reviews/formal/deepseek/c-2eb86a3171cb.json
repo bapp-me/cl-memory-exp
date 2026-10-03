@@ -1,0 +1,142 @@
+{
+  "case_id": "c-2eb86a3171cb",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "return [distance.euclidean(a, b) for a, b in zip_longest(pts, pts[1:]) if a is not None and b is not None]"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Calculate the Euclidean distances between consecutive points in a provided"
+        }
+      ],
+      "reason": "源题可见执行输出与文档示例一致，源任务本身是坐标距离计算，属可复用相邻经验；但源只返回相邻点距离列表，不含回程，故仅为有限可用。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "return [distance.euclidean(a, b) for a, b in zip_longest(pts, pts[1:]) if a is not None and b is not None]"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "If a tuple contains just one number it is assumed that both coordinates are equal to this number."
+        }
+      ],
+      "reason": "注入的源内容保留了对目标相关的单点归一化与欧氏距离计算，与源提交一致，未见内容失真；不代表记忆库其余无关条目也保真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "visits each consecutive point, and returns to the starting point"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Calculate the Euclidean distances between consecutive points in a provided"
+        }
+      ],
+      "reason": "单点元组归一化与逐段欧氏距离可直接沿用，但目标新增闭路回程与求和/0.0 语义，源片段不能原样套用。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "pairs = zip_longest(pts, pts[1:] + pts[:1])"
+        },
+        {
+          "section": "source_visible",
+          "quote": "return [distance.euclidean(a, b) for a, b in zip_longest(pts, pts[1:]) if a is not None and b is not None]"
+        }
+      ],
+      "reason": "目标沿用了与源相同的 normalize 辅助与 zip_longest 惯用法，并显式补充 pts[:1] 闭路后返回 float，属适配式改写；这只是行为代理，不构成因果复用证据。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "this number indicates"
+        },
+        {
+          "section": "source_visible",
+          "quote": "return [distance.euclidean(a, b) for a, b in zip_longest(pts, pts[1:]) if a is not None and b is not None]"
+        }
+      ],
+      "reason": "存在内容相邻的源题与源提交（坐标距离+单点归一化），为复用提供了机会；机会存在不等于源内容被正确取用或必然被用到。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "pairs = zip_longest(pts, pts[1:] + pts[:1])"
+        },
+        {
+          "section": "injection/0",
+          "quote": "return [distance.euclidean(a, b) for a, b in zip_longest(pts, pts[1:]) if a is not None and b is not None]"
+        }
+      ],
+      "reason": "目标可见代码与源提交共享 normalize/zip_longest 结构与裸数字归一化写法，可作迁移候选；但题面本身已给出导入与回程需求，相似不能证明记忆造成成功。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "def task_func(n_colors, colors=['Red', 'Green', 'Blue', 'Yellow', 'Purple'], rng_seed=None):"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 3"
+        }
+      ],
+      "reason": "注入 3 条中至少两条是颜色模式类无关任务，说明上下文打包包含不相关候选；仅证明可见占用，不证明干扰或效用损失。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "All results check out: the round trip sums each leg plus the return to start, and empty/single-point lists return 0.0."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "If the list is empty or contains only one point, the function should return 0.0."
+        }
+      ],
+      "reason": "目标在沙箱跑通自测示例后提交，离线评测判为 correct；这支持任务执行与契约覆盖，不涉及记忆机制。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "无记忆条件反事实缺失，成功可能来自题面已明确要求回程与导入，模型独立自解即可产生同样结构",
+    "同族题共用 itertools/scipy 惯用法与 normalize 写法，代码相似可能只是风格重合"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "未提供无记忆或换源对照运行，无法量化记忆贡献",
+    "未展示检索排序与候选选择过程，注入是否即检索结果不可知",
+    "缺少 target_update 内容，源内容在目标之后是否被保留/改写无法判断",
+    "颜色模式类注入条目的来源（检索还是库堆积）不可知"
+  ],
+  "minimal_intervention": {
+    "change": "在完全相同的题面、工具、预算与解码条件下，去掉记忆注入（或换入无关源）重跑同题，比较代码结构与通过结果",
+    "fixed": "保持相同目标题面、相同 PYTHON/SUBMIT 工具可用性、相同预算与相同可见自测方式",
+    "falsifier": "若去掉注入后仍产出同样的 normalize + zip_longest 闭路实现并通过全部检查，则 USE_TRANSFER 候选被削弱"
+  },
+  "causal_claim": false
+}

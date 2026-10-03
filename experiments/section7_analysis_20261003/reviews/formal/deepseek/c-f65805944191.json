@@ -1,0 +1,129 @@
+{
+  "case_id": "c-f65805944191",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(s1, s2, n_clusters=3):"
+        }
+      ],
+      "reason": "源题通过测试，但只覆盖单对 Series 的 K-Means 与单 Axes 返回，不含目标要求的多对组合叠加与返回契约。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "return labels, ax"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(s1, s2, n_clusters=3):"
+        }
+      ],
+      "reason": "源经验对自身任务是忠实的，但目标所需的 combined_visualization 返回 Axes/组合叠加内容不在源记录中。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(s1, s2, n_clusters=3):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def combined_visualization(series_pairs, n_clusters=3):"
+        }
+      ],
+      "reason": "K-Means 与散点可视化思路部分可迁移，但目标新增多对数据、组合叠加、颜色/标记区分和隐藏返回契约。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "perform K-Means clustering on each set separately"
+        },
+        {
+          "section": "target_submission",
+          "quote": "def combined_visualization(series_pairs, n_clusters=3, random_state=0):"
+        }
+      ],
+      "reason": "注入片段多为其他任务；目标代码中的 K-Means/绘图可由题意直接推出，未见可归因于注入记忆的特有内容、字符串或返回结构。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AttributeError: 'tuple' object has no attribute 'collections'"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert len(ax.collections) == 6"
+        }
+      ],
+      "reason": "隐藏评测把 combined_visualization 的返回值当作 Axes 并检查 scatter collections；提交返回 tuple，直接导致失败。不能由此判断记忆造成该返回选择。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "return individual_figs, combined_fig, kmeans_models"
+        },
+        {
+          "section": "target_visible",
+          "quote": "All verified: per-pair K-Means with individual scatter plots"
+        }
+      ],
+      "reason": "可见执行确实完成并自测了绘图逻辑，但最终返回类型未对齐隐藏测试；这是执行/契约匹配问题，不是记忆有效性证据。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_episode_byte_budget\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "相关源 provenance 在候选集中但未被注入，旧 episode 因字节预算淘汰，注入的是 5 个较新片段。这说明可见性/打包层面的情况，不能证明该缺失导致本题失败。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "失败也可归为 TASK_EXECUTION：agent 可选择返回 combined_ax，但实际返回 richer tuple，未满足未明说的返回值约定。",
+    "PACKING_VISIBILITY 未必有因果作用：源经验本身也不包含目标 required 的 Axes 返回契约，即使注入也未必阻止 tuple 返回。",
+    "目标提示未写明返回类型；若隐藏测试接受 tuple 或先解包，同一绘图逻辑可能通过 collections 数量检查。"
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "目标 prompt 是否本应说明 combined_visualization 需要返回 Axes，现有证据只显示隐藏测试这样要求。",
+    "源经验是否曾进入目标 agent 的实际上下文；mechanical 只说明 provenance 未注入。",
+    "注入的 5 个语义候选是否对目标代码有任何不可见影响。",
+    "若只修正返回类型，目标是否还能通过所有视觉/图例类隐藏检查。",
+    "本题失败与记忆内容/打包之间的因果关系无法由无干预证据判定。"
+  ],
+  "minimal_intervention": {
+    "change": "让 combined_visualization 返回 combined_ax（或至少返回具有 .collections 的 Axes），而不是 tuple。",
+    "fixed": "保持相同的 KMeans 拟合、random_state、逐对处理、组合散点与图例逻辑，以及相同工具和预算环境。",
+    "falsifier": "若返回 combined_ax 后隐藏评测仍失败，或隐藏评测明确要求 tuple/individual_figs，则 EVAL_CONTRACT 候选不成立。"
+  },
+  "causal_claim": false
+}

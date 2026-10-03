@@ -1,0 +1,128 @@
+{
+  "case_id": "c-fb8cdc1cc1e0",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Create a list of business days between two dates, excluding weekends and specified country's public holidays."
+        },
+        {
+          "section": "source_evaluation",
+          "quote": "EVALUATOR_RESULT=22:True:10"
+        }
+      ],
+      "reason": "Source passed its own scored tests, but its contract is single-range and includes datetime/order validation; those limits matter when transferring to a multi-range aggregator."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "I'll implement this using the same approach as the business days task: `pd.bdate_range` with the country's holidays, summed across all ranges."
+        },
+        {
+          "section": "source_visible",
+          "quote": "bdays = pd.bdate_range(start=start_date, end=end_date, freq='C', holidays=holiday_dates)"
+        }
+      ],
+      "reason": "Core weekend/public-holiday calculation is retained from source; target adds loop/sum and string parsing, and omits source ValueError checks not requested by target prompt."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "total number of business days across multiple date ranges"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Create a list of business days between two dates"
+        }
+      ],
+      "reason": "Holiday-exclusion logic applies, but target changes the contract to aggregate multiple ranges and handle string dates, so source single-range/validation experience is only partly aligned."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "I'll implement this using the same approach as the business days task: `pd.bdate_range` with the country's holidays, summed across all ranges."
+        },
+        {
+          "section": "target_submission",
+          "quote": "for start_date, end_date in date_ranges:"
+        }
+      ],
+      "reason": "Visible rationale and submitted code adapt source per-range bdate_range counting to loop over ranges and sum; behavioral proxy, not causal proof."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Create a list of business days between two dates, excluding weekends and specified country's public holidays."
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": true"
+        }
+      ],
+      "reason": "A raw prior business-days episode is present in the injected memory and source was correct/scorable, establishing opportunity only; it does not show retrieval or use."
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "def task_func(start_date=datetime(2023, 1, 1), end_date=datetime(2023, 12, 31), country='US'):"
+        },
+        {
+          "section": "source_visible",
+          "quote": "bdays = pd.bdate_range(start=start_date, end=end_date, freq='C', holidays=holiday_dates)"
+        }
+      ],
+      "reason": "The source memory appears as a raw episode with full implementation, not a semantic abstraction; this supports code-level D0 structure but not memory retrieval."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "I'll implement this using the same approach as the business days task: `pd.bdate_range` with the country's holidays, summed across all ranges."
+        },
+        {
+          "section": "target_submission",
+          "quote": "total += len(bdays)"
+        }
+      ],
+      "reason": "Target visibly self-reports reuse of the prior business-days approach and implements the same per-range holiday-aware count; no counterfactual, so cannot prove memory caused success."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "Target could be solved from the prompt and common pandas/holidays knowledge alone, with the 'same approach' phrase as post-hoc narrative rather than evidence of retrieval.",
+    "Injected memory contained three items, including unrelated Euclidean-distance and random-string tasks; target may have attended only to the target prompt, and visible code overlap is not causal.",
+    "Without a counterfactual, latent model competence or prompt framing cannot be excluded as the source of the successful approach."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the memory system actually retrieved the source episode or the model reconstructed the approach from the target prompt.",
+    "Whether D0 raw episode or any D1 semantic candidate was actually used; full unselected memory library is absent.",
+    "Whether hidden target tests check overlapping ranges, invalid ranges, or string handling; offline target correctness is available but hidden correctness is not.",
+    "Whether dropping source's ValueError validation affects hidden scoring, since target prompt omits it."
+  ],
+  "minimal_intervention": {
+    "change": "Remove or replace only injection/1 (the prior business-days episode) with an unrelated prior task while keeping other injected memory items.",
+    "fixed": "Same target prompt, tool budget, environment, and remaining injected memory items.",
+    "falsifier": "If the target still produces the same 'same approach as the business days task' rationale and the identical bdate_range/holiday aggregation with injection/1 removed, the visible-transfer hypothesis is refuted; if it degrades or changes approach, it is supported."
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,146 @@
+{
+  "case_id": "c-dfa6e760e6f3",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=36:True:6"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df):"
+        }
+      ],
+      "reason": "Source passed its own tests and contains relevant NaN-fill/describe/plot logic, but its interface is a single df and returns description/axes, unlike the target list-of-dfs contract."
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "No memory is injected or retained into the target context, so fidelity of source content relative to target cannot be assessed."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Describe a dataframe and draw a distribution chart for each numeric column after replacing the NaN values with the average of the column."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def process_dataframes(dataframes):"
+        }
+      ],
+      "reason": "Core fillna/mean/describe/plot idea is relevant, but target changes input to a list and changes output packaging."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "No source artifact appears in the target context, so the visible target code cannot be attributed to memory use."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "df.attrs['statistics'] = stats"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "KeyError: 'count'"
+        }
+      ],
+      "reason": "Visible code stores stats in attrs and returns processed dataframes/Figure objects, so the hidden evaluator's first tuple element lacks a 'count' index. This shows execution mismatch, not memory causation."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "return a list of tuples, where each tuple contains a processed dataframe with statistics and a list of distribution plots for each numeric column in the dataframe."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "return description, plots"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "KeyError: 'count'"
+        }
+      ],
+      "reason": "Prompt can be read as returning a processed dataframe with attached stats, while reference/test require the first element to be a describe DataFrame. Candidate contract mismatch only; hidden tests are not definitive prompt truth."
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "A pandas DataFrame with statistics."
+        },
+        {
+          "section": "target_submission",
+          "quote": "df.attrs['statistics'] = stats"
+        }
+      ],
+      "reason": "Source represents statistics as a separate return DataFrame; target uses df.attrs and Figure objects. Since source is not injected, this cannot prove memory-caused representation transfer."
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "No source memory is admitted or injected into the target context, so retrieval/transfer cannot be established. This is not by itself a failure cause."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "TASK_EXECUTION: the agent may have simply misread the return contract and should have returned the describe DataFrame first.",
+    "REPRESENTATION: the output-format shift may reflect generic task adaptation rather than memory influence."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Hidden correctness and full tests are unavailable; only the first KeyError is observed.",
+    "No memory injection metadata; source content may not have been in target context.",
+    "The prompt/test alignment is ambiguous, so whether the intended first tuple element was a stats DataFrame or a df with attrs cannot be fully resolved.",
+    "Unselected complete memory library not included; absence of other memories cannot be inferred."
+  ],
+  "minimal_intervention": {
+    "change": "Return the describe DataFrame as the first tuple element and the plot Axes/list in the expected form, matching reference/test.",
+    "fixed": "Same source experience, same input dataframes, same NaN-mean fill, same plotting library, same hidden tests and budget.",
+    "falsifier": "If returning the describe DataFrame first still fails, or if an updated hidden test accepts df.attrs stats/Figure plots, contract mismatch is not the primary cause."
+  },
+  "causal_claim": false
+}

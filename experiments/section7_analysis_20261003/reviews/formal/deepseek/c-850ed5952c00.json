@@ -1,0 +1,118 @@
+{
+  "case_id": "c-850ed5952c00",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "the safer normalization would extract the scalar: (p[0], p[0])"
+        }
+      ],
+      "reason": "Source run scored correct, but the accepted code normalized 1-tuples to nested ((4,),(4,)) and only worked because scipy coerced it; quality passes with a latent fragility."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "extract the scalar explicitly — (p[0], p[0])"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "use the pairing idiom zip(seq, seq[1:])"
+        }
+      ],
+      "reason": "The source-derived bullets restate the source task's actual lessons (explicit scalar extraction, consecutive-pair idiom) without distortion; fidelity is judged on content, not on whether they were later injected."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "visits each consecutive point, and returns to the starting point"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "use the pairing idiom zip(seq, seq[1:])"
+        }
+      ],
+      "reason": "Point-normalization guidance applies, but source is an open-path/consecutive-distances-list task while the target is a closed-path round trip returning a float 0.0, so pairing and degenerate returns differ."
+    },
+    "visible_use": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "The source-specific bullets (sai-00019/00020) are absent from injected_ids, so the target's scalar/1-tuple handling cannot be tied to memory as a visible use."
+    }
+  },
+  "labels": [
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_block_byte_budget"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "Source-specific strategy bullets were retrieved candidates but removed by the byte-budget packing step before any target injection; this is a visibility/packing outcome, not a retrieval miss and not evidence the source content was unfaithful."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "use the pairing idiom zip(seq, seq[1:])"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "normalization must handle bare scalars AND 1-tuples"
+        }
+      ],
+      "reason": "A faithful, on-topic source experience (scalar/1-tuple normalization, consecutive pairing) existed, creating a genuine transfer opportunity; it only partially matches the target's closed-path contract and was never injected."
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 47"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_text_utf8_bytes\": 43961"
+        }
+      ],
+      "reason": "47 injected memories (~44 KB) are overwhelmingly off-topic err-* bullets for this small geometry task; this describes overhead only and cannot show harm or lack of benefit from a single success."
+    }
+  ],
+  "primary_hypothesis": "PACKING_VISIBILITY",
+  "competing_explanations": [
+    "Target behavior may be derived independently from the target prompt, which already states that single-number tuples must be handled, so no memory use is needed.",
+    "Success may reflect an easy, self-contained task rather than any memory effect; there is no counterfactual.",
+    "Even if injected, the source's open-path experience only partially fits the closed-path target, so transfer might not occur regardless of packing."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether any source-derived content (beyond err-/misc-) reached the target context; injected_ids suggests not.",
+    "Hidden test details and any withheld library entries not shown in this packet.",
+    "Content fidelity of the full unselected library cannot be judged from the presented subset."
+  ],
+  "minimal_intervention": {
+    "change": "Preserve and inject the source-derived strategy bullets (sai-00019/00020) into the target context, e.g. adjust the packing byte budget or recency ordering so applicable strategy bullets survive.",
+    "fixed": "Same source episode, same target prompt, same tools and environment, same general budget rules otherwise.",
+    "falsifier": "If injecting those bullets leaves the target's visible behavior and outcome unchanged, the packing drop was not the limiting factor for the observed behavior."
+  },
+  "causal_claim": false
+}

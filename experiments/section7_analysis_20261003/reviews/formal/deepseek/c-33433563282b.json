@@ -1,0 +1,120 @@
+{
+  "case_id": "c-33433563282b",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=15:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Calculate the frequency of combinations of elements in a DataFrame."
+        }
+      ],
+      "reason": "源任务通过其5项测试，是合法的单DataFrame组合计数经验；但源契约未涉及多DataFrame调用与key类型要求，迁移边界有限。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false,"
+        }
+      ],
+      "reason": "注入内容只涉及matplotlib柱状图与value_counts，未包含与组合计数/键表示有关的任何源内容，源经验未保留，故对目标必要的记忆内容缺失。"
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "注入的两条记忆描述绘图任务，与多DataFrame组合频次计算不共享解法要素，不适用于本目标。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "combinations = df.apply(lambda row: frozenset(row.dropna()), axis=1)"
+        }
+      ],
+      "reason": "可见轨迹只有pandas/frozenset计数代码，没有绘图、value_counts等注入记忆特征的痕迹，无法观察到记忆被使用的行为代理。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "combinations = df.apply(lambda row: frozenset(row.dropna()), axis=1)"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(overall_combination_frequency(df1, df2, df3) == {(1, 4): 1, (2, 5): 2, (3, 6): 3, (4, 7): 2, (5, 8): 1})"
+        }
+      ],
+      "reason": "提交函数以frozenset作字典键，而契约用元组键比较，断言直接失败；这只说明可见执行缺陷，不能证明记忆导致该缺陷。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "df['combination'] = pd.Series(df.apply(lambda row: tuple(sorted(row)), axis=1))"
+        },
+        {
+          "section": "target_submission",
+          "quote": "combinations = df.apply(lambda row: frozenset(row.dropna()), axis=1)"
+        }
+      ],
+      "reason": "契约/参考解把组合表示为有序元组，目标选择了无序集合表示，键类型不等价；这是语义表示候选，仍属本题代码选择而非记忆内容。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        },
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "{\"facts\": []}"
+        }
+      ],
+      "reason": "源题结束时没有任何记忆写入操作，源侧也未产出事实，正确的元组计数经验未被准入；不能据此断言检索失败或记忆必然改变结果。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "失败可由目标自身的键表示选择（frozenset vs 期望元组）完全解释，无需假设记忆作用。",
+    "注入记忆与目标无关，其存在不证明干扰；除非同时被使用的反事实不可得，无法排除注意力被无关内容占用的可能。",
+    "若源经验被忠实保留并复用其tuple计数写法，可能避免该失配，但没有反事实实验，无法确认。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏正确性细节未公开，只能依据离线断言判断键类型不匹配。",
+    "source_provenance_retained为false，无法确认注入的两条记忆是否以及如何由源题派生。",
+    "token_count为null且未呈现完整未选中记忆库，不能判断是否存在其它相关经验未被检索。",
+    "无法知道目标是否曾考虑tuple键表示又主动放弃。"
+  ],
+  "minimal_intervention": {
+    "change": "将返回字典的键改为契约期望的元组（如tuple(row)或tuple(sorted(row))），保留多DataFrame聚合逻辑。",
+    "fixed": "保持相同的源历史、相同的两条注入记忆与相同预算/环境。",
+    "falsifier": "若改用元组键后隐藏测试仍失败，或原frozenset提交在真实契约下被判正确，则本候选被反驳。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,126 @@
+{
+  "case_id": "c-b376bcd01b7f",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": false,\n  \"scorable\": true"
+        }
+      ],
+      "reason": "源题（单词版 bigram 字典）离线评估 5 个用例全部 KeyError 报错、correct=false；它是合法可评分的源，但本身是失败解。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/10",
+          "quote": "Do not build a counting result only from OBSERVED values when the spec references a predefined universe of keys"
+        }
+      ],
+      "reason": "与目标相关的必要内容（按预定义键宇宙建完整骨架、未出现键也要以 0 存在）在注入记忆中表述正确，且与目标 676 键要求一致；未观察到被后续证据推翻。"
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "each key is a two-letter combination of the lowercase English alphabets"
+        },
+        {
+          "section": "injection/10",
+          "quote": "Verify with falsifying assertions, not prints"
+        }
+      ],
+      "reason": "“预定义键宇宙必须建全”这一规则直接适用于目标的 676 键要求；目标新增的条件是值为按输入词序的列表以及空列表/空串退化形状，属规则未覆盖但不冲突的扩展。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Full key universe: all 676 combinations must exist, even if never seen (err-00100)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "return {c: [w.count(c) for w in words] for c in combos}"
+        }
+      ],
+      "reason": "提交用 itertools.product(..., repeat=2) 生成 676 键骨架并逐词给出计数列表，与记忆中的全键骨架读法一致；这是行为代理，不是因果证明。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/10",
+          "quote": "Do not build a counting result only from OBSERVED values when the spec references a predefined universe of keys"
+        },
+        {
+          "section": "target_submission",
+          "quote": "combos = (''.join(p) for p in itertools.product(string.ascii_lowercase, repeat=2))"
+        }
+      ],
+      "reason": "目标把“预定义键宇宙建全”的规则迁移到新的多词列表变体上（676 键、未见键为 0），并有可见引用；无对照条件下不能断言是记忆造成了成功。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"memory_id\": \"err-00100\""
+        }
+      ],
+      "reason": "err-00100 同时出现在可观察候选中并进入注入集合，说明相关规则对目标可见；检索到不等于被采用或起了决定作用。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": false"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "itertools.permutations(seq, 2) vs itertools.product(seq, repeat=2) is a contract-changing distinction"
+        }
+      ],
+      "reason": "存在同族（bigram 计数）合法源经验，且源题失败本身产出了与目标直接相关的教训；源失败不等于其派生陈述全部正确。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"memory_id\": \"sai-00083\",\n      \"reason\": \"oldest_complete_block_byte_budget\""
+        }
+      ],
+      "reason": "源题新增的策略条目 sai-00083/sai-00084 已被选中却在打包阶段按字节预算淘汰，而同一源的 err-00085 被注入；这是打包可见性差异，不能据此推断检索失败或内容不存在。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "目标题面本身写了 “each key is a two-letter combination of the lowercase English alphabets”，agent 可能仅凭题面独立选择 product(repeat=2) 而完全未依赖记忆（无对照条件）。",
+    "err-00100 的原始语境是标量 Counter 的预定义名宇宙，可能只是泛化提醒，具体列表值/退化形状仍由题面推导；成功也可能是题面驱动而非记忆驱动。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "没有反事实运行，无法判断去掉 err-00100 后目标是否仍得到 676 键正确解。",
+    "sai-00083/sai-00084 与其它未注入记忆的实际文本未给出，无法核对源教训的完整保真度。",
+    "offline_target_evaluation 显示 stderr 中 “Ran 0 tests” 而 checks_executed=3，评测契约细节不完整，只能标为候选不一致。",
+    "reference_solution 片段引用 task_func 的另一族实现，与目标单函数签名关系不明，不能当作绝对真值。"
+  ],
+  "minimal_intervention": {
+    "change": "不注入 err-00100（以及任何全键宇宙规则），仅保留其余记忆与同一题面，重跑目标。",
+    "fixed": "相同目标 prompt、相同词表/隐藏测试、相同预算与工具配置。",
+    "falsifier": "若在不注入该规则的条件下 agent 仍用 product(repeat=2) 构建 676 键并离线 correct=true，则 USE_TRANSFER 的可见适配不足以支持记忆对结果的必要性。"
+  },
+  "causal_claim": false
+}

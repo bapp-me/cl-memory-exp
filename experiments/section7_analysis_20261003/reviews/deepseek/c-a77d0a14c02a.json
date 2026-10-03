@@ -1,0 +1,146 @@
+{
+  "case_id": "c-a77d0a14c02a",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Generates a simple scatter plot with 'n' points."
+        },
+        {
+          "section": "source_visible",
+          "quote": "assert pts == expected, \"mismatch\""
+        }
+      ],
+      "reason": "同族源题（带种子的散点图，返回 Figure 与点列表）在离线评测中通过并有自检，但其结构是单图+扁平点列表，未覆盖目标所需的多图/行嵌套输出契约。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Seed the random number generator for reproducibility"
+        },
+        {
+          "section": "injection/1",
+          "quote": "raise ValueError` (or `TypeError` for wrong-type cases) with a descriptive message naming the offending parameter"
+        }
+      ],
+      "reason": "种子化随机数据工作流与源题做法（np.random.seed(seed)、np.random.rand）一致，但注入库是跨 47 个查询的聚合体，验证守卫等条目在所展示源题中未被印证，且没有任何条目描述目标要求的按行嵌套输出结构。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Seed the random number generator for reproducibility"
+        },
+        {
+          "section": "injection/4",
+          "quote": "Create the plotting canvas with `fig, ax = plt.subplots()`"
+        }
+      ],
+      "reason": "种子化生成与散点图绘制条目对目标适用，但聚合库大量条目（Counter、DataFrame、模型拟合等）与目标无关，且目标新增的“rows×cols 图 + 按行嵌套点列表”条件无对应条目。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "raise ValueError(\"rows must be a positive integer\")"
+        },
+        {
+          "section": "injection/1",
+          "quote": "If a check fails, `raise ValueError` (or `TypeError` for wrong-type cases) with a descriptive message naming the offending parameter."
+        },
+        {
+          "section": "injection/7",
+          "quote": "Write a PYTHON tool call that defines the candidate function and executes it on the docstring example inputs"
+        }
+      ],
+      "reason": "提交代码逐字采用了注入的输入校验守卫，并复现“PYTHON 自检→SUBMIT”流程，属可见的行为对应；但它改用 np.random.default_rng(seed)，与记忆建议的 np.random.seed 不同，且无对照证明记忆导致成功。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "all_points.append(points.tolist())"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AssertionError: Each scatter plot should have 5 points"
+        }
+      ],
+      "reason": "提交把结果累积为扁平的每图点列表，而隐藏检查按“行→图→点”嵌套迭代导致 len(points)!=5；可见自检只统计顶层长度，因此该形状错误未被自己发现。只能说明实现与契约不符，不能证明记忆导致失败。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "a list of lists containing the points for each scatter plot"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "for row in points_grid for points in row"
+        }
+      ],
+      "reason": "题面措辞更直接读作“每个散点图一个内层列表”的扁平 list of lists，而隐藏断言要求按行嵌套；此为题意/测试口径是否一致的候选疑点，不改动评分，也不据此断言 agent 判断错误。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "raise ValueError` (or `TypeError` for wrong-type cases) with a descriptive message naming the offending parameter"
+        },
+        {
+          "section": "target_submission",
+          "quote": "raise ValueError(\"rows must be a positive integer\")"
+        }
+      ],
+      "reason": "校验守卫与自检流程可见地对应注入工作流，属行为层面的复用迹象；隐藏测试未检查校验分支，且无对照实验，不能据此断言记忆带来收益或造成失败。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(n, seed=0):"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Seed the random number generator for reproducibility"
+        }
+      ],
+      "reason": "存在同族且通过的源题，并有相关种子化随机数据工作流被检索并注入（dropped 为空），因此“有机会复用”成立；机会存在不等于内容保真或必然被有效使用。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "EVAL_CONTRACT 歧义：题面“a list of lists containing the points for each scatter plot”可读作扁平列表，失败或源于题面与隐藏测试口径不一致，而非实现失误。",
+    "记忆未覆盖必要契约：注入的 8 条工作流均未规定 rows×cols 的按行嵌套输出，失败可能是缺少可迁移契约而非记忆被误用。",
+    "可见的 RNG/点表示偏差（np.random.default_rng 与 points.tolist()）与记忆建议不同，但隐藏测试此处仅校验长度，无法解释本次失败。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试是否还有未展示的数值/类型比较（当前仅见长度断言），无法判断 rng 与点表示是否另会被判错。",
+    "注入条目虽在 retrieval.injected_ids 中，但无法从证据确认其在生成时实际进入上下文并影响决策。",
+    "源题 task_func 与目标 generate_grid_of_plots 的契约映射（嵌套层级）由谁定义、是否在题面中明示，证据不足。"
+  ],
+  "minimal_intervention": {
+    "change": "把结果组装改为按行嵌套：外层对每个 row 收集一个 points_row 再 append 到 points_grid，其余逻辑与 RNG 保持不动。",
+    "fixed": "保持相同源题历史、相同 8 条注入记忆与预算、相同提交协议与隐藏测试。",
+    "falsifier": "若在扁平 list of lists 输出下隐藏检查仍通过（说明以题面措辞为准、嵌套非必需），或嵌套输出仍失败，则 TASK_EXECUTION 作为主因不成立。"
+  },
+  "causal_claim": false
+}

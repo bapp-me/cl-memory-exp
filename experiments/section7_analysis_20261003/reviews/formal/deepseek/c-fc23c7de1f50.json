@@ -1,0 +1,133 @@
+{
+  "case_id": "c-fc23c7de1f50",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(target_words, n_sentences, vocabulary):"
+        }
+      ],
+      "reason": "Source task passed its own tests, but it solves a single-set function, not the target generate_report dict-wrapper contract."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "sentence = ' '.join(random.choices(vocabulary, k=10))"
+        },
+        {
+          "section": "target_submission",
+          "quote": "sentence = ' '.join(random.choices(vocabulary, k=10))"
+        }
+      ],
+      "reason": "The target inner _process reproduces the source per-set sampling/regex/lowercasing logic; fidelity is faithful for the source-covered algorithm."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "def generate_report(data):"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(target_words, n_sentences, vocabulary):"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "for key, value in data.items():"
+        }
+      ],
+      "reason": "The source per-set function is applicable inside the target, but the target also requires dict-keyed multi-set dispatch and identifier-preserving output."
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "for idx, item in enumerate(data, start=1):"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ValueError: too many values to unpack (expected 3)"
+        }
+      ],
+      "reason": "Visible code reuses the per-set algorithm but iterates data as a sequence, causing a dict-key unpack failure; this is a behavior proxy, not causal proof."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ValueError: too many values to unpack (expected 3)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "for idx, item in enumerate(data, start=1):"
+        }
+      ],
+      "reason": "Submitted wrapper enumerates data as a sequence; with dict input item is a key string, so tuple unpack fails in hidden evaluation. This does not prove memory caused the bug."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "return a dictionary where keys are identifiers for each set of target_words, n_sentences, and vocabulary"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "for key, value in data.items():"
+        }
+      ],
+      "reason": "The prompt does not explicitly state that data is a dict; the reference expects dict-keyed identifiers. This is a candidate contract-ambiguity explanation, not proof of prompt/eval inconsistency."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "def _process(target_words, n_sentences, vocabulary):"
+        },
+        {
+          "section": "source_visible",
+          "quote": "def task_func(target_words, n_sentences, vocabulary):"
+        }
+      ],
+      "reason": "Target code visibly mirrors the source per-set function and wraps it; the wrapper is misapplied to dict input. Without retrieval traces or intervention, this cannot prove retrieval or negative transfer."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "The target prompt may not specify dict input; the agent's list-of-sets interpretation could be reasonable, so hidden evaluator contract mismatch is an alternative to a pure implementation bug.",
+    "Visible code similarity to source may come from shared task description or common coding patterns rather than retrieval; no retrieval candidate list or counterfactual is provided.",
+    "The source per-set algorithm itself passed its tests; the failure arises from target wrapper/input-container adaptation, not necessarily from corrupted or negatively transferred memory."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "Whether source memory was actually retrieved and injected as the causal input to the target's visible code; no retrieval trace or controlled intervention.",
+    "Whether the hidden evaluator's data is always a dict keyed by identifiers; reference_solution implies it, but the target prompt does not state it explicitly.",
+    "Whether any unselected memory contained a correct generate_report dict wrapper; the unselected complete memory library is not included.",
+    "Whether the unrelated injected tasks affected context or token budget; no visible reference to them appears, so interference cannot be assessed.",
+    "Post-task target updates cannot explain this prior behavior; update/retention labels cannot be evaluated from this packet."
+  ],
+  "minimal_intervention": {
+    "change": "Change the report loop to consume the expected dict, e.g. iterate data.items() or otherwise unpack values from identifiers, while keeping the source-derived per-set _process logic.",
+    "fixed": "Keep the same source-derived _process body, random.seed behavior, tool/environment, and token/tool budget.",
+    "falsifier": "If the same hidden evaluation passes when data is a list of tuples, or if dict-based iteration still fails the hidden tests, the dict-container diagnosis is wrong."
+  },
+  "causal_claim": false
+}

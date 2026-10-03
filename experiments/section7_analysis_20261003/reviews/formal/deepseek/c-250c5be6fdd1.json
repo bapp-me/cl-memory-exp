@@ -1,0 +1,142 @@
+{
+  "case_id": "c-250c5be6fdd1",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Removes all special characters, punctuation marks, and spaces from the input string using a regular expression"
+        }
+      ],
+      "reason": "Source task passes and is scorable, but it only covers single-string cleaning/hashing, not target list/most-common aggregation."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "cleaned_str = re.sub(r'[^a-zA-Z0-9]', '', input_str)"
+        },
+        {
+          "section": "source_visible",
+          "quote": "return hashlib.sha256(cleaned_str.encode()).hexdigest()"
+        }
+      ],
+      "reason": "For the target-relevant clean-and-hash core, the source record is correct and not contradicted; target additions are outside source scope."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "find the most common hash among them and return it along with the list of hashes"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(input_str):"
+        }
+      ],
+      "reason": "Source cleaning and SHA256 steps fit the target, but source lacks list input, per-item hashing, and most-common hash."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "All tests pass: cleaning keeps only alphanumeric characters"
+        },
+        {
+          "section": "injection/0",
+          "quote": "create a combined document-term matrix for all documents"
+        }
+      ],
+      "reason": "Target implementation is developed from the prompt, while injected candidate content is from unrelated tasks; no visible adoption of memory."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "target_visible",
+          "quote": "All tests pass: cleaning keeps only alphanumeric characters"
+        }
+      ],
+      "reason": "Visible target run and offline checker report success; this supports execution correctness, not memory causation."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(input_str):"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "A passing, textually similar source exists in the record but was not injected; it is an available source opportunity only, not proof of use."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_episode_byte_budget\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 6"
+        }
+      ],
+      "reason": "Budget packing dropped older complete episodes and injected six candidates; this concerns visibility, not retrieval scoring or causal effect."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"tests_run\": 0"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"checks_executed\": 2"
+        }
+      ],
+      "reason": "Offline target evaluation reports zero unittest tests but two executed checks; success is still scorable, so tests-run count alone is not failure."
+    }
+  ],
+  "primary_hypothesis": "PACKING_VISIBILITY",
+  "competing_explanations": [
+    "Target may have been solved independently from the prompt, with memory irrelevant to success.",
+    "The relevant source may have been present in some non-injected state channel not visible in the provided evidence.",
+    "Unrelated injected episodes may have had no behavioral effect or only unobserved priming effects."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the target agent actually saw or used any memory item cannot be determined from visible trace.",
+    "Why source provenance was not injected cannot be fully established; retrieval scores are null and full memory library is missing.",
+    "Hidden correctness may use checks not identical to the reference assertions."
+  ],
+  "minimal_intervention": {
+    "change": "Ensure the matching source experience is included in the target injected pack, or run an explicit no-memory control under the same prompt.",
+    "fixed": "Same target prompt, same source record, same packing budget and tools.",
+    "falsifier": "If target behavior and success are unchanged whether the matching source is injected or not, the packing-visibility candidate does not explain use."
+  },
+  "causal_claim": false
+}

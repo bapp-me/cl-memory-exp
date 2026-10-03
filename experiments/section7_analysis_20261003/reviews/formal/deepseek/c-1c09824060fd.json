@@ -1,0 +1,139 @@
+{
+  "case_id": "c-1c09824060fd",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=35:True:5"
+        },
+        {
+          "section": "source_visible",
+          "quote": "Count occurrences of each predefined animal name with a random count"
+        }
+      ],
+      "reason": "源题通过全部 5 项测试且可评分，但契约是随机计数、单字典输入，与目标“跨组实际计数”不同，且源结束时没有产出任何经验条目。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": []"
+        }
+      ],
+      "reason": "源结束时更新操作为空，目标处也无源 provenance id，说明没有与目标相关的源内容被保留/注入。"
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "注入的两条记忆都是 pandas/条形图语境，与目标“反转字典并统计动物出现次数”无关。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "reversed_dicts.append({v: k for k, v in d.items()})"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "目标提交代码中不含任何 pandas/绘图痕迹，也未出现注入记忆或源题的 groupby 写法；这只是可见代理，不能证明无因果影响。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=35:True:5"
+        }
+      ],
+      "reason": "源题是一条合法成功的直接记录，但结束时零更新操作，未蒸馏出面向此类反转/计数任务的经验；这不等于库中原本没有其他条目。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "\n{\"facts\": []}\n"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        }
+      ],
+      "reason": "写入侧的辅助产出为空 facts，源经验未被准入；只能说明本题范围内没有写入，不能推断写入策略在其他题也失败。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"score\": 0.27206411957356413"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        }
+      ],
+      "reason": "检索只回传两条低分、主题为 pandas/matplotlib 的语义候选并全部注入；这属于可见候选与预算可见性，不证明候选被使用或造成干扰。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "target_submission",
+          "quote": "reversed_dicts.append({v: k for k, v in d.items()})"
+        }
+      ],
+      "reason": "注入内容在目标可见执行中没有任何对应痕迹，无法观察到复用或迁移；缺乏反事实，不能断言记忆无用或有害。"
+    }
+  ],
+  "primary_hypothesis": "WRITE_ADMISSION",
+  "competing_explanations": [
+    "目标正确可能完全来自题面自带 docstring/输入输出结构，与记忆无关。",
+    "检索到的两条候选主题不相关，但缺少反事实，无法判断若注入相关经验行为是否改变。",
+    "离线评估 tests_run=0 而 checks_executed=6，隐藏正确性不可见，成功判定可能只覆盖可见代理。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试内容与目标函数的真实边界（如重复动物名、非 ANIMALS 值）不可见。",
+    "未展示完整未选记忆库，无法判断库中是否存在与本题相关的条目。",
+    "无写入/无注入专门经验与“已存但未检索到”无法区分。",
+    "token_count 为 null，只能获得注入字节数，无法评估检索/打包开销。"
+  ],
+  "minimal_intervention": {
+    "change": "用一条与“反转字典并跨组实际计数”同契约的源经验替换两条无关注入，再比较目标行为与正确性。",
+    "fixed": "相同目标题面、相同 seed/预算、相同提交与评分 mask。",
+    "falsifier": "若替换后目标提交与结果完全不变，则“相关性检索/写入会改变本题行为”的候选被反驳。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,124 @@
+{
+  "case_id": "c-275146d11aa2",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Standardize numeric columns in a DataFrame and return the heatmap of the correlation matrix."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "Ran 5 tests in 0.278s"
+        }
+      ],
+      "reason": "源 episode 自身用例全通过，是合法源经验；但它只覆盖单个 DataFrame 的缺失值填充/标准化/单图，不覆盖目标新增的列表输入、合并规则与返回契约，故仅是有保留的合格源。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": true"
+        }
+      ],
+      "reason": "机械状态显示源原始 episode 被保留，但证据包未给出记忆条目的实际文本，也未注入源 provenance，无法核对记忆版本是否与源一致。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of DataFrames"
+        }
+      ],
+      "reason": "填充均值/StandardScaler/相关系数热力图这段逻辑可直接迁移；但目标是列表输入、多矩阵合并以及（据隐藏测试）返回 DataFrame，源没有任何合并或返回类型约定，属部分适用。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Create a function that generates a color pattern for a given number of rows and columns"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "实际注入的 5 条记忆都是与热力图无关的其他任务，合法源 episode 未被注入，目标代码可由题面自带的 import 提示解释，没有可归因于合法记忆的可见复用痕迹。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "return a combined heatmap of the correlation matrices for all DataFrames"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(combined_corr.shape == (2, 4))"
+        }
+      ],
+      "reason": "题面只说“输出合并热力图”，隐藏检查却要求返回可按列拼出 (2,4) 形状的 DataFrame，写法为均值合并+返回 Figure 时直接 AttributeError。该标签只说明题面/测试契约存在欠定义候选，不证明记忆导致失败。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_episode_byte_budget\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "合法源 episode 在 selected_before_packing 中位于被丢弃区间（history_index 0–53），实际注入的只有 5 条无关 episode，源内容未进入目标上下文。这只说明可见性/打包淘汰，不能证明源若可见就一定能修正目标。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Standardize numeric columns in a DataFrame and return the heatmap of the correlation matrix."
+        },
+        {
+          "section": "source_visible",
+          "quote": "return df, heatmap"
+        }
+      ],
+      "reason": "内存中确实存在一个同族、已通过的合法源经验（单 DataFrame 标准化+相关热力图），因此存在来源机会。但源返回 (DataFrame, Axes) 且无合并步骤，无法覆盖目标新增的列表合并与返回契约，机会价值有限。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "TASK_EXECUTION：失败可完全由提交自身的实现选择（返回 Figure、按均值而非按列拼接）解释，与任何记忆无关。",
+    "即使源 episode 未被字节预算淘汰并注入，源也只覆盖单 DataFrame 标准化，无法提供合并规则/返回类型，故 PACKING_VISIBILITY 未必是本题失败原因。",
+    "5 条无关注入是否对空列表/非数值列等边界处理风格产生了弱影响，现有证据无法区分。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "记忆条目的实际文本与源 episode 的保真度不可见，无法核对记忆是否完整保留源的填充/标准化细节。",
+    "隐藏测试期望的“合并”语义（按列 concat 得 (2,4)）是否唯一正确、题面是否本应明说，无法从离线证据裁定。",
+    "没有反事实运行，无法判断源 episode 若可见是否会改变目标的返回类型或合并方式。",
+    "history_index 与记忆 id 的对应关系只能从 retrieval 列表推断，源片段是否被其它未列出的条目覆盖不可知。"
+  ],
+  "minimal_intervention": {
+    "change": "在目标契约中明确返回值必须是合并后的相关系数 DataFrame（并给出合并规则/形状），而不是“输出热力图”这一含糊表述。",
+    "fixed": "保持相同的历史记忆、相同注入预算与运行环境，只改契约措辞。",
+    "falsifier": "若在返回契约明确后目标仍返回 Figure 或仍用均值合并，则契约歧义假设被反驳，失败应归因于任务执行本身。"
+  },
+  "causal_claim": false
+}

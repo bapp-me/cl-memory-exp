@@ -1,0 +1,123 @@
+{
+  "case_id": "c-f4e2fc5eb4ac",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "No paired source experience is provided; this BabyAI packet has no gold source to evaluate."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "No memory content is present or injected, so target-relevant memory fidelity is absent rather than partial or contradicted."
+    },
+    "target_applicability": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Goal: open a door behind you"
+        }
+      ],
+      "reason": "No memory candidate was injected to compare against the target goal or room conditions."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "The transcript contains ordinary ACTION calls only, with no memory text or injected memory visible."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The action is not recognized. Please check valid actions."
+        },
+        {
+          "section": "target_submission",
+          "quote": "\"submitted\": false"
+        }
+      ],
+      "reason": "The agent issued invalid bare action strings such as toggle and done, never submitted, and did not visibly achieve the behind-door goal. This shows visible execution failure, not memory effectiveness or harm."
+    },
+    {
+      "tag": "INFRA_PROTOCOL",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"response_timed_out\": true"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"solver_error\": \"Request was aborted\""
+        }
+      ],
+      "reason": "The run timed out or was aborted with zero submit calls, so incomplete terminal status is a plausible protocol/infrastructure contributor. It does not establish memory causation."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"done\""
+        },
+        {
+          "section": "target_visible",
+          "quote": "You can take the following actions: turn left, turn right, move forward, check available actions"
+        },
+        {
+          "section": "target_submission",
+          "quote": "\"submitted\": false"
+        }
+      ],
+      "reason": "The exposed valid-action list near the end lacks an explicit done/submit action while the agent attempted done and final submission remained false. This is a candidate contract/protocol gap, not proof of task failure due to memory."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "INFRA_PROTOCOL: timeout/abort may have truncated the run before a valid submission could occur.",
+    "EVAL_CONTRACT: the environment exposed no explicit submit/done action, so submitted=false may partly reflect protocol design.",
+    "No memory mechanism was active or injected, so D1 memory cannot explain the observed outcome."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the failure would still occur without the timeout/abort is unknown.",
+    "Whether done should be accepted or completion should be automatic in this harness is unresolved.",
+    "No source experience or injected memory exists in the packet, so memory fidelity/applicability/use effects cannot be assessed beyond absence.",
+    "The packet does not show whether opening blue door 1 was goal-compatible before the timeout."
+  ],
+  "minimal_intervention": {
+    "change": "Use only exact valid ACTION strings from the environment, especially toggle and go through ... instead of bare toggle, and ensure a valid terminal/submit path.",
+    "fixed": "Keep the same BabyAI room, same disabled memory policy, same injected_count=0, and same budget/history.",
+    "falsifier": "A rerun with exact valid actions and no timeout that still fails to open the behind door would weaken TASK_EXECUTION as the sole explanation and point more to EVAL_CONTRACT or INFRA_PROTOCOL."
+  },
+  "causal_claim": false
+}

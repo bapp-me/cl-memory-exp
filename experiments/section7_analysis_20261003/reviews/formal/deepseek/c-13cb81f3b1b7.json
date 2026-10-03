@@ -1,0 +1,144 @@
+{
+  "case_id": "c-13cb81f3b1b7",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=20:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(list_of_lists, size=5, seed=0):"
+        }
+      ],
+      "reason": "Source episode passed its scorable tests, but its input is list_of_lists and its output/aggregation scope differs from target."
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/3",
+          "quote": "handling empties by filling them (e.g., with random integers) or returning a default empty result."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "The function should output a dictionary with the overall statistics."
+        }
+      ],
+      "reason": "Injected workflow preserves source statistical/empty-fill and mode-wrapping patterns, but does not encode target dict output contract or whether filled values belong in overall stats."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(list_of_lists, size=5, seed=0):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def new_task_func(dict_of_lists, size=5, seed=0):"
+        }
+      ],
+      "reason": "Seeding, statistics, validation, and example-check workflows apply, but the container changed from list-of-lists to dict-of-lists and hidden expected output is overall-only."
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "overall['per_list'] = per_list_stats"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(new_task_func({'a': [1, 2, 3], 'b': [], 'c': [4, 5, 6]}, size=5, seed=0) == {'mean': 3.5, 'median': 3.5, 'mode': 1})"
+        }
+      ],
+      "reason": "Final artifact visibly adds per_list and aggregates filled empty-list values, differing from the hidden exact dict; this is a behavior proxy, not causal proof."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Finally, calculate the overall mean, median, and mode of all the values across all lists. The function should output a dictionary with the overall statistics."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(new_task_func({'a': [1, 2, 3], 'b': [], 'c': [4, 5, 6]}, size=5, seed=0) == {'mean': 3.5, 'median': 3.5, 'mode': 1})"
+        }
+      ],
+      "reason": "The written prompt says to fill empty lists and report overall statistics, while the hidden assertion expects mean 3.5 and no extra keys, apparently ignoring filled empty-list values; this is a contract/test mismatch candidate, not a rescore."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "all_values.extend(values)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "overall['per_list'] = per_list_stats"
+        }
+      ],
+      "reason": "Visible execution flattened filled empty lists into overall values and returned an extra per_list key, so the final artifact differs from the hidden expected shape and values; this does not prove memory caused the failure."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/3",
+          "quote": "handling empties by filling them (e.g., with random integers) or returning a default empty result."
+        },
+        {
+          "section": "target_submission",
+          "quote": "values = [random.randint(0, 100) for _ in range(size)]"
+        }
+      ],
+      "reason": "Target's empty-fill and mode/stat workflow aligns with injected statistical-summary memory, suggesting possible reuse; alignment alone cannot prove causal transfer or net benefit."
+    },
+    {
+      "tag": "SCOPE_INTERFERENCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(list_of_lists, size=5, seed=0):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def new_task_func(dict_of_lists, size=5, seed=0):"
+        }
+      ],
+      "reason": "Source memory was derived for list-of-lists while target requires dict-of-lists aggregation and a possibly different output contract; scope change is candidate interference, not established interference."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "The failure may be ordinary task execution: even without memory, the agent might have added per_list and included filled empty-list values.",
+    "The source workflows are generic Python practices, so visible similarity to memory may reflect prior competence rather than retrieval/injection use.",
+    "If the hidden test is treated as authoritative, the agent's main error is misreading the output/aggregation contract, not memory transfer.",
+    "No counterfactual is available, so memory cannot be shown to cause failure or success."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether hidden expected excludes filled empty-list values by design or contains a test/reference inconsistency.",
+    "Whether the intended output should include per-list statistics in addition to overall statistics.",
+    "Whether the agent actually read or used the injected memories rather than relying on general knowledge.",
+    "Token/cost impact of the 8 injected memories is not measurable from this packet."
+  ],
+  "minimal_intervention": {
+    "change": "Return only the overall statistics dict and compute overall over original non-empty values without adding random fills or per_list.",
+    "fixed": "Same source memory, same seed handling, same hidden tests, and same target prompt.",
+    "falsifier": "A corrected hidden test that expects filled empty-list values or a per_list key would reject this intervention."
+  },
+  "causal_claim": false
+}

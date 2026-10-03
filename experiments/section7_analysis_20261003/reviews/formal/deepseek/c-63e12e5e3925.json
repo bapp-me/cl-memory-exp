@@ -1,0 +1,131 @@
+{
+  "case_id": "c-63e12e5e3925",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=22:True:10"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Create a list of business days between two dates, excluding weekends and specified country's public holidays."
+        }
+      ],
+      "reason": "Source solved correctly (10 tests) in the same business-day/country-holiday domain, so it is legitimate. Its interface (one range, list[datetime]) differs from the target (many ranges, integer count), so it transfers only in part."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "it excludes weekends and is inclusive of BOTH endpoints, so no manual trimming is needed"
+        }
+      ],
+      "reason": "The source-derived bullet restates the source's verified bdate_range/CountryHoliday behaviour, so its content is faithful to the source. It was not injected into this target, so this does not show it was seen or applied."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "when the spec requires list[datetime], convert each with ts.to_pydatetime()"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "It should return the total count of business days across all provided date ranges."
+        }
+      ],
+      "reason": "The weekend/holiday domain carries over, but the source's return-type advice (to_pydatetime) and single-range framing are irrelevant to counting across multiple ranges. Applicability is partial."
+    },
+    "visible_use": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Both probes confirm the needed conventions: lazy `holidays` iteration yields nothing (years must be requested explicitly), and `bdate_range` needs `freq='C'` when holidays are passed."
+        }
+      ],
+      "reason": "The target's decisive facts (freq='C', lazy per-year population) appear in none of the 52 injected texts, so no memory adaptation is visible; generic sandbox probing cannot be attributed to memory. Absence of a match cannot prove the memory was unused or harmful."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "For business-day/date-range tasks: generate the range with pd.bdate_range(start_date, end_date)"
+        },
+        {
+          "section": "target_update_operations",
+          "quote": "This complements sai-00021's alternative pattern (default 'B' range + membership filter)"
+        }
+      ],
+      "reason": "A correctly-solved same-domain source produced a directly relevant strategy bullet, and that bullet's approach is referenced as existing in the target's library. This shows a real opportunity existed; it does not show the memory was reused or caused the result."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_block_byte_budget\""
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "source ID coverage is not content fidelity"
+        }
+      ],
+      "reason": "The source-derived ids (sai-00021/sai-00022) sit in retrieval's dropped list with the byte-budget reason and are absent from injected_ids, i.e. selected-then-evicted. That is a delivery/packing effect, not a retrieval miss, and it does not explain the target's success."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Both probes confirm the needed conventions: lazy `holidays` iteration yields nothing (years must be requested explicitly), and `bdate_range` needs `freq='C'` when holidays are passed."
+        }
+      ],
+      "reason": "The injected set is regex/RNG/ddof/Counter/PCA oriented and contains nothing about bdate_range, freq='C' or holidays laziness, so no injected memory is visibly transferred. This cannot rule out indirect use of generic verification tips nor prove harm."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "manual expectation: Jan 2023 US: Jan 2 (New Year observed) is holiday."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "It should return the total count of business days across all provided date ranges."
+        }
+      ],
+      "reason": "Visible execution is self-driven: probe library behaviour, hand-derive expected counts, then verify against the prompt's contract before submitting. Success is consistent with the direct task record plus sandbox probing, independent of the injected candidates."
+    }
+  ],
+  "primary_hypothesis": "unknown",
+  "competing_explanations": [
+    "Domain-general verification memories (e.g. err-00058 'A verification run that exits non-zero is not a passing run', err-00092 print-without-compare) could have reinforced the probing pattern without any date-specific memory being involved.",
+    "The mapping of the source's two ADD bullets to sai-00021/sai-00022 is inferred from source_provenance_at_target rather than shown in the ADD operations, so the packing story could rest on a wrong id attribution.",
+    "Whether the dropped business-day bullet would have changed anything is untested; the target discovered freq='C' on its own, so its absence may be irrelevant."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether any of the 52 injected memories influenced the agent's verification behaviour.",
+    "Exact id correspondence between the source's ADD operations and sai-00021/sai-00022.",
+    "Hidden correctness beyond the 4 reported checks.",
+    "Whether the source's default-'B'+membership approach would have sufficed here, since the source bullet omits the freq='C' constraint the target hit."
+  ],
+  "minimal_intervention": {
+    "change": "Include the source-derived business-day bullet (sai-00021) in the injected set by raising the packing byte budget or ranking it above the cutoff.",
+    "fixed": "Same target prompt, same dependency versions and sandbox, same overall memory budget/cutoff rule.",
+    "falsifier": "If behaviour and outcome are byte-identical with and without that bullet included, the packing drop had no effect and D1 did not drive the result."
+  },
+  "causal_claim": false
+}

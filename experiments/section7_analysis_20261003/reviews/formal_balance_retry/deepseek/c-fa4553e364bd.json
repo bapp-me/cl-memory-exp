@@ -1,0 +1,142 @@
+{
+  "case_id": "c-fa4553e364bd",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Create a list of business days between two dates, excluding weekends and specified country's public holidays."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=22:True:10"
+        }
+      ],
+      "reason": "源题正是同一领域的节假日工作日计算且离线通过10项测试，可用；但其契约是单区间返回datetime列表并在区间倒置时抛ValueError，与目标聚合契约不同。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/7",
+          "quote": "Write a PYTHON tool call that defines the candidate function and executes it on the docstring example inputs"
+        },
+        {
+          "section": "source_visible",
+          "quote": "business_days = pd.bdate_range(start=start_date, end=end_date, freq='C', holidays=list(country_holidays))"
+        }
+      ],
+      "reason": "注入内容保留了“先验证示例再提交”这类工作流，但看不到源题具体的holidays/freq='C'修复；保真度只能算部分，且注入文本本身是抽象步骤。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "calculating the total number of business days across multiple date ranges for a given country"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Create a list of business days between two dates, excluding weekends and specified country's public holidays."
+        }
+      ],
+      "reason": "共享周末/节假日排除的核心语义，但目标改为多区间求和返回int、参数结构变为(date_ranges, country)且允许倒置区间，属于部分适用。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "bdays = pd.bdate_range(start, end, freq='C', holidays=holiday_list)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "All checks pass, including holiday exclusion (Jan 1 → 7 instead of 8)"
+        }
+      ],
+      "reason": "可见行为与源题/工作流摘要一致：工作日+节假日排除、先小步验证示例再提交，并针对多区间聚合做了适配；这只是行为代理，不能证明记忆导致成功。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "excluding weekends and specified country's public holidays"
+        },
+        {
+          "section": "source_visible",
+          "quote": "business_days = pd.bdate_range(start=start_date, end=end_date, freq='C', holidays=list(country_holidays))"
+        }
+      ],
+      "reason": "存在合法且通过的源配对（工作日-节假日领域），可支撑把源经验迁到聚合任务；只说明来源存在，不说明内容被完整保留或已被使用。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "r = pd.bdate_range('2024-01-01','2024-01-10', freq='C', holidays=[pd.Timestamp(k) for k in holidays.US(years=[2024])])"
+        },
+        {
+          "section": "injection/7",
+          "quote": "Write a PYTHON tool call that defines the candidate function and executes it on the docstring example inputs"
+        }
+      ],
+      "reason": "目标可见地复现了“holidays + bdate_range + freq='C'”与示例验证后再SUBMIT的模式，与注入工作流摘要一致；无对照运行，不能据此断言记忆造成成功。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Reject invalid inputs with explicit errors before performing the main computation."
+        },
+        {
+          "section": "target_visible",
+          "quote": "a custom frequency string is required when holidays or weekmask are passed, got frequency B"
+        }
+      ],
+      "reason": "注入条目是泛化编号工作流（验证、示例循环等），不含源题的具体API修复；目标重现了与源题相同的那条pandas报错，提示具体修复未随表示携带，但无证据说明这是否有代价。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "total += len(task_func(start_date, end_date, country))"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "EVALUATOR_RESULT=4:True:0"
+        }
+      ],
+      "reason": "目标契约是源任务的聚合包装（多区间求和），而参考实现复用源函数；评分侧显示4项检查执行但0项pytest测试，属契约/评分实现候选点，不构成失败或记忆缺陷证据。"
+    }
+  ],
+  "primary_hypothesis": "OPPORTUNITY_SOURCE",
+  "competing_explanations": [
+    "目标可能完全靠自身探索（先触发同一ValueError再改用freq='C'）解决，无需任何注入记忆。",
+    "注入的是跨查询累计的通用工作流摘要，可能被忽略或仅作为泛化提示；检索候选全量入选且dropped为空，所以“未用”也不能归因于预算淘汰。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法确认目标是否读取或使用了任何一条注入记忆（仅有行为代理）。",
+    "源配对的具体内容在目标时刻的工作流库中是否仍保留，无法从现有证据判断。",
+    "离线评测报告tests_run=0而checks_executed=4，隐藏判定口径不明。",
+    "目标实现是否与隐藏测试的边界契约（倒置区间、空列表、字符串日期）完全一致，不可知。"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "相同目标提示、相同8条注入与同一工具/评测预算",
+    "falsifier": "若无注入的对照运行产生同样的探索路径、同样的最终代码并通过相同检查，则可见复用/迁移候选被反驳。"
+  },
+  "causal_claim": false
+}

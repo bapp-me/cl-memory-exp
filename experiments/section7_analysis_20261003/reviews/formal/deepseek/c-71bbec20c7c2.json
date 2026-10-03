@@ -1,0 +1,130 @@
+{
+  "case_id": "c-71bbec20c7c2",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "No red door is visible, so I'll explore through the green door."
+        },
+        {
+          "section": "injection/0",
+          "quote": "Goal: go to the yellow door"
+        }
+      ],
+      "reason": "三个注入源都是带完整轨迹并标记 completed 的 BabyAI 门导航任务，属合法源经验；但目标是 open a door behind you，源任务类型只是 go to <color> door，适用面有限。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "No red door is visible, so I'll explore through the green door."
+        }
+      ],
+      "reason": "唯一与目标相关的可迁移启发式（目标不可见时先探索）在记录中保留，但三条记录都没有“转身打开身后门”的示范；且无源题原始记录可比对，保真度只能算部分。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Goal: open a door behind you"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Goal: go to the yellow door"
+        }
+      ],
+      "reason": "源任务是“走到某色门”，目标要求转到身后并 toggle 门，导航/探索骨架可迁移，动作语义（open vs go to）与朝向条件并不相同。"
+    },
+    "visible_use": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"check available actions\""
+        }
+      ],
+      "reason": "目标 prompt 只含 goal 与 observation，未见记忆文本；可见动作（check available actions、turn right）是通用导航动作且同样出现在源轨迹中，只是代理，无法判定复用或误用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "No red door is visible, so I'll explore through the green door."
+        }
+      ],
+      "reason": "源包提供了“目标不可见则探索”的可迁移策略与成功的开门/走门轨迹，构成转移机会；但不能证明目标端已检索或采用了该内容。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "check available actions"
+        },
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"check available actions\""
+        }
+      ],
+      "reason": "源与目标存在动作字符串重合，但记忆文本未出现在 target_prompt，且无任何显式引用，无法区分复用、独立复现或误用。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The task is completed."
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "可见动作序列（反复 check/turn/go to/toggle）自身足以完成探索并触达完成状态；这支持“独立执行可解”，但不证明记忆未被使用。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"submitted\": true"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"scorable\": true"
+        }
+      ],
+      "reason": "任务已提交且被判为可评分成功，契约层面无异常；评分结果不含任何记忆机制信息。"
+    }
+  ],
+  "primary_hypothesis": "unknown",
+  "competing_explanations": [
+    "记忆辅助探索：agent 可能采用了 injection/1 的“目标不可见则先探索”经验。",
+    "纯任务执行：通用 check-actions/turn/search 循环已足以通关，记忆可能完全未被检索或使用；无对照无法区分。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "target_prompt 未显示被注入的记忆文本，无法确认三条注入项是否真的进入了本题上下文。",
+    "无源题原始记录，无法核对记忆是否被截断或改写。",
+    "无 no-memory 反事实或步数对照，不能判断记忆的必要性/收益。",
+    "完成触发的具体环境判定条件（何时算打开身前的门）无法从证据确定。"
+  ],
+  "minimal_intervention": {
+    "change": "在相同任务与随机种子下禁用（或清空）该三条注入记忆再运行一次，比较成功与步数。",
+    "fixed": "保持相同 BabyAI 任务、初始观察、动作空间、模型与预算。",
+    "falsifier": "若禁用记忆后仍以相近步数成功，则“记忆被有效复用”不成立；若禁用后失败或步数显著增加，则支持记忆被使用。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,142 @@
+{
+  "case_id": "c-645ea8ec980a",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=27:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "with indices 'A' and 'B', and then draw the values with a line displaying the Euclidean distance."
+        }
+      ],
+      "reason": "源题在离线评测中 5 项测试通过、correct=true，因此可判 pass；但其题面说 DataFrame 的索引是 'A'/'B'，与其通过实现（列 'A'/'B'）方向相反，属于措辞与受评行为不一致的局限。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "df = pd.DataFrame({'A': a, 'B': b})"
+        },
+        {
+          "section": "injection/1",
+          "quote": "ax.axhline(y=euclidean_distance, color='r', linestyle='--',"
+        }
+      ],
+      "reason": "注入项与该源会话的可通过实现（列构造 'A'/'B'、同一绘图写法）逐字一致，未见对源内容的删改或失真；源题面自身的措辞歧义也被原样保留，而非记忆引入的篡改。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(a, b):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def new_task_func(list_of_pairs):"
+        }
+      ],
+      "reason": "源是单对 (a,b) 的内部函数，目标是 list_of_pairs 外层包装并返回三个列表，需要新增循环/聚合契约；只有单对的构造与绘图层面的经验可直接沿用，外层结构需重写。"
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "df = pd.DataFrame([a, b], index=['A', 'B'])"
+        },
+        {
+          "section": "source_visible",
+          "quote": "df = pd.DataFrame({'A': a, 'B': b})"
+        }
+      ],
+      "reason": "目标可见产物沿用了源/注入项的画法与 axhline、legend 等写法，但把 DataFrame 写成行索引 'A'/'B'（形状 2×3），与源演示的列构造相反——行为代理层面更接近“取自记忆但取错方向”，不能据此断言记忆导致失败。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "df = pd.DataFrame([a, b], index=['A', 'B'])"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AssertionError: DataFrame are different"
+        }
+      ],
+      "reason": "失败的直接可见原因：提交物构造 2×3 行索引 DataFrame，与受评期望形状不符。这是产物层面事实，不能证明记忆是否被检索或是否造成该选择。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "create a Pandas DataFrame for each pair with indices 'A' and 'B'"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})"
+        }
+      ],
+      "reason": "可见契约字面说“indices 'A' and 'B'”（行索引读法），而离线测试断言形状 (3,2) 的列名 'A'/'B' DataFrame，措辞与受评行为存在可标候选的不一致；这只标候选，不等于测试有误。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "ax.axhline(y=euclidean_distance, color='r', linestyle='--',"
+        },
+        {
+          "section": "target_visible",
+          "quote": "ax.axhline(y=euclidean_distance, color='r', linestyle='--',"
+        }
+      ],
+      "reason": "注入源项与目标提交物共享同一绘图惯用写法，提示源内容在可见产物中留有痕迹；但受评关键的 DataFrame 取向恰恰未被沿用，故仅是行为代理，不能证明复用有效或失败由此产生。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "with indices 'A' and 'B', and then draw the values with a line displaying the Euclidean distance."
+        },
+        {
+          "section": "source_visible",
+          "quote": "df = pd.DataFrame({'A': a, 'B': b})"
+        }
+      ],
+      "reason": "被保留的源条目内部，规范性文字（'indices'）与通过实现的列构造互相矛盾，目标若照字面读该措辞即得到行索引；这是表示层面的候选混淆点，不构成已证因果。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "目标契约 'indices' 的歧义（而非记忆）单独就足以诱导行索引构造；无对照条件下无法把选择归因于源经验",
+    "axhline/画法重合可能只是同一句 'draw the values with a line displaying the Euclidean distance' 的独立收敛解释，并非记忆复用",
+    "隐藏断言集不可见（checks_executed=0），除首个形状断言外可能还有其它未暴露的契约差异"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "目标题面 'indices' 措辞是基准作者自撰还是沿用源记忆，无法从本包判定",
+    "三条注入如何被选中（检索还是打包）、是否存在未入选的更好经验，均无候选列表证据",
+    "无法判断模型是否真的读入并依赖了注入的源条目（无反事实、无注意力/检索日志）"
+  ],
+  "minimal_intervention": {
+    "change": "在目标契约中把 DataFrame 形状/列名写明为列 'A'、'B'（n×2），或要求沿用源实现的列构造",
+    "fixed": "相同的注入历史与预算、相同的隐藏测试与离线评测脚本",
+    "falsifier": "若在明确列语义的契约下目标仍返回 (2,3) 行索引 DataFrame，则措辞歧义不是关键因素；若改为列构造后仍判失败，则说明还有其它未暴露的契约差异"
+  },
+  "causal_claim": false
+}

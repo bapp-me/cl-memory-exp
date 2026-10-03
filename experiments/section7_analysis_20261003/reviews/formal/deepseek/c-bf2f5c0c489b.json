@@ -1,0 +1,144 @@
+{
+  "case_id": "c-bf2f5c0c489b",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=20:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Calculate the mean, median, and mode of values in a list of lists."
+        }
+      ],
+      "reason": "源题自身 5 tests / 20 checks 通过，是合法经验；但其可迁移的配方（填满空列表并把随机值并入总体统计）正是目标隐藏检查拒绝的语义，作为指导源有局限。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "def task_func(list_of_lists, size=5, seed=0):"
+        },
+        {
+          "section": "injection/1",
+          "quote": "def task_func(list_of_lists, size=5, seed=0):"
+        }
+      ],
+      "reason": "注入记录中的源任务与源轨迹和源码一致，种子、填空、聚合写法未见失真；这只说明内容保留，不说明该语义适用于目标。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "calculate the overall mean, median, and mode of all the values across all lists"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "== {'mean': 3.5, 'median': 3.5, 'mode': 1})"
+        }
+      ],
+      "reason": "同样用 numpy/random/scipy.stats 与 seed 机制，但输入容器由 list 变为 dict、且总体统计对空列表填充值的处理与源契约相反，源配方只部分适用。"
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "matches the behavior of the analogous list-of-lists task"
+        },
+        {
+          "section": "target_submission",
+          "quote": "lst = [random.randint(0, 100) for _ in range(size)]"
+        }
+      ],
+      "reason": "目标提交几乎逐行照搬源配方并宣称与源题行为一致，而隐藏检查要求不同聚合；这是行为代理，不能证明记忆导致该选择。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "def task_func(list_of_lists, size=5, seed=0):"
+        },
+        {
+          "section": "target_visible",
+          "quote": "matches the behavior of the analogous list-of-lists task"
+        }
+      ],
+      "reason": "注入的是源 episode 的原始记录，目标解法沿用其 seed-开头/填空/聚合写法，属可见的跨题复用候选；无对照时不能断言该复用造成失败。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "If a list is empty, fill it with SIZE (default: 5) random integers between 0 and 100."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "== {'mean': 3.5, 'median': 3.5, 'mode': 1})"
+        }
+      ],
+      "reason": "题面说空列表填充后计入“所有列表的所有值”，而隐藏检查期望空键 'b' 不贡献任何值（3.5），存在候选的题意/测试不一致，需标为候选而非定论。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "{'mean': 23.454545454545453, 'median': 5.0, 'mode': array([5])}"
+        },
+        {
+          "section": "target_submission",
+          "quote": "lst = [random.randint(0, 100) for _ in range(size)]"
+        }
+      ],
+      "reason": "仅一次 PYTHON 自测且输入沿用源题示例值，输出恰好等于源题标称示例，使 agent 误判正确；可见执行正常，失败非基础设施问题。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Calculate the mean, median, and mode of values in a list of lists."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=20:True:5"
+        }
+      ],
+      "reason": "存在结构与目标高度相似且自身通过评测的合法源经验，并确有源 provenance 注入，构成真实复用机会；机会存在不等于复用有效或有害。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "目标题面与隐藏检查对空列表填充值是否计入总体统计的解释分歧（EVAL_CONTRACT 候选）也可单独造成该失败，与源经验复用并非互斥。",
+    "无无记忆对照：agent 可能本就按最直白读法实现 fill-and-include，与是否注入源 episode 无关。",
+    "自测输入直接取自源示例，使 23.4545… 的“匹配”掩盖了目标契约差异，这属于验证策略问题而非记忆缺陷。",
+    "另有两条无关注入任务存在，但无证据表明造成干扰。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "源题自身的测试用例内容未提供，无法核对源契约是否与源示例一致（仅见 5 tests / 20 checks 通过）。",
+    "无私有推理与检索日志，无法确认 agent 实际读取的是源原始 episode（D0）还是某种抽象经验（D1），也无法确认是否发生检索/选中。",
+    "没有反事实运行，无法量化源经验对目标提交内容的影响。",
+    "隐藏检查的完整用例集不可见，失败点是否唯一为聚合语义无法确认。"
+  ],
+  "minimal_intervention": {
+    "change": "做一次消融：移除注入的源 episode（injection/1），其余条件完全不变，观察是否仍提交把填充随机值并入总体统计的解。",
+    "fixed": "相同目标题面（含原有歧义）、相同模型与预算、相同工具、相同 seed 与示例输入。",
+    "falsifier": "若无源 episode 的对照仍产生 fill-and-include 的总体统计，则源经验复用不是该失败的必要条件。"
+  },
+  "causal_claim": false
+}

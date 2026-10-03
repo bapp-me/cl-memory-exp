@@ -1,0 +1,111 @@
+{
+  "case_id": "c-a091bb781eb6",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=15:True:6"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Analyze a column of a pandas DataFrame, find the values that are larger than the average, and count the number of values"
+        }
+      ],
+      "reason": "源题在离线评测中通过且可评分，提供了合法的单 DataFrame 参考实现；其适用范围限于单个 DataFrame。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "data = df[column].dropna()"
+        },
+        {
+          "section": "source_visible",
+          "quote": "num_greater_value = len(sorted_data) - bisect.bisect_right(sorted_data, value)"
+        }
+      ],
+      "reason": "注入候选中的核心算法（列校验、均值、bisect 计数、直方图）与源轨迹一致，目标提交也保留同一核心，无明显失真。"
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "analyze each DataFrame's specified column to find the values that are larger than the average"
+        },
+        {
+          "section": "target_submission",
+          "quote": "results.append((greater_avg, num_greater_value, ax))"
+        }
+      ],
+      "reason": "源逻辑可直接作为目标中逐 DataFrame 处理的内核；目标新增列表遍历、长度校验与逐项错误信息，属于扩展而非替代。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "This is a list-based extension of the single-DataFrame version I built earlier."
+        },
+        {
+          "section": "target_submission",
+          "quote": "for i, (df, column) in enumerate(zip(dfs, columns)):"
+        }
+      ],
+      "reason": "可见行为显示把单 DataFrame 版本改造为对列表逐项调用，属行为代理；不能据此证明记忆是成功的因果来源。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df, column, value):"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=15:True:6"
+        }
+      ],
+      "reason": "存在一个通过且可评分的同族源任务，构成目标可用的合法经验来源；这只证明来源覆盖，不证明该内容被注入或被复用。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "This is a list-based extension of the single-DataFrame version I built earlier."
+        },
+        {
+          "section": "injection/0",
+          "quote": "if column not in df.columns:"
+        }
+      ],
+      "reason": "目标解答在结构上复用源实现的校验、均值、bisect 计数与直方图写法，属可见适配；无可控消融，不能证明记忆造成成功或优于重新推导。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "目标本身是常见的 pandas/bisect 练习，模型可能未依赖注入内容而独立推导出相同写法。",
+    "三个注入候选并非全部被模型读取或选用，当前证据只显示上下文存在，不显示选择集。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法确认模型是否实际读取或采用了注入的单 DataFrame 源轨迹。",
+    "无未选中完整记忆库与反事实运行，无法评估源经验相对独立推导的增益。",
+    "隐藏测试未公开，正确性仅由离线 evaluator 汇总结果支持。"
+  ],
+  "minimal_intervention": {
+    "change": "做一次反事实消融：移除注入的源单 DataFrame 轨迹后重跑同一目标，比较解答是否仍等价地包含逐列均值、bisect 计数与直方图适配。",
+    "fixed": "保持相同目标 prompt、工具集、token 预算与提交协议；仅改变是否提供源轨迹。",
+    "falsifier": "若移除源轨迹后目标仍以同等质量独立产出等价适配，则 USE_TRANSFER 主张被削弱。"
+  },
+  "causal_claim": false
+}

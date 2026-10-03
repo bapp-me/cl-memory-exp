@@ -1,0 +1,141 @@
+{
+  "case_id": "c-8a310db38a24",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "Ran 5 tests in 0.088s"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "source ID coverage is not content fidelity"
+        }
+      ],
+      "reason": "配对源题通过其测试且可评分，故有合法源经验；但源主题结束时未保留可注入的来源标识（memory_ids 为空），源通过也不代表其归纳语句适用于目标。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Given a nested list of menu items, this function flattens the list and visualizes the frequency of each menu item using a seaborn barplot."
+        }
+      ],
+      "reason": "注入内容只保留了“DataFrame 计数 + 绘图”的笼统图式，与源题的 pandas/matplotlib 方向一致；但源题核心是嵌套列表展平并返回 Axes/None，记忆既未含展平也未含 None 约定，还出现源题没有的 'value' 列细节，故仅为部分保真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "where each menu is represented as a nested list of menu items"
+        }
+      ],
+      "reason": "记忆描述的任务类别（pandas DataFrame + matplotlib 条形图）与目标同类，故方向相关；但缺少目标新增/关键的嵌套展平与空输入返回 None 条件，不能直接照搬。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "ax.bar(df['item'].astype(str), df['frequency'], color='steelblue')"
+        },
+        {
+          "section": "source_visible",
+          "quote": "fig, ax = plt.subplots(figsize=(10, 6))"
+        }
+      ],
+      "reason": "可见实现用 ax.bar 与递归展平生成器，写法与源题可见解（seaborn barplot、fig, ax）不同，也没有把注入文本转化为任何可辨识的复用动作；这只能说明没有可见代理，不能证明未被读取或未被内部使用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        }
+      ],
+      "reason": "注入物是极短的自然语言任务画像，不含可执行片段或关键契约（嵌套展平、None 返回），因此即便被读到也难以直接转为目标代码；这不足以说明记忆有害或真正驱逐了有效内容。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "all_items = list(flatten(list_of_menus or []))"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "this function flattens the list and visualizes the frequency of each menu item using a seaborn barplot."
+        }
+      ],
+      "reason": "目标写法（递归 flatten 生成器 + ax.bar + 空输入 None）与源题可见解不同，看不出对注入经验的直接搬运或错误搬运；缺少反事实，不能判定记忆造成成功或未起作用。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "That's just my test expectation being wrong (pizza appears 3 times, salad 2, pasta 2)."
+        },
+        {
+          "section": "target_visible",
+          "quote": "Again my test expectation was off — bread appears twice across the nested list. Correcting:"
+        }
+      ],
+      "reason": "两次失败均来自 agent 自写临时断言的期望值错误，随后修正并全部通过；这是执行层自纠，没有证据显示与注入记忆有关，也不能视为记忆负迁移。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "Ran 0 tests in 0.000s"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "ax1 = process_menus(menu1)"
+        }
+      ],
+      "reason": "目标离线评估 checks_executed=1 且 tests_run=0，而源题为 5 个测试；参考解/测试片段中名称（task_func 片段、process_menus 调用）与题意不完全对齐，提示契约呈现存在候选性差异，仅作线索而非失败原因。"
+    }
+  ],
+  "primary_hypothesis": "unknown",
+  "competing_explanations": [
+    "目标任务本身成功且可评分，注入的两条泛化画像可能未被实际采纳，成功与记忆无因果关系。",
+    "目标实现由模型自身知识得出（递归展平 + Counter + ax.bar），注入文本只是恰好同领域的冗余内容。",
+    "注入物确被读取但因过于笼统而无法产生可辨识行为差异，当前证据无法区分“未使用”与“使用但无可观察痕迹”。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "两条注入记忆是否确实来源于本 case 的配对源题（源 provenance 的 memory_ids 为空）。",
+    "隐藏测试对 X 轴取值（ax.bar vs seaborn barplot）与返回类型的具体判定标准。",
+    "目标结束后 target_update_operations 为空是否意味着未写入新经验，及其对后续任务的影响。"
+  ],
+  "minimal_intervention": {
+    "change": "将两条泛化任务画像替换为源题中可直接复用的具体要点（嵌套展平、无项目时返回 None），其余不变",
+    "fixed": "相同目标 prompt、相同工具（PYTHON/SUBMIT）、相同候选预算与注入字节上限"
+  },
+  "causal_claim": false
+}

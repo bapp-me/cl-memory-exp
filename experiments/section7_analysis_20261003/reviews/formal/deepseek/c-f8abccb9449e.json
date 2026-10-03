@@ -1,0 +1,151 @@
+{
+  "case_id": "c-f8abccb9449e",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=20:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(list_of_lists, size=5, seed=0):"
+        }
+      ],
+      "reason": "源题自带评测 5 测试全过（correct:true, scorable:true），是合法可用来源；但接口是 list_of_lists，与目标 dict_of_lists 不同，且源把空表填充值计入统计，与目标隐藏期望不一致。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "{\"facts\": []}"
+        }
+      ],
+      "reason": "注入内容全是 pandas/绘图类描述，没有任何与本题字典统计相关的必要内容；源侧写入器输出 facts 为空、源写入操作也为空。注意这只能判定与目标相关信息缺失，不能判定这两条 pandas 记忆对其自身来源是否保真。"
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "calculate the mean, median, and mode for each list"
+        }
+      ],
+      "reason": "注入的两条记忆讲 DataFrame 值计数柱状图，与字典列表的均值/中位数/众数任务无共享条件。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "overall_mode = stats.mode(all_values, keepdims=False).mode"
+        },
+        {
+          "section": "target_submission",
+          "quote": "overall_mean = float(np.mean(all_values))"
+        }
+      ],
+      "reason": "可见代码全程只用 random/numpy/scipy 手写统计，无任何 pandas/绘图痕迹；这是行为代理，不构成注入内容未被使用的因果结论。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "If a list is empty, fill it with SIZE (default: 5) random integers between 0 and 100."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "overall_values.extend(value)"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "== {'mean': 3.5, 'median': 3.5, 'mode': 1})"
+        }
+      ],
+      "reason": "题面说空表先填充再对 all values 求总体统计，而参考/隐藏期望（mean 3.5 对应仅 1..6，空表填充值被丢弃）把填充值排除在 overall 之外；提交解按字面把填充值计入，故判错。这只是题意/测试可能不一致的候选，不能据此重打分，也不能断言参考解绝对正确。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_pair\": {"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"tests_run\": 5,"
+        }
+      ],
+      "reason": "存在一个几乎同族且通过评测的源经历（source_pair distance 61, source_correct true），原则上可复用；但机会存在不等于一定被记录或注入。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": []"
+        }
+      ],
+      "reason": "源题结束时的写入操作为空、目标处源 provenance 无 memory_id，说明本题相关经验没有被写入/保留；这属于写入准入层，不能反推为'已存但未检索到'。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"memory_id\": \"046fecd0-bb97-4487-aea7-9105b37efe5a\""
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "\"score\": 0.255037938519273"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"dropped\": []"
+        }
+      ],
+      "reason": "本次观测到的候选/注入集只有两条低分（0.26/0.23）的 pandas 记忆，未出现与源题族相关的候选；这只描述本次候选集构成，不证明相关记忆存在、也不证明多出的不相关候选造成干扰。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "TASK_EXECUTION：agent 对“总体统计是否包含空表填充值”的读法可能只是误解了意图，而非题面/测试本身矛盾。",
+    "参考解与隐藏断言可能自身有缺陷（参考实现丢弃填充值），因此二者都可能偏离题面本意；无源配对外的绝对真值。",
+    "记忆通道无法被认定为本轮失败原因：注入内容与本题无关且未见使用，源记忆也从未写入/注入，缺少反事实。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法确认系统是否曾在别处写入过与本题相关的记忆（未选中的完整记忆库未提供，写入操作与 facts 均为空只覆盖本包可见通道）。",
+    "无法核验两条注入的 pandas 记忆对其自身来源是否保真。",
+    "无法解释为何这两条 pandas 记忆在本题查询下取得最高相似度（0.26/0.23）。",
+    "无受控对照，无法判断若源经验被注入是否会改变提交内容或结果。"
+  ],
+  "minimal_intervention": {
+    "change": "在 target prompt（或隐藏测试/参考解）中明确空列表填充值是否计入 overall 统计，使二者一致",
+    "fixed": "保持同一记忆状态、同一注入预算、同一 size/seed 与题面其余措辞不变",
+    "falsifier": "若在语义明确后（或改用把填充值计入 overall 的测试）同一 agent 仍失败，则 EVAL_CONTRACT 作为主因不成立"
+  },
+  "causal_claim": false
+}

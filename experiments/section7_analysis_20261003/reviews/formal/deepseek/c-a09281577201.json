@@ -1,0 +1,127 @@
+{
+  "case_id": "c-a09281577201",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"checks_executed\": 10,\n  \"correct\": true,"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Note:\n    - The title of the plot is set to \"Explained Variance Ratio of Principal Components\"."
+        }
+      ],
+      "reason": "源任务可评分且离线判定正确（5 个测试通过），属合法源经验；但其契约是单数组、返回 Axes、固定标题，与目标的多子图、返回 Figure、带索引标题不同。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/6",
+          "quote": "`PCA(n_components=<k>)`, `LinearRegression()`, or `sm.OLS(y, X)` — and call `.fit(...)` (or `.fit_transform(...)` / `.fit_predict(...)`)."
+        },
+        {
+          "section": "injection/6",
+          "quote": "`<pca>.explained_variance_ratio_`"
+        }
+      ],
+      "reason": "注入内容保留了“拟合 PCA 并取 explained_variance_ratio_”这类片段，但源任务的关键前提（先对各行求和再 reshape）未被表述；与目标相关的必要内容只部分保真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "If a check fails, `raise ValueError` (or `TypeError` for wrong-type cases) with a descriptive message naming the offending parameter."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "The figure should have subplots corresponding to each array, and the title of each subplot should be 'Explained Variance Ratio of Principal Components for Array X'"
+        }
+      ],
+      "reason": "通用输入校验、绘图与模型拟合步骤对目标可用；但没有任何注入条目描述目标独有的多子图布局、逐数组标题与返回 Figure 的契约，适用性只能算部分。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "    if not isinstance(arrays, (list, tuple)):\n        raise ValueError(\"arrays must be a list of 2D numpy arrays\")"
+        },
+        {
+          "section": "target_submission",
+          "quote": "    row_sums = np.sum(arr, axis=1).reshape(-1, 1)\n        n_comp = min(row_sums.shape)\n        pca = PCA(n_components=n_comp)"
+        }
+      ],
+      "reason": "提交代码中的参数校验与 ValueError 文案、以及对 PCA 输出比例的抽取，与注入的通用工作流形态一致，同时按目标要求改成了多子图、返回 Figure、标题带索引；这只是行为代理，不能证明记忆导致成功。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "add value/domain checks (e.g., `{n_sentences} < 0`, empty collections"
+        },
+        {
+          "section": "target_visible",
+          "quote": "if len(arrays) == 0:\n        raise ValueError(\"arrays must contain at least one 2D numpy array\")"
+        }
+      ],
+      "reason": "目标中出现的类型/空列表守卫与注入的 Input Validation Guard 形态吻合，支持“可见复用”候选；无反事实，不能证明该守卫或最终正确性由记忆造成，也可能是通用编码习惯。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"distance\": 27,\n    \"source_correct\": true,"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": true,"
+        }
+      ],
+      "reason": "存在配对且正确的同族源题，其来源在注入与可观测候选中均出现，机会存在；来源覆盖不等于内容保真或对目标适用。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/4",
+          "quote": "Return the `ax` (and `fig` when required) object."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "The function should return the figure object."
+        }
+      ],
+      "reason": "注入的工作流以单 Axes（可选 Figure）绘图为代表，缺少目标所需“一数组一子图并返回 Figure”的表征，这部分由解题者自行补齐；不能据此断言记忆无用或有害。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "任务本身简单，模型可独立写出 PCA + 子图代码，成功与记忆无关",
+    "代码中的输入校验更像通用编程习惯，而非读取注入条目的结果",
+    "未展示未选中的完整记忆库，可能还有其它条目影响行为"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法确认 8 条注入条目是否真的进入了实际上下文并被读取",
+    "无法判断多子图/返回 Figure 的改写是否受任何记忆影响",
+    "隐藏正确性细节（checks_executed=2）对解题者不可见，token 计数不可得"
+  ],
+  "minimal_intervention": {
+    "change": "在同样的目标题与预算下做一次消融：不注入这 8 条工作流（或仅保留绘图/模型拟合相关条目），比较是否仍产出返回 Figure 的多子图实现与相同校验",
+    "fixed": "相同的源历史、相同记忆库与注入协议、相同提示与工具预算",
+    "falsifier": "若消融后目标仍成功且校验/验证循环行为不变，USE_TRANSFER 候选被削弱"
+  },
+  "causal_claim": false
+}

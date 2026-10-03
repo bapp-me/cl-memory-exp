@@ -1,0 +1,133 @@
+{
+  "case_id": "c-aee1b0e204fc",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=19:True:5"
+        }
+      ],
+      "reason": "Source task passed its tests, but it only covers single-text DTM, not target multi-document combination."
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "column names should be adapted from the vectorizer feature names"
+        },
+        {
+          "section": "target_submission",
+          "quote": "columns=[f'doc{i}_{feat}'"
+        }
+      ],
+      "reason": "Source-supported per-document vectorization/feature-name idea appears, but target adds a prefix and cross-document concat not present in source."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "create a combined document-term matrix for all documents"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Analyze a text by creating a document term matrix with CountVectorizer"
+        }
+      ],
+      "reason": "Source method applies to per-document DTM step only; target adds cross-document concatenation and row alignment."
+    },
+    "visible_use": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "No visible memory citation; final code tracks the visible prompt more than the four injected late memories, and source similarity could be task-driven."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "concatenated horizontally to form a single combined matrix"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "combined_df = pd.concat(all_dtm, axis=0, ignore_index=True)"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert result.shape == (4, 11)"
+        }
+      ],
+      "reason": "Visible prompt says horizontal concat, while hidden reference/tests expect vertical concat giving 4x11; candidate contract inconsistency, not proof of memory effect."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "combined = pd.concat(dtms, axis=1).fillna(0).astype(int)"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AssertionError"
+        }
+      ],
+      "reason": "Submitted artifact follows literal horizontal concat and hidden shape assertion fails; explains scorable failure without implying memory harm."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_episode_byte_budget"
+        },
+        {
+          "section": "mechanical",
+          "quote": "source_provenance_injected"
+        }
+      ],
+      "reason": "Packing kept only four late injected episodes and dropped older candidates by byte budget; legitimate source provenance was not injected, so this is visibility/packing, not proven retrieval failure."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Analyze a text by creating a document term matrix with CountVectorizer"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Each document should be processed individually to create its own document-term matrix"
+        }
+      ],
+      "reason": "Source's per-document DTM method partially matches target's per-document step, but source lacks target's cross-document concat; no counterfactual evidence of transfer or harm."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "EVAL_CONTRACT: visible prompt explicitly asks horizontal concat while hidden reference/tests expect vertical concat, so failure may be contract mismatch rather than implementation error.",
+    "PACKING_VISIBILITY: only four unrelated late memories were injected and source provenance was not injected, so any source-based explanation is unproven.",
+    "No controlled intervention; success of source does not prove its statements or that target reused it."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether hidden tests or prompt wording is authoritative about horizontal vs vertical concatenation.",
+    "Whether the legitimate source memory was available to the target at generation time and whether it affected the final code.",
+    "Whether injected unrelated memories influenced target behavior at all."
+  ],
+  "minimal_intervention": {
+    "change": "Make target's concatenation and column representation match hidden reference (vertical axis=0 with unified feature names) or fix the prompt/reference contract in one direction.",
+    "fixed": "Same documents, same source/history, same packing budget, same injected memories, same hidden evaluation mask.",
+    "falsifier": "If hidden tests accept horizontal per-document prefixed columns, or if injecting the source memory changes the result, the task-execution/contract candidate is weakened."
+  },
+  "causal_claim": false
+}

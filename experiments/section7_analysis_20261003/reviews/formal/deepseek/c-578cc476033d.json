@@ -1,0 +1,135 @@
+{
+  "case_id": "c-578cc476033d",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "The task is completed."
+        },
+        {
+          "section": "injection/4",
+          "quote": "Goal: open a door on your right"
+        }
+      ],
+      "reason": "五个来源 episode 都以完成观察结束，属合法源经验；但四个是 “go to X door”，只有 injection/4 属 “open a door …”，没有任何源涉及 “behind you” 关系，覆盖与目标语义不完全对齐。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/4",
+          "quote": "I'll use it to open the grey door."
+        }
+      ],
+      "reason": "与目标最相关的样板记录内部自洽（目标、观察、动作序列完整且动作—观察匹配），未见与源经验相矛盾的改写；因无源原始记录，无法做逐字节比对。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/4",
+          "quote": "Goal: open a door on your right"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Goal: open a door behind you"
+        }
+      ],
+      "reason": "可迁移的是 “定位门→go to→toggle” 的通用技能与 “先转身扫描” 模式；目标新增条件是把空间关系从 right 改为 behind（需先 180° 找不可见门），源中没有对应经验。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "I need to find a door behind me. Neither visible door is behind me, so let me turn around to look."
+        },
+        {
+          "section": "target_visible",
+          "quote": "Now I'm at the blue door. Let me open it with toggle."
+        }
+      ],
+      "reason": "目标行为与注入样板同构：先转身扫视（同 injection/1、2），再 go to 目标门并对门使用 toggle（同 injection/4），且 reasoning 与 behind 语义一致；这只说明行为相似，不是因果复用证据。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The task is completed."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": false"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"progress\": 0"
+        }
+      ],
+      "reason": "环境侧观察宣称任务完成，但离线判定为 correct=false、progress=0，两层判定对同一轨迹结论冲突，失败标签未必反映 agent 能力；无法据此推断记忆作用。"
+    },
+    {
+      "tag": "INFRA_PROTOCOL",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"submit_calls\": 0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"terminal_state\": \"completed\""
+        },
+        {
+          "section": "target_submission",
+          "quote": "\"submitted\": false"
+        }
+      ],
+      "reason": "episode 以 completed 结束却没有任何 submit 调用且 submitted 为 false，而源轨迹在同位置出现提交完成的记录，提示提交/终止协议层可能自身影响离线判定；不能证明记忆或策略有责。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/4",
+          "quote": "I'll use it to open the grey door."
+        },
+        {
+          "section": "target_visible",
+          "quote": "Let me go to it."
+        },
+        {
+          "section": "target_visible",
+          "quote": "Now I'm at the blue door. Let me open it with toggle."
+        }
+      ],
+      "reason": "最相近源样板展示了 “接近门后用 toggle 打开” 的语义模式，目标复现了同样的动作组合，可作为语义候选被复用的可见代理；无对照条件，不能证明来自记忆、也不能证明带来收益或损害。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "离线检查可能使用与 prompt 中 “open a door behind you” 不同的目标门谓词（例如某个特定颜色门），此时 agent 打开蓝门属执行/目标误解，而非契约问题。",
+    "即使没有注入记忆，同一 BabyAI 通用启发的 “转身扫描 + go to + toggle” 行为也会出现，因此当前行为与记忆的关系不可判定。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "retrieval 中各候选 score 均为 null，无法判断检索质量或是否存在更相关但未被选中的经验。",
+    "未提供完整记忆库与反事实运行，无法判断注入内容是否被真实采用。",
+    "无法确认 in-env “The task is completed.” 与离线判定是否使用同一目标谓词。",
+    "没有任何 source_update/target_update 内容，无法评估写入、淘汰或保留变化。"
+  ],
+  "minimal_intervention": {
+    "change": "让离线判定与 in-env 完成信号使用同一目标谓词（或在 episode 结束时保留显式提交动作）。",
+    "fixed": "相同的目标 prompt、相同的 5 条注入记忆、相同动作预算与环境。",
+    "falsifier": "对齐后同一轨迹被判定为正确，则说明当前失败来自契约/协议不一致；若仍为 false，则说明失败确实发生在目标门判定或执行层面。"
+  },
+  "causal_claim": false
+}

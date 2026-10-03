@@ -1,0 +1,119 @@
+{
+  "case_id": "c-e5bbe1e7955c",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        },
+        {
+          "section": "source_visible",
+          "quote": "flattened = [item for sublist in list_of_menuitems for item in sublist]"
+        }
+      ],
+      "reason": "The source submission passed its hidden checks (10 checks / 5 tests), so it is a legitimate scorable source. But its flattening only handles one nesting level, while both prompts speak of nested menu lists, so the source experience carries limits."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "raw_source_episode_retained_in_method_state"
+        }
+      ],
+      "reason": "The packet records that the raw source episode was not retained in method state and that zero items were injected, so no legitimate source content was present in memory for the target; nothing to be faithful or unfaithful about."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(list_of_menuitems):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def process_menus(list_of_menus):"
+        }
+      ],
+      "reason": "Same task family (Counter + pandas DataFrame + seaborn bar plot over menu items) so the source is relevant in kind, but the target renames the entry point and stresses nested menus and returning a single Axes, conditions the source's one-level flatten does not cover."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "raw_source_episode_retained_in_method_state"
+        }
+      ],
+      "reason": "No source material was retained or injected, so the visible trace can only show direct authoring and self-debugging in the PYTHON tool; code resemblance to the source is a visible proxy, not evidence of memory use."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "NameError: name 'pd' is not defined. Did you mean: 'id'?"
+        },
+        {
+          "section": "target_visible",
+          "quote": "import pandas as pd"
+        }
+      ],
+      "reason": "The first PYTHON call omitted the pandas import, failing on pd.DataFrame; the next call added it and all sanity checks passed. This is a self-corrected direct-record execution error and says nothing about memory quality or reuse."
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "raw_source_episode_retained_in_method_state"
+        },
+        {
+          "section": "source_state_summary",
+          "quote": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      ],
+      "reason": "No source episode was retained and the before/after state hashes are identical, so nothing was admitted into memory. This is absence of write/retention, not a stored-but-unretrieved item."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "return task_func(all_items)"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "ax1 = process_menus(menu1)"
+        }
+      ],
+      "reason": "The offline reference/tests mix the source entry name task_func with the target entry point process_menus, and the harness log reports zero tests run while scoring one check. Flagged only as a possible contract/test-alignment candidate, not proof that the submission violated the stated contract."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "Resemblance between target and source code (Counter, DataFrame, sns.barplot) may reflect a shared task template or common library idiom rather than memory reuse; with zero injection this cannot be tested.",
+    "Success may reflect a lenient hidden check (harness reports 0 tests run) that never exercises deeply nested menus, rather than full satisfaction of the nested-list contract.",
+    "The initial missing pandas import may simply follow from the truncated prompt stub ending at the function signature, not from any memory content."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the executed hidden check exercised deeply nested menus or only one-level lists.",
+    "Whether the source solution (one-level flatten) would have helped or hurt on the target; no injection counterfactual exists.",
+    "Whether any source episode lived in a memory store not shown in this packet (unselected complete library not included)."
+  ],
+  "minimal_intervention": {
+    "change": "Enable retention and injection of the correct source episode (the source task_func solution) into the target context, changing nothing else.",
+    "fixed": "Same target prompt, same hidden check, same model/budget/tooling and no extra hints.",
+    "falsifier": "Behaviorally identical output to this no-injection run (e.g. no adaptation toward the source's flatten-and-plot pattern, or worse handling of nested menus) would refute that this source experience is reused."
+  },
+  "causal_claim": false
+}

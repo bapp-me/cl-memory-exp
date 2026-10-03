@@ -1,0 +1,140 @@
+{
+  "case_id": "c-0fabe81fd438",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "raise TypeError(\"The DataFrame contains non-numeric data types.\")"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "Ran 6 tests in 0.942s"
+        }
+      ],
+      "reason": "Source task is scorable and passed, and it shows correct non-numeric TypeError handling, but it covers a single DataFrame rather than the target's list-of-DataFrames and combined task."
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "If a check fails, `raise ValueError` (or `TypeError` for wrong-type cases)"
+        },
+        {
+          "section": "source_visible",
+          "quote": "raise TypeError(\"The DataFrame contains non-numeric data types.\")"
+        }
+      ],
+      "reason": "The injected guard workflow preserves the validation structure but states ValueError first and does not clearly preserve the source's specific mapping from non-numeric DataFrame data to TypeError."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "If any DataFrame is empty or contains non-numeric data, raise the appropriate exception."
+        },
+        {
+          "section": "source_prompt",
+          "quote": "TypeError: If the DataFrame contains non-numeric data types."
+        }
+      ],
+      "reason": "Validation guards are applicable to the target, but the source is single-DataFrame and the target adds list concatenation/combination, so exception-type applicability is only partial."
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "raise ValueError(f\"DataFrame at index {i} contains non-numeric data\")"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ValueError: DataFrame at index 0 contains non-numeric data"
+        }
+      ],
+      "reason": "The target visibly raises ValueError for non-numeric data, while the hidden reference expects TypeError; this is a behavioral misapplication candidate, not proof that memory caused it."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ValueError: DataFrame at index 0 contains non-numeric data"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "except TypeError:"
+        }
+      ],
+      "reason": "The submitted guard raises ValueError for non-numeric input, but the hidden test expects TypeError, directly causing scorable failure. This does not establish any memory effect."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "If any DataFrame is empty or contains non-numeric data, raise the appropriate exception."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "except TypeError:"
+        }
+      ],
+      "reason": "The target prompt does not specify the exact exception type for non-numeric data, while the hidden reference requires TypeError; this is a contract ambiguity candidate, not proof of memory harm."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "If a check fails, `raise ValueError` (or `TypeError` for wrong-type cases)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "raise ValueError(f\"DataFrame at index {i} contains non-numeric data\")"
+        }
+      ],
+      "reason": "The visible guard matches the injected ValueError-first validation pattern and applies it to non-numeric data, but without a controlled intervention this only supports visible misapplication, not a causal transfer claim."
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "If a check fails, `raise ValueError` (or `TypeError` for wrong-type cases)"
+        },
+        {
+          "section": "source_visible",
+          "quote": "raise TypeError(\"The DataFrame contains non-numeric data types.\")"
+        }
+      ],
+      "reason": "The injected workflow represents validation failure with ValueError first and does not clearly retain the source-specific non-numeric TypeError mapping; this is a candidate representation limitation, not proof that the representation caused the failure."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "The submitted implementation itself chose ValueError for non-numeric data, independent of memory; the target prompt's 'appropriate exception' wording is underspecified."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the injected Input Validation Guard was actually read or used by the target agent.",
+    "Whether source provenance content including the TypeError precedent was available in-context versus only present as metadata.",
+    "Whether unselected memory content could have supplied the correct TypeError pattern."
+  ],
+  "minimal_intervention": {
+    "change": "Change the non-numeric guard to raise TypeError, matching the source/reference, while keeping ValueError for empty DataFrames.",
+    "fixed": "same injected memory library, same target prompt, same hidden tests, and same budget.",
+    "falsifier": "A TypeError-raising target still failing the same hidden check, or direct evidence that the agent never attended to the validation-guard memory, would weaken the memory-related candidate."
+  },
+  "causal_claim": false
+}

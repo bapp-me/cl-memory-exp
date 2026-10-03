@@ -61,7 +61,8 @@ def tool_metrics(pi):
                 if obj.get('error'):errors.append('error_field')
                 if obj.get('returncode') not in [None,0]:errors.append('nonzero_returncode')
                 # Descriptive BabyAI textual observation proxy, never a failure rate.
-                if re.search(r'invalid action|not a valid action|cannot|can.t|blocked',str(obj.get('observation','')),re.I):errors.append('action_text_proxy')
+                if re.search(r'invalid action|not a valid action|not recognized|cannot|can.t|blocked',str(obj.get('observation','')),re.I):errors.append('action_text_proxy')
+            if any('fetch failed' in t or 'ECONNREFUSED' in t for t in texts):errors.append('tool_transport_failure')
             observations.append({'tool_call_id':m.get('toolCallId'),'tool':m.get('toolName'),'signals':errors})
     working=[c for c in calls if c['name']!='SUBMIT']
     keys=[digest([c['name'],c.get('arguments')]) for c in working]
@@ -93,7 +94,7 @@ def ast_overlap(source,target):
 
 def main():
     final=read(OBS/'records/section7.1-final.json'); assets=read(OBS/'.cache/agentcl-codeeval.json')
-    output=[];contexts=[];reconstructed=[];issues=[];inputs={};pair_metrics=[]
+    output=[];contexts=[];reconstructed=[];issues=[];inputs={};pair_metrics=[];content_states=[]
     pairs={(p['method'],p['target_index']):p for p in final['paired_source_target_rows']}
     def track(p):
         if p.exists():inputs[p.relative_to(REPO).as_posix()]=sha(p)
@@ -110,6 +111,12 @@ def main():
                 'result_status':'asset_unscorable' if not row['scorable'] else 'success' if row['correct'] else 'scorable_failure'}
         # Score remains authoritative; separately record infrastructure evidence without erasing failure.
         result['execution_anomalies']={k:row.get(k) for k in ['terminal_state','response_timed_out','context_exceeded','solver_error','memory_error']}
+        result['diagnostic_outcome_status']='infrastructure_interruption' if result['tool_metrics']['error_signal_types'].get('tool_transport_failure') else result['result_status']
+        if row['benchmark']=='codeeval' and row['method'] in ['mem0','awm','ace']:
+            key={'awm':'workflow_text','ace':'playbook','mem0':'points'}[row['method']]
+            content_states.append({'method':row['method'],'task_id':row['task_id'],'index':row['index'],'content_key':key,
+                 'before_content_hash':digest(before.get(key)),'after_content_hash':digest(after.get(key)),
+                 'content_changed':before.get(key)!=after.get(key),'memory_state_hash_changed':digest(before)!=digest(after)})
         prompt=assets[row['index']]['problem'] if row['benchmark']=='codeeval' else next(m['content'] for m in pi['messages'] if m['role']=='user')
         if isinstance(prompt,list):prompt='\n'.join(x.get('text','') for x in prompt if isinstance(x,dict))
         retrieval=optional(folder/'retrieval.json')
@@ -238,6 +245,7 @@ def main():
     save(ROOT/'records/legacy-retrieval-reconstructed.json',reconstructed)
     save(ROOT/'records/auxiliary-context-map.json',contexts)
     save(ROOT/'records/d0-input-hashes.json',inputs)
+    save(ROOT/'records/content-state-transitions.json',content_states)
     print(json.dumps({'tasks':len(output),'summaries':len(summaries),'legacy_retrieval_reconstructions':len(reconstructed),'auxiliary_payload_maps':len(contexts),'issues':issues}))
     assert not issues
 

@@ -1,0 +1,147 @@
+{
+  "case_id": "c-9e52706a1570",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=19:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Analyze a text by creating a document term matrix with CountVectorizer."
+        }
+      ],
+      "reason": "源题在离线评测中通过（5 项测试、19 检查），但只覆盖单文本 DTM；目标要求多文档各自建矩阵后再合并，源经验只覆盖其中一部分。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Analyze a text by creating a document term matrix with CountVectorizer."
+        }
+      ],
+      "reason": "注入记忆只保留“pandas DataFrame”这一泛化部分，缺少 CountVectorizer/按句拆分等关键内容，且 matplotlib 描述与配对源可见内容不符；且 source_provenance_at_target 的 memory_ids 为空，归属无法确认。"
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "create a combined document-term matrix for all documents"
+        }
+      ],
+      "reason": "注入内容讲 DataFrame 取值计数画柱状图，对构建/拼接文档-词矩阵无可用信息；同域（pandas）不足以构成适用。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "combined = pd.concat(padded, axis=1)"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "目标代码与解释中看不到任何来自注入记忆的痕迹（无柱状图/取值计数相关内容），只能说明无可见复用，不能证明记忆无因果影响。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "concatenated horizontally to form a single combined matrix"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "combined_df = pd.concat(all_dtm, axis=0, ignore_index=True)"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(result.shape == (4, 11))"
+        }
+      ],
+      "reason": "可见提示明确要求水平拼接且列名“adapted”，而参考解与测试要求垂直 concat 得到 (4,11) 共享列名，二者不相容；只能标为题意/测试不一致候选，不能断定谁是真契约。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "combined = pd.concat(padded, axis=1)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "[3 rows x 9 columns]"
+        }
+      ],
+      "reason": "实现按文档前缀列名后水平拼接并补零行，自测形状即与测试期望不同；这是最终工件层面的偏差，不涉及记忆。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Analyze a text by creating a document term matrix with CountVectorizer."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "create a combined document-term matrix for all documents"
+        }
+      ],
+      "reason": "源只解决单文本 DTM，目标新增了多文档循环、矩阵拼接轴与列命名（去重/前缀）等条件，源经验至多部分适用；source_update_operations 为空说明该源未沉淀专门内容。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "target_visible",
+          "quote": "combined = pd.concat(padded, axis=1)"
+        }
+      ],
+      "reason": "注入记忆被选中并进入上下文，但目标行为与注入内容无可辨识对应，属“无可见复用”代理；不能据此推出记忆造成成功或失败。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "最终形状不符可由 TASK_EXECUTION 解释：即便按垂直拼接，代理自行加的 doc{i}_ 前缀也会得到 (4,19) 而非 (4,11)。",
+    "注入记忆与目标无关，目标失败很可能与记忆无因果关联（记忆仅为同域泛化描述）。",
+    "隐藏评分口径可能不同于本包内的 offline_target_evaluation，题意/测试谁为准未知。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏正确性不可见，无法确认失败是否仅来自 shape 断言。",
+    "注入的两条记忆是否源自 source_index 17（task-017）无法确认：source_provenance_at_target 的 memory_ids 为空，source_auxiliary_visible 的 facts 为 []。",
+    "未提供完整未选中记忆库与 token 预算，无法判断是否存在更适用但未检索到的经验。",
+    "无对照运行，无法估计记忆对目标行为的因果影响。"
+  ],
+  "minimal_intervention": {
+    "change": "在目标提示中明确拼接轴与列命名规则（例如与参考一致：垂直 concat、共享 feature name 列名、不按文档前缀），使提示与隐藏测试契约一致。",
+    "fixed": "保持相同的注入记忆、相同的源配对（task-017）、相同工具与回合预算。",
+    "falsifier": "若提示改为明确垂直拼接与共享列名后同一代理仍给出不符形状，或同提示在无注入记忆条件下仍以完全相同形状失败，则 EVAL_CONTRACT/记忆相关候选被削弱。"
+  },
+  "causal_claim": false
+}

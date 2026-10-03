@@ -1,0 +1,140 @@
+{
+  "case_id": "c-1289c6d57cf9",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "injection/2",
+          "quote": "I found the red door. Let me go to it."
+        },
+        {
+          "section": "injection/0",
+          "quote": "The yellow door is accessible directly. Let me go to it."
+        }
+      ],
+      "reason": "三条源轨迹均为同族“go to <color> door”任务且以 submitted:true、task is completed 收尾，属合法成功经验；但源题都需先 check available actions 并穿门跨房间搜索，与本题一步可达的条件不同。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "I found the purple door. Let me go to it."
+        }
+      ],
+      "reason": "注入文本是与源任务目标、观察、动作自洽且成功收尾的完整轨迹，未见内容被改写或自相矛盾的迹象；但只有注入后的渲染，没有存储前版本可对照。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "There is a green closed door 1 5 steps in front of you and 2 steps to your left."
+        },
+        {
+          "section": "injection/1",
+          "quote": "The purple door isn't visible here. I may need to go through one of the doors to find it. Let me try going through the blue door first."
+        }
+      ],
+      "reason": "“找到目标颜色的门并前往”这一目标模式通用，但源经验的核心步骤（目标不可见时逐门探索）在本题不适用，因为绿色关门起始即可见。此处不是不可用，只是可迁移面窄。"
+    },
+    "visible_use": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "I can see a green closed door in this room. Let me go to it."
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"working_tool_calls\": 1"
+        }
+      ],
+      "reason": "目标一步直达可见门，未出现源轨迹里 check available actions / 穿门探索的痕迹，“Let me go to it”只是措辞重合代理，无法判定记忆是否被读取或影响决策。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/2",
+          "quote": "I found the red door. Let me go to it."
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"observable_candidates\": ["
+        }
+      ],
+      "reason": "历史中存在同族、成功、可直接参照的门导航经验，机会存在；来源覆盖不证明其内容对本题具体步骤仍适用。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"dropped\": [],"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"history_index\": 2,"
+        }
+      ],
+      "reason": "3 条候选全部被选中并注入（dropped 为空），可见候选供给充足；score 均为 null，无法判断排序依据或相关性，也不能说明检索是否挑对了有用内容。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Goal: go to a green door"
+        },
+        {
+          "section": "injection/0",
+          "quote": "The yellow door is accessible directly. Let me go to it."
+        }
+      ],
+      "reason": "源目标颜色与本题不同且本题一步即成功，注入内容与结果之间没有可区分的行为中介；成功同样可由“看见门就去”的朴素策略解释，不构成复用证据。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 3,"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_text_utf8_bytes\": 7809"
+        }
+      ],
+      "reason": "为一步任务注入了 3 条、约 7809 字节的完整轨迹，上下文开销可量化；本题不提供任何收益或性价比结论。"
+    }
+  ],
+  "primary_hypothesis": "unknown",
+  "competing_explanations": [
+    "本题目标门在初始观察中即已可见，单步直达是最朴素策略，成功可在无记忆条件下复现，因此看不出记忆促成作用",
+    "注入文本的措辞与源轨迹重合（“Let me go to it”）可能只是同族任务的通用说法，而非记忆被实际读取",
+    "源经验以多房间探索为主，与本题条件不匹配；也可能被读取后正确弃用而未留下行为痕迹",
+    "三条记忆的来源题结束状态相同且都未包含源题记忆更新，无法判断被注入内容是否已过时或不完整"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "没有无记忆对照运行，无法评估记忆对这次成功的作用",
+    "retrieval 中 score 与 token_count 缺失，无法判断排序与上下文占用",
+    "证据中不含源题结束后的 source_update 或本题结束后的 target_update，无法讨论经验更新或遗忘",
+    "私有推理被移除，无法确认模型是否注意到并使用了注入的 3 条轨迹"
+  ],
+  "minimal_intervention": {
+    "change": "在相同任务与环境下做一次不注入任何历史记忆的空记忆对照运行",
+    "fixed": "保持同一目标观察、同一 BabyAI 环境与动作空间、同一预算与就绪工具集",
+    "falsifier": "若空记忆运行同样在 1 步内直接前往绿色关门并完成，则记忆对本题成功的贡献无法成立"
+  },
+  "causal_claim": false
+}

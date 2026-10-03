@@ -1,0 +1,143 @@
+{
+  "case_id": "c-fdfa129bce2f",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"tests_run\": 5,"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true,"
+        }
+      ],
+      "reason": "Source task passed its own 5 scorable tests, but its contract is filter-by-initial-letter, not category grouping."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": true,"
+        },
+        {
+          "section": "source_visible",
+          "quote": "return lengths.value_counts().to_dict()"
+        }
+      ],
+      "reason": "The injected source episode preserves the relevant pandas/str.len/value_counts pattern without apparent contradiction."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "find the most common word lengths in the 'Content' field for each category"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "filters rows in a dict of list in which the values of the 'Word' column begin with a specified letter"
+        }
+      ],
+      "reason": "Both count word lengths with pandas, but target adds category grouping and Content splitting while source filters one column by letter."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "result[category] = lengths.value_counts().to_dict()"
+        },
+        {
+          "section": "source_visible",
+          "quote": "return lengths.value_counts().to_dict()"
+        }
+      ],
+      "reason": "Target visibly extends the source's value_counts-to-dict idiom with groupby/split; this is behavioral proxy, not causal proof."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"tests_run\": 5,"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": true,"
+        }
+      ],
+      "reason": "A passed, similar source experience was retained and injected; this shows opportunity, not retrieval or use."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "result[category] = lengths.value_counts().to_dict()"
+        },
+        {
+          "section": "source_visible",
+          "quote": "return lengths.value_counts().to_dict()"
+        }
+      ],
+      "reason": "The submission shares the source's pandas/value_counts output idiom; without counterfactual this cannot prove causal transfer."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "KeyError: 'Category'"
+        },
+        {
+          "section": "target_visible",
+          "quote": "Works for the main case; I need to guard against an empty input list"
+        }
+      ],
+      "reason": "Target-specific empty-list failure was fixed by an explicit guard; this is execution behavior, not evidence about memory."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"tests_run\": 0,"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"checks_executed\": 1,"
+        }
+      ],
+      "reason": "The correctness signal ran zero tests and one check, so pass status may not validate the full target contract; candidate only."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The target prompt already imports pandas and provides the function stub, so the solution could be independently generated without memory.",
+    "The source episode was injected, but there is no visible retrieval ranking or attention evidence proving it was selected or reused.",
+    "The shallow target evaluator (0 tests, 1 check) may mark success without exercising edge cases; this does not explain the code pattern."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Cannot know whether the source episode was actually retrieved or attended by the target agent.",
+    "Cannot know whether the same target solution would pass or be produced without the source episode.",
+    "The complete unselected memory library and retrieval candidates are not provided.",
+    "The target hidden test suite is not visible beyond the 1-check evaluator result."
+  ],
+  "minimal_intervention": {
+    "change": "Remove or mask only the source episode from the injected context while keeping the target prompt, tools, and budget unchanged.",
+    "fixed": "Same target prompt, model, tool access, unrelated injected tasks, and token budget.",
+    "falsifier": "If the target still submits an equivalent pandas groupby/split/value_counts solution and passes, the USE_TRANSFER candidate is weakened; if it fails or omits the pattern, that supports transfer."
+  },
+  "causal_claim": false
+}

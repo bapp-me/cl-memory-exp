@@ -1,0 +1,125 @@
+{
+  "case_id": "c-0bbc9f0afa05",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=20:True:5"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "Ran 5 tests in 0.003s"
+        }
+      ],
+      "reason": "源题单字符串任务离线评测全部通过，但仅覆盖单 length 语义。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Following the same pattern as the previous tasks (seed once, then use `random.choice` over `string.ascii_letters`, count with `collections.Counter`)"
+        }
+      ],
+      "reason": "源题核心代码惯用法（choice/ascii_letters/Counter/dict、random.seed）被忠实复现，但源解法中 seed 位于 task_func 内、每次调用重播种的结构未被保留。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "combined_counter.update(task_func(length, seed))"
+        }
+      ],
+      "reason": "源模式适用于字符串生成与计数，但目标新增多长度列表条件；参考解对每个 length 重新以同一 seed 调用 task_func，即每条字符串重播种，与源的逐次播种结构不同。"
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Same as generating one string of combined length sequentially"
+        },
+        {
+          "section": "target_visible",
+          "quote": "print(dict(collections.Counter(s)) == combined_frequency([5, 7], 0))"
+        }
+      ],
+      "reason": "agent 明示沿用先前任务的 seed once 模式并用自设不变量（整体拼接等价）验证，该自证检验与隐藏期望输出不一致，属于可见的模式误用候选，非因果证明。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Following the same pattern as the previous tasks (seed once, then use `random.choice` over `string.ascii_letters`, count with `collections.Counter`)"
+        }
+      ],
+      "reason": "行为上可见对先前源经验的引用与复用；但 D1 无反事实，不能证明是记忆导致了 seed once 的错误语义选择。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "combined_frequency([10, 20], 0) == {'y': 2, 'W': 3, 'A': 2, 'c': 2, 'q': 2, 'G': 3, 'F': 2, 'z': 2, 'Y': 2"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AssertionError"
+        }
+      ],
+      "reason": "提交代码对整个 lengths 序列只播种一次并顺序生成，与隐藏期望（每条字符串重播种）不符，确定性断言失败。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should accept a list of lengths and a seed for random generation."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "combined_counter.update(task_func(length, seed))"
+        }
+      ],
+      "reason": "提示语为单一 seed、未说明每条字符串是否重播种，而隐藏测试强制参考解的逐条重播种语义；题意与测试可能不一致，仅标候选。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true,\n    \"source_scorable\": true,\n    \"raw_source_episode_retained_in_method_state\": true"
+        }
+      ],
+      "reason": "存在配对的合法源经验（injection/2 即源题），且方法状态保留了源 episode 与 provenance；这只是来源覆盖，不证明内容保真或适用性。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "目标提示对 seed 语义本就含糊（单一 seed 未说明逐条重置），无记忆的 agent 也可能做出同样的 seed once 解释并失败，无法由此题区分。",
+    "未选中记忆库不完整，可能存在其他被检索经验影响 seed 处理方式，证据包无法排除。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "agent 私有推理被移除，无法确认其 seed once 解释来自记忆检索还是独立推断。",
+    "没有对照（相同历史但不含源经验）无法建立记忆与失败之间的因果。",
+    "隐藏评测只跑了一个断言即中断，其他语义点（如空列表、确定性）是否通过未知。"
+  ],
+  "minimal_intervention": {
+    "change": "让 agent 将源题 task_func 作为子程序按每个 length 以给定 seed 重新调用并累加 Counter（即逐条重播种的组合方式），其余不变。",
+    "fixed": "相同的历史、注入的源经验与工具预算。",
+    "falsifier": "若改为逐条重播种后 [10,20] 断言仍失败，或原 seed once 版本在某对照中同样普遍出现，则记忆误用候选被削弱。"
+  },
+  "causal_claim": false
+}

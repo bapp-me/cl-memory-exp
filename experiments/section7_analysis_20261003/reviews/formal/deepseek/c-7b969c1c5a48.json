@@ -1,0 +1,84 @@
+{
+  "case_id": "c-7b969c1c5a48",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "该证据包没有任何源任务/源经验片段，无法评估源经验合法性；按规则不为 BabyAI 虚构 gold source。"
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": [],"
+        }
+      ],
+      "reason": "实际注入为空（injected_utf8_bytes=2 即空数组），没有任何与目标有关的记忆内容可供保真度评估。"
+    },
+    "target_applicability": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"observable_candidates\": [],"
+        }
+      ],
+      "reason": "没有可观察候选，也无注入条目，因此不存在可谈适用性的记忆内容。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "I'll navigate toward the yellow door. First, let me check available actions."
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0,"
+        }
+      ],
+      "reason": "可见轨迹是纯环境导航（询问可用动作→go to yellow closed door 1），且注入计数为 0，未出现任何记忆内容的适配或误用痕迹。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"go to yellow closed door 1\""
+        },
+        {
+          "section": "target_visible",
+          "quote": "The task is completed."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true,"
+        }
+      ],
+      "reason": "成功可由直接环境观察与两次 ACTION 调用解释，不需假设记忆参与；这不证明记忆无效，只是本轨迹中无可归因于记忆的可见成分。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "未注入可能只是本目标阶段没有检索到内容，而未选中的完整记忆库未包含在证据包中，不能推断记忆库为空或无可用经验。",
+    "该房间布局简单（黄色门可直接 go to），成功可能源于任务本身对记忆不敏感，而非记忆策略无效。",
+    "无对照干预，无法判断若注入相关经验动作数或轨迹会否变化。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "本目标之前是否存在源任务及其写入内容（packet 无 source_* 段）。",
+    "记忆库中是否存在与 BabyAI 寻门相关但未被选中的经验；本证据包不足以判断 RETRIEVAL 是否失败。",
+    "token_count 为 null 且 token_measurement_method=unavailable，无法做精确开销比较。"
+  ],
+  "minimal_intervention": {
+    "change": "在本目标前置注入一条与该目标房间一致的合法源经验（如黄色门可达时的直接 go to 规则），其他条件不变，比较动作数与轨迹。",
+    "fixed": "保持相同的目标 prompt、房间布局/种子、工具集合与动作预算。",
+    "falsifier": "若注入后动作数或轨迹出现可复现改变（变好或变差），则说明本轨迹的无记忆成功并非与记忆无关。"
+  },
+  "causal_claim": false
+}

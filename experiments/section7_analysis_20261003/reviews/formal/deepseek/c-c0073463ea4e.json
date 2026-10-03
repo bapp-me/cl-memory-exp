@@ -1,0 +1,110 @@
+{
+  "case_id": "c-c0073463ea4e",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"checks_executed\": 45,"
+        }
+      ],
+      "reason": "源题在 5 个测试/45 个检查上返回 returncode 0、correct true，属合法经验；但源只是单个 K-Means/DataFrame 任务，可迁移面窄。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "For sklearn K-Means / clustering tasks: fit on exactly the object type the docstring specifies"
+        }
+      ],
+      "reason": "源写入的要点（按 docstring 指定对象类型拟合、直接返回估计器属性）与源题的可见实现一致，未被源侧证据反驳；这不等于该要点在目标题同样成立。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "labels, centroids = task_func(data['x'], data['y'], n_clusters, random_state)"
+        }
+      ],
+      "reason": "“按指定对象类型拟合、不要转成裸数组”的原则对目标题高度相关（目标恰是转了 ndarray），但源要点不覆盖“跨多集合求平均”这一目标新增结构。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "X = np.asarray(data, dtype=float)"
+        }
+      ],
+      "reason": "源派生要点 sai-00013 仅出现在候选/来源记录中、不在 injected_ids 内，目标可见轨迹里没有它的使用痕迹，因此无法判断它被复用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "TypeError: float() argument must be a string or a real number, not 'dict'"
+        },
+        {
+          "section": "target_submission",
+          "quote": "X = np.asarray(data, dtype=float)"
+        }
+      ],
+      "reason": "提交实现把 data_sets 的每个元素当成 array-like 转 float，隐藏测试传入的是含 'x'/'y' 的 dict，首次调用即抛 TypeError、tests_run 0；这只能证明本次执行与契约不符，不能证明记忆有害。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "def overall_clustering(data_sets, n_clusters=2, random_state=0):"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "labels, centroids = task_func(data['x'], data['y'], n_clusters, random_state)"
+        }
+      ],
+      "reason": "目标可见 prompt 只到签名，未展示 data_sets 元素结构示例，而参考解/隐藏测试使用 dict('x','y')——存在题意与测试结构可能不一致的候选；因可见文本可能被裁剪，这只是候选而非定论。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"memory_id\": \"sai-00013\","
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": ["
+        }
+      ],
+      "reason": "源自本题的 sai-00013 被检索为候选（rank 10），但注入清单以 err-00055 起、不含任何 sai 项，说明它在打包阶段因字节预算被丢弃而非检索失败；不能据此断言它若被注入就一定能避免失败。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "可见 prompt 结束于签名、未给出 data_sets 元素类型示例，失败也可能源于契约/题意歧义（EVAL_CONTRACT）而非纯执行失误。",
+    "无反事实且源要点 sai-00013 未被注入，无法说明记忆与结果之间有因果，也无法说明它本可挽救该失败。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "可见 target_prompt 是否被裁剪、原本是否含 dict 结构示例或 docstring 样例。",
+    "被丢弃的 sai-00013 若注入是否会改变输入类型判断。",
+    "注入的 46 条 err-*/misc-* 是否实际影响了本次验证脚本的构造方式。"
+  ],
+  "minimal_intervention": {
+    "change": "提交前用 array-like 与 dict('x'/'y') 两种元素形态各做一次探针（或对 dict 元素做保护），确认 data_sets 的实际元素类型再拟合。",
+    "fixed": "相同目标 prompt、相同隐藏 data_sets 结构、相同记忆预算与打包策略。",
+    "falsifier": "若隐藏测试实际传入 array-like 集合，或可见 prompt 明确规定了元素结构，则“读错输入类型”的候选被反驳。"
+  },
+  "causal_claim": false
+}

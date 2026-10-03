@@ -1,0 +1,143 @@
+{
+  "case_id": "c-28e6f19105ad",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"tests_run\": 5"
+        },
+        {
+          "section": "source_visible",
+          "quote": "Exact match confirmed. Note the seed is set by the caller (as in the doctest), not inside the function. Submitting:"
+        }
+      ],
+      "reason": "源题被离线评测判为 correct/scorable；它验证充分但只是一个单条 dict→JSON 字符串 的 episode，与目标结构不同。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "When the required return type is a serialized string (e.g., json.dumps of a dict), verify the FINAL string against the docstring's printed output"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "源写出的经验条目本身忠实（选择调用方式、由调用方播种、核对 json.dumps 字符串），但目标所需的输入/输出契约内容并未随注入到达目标，故只算部分覆盖。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Generate a JSON object from employee data based on given department codes and their employee counts."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "for department_data in department_data_list:"
+        }
+      ],
+      "reason": "随机级别分布与 JSON 序列化在目标仍适用，但目标把输入改成多个 dict 的列表并要跨 dict 拼接级别，源的单 dict 结构只部分适用。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "result[code] = {level: assignments.get(level, 0) for level in LEVELS}"
+        },
+        {
+          "section": "injection/4",
+          "quote": "the sparse Counter passes value-lookup checks but fails dict-comparison, key-set, len()"
+        }
+      ],
+      "reason": "提交里保留了全骨架键与错误路径/边界的自测风格，与注入的 err-00100/err-00124 类规则一致；但这只是行为代理，不能证明记忆带来正确性或错误。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ValueError: department_data_list must contain exactly one employee count per department code (4 expected, 2 given)"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert len(json.loads(new_solution([{'EMP$$': 3, 'MAN$$': 2}, {'DEV$$': 4, 'HR$$': 1}]))['EMP$$']) == 3"
+        }
+      ],
+      "reason": "实际实现把 department_data_list 当作与 PREFICES 位置对齐的扁平 int 列表；隐藏测试按 list[dict] 调用，于是长度守卫直接抛错。不能据此断言记忆有害，只是执行契约读错。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of department codes and their respective employee counts, generate a JSON object that represents the distribution of employee levels"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "department_result = json.loads(task_func(department_data))"
+        }
+      ],
+      "reason": "目标题面只写“a list of department codes and their respective employee counts”，未说明元素是 code→count 的 dict；参考解与测试却按 list[dict]+拼接处理，题意与测试可能不一致，仅作候选，不重打分。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "result[code] = {level: assignments.get(level, 0) for level in LEVELS}"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "return json.dumps(final_result)"
+        }
+      ],
+      "reason": "提交返回的是内层为级别计数的 dict，而契约要求返回 JSON 序列化字符串、内层为级别列表（测试对返回值做 json.loads）。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_block_byte_budget\""
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"source_index\": 14,"
+        }
+      ],
+      "reason": "源派生条目 sai-00027/28/29 在候选集内且在选定集中，但注入列表里没有它们，属于按字节预算淘汰后的可见性问题。这是观察而非已证因；不相关内容的存在也不构成干扰证据。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "EVAL_CONTRACT：目标题面对 department_data_list 的元素结构欠说明，隐藏测试却按 list[dict] 调用，失败可能来自契约歧义而非纯执行失误。",
+    "PACKING_VISIBILITY：源派生的 sai-* 策略条目在打包阶段被字节预算整体淘汰（注入列表只剩 err-* 与 misc-*），若其到达可能改变返回类型选择，无法排除可见性影响。",
+    "无记忆反事实：缺少对照组，无法判断在无注入或换一套注入时 agent 是否仍会误读输入契约。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "target_prompt 的可见部分被截断到函数签名，agent 当时是否看到更完整的输入说明未知。",
+    "hidden correctness 不可见；只能据离线评测的 returncode/报错位置判定失败点。",
+    "源派生条目在打包阶段被淘汰的确切字节账本未给出（token 计数 unavailable）。",
+    "无法确定注入的 err-* 集合对本次误读是中性、无助还是间接影响（无对照）。"
+  ],
+  "minimal_intervention": {
+    "change": "按任务自带调用形态推导契约：把 department_data_list 视为多个 code→count dict 的列表，跨 dict 拼接级别列表，并返回 json.dumps 的序列化字符串。",
+    "fixed": "相同题面、相同注入记忆集合与相同字节预算。",
+    "falsifier": "若隐藏测试实际接受扁平 int 列表与计数 dict 输出（题面字面即契约），或按 list[dict]+json.dumps 读取后仍判失败，则输入契约误读这一假设被反驳。"
+  },
+  "causal_claim": false
+}

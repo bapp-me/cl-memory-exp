@@ -1,0 +1,142 @@
+{
+  "case_id": "c-3d1dd7cbec9c",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "only coerce dtypes when the spec explicitly demands it"
+        }
+      ],
+      "reason": "源题通过全部测试且可评分，但其最终采用的 blanket astype(str) 修复被源自身记录为语义风险，故为合法但有边界的经验。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "astype(str) rewrites NaN to the literal string 'nan' (which then matches startswith('n'))"
+        },
+        {
+          "section": "injection/18",
+          "quote": "Do not patch a pandas .str AttributeError with a blanket .astype(str) coercion without examining its semantics"
+        }
+      ],
+      "reason": "注入的 err-00089 文本与源题结束时写入的内容逐字一致，没有转述漂移；但保真不等于对本题适用。"
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "counters.setdefault(category, Counter()).update(len(w) for w in words)"
+        },
+        {
+          "section": "injection/18",
+          "quote": "Do not patch a pandas .str AttributeError with a blanket .astype(str) coercion without examining its semantics"
+        }
+      ],
+      "reason": "目标实现只在 dict/Counter 上做分组累加，未使用 pandas .str、空 object 列或 astype 强制转换，源记忆的具体机制在本题不会触发。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Found my bug: I was overwriting each category's counts per document instead of accumulating across all documents in that category."
+        },
+        {
+          "section": "target_submission",
+          "quote": "counters.setdefault(category, Counter()).update(len(w) for w in words)"
+        }
+      ],
+      "reason": "可见行为是自测发现‘每文档覆盖’缺陷后改为累加，未出现源记忆特征的 .str/astype 痕迹；这只是行为观察，不能证明记忆确实未被使用或有害。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Found my bug: I was overwriting each category's counts per document instead of accumulating across all documents in that category."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "EVALUATOR_RESULT=1:True:0"
+        }
+      ],
+      "reason": "目标内部第一次提交按文档覆盖同类别计数，自身探针返回 KeyError 5 后改为按类别累加并通过；这解释了中间失败与最终成功，无需引入记忆。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_block_byte_budget"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"memory_id\": \"sai-00088\""
+        }
+      ],
+      "reason": "大量已选中候选（含源题策略条目 sai-00088）在选中后因字节预算被 oldest_complete_block 淘汰，只有 err-00089 等 49 条注入；这说明是打包淘汰而非检索缺失，但不能证明被淘汰条目对本题有用。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/18",
+          "quote": "Do not patch a pandas .str AttributeError with a blanket .astype(str) coercion without examining its semantics"
+        },
+        {
+          "section": "target_submission",
+          "quote": "counters.setdefault(category, Counter()).update(len(w) for w in words)"
+        }
+      ],
+      "reason": "唯一带源 provenance 的注入内容讲 pandas .str/astype，而目标解的是 Counter 分组累加，观察不到该经验的迁移；未迁移不等于负迁移或有害。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "def task_func(df, letter):"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "Ran 0 tests in 0.000s"
+        }
+      ],
+      "reason": "离线参考/测试声明的是 task_func(df, letter)，而目标契约函数名是 process_documents，且运行时 0 tests 却报告 1 个检查通过；仅标为题意/测试可能不一致的候选，不重打分。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "成功可由基础能力与目标内自调试解释，无非事实对照，无法归因于任何注入记忆。",
+    "目标中规整的手工期望值与边界检查（退出码、空输入）可能与注入的通用验证类条目一致，但无法与模型自身习惯区分。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法确定 49 条注入记忆中是否有任一条影响了目标的验证写法。",
+    "检索条目分数为 null，无法判断包中谁先被淘汰或记忆容量的真实上限。",
+    "源 provenance 仅覆盖 ID（源 44: sai-00088/err-00089），不证明被淘汰的 sai-00088 内容若在场会改变结果。",
+    "离线评测仅执行 1 个检查且 tests_run=0，隐藏正确性判定内部细节未知。"
+  ],
+  "minimal_intervention": {
+    "change": "在实验条件下把注入集合中不相关的 pandas .str 条目替换为目标陷阱对应的‘同类键必须累加（setdefault+update）’规则，观察首轮实现是否仍出现覆盖缺陷。",
+    "fixed": "相同目标 prompt、相同源题历史与来源 provenance、相同 49 条注入预算与相同求解环境。",
+    "falsifier": "若替换后 agent 仍先写出按文档覆盖的实现再自修复，则该候选规则无因果作用。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,121 @@
+{
+  "case_id": "c-82b0461b1e08",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "只给出 memory_id 与工作流文本，没有任何源题轨迹或结果可供评估来源经验质量。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "注入文本可见，但其来源内容未提供，无法判断是否保真或是否被删改。"
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "1. Select the door that satisfies the goal condition (e.g., the one on the right, behind, or of a required color) from the current observation."
+        }
+      ],
+      "reason": "注入的开门工作流直接覆盖按相对位置（含 behind）选门并 toggle and go through，与目标 'open a door behind you' 同型。"
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "the room now shows only walls, indicating the door is no longer blocking"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Verify from the observation that the door is no longer blocking (room with walls only) and the task is completed."
+        }
+      ],
+      "reason": "行为上采纳了工作流的检查/开门/验证套路，却把正前方的红门当作目标并在没有完成标记时宣布完成，属应用偏差候选而非因果结论。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"progress\": 0.5,"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"submit_calls\": 0,"
+        }
+      ],
+      "reason": "直接记录显示本次得 0.5 且未提交，执行链在选门与收尾上失败；这只说明执行结果，不说明记忆是否参与。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "**Goal:** Open a specific door (selected by color or relative position) by passing through it."
+        },
+        {
+          "section": "injection/0",
+          "quote": "**Goal:** Navigate to a specific door (by color or relative position) so it is right in front of the agent."
+        }
+      ],
+      "reason": "记忆库中确实存在与本题同型的开门/定位工作流条目，机会面成立；机会存在不等于内容被有效复用。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"selected_before_packing\": ["
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"dropped\": [],"
+        }
+      ],
+      "reason": "两条候选都被选中、注入且无淘汰，可见检索/打包不是本次的瓶颈；这不能证明被注入内容适用于当前房间。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The door in front is red closed door 1, but the goal is a door behind me. Let me turn around to see what's behind."
+        },
+        {
+          "section": "target_visible",
+          "quote": "toggle and go through red closed door 1"
+        }
+      ],
+      "reason": "措辞与动作名和注入工作流的相对位置选门、toggle and go through 步骤表面一致；表面一致只是代理证据，不能证明记忆导致该选择。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "失败可由 agent 自身对 'behind' 相对方位的空间推理错误造成，与注入记忆无关（无对照运行）。",
+    "两条工作流较通用，agent 不注入记忆也可能执行同样的 check available actions / toggle 序列。",
+    "评测中 submitted=false 而 terminal_state=completed，失败可能部分来自未提交契约而非开门选择本身。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无源题轨迹，无法判断两条记忆的来源质量与保真度。",
+    "无移除记忆或改写记忆的对照，无法判断记忆对动作序列的影响。",
+    "'behind you' 是按初始朝向还是当前朝向判定，证据中未说明。",
+    "提交是否为计分必要条件，包内未见契约说明。"
+  ],
+  "minimal_intervention": {
+    "change": "在注入的开门工作流中显式要求先按目标相对位置（behind）解析出门名并在 toggle 前 go to 该门",
+    "fixed": "保持相同任务、环境、记忆库内容与动作预算",
+    "falsifier": "若仍注入同样工作流时 agent 依旧选择正前方红门并宣布完成，则该改动与记忆使用假设不成立"
+  },
+  "causal_claim": false
+}

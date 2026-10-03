@@ -1,0 +1,111 @@
+{
+  "case_id": "c-33b88e3ff385",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "无源题配对或源记忆证据，不能评价合法源经验。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": []"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "本题没有实际注入的记忆内容，相关记忆保真度无载体。"
+    },
+    "target_applicability": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"observable_candidates\": []"
+        }
+      ],
+      "reason": "无可观察或注入的候选记忆，因而没有可适用于本目标的记忆内容。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": []"
+        },
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"go to yellow closed door 1\""
+        }
+      ],
+      "reason": "可见动作直接调用环境高层动作，未显示任何记忆内容被引用或改变行为。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"go to yellow closed door 1\""
+        },
+        {
+          "section": "target_visible",
+          "quote": "The task is completed."
+        }
+      ],
+      "reason": "两次 ACTION 即完成目标，属可见的直接环境交互成功；不能证明记忆参与。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"observable_candidates\": []"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": []"
+        }
+      ],
+      "reason": "没有可观察候选、选中或注入记录，说明本次会话未向提示注入记忆；这不是记忆库为空的证明。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_update_operations",
+          "quote": "\"type\": \"ADD\",\n      \"section\": \"STRATEGIES & INSIGHTS\""
+        }
+      ],
+      "reason": "目标结束后才写入 ADD 策略条目；target_update 不能解释目标期间行为，也不能证明该写入已被未来检索。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "成功可由环境提供的高层 'go to ...' 动作接口直接解释，与检索/记忆无关。",
+    "本次检索包只显示未注入；未提供完整记忆库，不能据此断定记忆库为空或检索机制失效。",
+    "目标后的 ADD 写入可能在后续任务中才被使用，但本次无反事实或受控干预，不能评估其迁移效果。"
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "完整记忆库内容未提供，不能判断是否存在未被检索的合法源经验。",
+    "target_update_operations 的 ADD 条目未来是否被检索、是否保真适用未知。",
+    "无源题配对，不能评价跨任务源经验质量与迁移。",
+    "token_count 为 null，无法评估注入 token 开销（虽然本次注入为 0）。"
+  ],
+  "minimal_intervention": {
+    "change": "在前置注入一条与“go to yellow door”直接相关的合法源经验，保持相同目标提示与环境，观察动作选择/成功率是否改变。",
+    "fixed": "相同 BabyAI 布局/种子、目标提示、动作接口和预算。",
+    "falsifier": "若无论是否注入，可见动作序列与成功率均无变化，则本次成功不支持 D1 记忆有效复用；若注入后行为改变也不能单独建立因果，需重复对照。"
+  },
+  "causal_claim": false
+}

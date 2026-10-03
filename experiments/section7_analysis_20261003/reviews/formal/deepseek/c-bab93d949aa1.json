@@ -1,0 +1,140 @@
+{
+  "case_id": "c-bab93d949aa1",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Encodes a dict of list as a Base64 string. The dict is first converted to a Pandas DataFrame."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        }
+      ],
+      "reason": "The source episode passed its own tests and teaches the DataFrame-to-CSV-to-base64 method. Its limit is that it handles a single dict of lists, while the target asks for a list of datasets and refers to an unspecified raw problem."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 6"
+        }
+      ],
+      "reason": "No target-relevant source memory was injected; the six injected episodes concern unrelated tasks, so there is no visible faithful memory of the CSV-base64 source method in the target context."
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "return base64.b64encode(csv_data).decode('utf-8')"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "csv = df.to_csv(index=False)"
+        }
+      ],
+      "reason": "The source method is exactly the reference target method once wrapped in a loop over datasets; the target reference converts each dict to a DataFrame, CSV, then base64."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "json_str = json.dumps(_to_jsonable(dataset))"
+        }
+      ],
+      "reason": "The target submission visibly uses JSON serialization and never the DataFrame/CSV/base64 source method. This is a behavioral proxy, not proof that memory was unavailable."
+    }
+  },
+  "labels": [
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_episode_byte_budget"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "The relevant source appears among observable retrieval candidates but was not injected; packing dropped oldest complete episodes by byte budget, leaving only six unrelated injections. This supports a visibility/budget mechanism but cannot prove the source would have prevented failure."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Encodes a dict of list as a Base64 string. The dict is first converted to a Pandas DataFrame."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        }
+      ],
+      "reason": "A legitimate, passing source episode exists and is relevant to the target task. It does not prove the source was actually injected or would have been used."
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "json_str = json.dumps(_to_jsonable(dataset))"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "csv = df.to_csv(index=False)"
+        }
+      ],
+      "reason": "The target emitted JSON-base64 strings, while the hidden reference asserts exact CSV-base64 strings. The mismatch is representation-level, not an execution crash; it does not prove memory caused the JSON choice."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Each dataset needs to be encoded into a Base64 string as described in the raw problem."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "csv = df.to_csv(index=False)"
+        }
+      ],
+      "reason": "The visible target prompt does not itself state CSV/DataFrame encoding, yet the hidden test requires exact CSV-base64 output. This is a contract-ambiguity candidate; the source episode does define the CSV method, so it is not proof that the test is invalid."
+    }
+  ],
+  "primary_hypothesis": "PACKING_VISIBILITY",
+  "competing_explanations": [
+    "EVAL_CONTRACT: the target prompt omits the CSV specification and only says to follow the raw problem, so failure may be contract under-specification independent of memory.",
+    "REPRESENTATION: the solver may have independently chosen generic JSON serialization; no counterfactual shows the dropped source memory would have changed this.",
+    "OPPORTUNITY_SOURCE: a relevant source existed and was applicable, but it may not have been selected or retained even without the observed byte-budget drop."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "The exact history_index of the source episode among the dropped candidates is inferred, not directly shown.",
+    "Whether the agent had access to the raw problem text elsewhere is not shown in the packet.",
+    "Whether injecting the source CSV episode would have changed the agent's representation choice is a counterfactual and cannot be answered here.",
+    "The six injected unrelated episodes may be noise, but their mere presence does not prove interference.",
+    "Hidden correctness is unavailable; only the offline exact-match assertion is visible."
+  ],
+  "minimal_intervention": {
+    "change": "Ensure the retained source episode teaching DataFrame-to-CSV-to-base64 is included in the target context, or include the raw problem's CSV specification explicitly.",
+    "fixed": "Keep the same target prompt, model policy, tool environment, and packing budget.",
+    "falsifier": "If the source CSV episode is injected and the target still submits JSON-base64 failing the exact CSV assertion, the packing-visibility hypothesis is weakened."
+  },
+  "causal_claim": false
+}

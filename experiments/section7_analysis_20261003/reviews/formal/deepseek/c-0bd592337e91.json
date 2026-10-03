@@ -1,0 +1,86 @@
+{
+  "case_id": "c-0bd592337e91",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "包内无源任务轨迹，只有 helpful=1 计数与 section 元数据，无法核验来源经验本身是否通过或完整。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "没有源题原文可与注入内容逐条对照，注入指令虽与 BabyAI 任务形态一致，但不能据此确认保真。"
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "injection/2",
+          "quote": "If the goal object (e.g., a door of a specific color) is not visible in the current room, do not guess its location — explore first."
+        }
+      ],
+      "reason": "目标正是“go to a red door”，而红门起初不可见，该条探索策略与目标条件直接相关。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The red door isn't visible in this room, so I'll explore through the green door."
+        },
+        {
+          "section": "target_visible",
+          "quote": "go to red closed door 1"
+        }
+      ],
+      "reason": "可见行为先探索后使用高层 go to 到达红门，与注入的两条指令方向一致；这只是行为代理。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "if the goal object appears as a direct action (e.g., 'go to yellow closed door 1'), execute it immediately"
+        },
+        {
+          "section": "target_visible",
+          "quote": "go to red closed door 1"
+        }
+      ],
+      "reason": "轨迹中确实出现先查可用动作、找到红门后直接执行 go to 的模式，与注入指令吻合；但无记忆关闭对照，不能证明记忆造成了成功。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"dropped\": []"
+        }
+      ],
+      "reason": "四条候选全部被选中并注入且无淘汰，说明本次不存在检索/打包缺失；这证明可用性，不证明其内容被有效复用。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "相同的“探查—高层动作到达”行为可能来自模型自身的 BabyAI 能力，缺少无记忆对照，观察到的吻合可能只是巧合。",
+    "注入内容中颜色示例为 yellow/blue 等，而本题为 red/grey/green，行为对齐也可能源于通用常识而非具体记忆条目。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无源题配对，source_quality 与 memory_fidelity 无法核验。",
+    "无记忆消融或打乱对照，不能判定注入内容与成功之间的因果关系。",
+    "无法观察模型是否真正读到并引用了全部四条注入文本。",
+    "target_update_operations 发生在目标结束之后，不能用于解释本次行为。"
+  ],
+  "minimal_intervention": {
+    "change": "在相同任务上做一次四条注入记忆全部消融（或替换为打乱对照集）的重跑。",
+    "fixed": "保持相同题面、随机种子、动作预算与环境配置。",
+    "falsifier": "若消融条件下仍以相当或更少步数到达红门并提交成功，则记忆贡献假设被反驳。"
+  },
+  "causal_claim": false
+}

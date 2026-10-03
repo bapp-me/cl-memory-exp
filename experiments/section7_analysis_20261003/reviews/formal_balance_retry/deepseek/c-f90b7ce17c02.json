@@ -1,0 +1,143 @@
+{
+  "case_id": "c-f90b7ce17c02",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "injection_metadata",
+          "quote": "da1a7a8b15514ab368cfc42ba0e216d8b13f60948d1ac068d90400de347b4605"
+        }
+      ],
+      "reason": "只有记忆 id 与 source_event_ids，没有任何源题文本或配对结果，无法判断该工作流的来源是否合规、是否通过。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "target_update_operations",
+          "quote": "stream.task-004.attempt-1"
+        }
+      ],
+      "reason": "仅见来源事件 id，未见源内容，无法比对注入文本与源之间是否保真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "**Goal:** Move the agent to a door of a specified color so that it is directly in front of the agent (1 step away), completing the task."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Goal: open a door on your right"
+        }
+      ],
+      "reason": "记忆的定位彩色门与导航步骤对目标可用，但目标新增了 open 动作与“on your right”空间条件，记忆把“到达门前”当作完成。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "check available actions"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Issue `go to <door_name>` to navigate so the target door is directly in front (1 step away)."
+        }
+      ],
+      "reason": "首个动作“check available actions”和“go to grey closed door 1”与记忆步骤逐条对应，随后额外执行 toggle，属行为代理；无未注入对照，不能推断依赖。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": false"
+        },
+        {
+          "section": "target_visible",
+          "quote": "The task is complete."
+        },
+        {
+          "section": "target_visible",
+          "quote": "you can see several objects: The room has walls around you."
+        }
+      ],
+      "reason": "3 个动作后判为未完成且 progress 0，而最终消息宣称门已打开并通过，可见执行与自述不一致；不能据此判断哪一步出错。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "submitted\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"submit_calls\": 0"
+        }
+      ],
+      "reason": "回合结束时从未提交，且可用动作枚举里没有 done/submit 类动作，提交契约与动作空间可能不一致；这只能标为契约候选，不能断定门状态是否达标。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "go to grey closed door 1"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Issue `go to <door_name>` to navigate so the target door is directly in front (1 step away)."
+        },
+        {
+          "section": "retrieval",
+          "quote": "injected_ids"
+        }
+      ],
+      "reason": "注入记忆的导航步骤在可见轨迹中出现，属复用行为代理；成功/失败都可能与记忆无关，无反事实不得因果化。"
+    },
+    {
+      "tag": "SCOPE_INTERFERENCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "so that it is directly in front of the agent (1 step away), completing the task."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Goal: open a door on your right"
+        }
+      ],
+      "reason": "记忆作用域是“到门前即完成”，目标契约是开一扇右侧门，完成判据不同；但 agent 随后仍执行了 toggle，故不能证明作用域差异造成失败。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "评测可能要求显式 submit，而可用动作列表未提供该动作，失败可能是协议层而非执行层。",
+    "记忆未注入时 agent 可能仍会先 check available actions 并走同一路径，可见重合不构成因果。",
+    "组合动作“toggle and go through”后观测中门消失，环境对该动作的语义不明，进度 0 可能由动作/环境解析造成。",
+    "房间与门的初始位置是否使灰门真属“on your right”存在歧义，可能选错目标门。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "门是否真的被打开、toggle 是否生效，无环境真值。",
+    "记忆的源题内容、评测口径（是否必须 submit）均不可见。",
+    "目标结束后的 REPLACE_WORKFLOW_LIBRARY 无法解释本题行为。"
+  ],
+  "minimal_intervention": {
+    "change": "把记忆的作用域改为与目标契约一致（在导航步骤后加入 toggle/open 目标门并以显式提交结束）。",
+    "fixed": "同一房间布局/种子、同一动作工具、同一注入预算（1 条记忆）与相同历史。",
+    "falsifier": "换成作用域匹配的记忆后仍出现 progress 0 且无提交，则作用域错配不是关键原因。"
+  },
+  "causal_claim": false
+}

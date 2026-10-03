@@ -1,0 +1,139 @@
+{
+  "case_id": "c-4892bb357b48",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=16:True:7"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Create a Pandas DataFrame with random alphabets in each cell."
+        }
+      ],
+      "reason": "源题离线评测 correct/scorable 为 true、16 项检查全过，覆盖了随机字母表与 a,b,c 列命名这一子技能；但源题只生成单个 DataFrame，不含目标新增的多表生成、纵向拼接与超过 26 列时的命名条件。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Create a Pandas DataFrame with random alphabets in each cell."
+        }
+      ],
+      "reason": "注入文本只保留“pandas DataFrame / value counts”的泛化痕迹，缺少可复用配方，并夹带源题没有的 matplotlib 柱状图与 'value' 列条件；且无 source memory id 映射到这些候选，归属本身未确立。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "generates multiple Pandas DataFrames, each with random alphabets in each cell, and then concatenates them vertically"
+        }
+      ],
+      "reason": "注入内容仅与“pandas DataFrame”这一语域重叠，对多表生成、pd.concat 与列名映射无可操作内容，因此只是部分相关。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "return pd.concat(dfs, ignore_index=True)"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        }
+      ],
+      "reason": "提交代码只做 DataFrame 生成与纵向拼接，没有出现注入描述中的 matplotlib/柱状图元素；这只是行为代理，不能证明记忆在内部环节完全未被读到。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        }
+      ],
+      "reason": "源事件 stream.task-002.attempt-1 的更新操作列表为空，说明源题结束没有产生新的记忆条目，注入的两条文本并非该源题的直接记录；这不能说明库中不存在其他条目。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Create a Pandas DataFrame with random alphabets in each cell."
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        }
+      ],
+      "reason": "源题含目标所需子步骤（随机字母 DataFrame 与 a,b,c 列名），本可成为可复用经验；但原始源 episode 未保留、源 provenance 未注入，机会存在却未实际投递到目标上下文。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "Native Qdrant top-5 returned set; complete persisted point pool separately snapshotted"
+        },
+        {
+          "section": "retrieval",
+          "quote": "0.3668851958303102"
+        }
+      ],
+      "reason": "两条候选被召回并全部注入、无丢弃，但候选范围仅 top-5 且最高分约 0.37，内容均为可视化类任务描述；只能说明该返回集中存在弱相关候选，不能证明检索失败或不存在更相关记忆。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "target_submission",
+          "quote": "return pd.concat(dfs, ignore_index=True)"
+        }
+      ],
+      "reason": "成功解的可见代码中没有注入文本所述的柱状图/value 列痕迹，缺少可见的迁移证据；成功不能归因于记忆复用，同理也不能据此断言记忆有害。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "注入的两条片段可能来自其他 pandas+matplotlib 题，与本题无关，其出现属于检索噪声而非干扰。",
+    "目标解与源题解在 np.random.choice 与 letters 命名上相似，这既可能是通用惯用法（字符串重合只是可见代理），也可能是未记录的传递，缺乏 provenance 无法判定。",
+    "任务本身较简单，成功可在无有效记忆参与下由题面直接完成。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法确定两条注入记忆的真实来源题，source_provenance_at_target 的 memory_ids 为空。",
+    "未提供完整持久记忆库，不能判断是否存在更相关的、未被召回的条目。",
+    "私有推理被移除，无法确认模型是否在内部读到或依赖了任何记忆内容。",
+    "离线评测记录 tests_run 为 0 而 checks_executed 为 3，评测机制细节不明。"
+  ],
+  "minimal_intervention": {
+    "change": "让源题产生的可复用配方（随机字母 DataFrame + 列名映射）以直接记录或保真摘要进入候选池，替换当前与任务无关的摘要候选。",
+    "fixed": "相同题面、相同检索配置与预算、相同隐藏评测。",
+    "falsifier": "若换入保真源经验后目标解出现明显加速/更稳健，或换入无关摘要后出现错误，则反驳“无可见迁移影响”的判断。"
+  },
+  "causal_claim": false
+}

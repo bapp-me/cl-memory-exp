@@ -1,0 +1,143 @@
+{
+  "case_id": "c-4fd582f58d92",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"tests_run\": 6,"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Describe a dataframe and draw a distribution chart for each numeric column after replacing the NaN values with the average of the column."
+        }
+      ],
+      "reason": "Source episode passed its own 6 tests, but its contract is single-DataFrame task_func, while the target asks for a list-of-DataFrames function."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].mean())"
+        },
+        {
+          "section": "source_visible",
+          "quote": "ax = sns.histplot(df[col], bins=10)"
+        }
+      ],
+      "reason": "The source retains the target-relevant core operations: numeric-column selection, column-mean NaN fill, describe, and 10-bin histplot per column."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of dataframes, each containing numeric columns with potential NaN values"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df):"
+        }
+      ],
+      "reason": "Core operations apply, but the source supplies a single-DataFrame helper; the target adds list iteration and list-of-tuples return shape."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].mean())"
+        },
+        {
+          "section": "source_visible",
+          "quote": "numeric_cols = df.select_dtypes(include=[np.number]).columns"
+        }
+      ],
+      "reason": "Visible target code wraps the source-like single-DataFrame logic in a list loop, matching the recalled mechanism but not proving memory causality."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Describe a dataframe and draw a distribution chart for each numeric column after replacing the NaN values with the average of the column."
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true,"
+        }
+      ],
+      "reason": "A legal, correct single-DataFrame source episode is present and related to the target core; this identifies a transfer opportunity, not proof of selection or use."
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def process_dataframes(dataframes):"
+        }
+      ],
+      "reason": "The source is represented as a single-DataFrame function returning a tuple; the target requires a list wrapper returning a list of tuples, so adaptation is required."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].mean())"
+        },
+        {
+          "section": "source_visible",
+          "quote": "ax = sns.histplot(df[col], bins=10)"
+        }
+      ],
+      "reason": "Visible target implementation uses the same mean-fill/describe/histplot mechanism as the source candidate, but no counterfactual isolates memory as the cause."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 3,"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Calculate the frequency of combinations of elements in a DataFrame."
+        }
+      ],
+      "reason": "Three candidates were injected, including an unrelated combination-count task; presence alone does not show retrieval, use, or interference."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The target task is simple enough that the agent could solve it without any memory, especially since no counterfactual or ablation is available.",
+    "Structural code similarity is only a visible proxy; memory may have been present but not selected or not causally used.",
+    "The unrelated injected candidates may be context padding only, with no evidence they were retrieved or interfered."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "No counterfactual; cannot determine whether memory caused the successful solution or whether the agent would solve it independently.",
+    "The unselected full memory library is absent, so retrieval candidates, ranking, and budget eviction cannot be assessed.",
+    "There is no observable evidence about whether the unrelated injected items were considered or affected cost/behavior.",
+    "Source provenance retention does not prove the target agent actually used the source content."
+  ],
+  "minimal_intervention": {
+    "change": "Ablate or withhold the single-DataFrame source/provenance in an otherwise identical target run.",
+    "fixed": "Keep the same target prompt, list-of-DataFrames contract, model, tool budget, and offline evaluator.",
+    "falsifier": "If the ablated run still produces an equivalent process_dataframes and passes, USE_TRANSFER is not necessary; if it loses the mean-fill/histplot solution, the transfer candidate is strengthened."
+  },
+  "causal_claim": false
+}

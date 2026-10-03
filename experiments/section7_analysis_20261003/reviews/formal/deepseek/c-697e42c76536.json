@@ -1,0 +1,143 @@
+{
+  "case_id": "c-697e42c76536",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=20:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "First a normal distribution is fitted to the data, the mean and standard"
+        }
+      ],
+      "reason": "源任务在其自身评测中通过（20 项检查、5 个测试、correct=true），是合法可参考经验；但源内容保真度与是否被带入目标不可由该分数保证。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/3",
+          "quote": "Compute the required statistics using `np.mean`, `np.median`, `np.std`"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        }
+      ],
+      "reason": "注入内容只以通用统计计算/验证流程描述 mean、std 一类操作，与目标所需一致；但源题的具体离群点过程（norm 拟合、std==0 返回空表、variance=std**2）没有任何源派生记忆承载。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "return a dictionary where the keys are the indices of the groups"
+        },
+        {
+          "section": "injection/7",
+          "quote": "defines the candidate function and executes it on the docstring example inputs"
+        }
+      ],
+      "reason": "通用统计与‘跑示例再提交’流程对目标局部适用；目标的组列表循环、字典按组索引、每组 std==0 判空等新增条件在任何候选记忆中都没有对应描述。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The function works correctly: it identifies outliers via Z-scores"
+        },
+        {
+          "section": "injection/7",
+          "quote": "defines the candidate function and executes it on the docstring example inputs"
+        }
+      ],
+      "reason": "可见行为是先用 PYTHON 跑一遍样例、再带完整 docstring 提交，与通用验证流程形式一致；这只是行为代理，不能推出记忆导致成功。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_retained\": false"
+        }
+      ],
+      "reason": "源题通过后没有任何更新操作、也没有源溯源被保留/注入，即不存在可检索的源派生经验；这不等于源内容被目标看到后发现无用。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/3",
+          "quote": "Compute the required statistics using `np.mean`, `np.median`, `np.std`"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "identify the outliers in each group based on the Z score"
+        }
+      ],
+      "reason": "注入的 8 条都是跨查询通用工作流，缺少目标所需的 Z 分数离群点与按组聚合表示；表征缺口可用来说明记忆不可能提供核心算法，但不能说明模型一定未受其余通用条目影响。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"rank\": 1,\n      \"score\": null"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": []"
+        }
+      ],
+      "reason": "可观测检索集为 8 条通用工作流且无相似度分值、无源溯源条目，只说明可见候选构成；分值缺失使检索质量本身不可评。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/7",
+          "quote": "defines the candidate function and executes it on the docstring example inputs"
+        },
+        {
+          "section": "target_visible",
+          "quote": "The function works correctly: it identifies outliers via Z-scores"
+        }
+      ],
+      "reason": "可见的‘先测样例再提交’与统计量写法同通用工作流相容，属于可能的迁移形态；无对照实验，不能据此判定记忆造成成功或存在有效复用。"
+    }
+  ],
+  "primary_hypothesis": "OPPORTUNITY_SOURCE",
+  "competing_explanations": [
+    "目标所需的 Z 分数算法可由模型自备知识直接写出，通用工作流注入对结果无实质作用。",
+    "‘统计汇总’与‘示例验证’两条通用流程可能提供了弱提示，但无法与模型自身默认策略分离。",
+    "隐藏检查仅执行 1 项（tests_run=0），成功判定可能未覆盖全部题面边界。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "目标上下文是否实际呈现了源题原文（raw_source_episode_retained_in_method_state=true 与未注入并存）。",
+    "检索相似度分值缺失，无法判断候选排序质量。",
+    "目标实现用 np.mean/np.std 而源题示例用 norm.fit，两者在本例等价与否未由离线检查显式区分。",
+    "无对照条件，无法确认任一注入条目的贡献或开销。"
+  ],
+  "minimal_intervention": {
+    "change": "在目标运行前写入并注入一条源派生的单数组 Z 分数离群点过程记忆（拟合均值/标准差、std==0 返回空表、variance=std**2）",
+    "fixed": "相同目标题面、相同 8 条候选取舍与上下文预算、相同模型与评分 mask",
+    "falsifier": "若加入该记忆后目标输出不变且仍正确，则说明该记忆对本题成功并非必要"
+  },
+  "causal_claim": false
+}

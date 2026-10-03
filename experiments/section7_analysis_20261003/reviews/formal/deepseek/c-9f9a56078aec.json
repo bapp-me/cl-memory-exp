@@ -1,0 +1,111 @@
+{
+  "case_id": "c-9f9a56078aec",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "target_update_operations",
+          "quote": "stream.task-002.attempt-1"
+        }
+      ],
+      "reason": "只出现源事件ID，没有源题内容、结果或保留版本，无法评价合法源经验质量。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": []"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "目标运行时没有可见注入记忆，因而没有可核对的记忆保真内容。"
+    },
+    "target_applicability": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"observable_candidates\": []"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"selected_before_packing\": []"
+        }
+      ],
+      "reason": "检索未返回候选，也没有进入打包或注入，故无可评价其目标适用性的记忆。"
+    },
+    "visible_use": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "无注入记忆，无法观察记忆被复用、误用或忽略的行为代理。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The task is completed."
+        },
+        {
+          "section": "target_submission",
+          "quote": "\"submitted\": true"
+        }
+      ],
+      "reason": "可见动作链完成探索、开门、转向并到达红门后提交；只能证明任务执行成功，不能证明任何记忆参与。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_update_operations",
+          "quote": "stream.task-002.attempt-1"
+        }
+      ],
+      "reason": "仅出现源事件ID，不证明源内容被完整保留、适用或被目标使用。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"observable_candidates\": []"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "目标运行时没有可见检索候选或注入；不能据此推断库中无记忆，也不能推断检索必然失败。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "成功也可能来自模型原生导航与试错能力，而非任何记忆支持。",
+    "检索为空可能是库中无相关记忆、检索未命中或存储本身为空，现有证据无法区分。",
+    "源事件ID存在但无源内容，无法判断是否存在可用旧经验。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "是否存在相关已存记忆及其内容无法得知。",
+    "空检索是库空、检索失败还是无相关候选无法区分。",
+    "target_update_operations 显示 operations 为空但前后 hash 不同，含义未知；且其为任务后更新，不能解释本题行为。",
+    "无对照条件，不能判断记忆是否影响成功。"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "保持相同 BabyAI 环境、初始观测、动作预算与记忆策略 enabled",
+    "falsifier": "若在相同条件下注入一条可追溯的相关记忆后，可见动作出现与该记忆对应的适应且结果改变，则支持记忆复用；否则仍只支持直接执行解释。"
+  },
+  "causal_claim": false
+}

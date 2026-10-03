@@ -1,0 +1,142 @@
+{
+  "case_id": "c-d21e7de5225b",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=14:True:6"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Generates a pair plot from a numeric DataFrame and calculates its covariance matrix."
+        }
+      ],
+      "reason": "源题通过全部 6 项检查，但其契约是单 DataFrame 版 task_func(df)，对列表版目标只在空值/非数值校验子任务上可复用。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        },
+        {
+          "section": "source_state_summary",
+          "quote": "\"before_target_hash\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\""
+        }
+      ],
+      "reason": "状态前后哈希一致且源原始片段未保留在方法状态中，说明与目标相关的源内容并未作为记忆存在，因此无所谓保真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "generate a combined pair plot and covariance matrix for all these DataFrames"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df):"
+        }
+      ],
+      "reason": "源的单帧校验思想部分适用于目标，但目标新增了列表遍历、类型检查与 pd.concat 合并等源题不存在的条件。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        }
+      ],
+      "reason": "没有任何记忆内容被注入目标上下文，可见轨迹中无法观察到对已存经验的复用或误用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Generates a pair plot from a numeric DataFrame and calculates its covariance matrix."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=14:True:6"
+        }
+      ],
+      "reason": "存在一个合法且通过评测的同族源任务，构成可复用机会；但源解法只针对单 DataFrame，不能证明它被写入或用于本题。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_state_summary",
+          "quote": "\"after_source_hash\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        }
+      ],
+      "reason": "源题结束前后状态哈希相同，未把源片段写为可复用经验；这只能说未写入，不能推断“已存但未检索到”。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "target_visible",
+          "quote": "numeric_df = df.select_dtypes(include=[np.number])"
+        }
+      ],
+      "reason": "目标题可见代码与源题有校验写法重合，但没有注入记录，重合只是字符串/结构代理，不能证明迁移或因果影响。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "EVALUATOR_RESULT=4:True:0"
+        },
+        {
+          "section": "target_visible",
+          "quote": "The function works as expected. Now I'll submit the final implementation."
+        }
+      ],
+      "reason": "目标函数自行编写并跑通 4 项检查后提交，成功可由自生成直接解释；成功本身不证明记忆有效复用。"
+    }
+  ],
+  "primary_hypothesis": "unknown",
+  "competing_explanations": [
+    "目标成功可由模型对列表合并与校验的直接泛化解释，与源经验无关",
+    "源题与目标题共享的空值/非数值校验写法可能只是同族任务的常见模式，而非迁移",
+    "memory_policy 为 disabled 且注入数为 0，本题无法检验记忆的实际作用"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏正确性具体检查项未展示，仅有 correct=true 与 4 checks",
+    "未提供未选中的完整记忆库，不能由本包推断源内容一定不存在于其他状态",
+    "无法判断源片段是否在上下文层面出现过（仅知未注入）"
+  ],
+  "minimal_intervention": {
+    "change": "在相同题面下显式注入源题解法/校验片段，观察目标代码是否出现源特有写法或行为差异",
+    "fixed": "保持同一目标 prompt、同一模型、同一工具与预算，且不改变评分 mask",
+    "falsifier": "若注入与不注入两条件产出完全等价且无任何源特有痕迹，则本候选“可见复用”判断被削弱"
+  },
+  "causal_claim": false
+}

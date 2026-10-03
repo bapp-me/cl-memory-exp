@@ -1,0 +1,75 @@
+{
+  "case_id": "c-3f4e3c0b913a",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "No source task or memory source is present in the packet; the target run is a no-memory D0 baseline."
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "injected_count 0 and memory_policy disabled, so there is no memory content whose fidelity could be judged."
+    },
+    "target_applicability": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "No retrieved or injected experience exists for this target episode."
+    },
+    "visible_use": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "No memory was available, so no visible use or adaptation of memory can be assessed."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The door on your left is now open, completing the goal."
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"correct\": false"
+        }
+      ],
+      "reason": "The agent ended the episode with a self-declared success text instead of a verified completion, and the run is scored incorrect; this does not prove which door was the intended target."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"submit_calls\": 0"
+        },
+        {
+          "section": "target_submission",
+          "quote": "\"submitted\": false"
+        }
+      ],
+      "reason": "The goal-completion protocol appears to require a submit action, which was never issued, so the episode terminated as historical_committed without a verifiable final state."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "The door-selection action sequence may itself be wrong (target door ambiguous), rather than only the missing submission.",
+    "correct=false may reflect the absent submission signal rather than a demonstrably wrong walk/toggle sequence."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the green door the agent opened was the intended 'door on your left'.",
+    "Whether a submit tool was available but overlooked, or the termination was harness-side.",
+    "Whether the target door was the initially visible red door despite the 'left' phrasing."
+  ],
+  "minimal_intervention": {
+    "change": "Issue the submit action after opening the door instead of ending with a prose summary of completion.",
+    "fixed": "Keep the same observations, action tool, step/token budget and environment (no memory injection).",
+    "falsifier": "A submitted run with the same walk/toggle sequence still scored incorrect would show door selection, not the missing submit, was the failure."
+  },
+  "causal_claim": false
+}

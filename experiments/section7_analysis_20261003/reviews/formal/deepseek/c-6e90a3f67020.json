@@ -1,0 +1,147 @@
+{
+  "case_id": "c-6e90a3f67020",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=22:True:10"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "applying a Hann window to reduce edge effects."
+        }
+      ],
+      "reason": "源题通过 10 项测试(22 checks)，是合法可用的源经验；但源题只处理单谐波、标题为 'Complex Wave with Hann Window'，与目标多谐波契约不同。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "wave = amplitude * np.exp(2j * np.pi * frequency * time)"
+        },
+        {
+          "section": "injection/0",
+          "quote": "\"name\": \"SUBMIT\""
+        }
+      ],
+      "reason": "注入的源 prompt/轨迹内容与源题实际可见过程一致（单谐波复数波 + get_window('hann') + SUBMIT），与目标相关的必要内容未见失真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Create a function that generates a complex wave with multiple harmonics, each with its own amplitude and frequency"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Generates and plots a complex wave with a specified amplitude and frequency over given time points,"
+        }
+      ],
+      "reason": "源题的复数指数/汉宁窗/坐标标签模式适用于目标；但目标新增多谐波叠加与不同标题，源题是单谐波，只部分适用。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "harmonic = amp * (np.cos(2*np.pi*freq*time) + 1j*np.sin(2*np.pi*freq*time))"
+        },
+        {
+          "section": "target_visible",
+          "quote": "ax.set_title('Complex Wave with Multiple Harmonics and Hann Window')"
+        }
+      ],
+      "reason": "目标沿用源的汉宁窗与复指数构造，改为对每个谐波加窗后累加，并按题意改写标题——行为上与源模式一致适配，但不证明因果复用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "window = get_window('hann', n)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "window = get_window('hann', n)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "combined += harmonic * window"
+        }
+      ],
+      "reason": "目标复用源的 get_window('hann', n) 与复指数表示并扩展到多谐波；这仅是风格/结构重合的可见代理，无对照无法证明成功来自该经验。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The function works correctly: harmonics are combined, the Hann window tapers the edges (first value is 0j), and the plot has the required title and labels."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"checks_executed\": 4"
+        }
+      ],
+      "reason": "目标自行执行并自测通过、提交成功且离线判为 correct/scorable，属直接记录的成功执行，不含记忆有效性结论。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Create a function that generates a grid of scatter plots, where each scatter plot represents a different set of random points."
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 3"
+        }
+      ],
+      "reason": "上下文注入了 3 个 episode，其中含与目标无关的散点图/正态分布任务；仅说明打包内容冗余，存在无关内容不等于造成干扰或挤占淘汰。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "Ran 0 tests in 0.000s"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"checks_executed\": 4"
+        }
+      ],
+      "reason": "离线评测报告 0 个 unittest 测试却执行 4 项检查并判 correct；仅作为评测口径候选疑点，未被证实为评分错误。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "汉宁窗与复指数波是通用常识，目标可能在无记忆时同样写出，无对照故不能归因于记忆复用",
+    "注入的两个无关 episode 可能根本未被模型关注，PACKING_VISIBILITY 不成立",
+    "离线 0 tests/4 checks 的评测口径差异可能只是自定义检查器，与任务契约无关"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法判断目标是否实际读取/依赖注入的源 episode 与两个无关 episode",
+    "无未注入记忆的反事实运行，无法量化记忆对本次成功的作用",
+    "隐藏正确性细节不可见，无法确认多谐波加窗逐谐波与整体加窗之外的语义要求是否被满足",
+    "source_provenance_in_observable_retrieval_candidates 为 null，检索候选不可见"
+  ],
+  "minimal_intervention": {
+    "change": "移除注入的源 episode（保留相同 prompt 与工具）后重跑目标",
+    "fixed": "相同 prompt、相同环境/依赖、相同 token 预算与相同无干预流程",
+    "falsifier": "若移除源 episode 后目标仍以相同汉宁窗+复指数风格一次通过，则 USE_TRANSFER 的复用必要性被反驳"
+  },
+  "causal_claim": false
+}

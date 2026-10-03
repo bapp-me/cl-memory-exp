@@ -1,0 +1,142 @@
+{
+  "case_id": "c-4d76009b2800",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=39:True:6"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Each sub-list should have exactly 5 elements"
+        }
+      ],
+      "reason": "Source episode passed its own 6 checks and is therefore a legal source, but it covers a single fixed-5-column regression, not the target multi-dataset summary report."
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "sm.OLS(y, X).fit()"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Simulate multiple sets of dice rolls"
+        }
+      ],
+      "reason": "The source OLS mechanics appear faithfully recorded, but the visible injected memories are unrelated tasks and do not encode the target report key schema."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "multiple 2D lists representing different datasets"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Each sub-list should have exactly 5 elements"
+        }
+      ],
+      "reason": "The source and target share statsmodels/DataFrame mechanics, but the target changes to multiple datasets, aggregation, and a comparison structure, so applicability is only partial."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Only the empty-list edge case needs a guard. Fixing and retesting:"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Simulate multiple sets of dice rolls"
+        }
+      ],
+      "reason": "The target trajectory discusses only its own regression/validation work and never visibly references the injected dice/menu/date episodes; this is a behavior proxy, not proof memory was unused."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should return a summary report with the details of each regression analysis."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "KeyError: 'Dataset 1'"
+        }
+      ],
+      "reason": "The visible prompt specifies a summary report only at a high level, while the hidden test expects a report key such as 'Dataset 1'; this is a schema/contract mismatch, not proof of memory harm."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "comparison.idxmax() if len(comparison) else None"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "KeyError: 'Dataset 1'"
+        }
+      ],
+      "reason": "The submitted code builds its own report keys/fields, so the hidden assertion cannot find 'Dataset 1'; this shows an output artifact mismatch, not necessarily regression-math failure."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Each sub-list should have exactly 5 elements"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "multiple 2D lists representing different datasets"
+        }
+      ],
+      "reason": "The legal source experience is narrower than the target: fixed 5-column single-regression logic cannot supply the target's multi-dataset report schema."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_episode_byte_budget"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "Packing dropped older episodes by byte budget and the source provenance was not injected, while six unrelated newer memories were injected; this is visibility/packing, not retrieval failure, and cannot prove it caused the target failure."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "TASK_EXECUTION: the submitted report simply used different key names/fields than the hidden assertion expected.",
+    "PACKING_VISIBILITY: the source experience was not injected because older episodes were dropped under the byte budget, though its single-regression content may still not have fixed the key-schema mismatch.",
+    "No controlled intervention: the target trajectory never visibly references memory, so memory influence or harm cannot be established."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "The full hidden test contract is not visible; whether the original task prompt elsewhere specified keys like 'Dataset 1' or 'DataFrame' cannot be confirmed from target_prompt alone.",
+    "The source raw episode is reported retained in method state but its provenance was not injected; the agent's actual pre-submit context is not fully shown.",
+    "Without a counterfactual run, it is unknown whether any injected or retained memory changed the submitted code."
+  ],
+  "minimal_intervention": {
+    "change": "Make the report schema explicit: specify required keys and fields such as 'Dataset {i+1}' with 'DataFrame', 'Regression Results', and 'R-squared' in the visible task contract or evaluator adapter.",
+    "fixed": "Keep the same source episode, six injected memories, packing budget, and hidden tests.",
+    "falsifier": "If the agent still fails with the explicit schema, or if the hidden tests accept different report keys, then EVAL_CONTRACT is not the primary bottleneck."
+  },
+  "causal_claim": false
+}

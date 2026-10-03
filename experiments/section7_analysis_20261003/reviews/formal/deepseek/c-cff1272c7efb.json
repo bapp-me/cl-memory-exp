@@ -1,0 +1,104 @@
+{
+  "case_id": "c-cff1272c7efb",
+  "result_status": "infrastructure_interruption",
+  "semantic": {
+    "source_quality": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "No memory source is present in this packet, and memory policy is disabled."
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "No injected memory content exists to evaluate for fidelity."
+    },
+    "target_applicability": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "No source memory candidate is available to apply to this target."
+    },
+    "visible_use": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "Memory was disabled and injected_count is zero, so memory use cannot be visible."
+    }
+  },
+  "labels": [
+    {
+      "tag": "INFRA_PROTOCOL",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"response_timed_out\": true"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"solver_error\": \"Request was aborted\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"submit_calls\": 0"
+        }
+      ],
+      "reason": "The run was aborted/timed out before a normal terminal submission; this is a platform termination, not evidence about memory."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Goal: open a door behind you"
+        },
+        {
+          "section": "target_visible",
+          "quote": "toggle and go through blue closed door 1"
+        },
+        {
+          "section": "target_submission",
+          "quote": "\"submitted\": false"
+        }
+      ],
+      "reason": "Visible actions include opening a blue door, but the episode ends without a submitted success and with later barrier failure, so target execution is incomplete or failed."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Goal: open a door behind you"
+        },
+        {
+          "section": "target_visible",
+          "quote": "toggle and go through blue closed door 1"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"correct\": false"
+        }
+      ],
+      "reason": "The visible blue-door action may relate to the behind-door goal, but mechanical marks it false; the packet does not establish whether blue was the required behind door or whether submit was required, so this is only a contract-mismatch candidate."
+    }
+  ],
+  "primary_hypothesis": "INFRA_PROTOCOL",
+  "competing_explanations": [
+    "TASK_EXECUTION failure: the model may have failed to solve or submit independently of the timeout.",
+    "EVAL_CONTRACT ambiguity: the blue door opened after turning around may or may not satisfy 'open a door behind you', and submission semantics are unclear.",
+    "No memory evidence: memory_policy disabled and injected_count 0, so memory-related causal explanations are unsupported."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the abort caused the empty final assistant message or the agent had already stalled.",
+    "Whether the blue door was the door behind the initial position and whether opening it met the goal contract.",
+    "Whether submit was required for success or only environment state mattered.",
+    "The full unselected memory library is not included, so absence of stored memory globally cannot be inferred."
+  ],
+  "minimal_intervention": {
+    "change": "Rerun with an adequate timeout/abort-free protocol and unchanged task, with memory still disabled, then inspect whether the trace terminates normally.",
+    "fixed": "Same BabyAI prompt, environment, hidden memory policy disabled, and action budget.",
+    "falsifier": "If a timed/aborted-free rerun with the same memory-disabled configuration still fails or fails to submit, the timeout explanation is weakened."
+  },
+  "causal_claim": false
+}

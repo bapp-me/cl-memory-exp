@@ -1,0 +1,103 @@
+{
+  "case_id": "c-edf84faacfe0",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "仅出现 source_event_ids（stream.task-005.attempt-1），包内没有源题内容，无法判断源经验质量；也不为无源配对的 BabyAI 虚构 gold source。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": []"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "本次运行没有注入任何记忆内容，不存在可评估保真度的与目标相关记忆。"
+    },
+    "target_applicability": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"observable_candidates\": []"
+        }
+      ],
+      "reason": "可见范围内没有可应用于“open a door behind you”的记忆条目。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "轨迹中的转向与开门动作无法归因于任何已注入记忆。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "\"submitted\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"submit_calls\": 0"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": false"
+        }
+      ],
+      "reason": "可见执行以文字宣称完成却从未提交，离线判为 correct=false、progress=0.5；支持任务执行/提交缺失是主因，但不能证明它开错门或环境契约有误。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": []"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "检索侧无候选、无注入，说明本次可见运行没有记忆内容进入上下文；因未提供完整库快照，无法区分“未检索到”与“库中无适用条目”。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "该环境可能需要显式 submit/终止动作；模型只输出文字总结而 submit_calls=0，也可能被记为 EVAL_CONTRACT 层面的提交契约不符。",
+    "progress=0.5 而非 1.0，不能从可见观察确认所开的蓝色门是否即“behind you”的目标门，也可能是开门对象选择偏差。",
+    "无任何注入，故没有记忆层面的失败证据；检索空结果既可能是无适用记忆，也可能是检索未命中，二者不可区分。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法确认初始“behind you”所指的具体门与 agent 所开蓝色门是否为同一目标。",
+    "未包含完整持久化记忆库快照，无法判断是否本就无适用经验。",
+    "target_update_operations 的 before/after 哈希不同但 operations 为空，其含义不明，且属于本题之后，不能解释先前行为。"
+  ],
+  "minimal_intervention": {
+    "change": "在开门动作后要求显式 submit 才结束回合，并在宣称完成前核对所开门是否为“behind you”的目标门。",
+    "fixed": "保持同一任务种子、同一动作预算与本次无记忆注入的条件。",
+    "falsifier": "若补上显式提交后仍为 correct=false 且 progress=0.5，则失败应归因于开门对象/任务执行而非缺少提交。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,152 @@
+{
+  "case_id": "c-94365bc291bd",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=15:True:5"
+        },
+        {
+          "section": "source_visible",
+          "quote": "return labels, ax"
+        }
+      ],
+      "reason": "源 episode 自身测试通过（returncode 0），是合法相关经验；但其契约只覆盖单对 Series 并返回 (labels, Axes)，比目标的‘多对+叠加+个体图+未指明返回值’窄。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "For K-Means clustering on a PAIR of pandas Series (one Series per dimension): build the 2D feature matrix positionally from the Series values"
+        },
+        {
+          "section": "source_visible",
+          "quote": "return labels, ax"
+        }
+      ],
+      "reason": "源写入的配方（位置式构造、fit_predict、逐簇 scatter+legend）与源代码一致；但未记录源契约返回 Axes 这一点，而这正是目标判分所依赖的必要内容。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Afterward, generate a combined visualization that overlays all the individual cluster plots onto a single plot."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Ensure that each cluster from different pairs is distinguishable by color and marker type."
+        }
+      ],
+      "reason": "聚类到可视化的核心流程可迁移；但目标新增了多对叠加、颜色/标记可区分、per-pair 个体图以及被测试使用的返回值类型等条件。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "injection/13",
+          "quote": "the submitted artifact must be byte-identical to the code that passed the sandbox run"
+        },
+        {
+          "section": "target_visible",
+          "quote": "Submitting the verified code unchanged."
+        }
+      ],
+      "reason": "可见行为（修正自造 oracle、提交与验证一致的代码）与注入的验证类经验方向一致；仅为行为代理、非因果证据，且与返回值失败无关。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "    combined_fig, combined_ax = plt.subplots(figsize=(10, 8))"
+        },
+        {
+          "section": "target_submission",
+          "quote": "    return combined_fig"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AttributeError: 'Figure' object has no attribute 'collections'"
+        }
+      ],
+      "reason": "提交物返回 Figure，而判分脚本对返回对象取 .collections，直接 AttributeError 且 tests_run=0；自测只用 fig.axes[0]，从未探测返回值契约。不能证明任何记忆导致该选择。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The final plot should have a legend that clearly indicates which cluster corresponds to which pair of Series."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(len(ax.collections) == 6), 'Number of scatter plots should be equal to the number of clusters times the number of pairs'"
+        }
+      ],
+      "reason": "题面通篇未规定返回值类型（只描述图与图例），隐藏测试却假定返回 Axes 并索引 .collections；这是题意/测试可能不一致的候选，不据此认定测试错误。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"memory_id\": \"sai-00050\","
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_block_byte_budget\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false,"
+        }
+      ],
+      "reason": "源更新产出的 sai-00050 是可观察检索候选且进入 selected_before_packing，却在注入前因字节预算被淘汰；属打包/可见性缺口而非检索失败，也不证明该条能被注入就会修好返回值问题。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/13",
+          "quote": "the submitted artifact must be byte-identical to the code that passed the sandbox run"
+        },
+        {
+          "section": "target_visible",
+          "quote": "The cluster sizes assertion was wrong — each cluster legitimately has a different count"
+        }
+      ],
+      "reason": "可见的‘自造 oracle 失败→改测试不改实现’与若干注入经验方向一致；只是行为代理，无反事实，不能据此断言复用或有效迁移。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "题面未规定返回值，EVAL_CONTRACT 候选：若判分接受 Figure，则失败仅是契约缺口而非实现缺陷。",
+    "相关源经验（sai-00050）从未注入，失败可能与记忆完全无关，是模型对返回值类型的独立选择。",
+    "per-pair 个体图只设了标题/标签并在 plt.close 前未画任何散点，属另一处独立缺陷，隐藏测试未必覆盖。",
+    "判分脚本在断言前即抛 AttributeError（tests_run=0），无法判断其余断言（图例文本、颜色/标记区分度）是否本可通过。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试是否还检查返回类型以外的结构（个体图、图例文本、颜色/标记唯一性）。",
+    "题目是否本意要求返回 Axes（题面未写，reference 返回 ax 但 reference 非绝对真值）。",
+    "注入的验证类记忆是否实际影响了模型的 oracle 修复行为（无对照）。",
+    "被预算淘汰的 sai-00050 若注入，是否真能改变返回值选择，无法由现有证据回答。"
+  ],
+  "minimal_intervention": {
+    "change": "让函数返回合并图的 Axes（如 fig, ax = plt.subplots() 后 return ax，或 return combined_ax），其余绘图逻辑不变。",
+    "fixed": "相同题面、相同注入记忆集合（源配方条仍处于预算淘汰状态）、相同工具与预算。",
+    "falsifier": "若判分同样接受 Figure，或改为返回 combined_ax 后仍报 returncode 1，则‘返回值类型是关键改动’被反驳。"
+  },
+  "causal_claim": false
+}

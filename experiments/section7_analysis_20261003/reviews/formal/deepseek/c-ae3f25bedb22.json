@@ -1,0 +1,141 @@
+{
+  "case_id": "c-ae3f25bedb22",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "helpful=3 harmful=0"
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "\"section\": \"STRATEGIES & INSIGHTS\""
+        }
+      ],
+      "reason": "Memory items are attributed to strategy/mistake sources with positive counters, but counters and provenance do not verify source correctness or target transfer."
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "No source-side trace or original memory content is available to check whether the injected statements faithfully preserve the source experience."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Goal: open a door on your right"
+        },
+        {
+          "section": "injection/2",
+          "quote": "If the goal object (e.g., a door of a specific color) is not visible in the current room, do not guess its location"
+        }
+      ],
+      "reason": "Direct-action and check-actions memories fit the visible door, while exploration memories for hidden goals are not needed by this prompt."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Before acting, check the available actions list first"
+        },
+        {
+          "section": "target_visible",
+          "quote": "check available actions"
+        },
+        {
+          "section": "injection/0",
+          "quote": "always prefer it over manual turn/move sequences"
+        },
+        {
+          "section": "target_visible",
+          "quote": "go to grey closed door 1"
+        }
+      ],
+      "reason": "Visible tool calls match the injected check-actions and direct go-to strategy; this is behavioral alignment only, not causal evidence."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "toggle and go through grey closed door 1"
+        },
+        {
+          "section": "target_visible",
+          "quote": "The task is complete. I identified the grey closed door as the one on my right"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"progress\": 0"
+        }
+      ],
+      "reason": "The visible sequence ends by passing through the target door into an empty room and then declaring completion; offline progress is zero. This shows execution/verification failure but not that memory caused it."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "\"submitted\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"submit_calls\": 0"
+        }
+      ],
+      "reason": "No submit event is recorded, so explicit submission may be part of the task contract. The available-actions list did not list submit, so requiredness is uncertain and this cannot yet be treated as the proven cause."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Before acting, check the available actions list first"
+        },
+        {
+          "section": "target_visible",
+          "quote": "check available actions"
+        },
+        {
+          "section": "injection/0",
+          "quote": "always prefer it over manual turn/move sequences"
+        },
+        {
+          "section": "target_visible",
+          "quote": "go to grey closed door 1"
+        }
+      ],
+      "reason": "The agent visibly followed the injected high-level-action strategy. This supports a transfer candidate but does not prove the memory changed the outcome or caused failure."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "The missing submit call may be the actual contract failure, but the available-actions list did not include submit and no submit requirement is shown explicitly.",
+    "The grey door may not be the intended 'door on your right' under the benchmark's spatial semantics, or 'toggle and go through' may not leave the door open for evaluation.",
+    "The injected direct-action memories may have encouraged a shortcut that bypassed verification, but there is no counterfactual to establish causation.",
+    "The post-task memory additions suggest the system later diagnosed a toggle-versus-toggle-and-go-through issue, but those updates occurred after the target and cannot explain prior behavior."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether this BabyAI task requires an explicit submit call for success.",
+    "Whether 'toggle and go through grey closed door 1' opened the door and whether the door remained open in the final world state.",
+    "Whether the grey door is the correct target under the exact 'on your right' semantics.",
+    "Whether any injected memory influenced the final toggle-and-go-through choice.",
+    "Source-task traces are absent, so source quality and memory fidelity cannot be fully verified."
+  ],
+  "minimal_intervention": {
+    "change": "After reaching the target door, use a plain toggle/verify action rather than only 'toggle and go through', then submit if the environment requires it.",
+    "fixed": "Keep the same target prompt, initial observation, available actions, injected memories, and interaction budget.",
+    "falsifier": "If a run with the same navigation but a verified open state or explicit submit still yields correct=false/progress=0, then action choice or submission is not the key failure."
+  },
+  "causal_claim": false
+}

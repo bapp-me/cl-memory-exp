@@ -1,0 +1,128 @@
+{
+  "case_id": "c-68155ee0417d",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true,"
+        },
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "{\"facts\": []}"
+        }
+      ],
+      "reason": "源题（单串清洗+SHA256）离线评测正确且可评分，属合法源经验；但源写入为空，内容是否以可用形式留存无证据，故仅 pass_with_limits。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        }
+      ],
+      "reason": "注入的两个候选只含 pandas/DataFrame/matplotlib 描述，与本题清洗+哈希所需内容无关；源端写入操作为空，未见任何与目标相关的、有合法来源支持的记忆内容进入注入集。"
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "hash each cleaned string with SHA256 and return a list of these hashes"
+        }
+      ],
+      "reason": "注入内容讲 DataFrame 柱状图，而目标是字符串清洗、SHA256 与 Counter 众数，二者无技术交集。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "cleaned = re.sub(r'[^A-Za-z0-9]', '', s)"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        }
+      ],
+      "reason": "可见提交只用 re/hashlib/Counter，完全没有出现被注入的 DataFrame/matplotlib 模式；仅为行为代理，不能据此断言记忆未被使用或对结果无影响。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"selected_before_packing\": ["
+        }
+      ],
+      "reason": "两个 D1 语义候选被选中并注入，但其描述与目标任务主题无关，说明检索层未按目标相关性过滤；只能证明候选可见/被注入，不能证明造成了负迁移。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "most_common_hash = Counter(hashes).most_common(1)[0][0]"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "可见解法是自洽的清洗+哈希+Counter 实现，未复用被注入内容；不代表成功由记忆造成，也不代表记忆有害。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Removes all special characters, punctuation marks, and spaces from the input string using a regular expression,"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        }
+      ],
+      "reason": "源题与目标共享清洗+SHA256 核心，存在可迁移机会且源题正确；但源端写入为空、writer 产出 {\"facts\": []}，没有专门经验落库，故本题无可复用来源（无写入不等于已存未检索）。"
+    }
+  ],
+  "primary_hypothesis": "RETRIEVAL",
+  "competing_explanations": [
+    "目标成功可能完全来自模型自身能力，与任何记忆无关",
+    "源经验可能从未以记忆形式持久化（operations 为空），因此本题不存在可检索来源",
+    "被注入的 pandas/matplotlib 摘要本身来源不明，无法判断其是否对检索查询产生干扰"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "注入的两个记忆源自哪个源任务、是否内容保真，证据未提供",
+    "token_count 为 null，无法评估注入预算压力",
+    "source_pair 显示 raw_source_episode_retained_in_method_state=false，无法确认源内容是否曾以其他形式存在",
+    "隐藏正确性仅在离线评测可见，未见到 0 tests 但 checks_executed=2 的具体检查内容"
+  ],
+  "minimal_intervention": {
+    "change": "在注入前加入按目标相关性的候选过滤，使 pandas/matplotlib 类离题摘要不再进入提示",
+    "fixed": "保持相同目标提示、相同检索候选池、相同 token 预算与工具环境",
+    "falsifier": "若移除离题候选后目标可见解法或结果发生变化（例如开始使用 DataFrame 相关代码），则 no_visible_use/irrelevant 判断被反驳"
+  },
+  "causal_claim": false
+}

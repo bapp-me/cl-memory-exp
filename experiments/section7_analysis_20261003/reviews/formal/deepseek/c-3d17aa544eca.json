@@ -1,0 +1,132 @@
+{
+  "case_id": "c-3d17aa544eca",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"tests_run\": 6,"
+        },
+        {
+          "section": "source_visible",
+          "quote": "All checks pass: the example works, types are correct"
+        }
+      ],
+      "reason": "源题通过 6 个测试且可评分，是合法且相关的先例；但源签名是单个 df，目标要求 DataFrame 列表，源代码不能直接复用。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/4",
+          "quote": "Create the plotting canvas with `fig, ax = plt.subplots()`."
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "\"type\": \"REPLACE_WORKFLOW_LIBRARY\""
+        }
+      ],
+      "reason": "被注入工作流中与目标相关的条目（画图流程、ValueError 校验）与可见源行为一致；但它们由 12 个源事件聚合改写而成，逐条保真无法核验。"
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "If a check fails, `raise ValueError` (or `TypeError` for wrong-type cases) with a descriptive message naming the offending parameter."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Ensure that the function raises a ValueError if any column does not exist"
+        }
+      ],
+      "reason": "校验守卫与直方图/返回 Axes 的工作流直接对目标契约的两项要求，属可直接套用的范围。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "ax.set_xlabel(col)"
+        },
+        {
+          "section": "injection/4",
+          "quote": "Set the required text elements — `ax.set_title(<title>)`, `ax.set_xlabel(<xlabel>)`, `ax.set_ylabel(<ylabel>)`"
+        }
+      ],
+      "reason": "目标用 subplots+ax.hist+三处标签并保留缺失列/非数值的 ValueError，与注入工作流写法一致；但该写法也是常见惯例，且题面本就要求直方图与 ValueError，行为代理不等于因果。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "fig, ax = plt.subplots()"
+        },
+        {
+          "section": "injection/4",
+          "quote": "Create the plotting canvas with `fig, ax = plt.subplots()`."
+        },
+        {
+          "section": "source_visible",
+          "quote": "ax.hist(col_values, bins='auto')"
+        }
+      ],
+      "reason": "目标绘图结构与注入的直方图工作流高度吻合，源题的做法也是同族；但这只是可见相似，无对照无法证明记忆导致成功，也无法排除题面本身的形状约束。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Analyze a column of a pandas DataFrame, find the values that are larger than the average"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": true"
+        }
+      ],
+      "reason": "存在同一核心计算且正确的源轨迹，其来源标记确实出现在目标可观察候选中，说明复用机会真实存在；来源覆盖不证明内容保真或已被采纳。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "Ran 0 tests in 0.000s"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "EVALUATOR_RESULT=6:True:0"
+        }
+      ],
+      "reason": "离线评测显示 0 个 unittest 运行但执行了 6 项检查并判正确，评分口径与参考测试文件不完全对应；这是候选口径歧义，本题结果仍为可评分成功。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "目标代码形态也可能完全由题面要求（直方图、ValueError、返回 Axes）与 matplotlib 常见写法驱动，与记忆无关。",
+    "记忆库为聚合工作流，无法确认被注入的条目与目标行为之间存在实际采纳路径。",
+    "目标用 np.mean/np.sum 而非源题的 statistics/bisect，说明源实现方式并未被直接沿用。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "没有无记忆对照运行，无法判断子流程写法是否由注入工作流造成。",
+    "注入条目为跨约 12 个源事件的改写汇总，逐源内容保真与目标适用性无法核验。",
+    "被注入条目的检索分数为 null，无法判断相关条目的排序质量。",
+    "target_update_operations 为空只说明目标后未写入新经验，不能反推本题行为原因。"
+  ],
+  "minimal_intervention": {
+    "change": "在相同题面下移除与校验/直方图相关的注入工作流（其余预算与历史不变），比较提交代码的结构与交付结果。",
+    "fixed": "相同题面、相同模型与工具集、相同注入预算与被保留的其他记忆。",
+    "falsifier": "若无可记忆版仍产出同样的 subplots+ax.hist+三标签与同样顺序的 ValueError 守卫，则 USE_TRANSFER 候选被削弱。"
+  },
+  "causal_claim": false
+}

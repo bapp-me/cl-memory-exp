@@ -1,0 +1,129 @@
+{
+  "case_id": "c-eeaaf2b81888",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"EVALUATOR_RESULT=14:True:5\""
+        }
+      ],
+      "reason": "Source task passed all offline tests (correct: true), though its scope was single length/count, not the target's list-based variant."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": []"
+        }
+      ],
+      "reason": "No memory operations were recorded at source end and no source-paired memory IDs exist at target, so no source-relevant content was stored."
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "\"score\": 0.23637014851275556"
+        }
+      ],
+      "reason": "Both injected memories concern pandas/matplotlib plotting, unrelated to random-string letter counting; retrieval scores are also low (~0.2)."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "rng = random.Random(seed)\n    letters = 'abcde'"
+        }
+      ],
+      "reason": "The submitted solution is built directly from the target prompt (Counter, fixed letters, seed); nothing traces to the injected plotting memories."
+    }
+  },
+  "labels": [
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        }
+      ],
+      "reason": "Direct record: the source task ended with zero memory write operations, so nothing about the solved string-frequency task was admitted. Does not prove the system intended to store anything."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Generate a number of random strings with a specified length from a fixed set of letters ('a', 'b', 'c', 'd', 'e')"
+        }
+      ],
+      "reason": "A correct, directly relevant source episode existed (target is a list-variant of the same generator), yet no experience was written — a D0 record of a missed reuse opportunity, not proof reuse would have succeeded."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "rng = random.Random(seed)"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "random.seed(seed)\n    strings = [''.join(random.choices(['a', 'b', 'c', 'd', 'e'], k=length)) for _ in range(count)]"
+        }
+      ],
+      "reason": "Candidate failure cause: target uses a private Random(seed) instance with .choice, while the reference/test expects the global random.seed stream with random.choices — different RNG streams yield different letters, so the expected Counter values cannot match. This is inference from offline evidence the agent never saw."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "identify the most frequent letter and the least frequent letter across all strings."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "most_frequent = total_counter.most_common(1)[0][0]\nleast_frequent = total_counter.most_common()[-1][0]"
+        }
+      ],
+      "reason": "Candidate contract/test tension: the prompt does not specify tie-breaking or RNG mechanics, while tests pin exact Counter values and an insertion-order tie-break that can differ from the agent's alphabetical tie-break. Flagged as candidate, not confirmed."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "EVAL_CONTRACT mismatch: even with the reference RNG stream, the alphabetical tie-break vs most_common insertion-order tie-break could fail the second/third asserts; cannot decide from the single shown assert.",
+    "The failure is fully attributable to implementation choices visible in the prompt-only transcript; memory injection (irrelevant plotting notes) provides no plausible positive or negative contribution, so a memory-causal story cannot be constructed either way."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the agent had any prior exposure to the source task within the method's own state (raw episode retention is false, but private reasoning is removed).",
+    "Which hidden asserts would pass under the reference RNG stream; only the first assert's traceback is shown.",
+    "Whether the unselected memory library contains other relevant items (packet does not include it)."
+  ],
+  "minimal_intervention": {
+    "change": "Rerun the target with the solution switched to global random.seed(seed) + random.choices (the reference stream), holding memory injection unchanged, to isolate whether RNG divergence alone explains the assert failure.",
+    "fixed": "Same hidden tests, same target prompt, same retrieved/injected memories, same source history.",
+    "falsifier": "If the seed/choices variant still fails the same assert, the RNG-divergence hypothesis (TASK_EXECUTION as primary) is refuted and tie-breaking/return-type contract issues become primary."
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,141 @@
+{
+  "case_id": "c-af1fad3cc92b",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"tests_run\": 5,"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df):"
+        }
+      ],
+      "reason": "源事件离线评分为 correct=true 且 scorable，5 项测试通过，是合法可用来源；但其契约是单 DataFrame、固定 item1..item5 列，与目标的多 DataFrame、任意列契约不同。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/4",
+          "quote": "df[columns].itertuples(index=False, name=None) yields one plain hashable tuple per row"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "assign it via df['combination'] = [...], count with Counter, then return dict(counter) when the docstring's return type is 'dict'"
+        }
+      ],
+      "reason": "注入的 sai-00079 与源结束时写入的 ADD 文本一致，重述的 itertuples/Counter/dict 机制与源可见解法相同，未发现内容被改写或矛盾。"
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "injection/4",
+          "quote": "count with Counter, then return dict(counter)"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "calculate the overall frequency of combinations of elements across all DataFrames"
+        }
+      ],
+      "reason": "逐行组合频率的核心机制可直接迁移；目标新增的只是跨多个 DataFrame 聚合（counter.update）与列集合不再固定，属组合式扩展而非改变机制。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "tuple(row) for row in df.itertuples(index=False, name=None)"
+        },
+        {
+          "section": "injection/5",
+          "quote": "in-place modification of the input df IS the documented contract"
+        }
+      ],
+      "reason": "提交沿用 itertuples(index=False, name=None)、dict(counter)，并按文档就地新增 'combination' 列、未加 df.copy()，与记忆模式一致；仅为行为代理，不能证明因果。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/4",
+          "quote": "df[columns].itertuples(index=False, name=None) yields one plain hashable tuple per row"
+        },
+        {
+          "section": "target_submission",
+          "quote": "return dict(counter)"
+        }
+      ],
+      "reason": "目标提交的元组构造与 Counter->dict 返回与注入模式高度一致，显示源经验被复用；字符串/写法重合只是可见代理，且该写法也是通用 pandas 惯用法，不能证明记忆造成成功。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": [\n    \"sai-00079\",\n    \"sai-00080\"\n  ]"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "Canonical pattern for 'frequency of combinations of elements in each row' tasks"
+        }
+      ],
+      "reason": "目标上下文中确实存在与本题同族的源经验（sai-00079/sai-00080）并可被检索到，构成复用机会；来源覆盖不证明其内容对目标完全适用。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_block_byte_budget\""
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": [\n    \"sai-00073\","
+        }
+      ],
+      "reason": "多数候选在打包阶段按字节预算被淘汰，注入的是 52 条；这属打包可见性而非检索失败，也不能说明被淘汰条目对本题有用或无干扰。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 52,"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"totalTokens\": 50807"
+        }
+      ],
+      "reason": "展示了注入规模与 token 开销这一事实；本题成功且无对照，不能据此断言开销无收益或性价比差。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "任务本身是标准 pandas 惯用法（itertuples+Counter+dict），模型可能仅凭题面即写出同样解法，与记忆无关。",
+    "同族源经验可能只部分适用（单 DataFrame 固定列），目标的多 DataFrame/任意列部分靠模型自行扩展。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无干预/反事实，无法判断注入记忆是否必要或是否为成功原因。",
+    "无法知悉被字节预算淘汰的条目是否包含更贴切或更易致误的内容。",
+    "offline_target_reference 中 task_func 使用 tuple(sorted(row)) 而题面描述为按行原样组合，二者在给定测试上不产生分歧，是否存在隐藏的排序契约未定。"
+  ],
+  "minimal_intervention": {
+    "change": "在不注入源衍生条目 sai-00079/sai-00080 的前提下重跑同一目标。",
+    "fixed": "保持相同目标题面、工具、打包预算与源历史。",
+    "falsifier": "若无注入运行仍产出等价提交并成功，则说明该记忆复用并非必要。"
+  },
+  "causal_claim": false
+}

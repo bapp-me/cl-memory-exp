@@ -1,0 +1,137 @@
+{
+  "case_id": "c-ed35ca9868a2",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "pre-registered scorer defect; task retained, excluded from scores"
+        }
+      ],
+      "reason": "源题被预登记评分缺陷排除，scorable=false 且 correct=null，无法确认源经验本身是否正确。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/2",
+          "quote": "Draw a bar chart of the counts of each unique value in the 'value' column of a pandas DataFrame and return the Axes object."
+        },
+        {
+          "section": "source_prompt",
+          "quote": "This function use \"Value Distribution\" for the plot title."
+        }
+      ],
+      "reason": "注入项内容与源题 prompt/可见提交逐字一致（标题、xlabel、ylabel、ValueError 记录都在），就目标相关部分未见明显改写。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should return the summary report as a dictionary and the Axes object of the bar chart."
+        },
+        {
+          "section": "injection/2",
+          "quote": "Draw a bar chart of the counts of each unique value in the 'value' column of a pandas DataFrame and return the Axes object."
+        }
+      ],
+      "reason": "源经验只覆盖“用 pandas/matplotlib 画计数柱状图并返回 Axes”，目标新增了按分类聚合的 report 字典及其键名要求，源未覆盖。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "ax.set_title('Transaction Counts by Category')"
+        },
+        {
+          "section": "injection/2",
+          "quote": "ax.set_title(\\\"Value Distribution\\\")"
+        }
+      ],
+      "reason": "目标代码的标题/标签、返回结构均为题目自定义，未见源特有内容（'Value Distribution'、ValueError 校验）被搬用；但无对照实验，不能反推记忆未被读取。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should return the summary report as a dictionary and the Axes object of the bar chart."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(summary_report['total_amount_per_category'] == {'food': 150, 'travel': 350, 'shopping': 300})"
+        }
+      ],
+      "reason": "题面只要求返回字典与 Axes，未规定 report 的键名；隐藏测试却按 'total_amount_per_category' 取值导致 KeyError。支持契约欠定义候选，不证明测试整体错误。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The implementation works correctly: totals, averages, chart heights, and empty-input handling all check out."
+        },
+        {
+          "section": "target_visible",
+          "quote": "print(report)"
+        }
+      ],
+      "reason": "自测只打印自己构造的 report，数值自洽即提交，未针对输出结构（键名/层级）做任何校验。可支持执行侧验证不足，但无法确定换一种自测就必然通过。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_pair\": {\n    \"distance\": 52,\n    \"source_correct\": null,\n    \"source_scorable\": false,"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "pre-registered scorer defect; task retained, excluded from scores"
+        }
+      ],
+      "reason": "存在同族源题且源经验被注入，但源结果不可评分，因此没有可用作对照的合法“已验证经验”；这只说明机会受限，不证明源经验有害或无用。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/2",
+          "quote": "import pandas as pd\nimport matplotlib.pyplot as plt\n\ndef task_func(df):"
+        },
+        {
+          "section": "target_submission",
+          "quote": "return report, ax"
+        }
+      ],
+      "reason": "源与目标的共性仅是 matplotlib 柱状图/返回 Axes 的通用写法，目标特有的分类汇总 report 不在源中；可见行为不构成复用证据，也无法支持迁移成功或负迁移。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "TASK_EXECUTION：模型可自行检查/选择更通用的键名（如按题面字面命名）却未做，失败源于提交前验证不足。",
+    "记忆内容与目标接口不匹配（源只含柱状图经验），故本题失败与记忆无关，属目标自身实现选择。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "注入的三个候选中哪一个被检索/选中并进入可见上下文，证据未说明。",
+    "源题在正常评分下是否正确未知（预登记评分缺陷，correct=null）。",
+    "隐藏测试是否接受其他键名或结构（例如按分类嵌套）无法从现有证据判断。"
+  ],
+  "minimal_intervention": {
+    "change": "在目标题面中明确 report 的键名与结构（如 'total_amount_per_category'/'average_amount_per_category'），其余条件不变。",
+    "fixed": "保持相同的历史/环境/工具与 token 预算，不改变注入的记忆库内容。",
+    "falsifier": "若在键名明确后仍因同一 KeyError 失败，或评测器实际接受其他键名，则 EVAL_CONTRACT 候选被削弱。"
+  },
+  "causal_claim": false
+}

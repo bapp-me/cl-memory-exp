@@ -1,0 +1,104 @@
+{
+  "case_id": "c-341e2ac7410a",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=14:True:6"
+        }
+      ],
+      "reason": "源题（单DataFrame的cov+pairplot）离线14项检查全过；但其仅覆盖单DataFrame，不包含列表合并的新条件。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "无反事实且未提供记忆内容本身；仅知source_provenance_retained=true而source_provenance_injected=false，无法核实目标相关内容（如TypeError处理）是否保真进入上下文。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "You are given a list of DataFrames, each potentially containing numeric data. Your task is to generate a combined pair plot and covariance matrix"
+        }
+      ],
+      "reason": "源经验是单DataFrame的cov/pairplot与空/非数值校验，可部分套用；目标新增了多DataFrame合并、公共列、返回tuple等新条件。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "raise TypeError(\"The DataFrame must contain only numeric data types.\")"
+        }
+      ],
+      "reason": "源经验中非数值数据抛TypeError且通过测试；目标提交代码却对非数值抛ValueError（见offline_target_evaluation），行为上看不到对该源知识的采纳，仅是行为代理非因果结论。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ValueError: DataFrame at index 0 contains non-numeric data."
+        }
+      ],
+      "reason": "直接记录：隐藏评测在类型不匹配用例上未捕获异常，tests_run=0、correct=false，是可核查的失败事实；但异常类型选择为何偏离不能由该记录单独证明。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "raise ValueError(\n                f\"DataFrame at index {i} contains non-numeric data.\""
+        }
+      ],
+      "reason": "语义候选：源通过的经验含\"非数值→TypeError\"，目标提交对同一情形抛ValueError，表面矛盾提示未迁移或部分迁移；不能证明记忆不存在或记忆造成失败。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": true,\n    \"source_provenance_retained\": true,\n    \"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "合法源经验（已通过）存在于方法状态且有来源记录，但其内容未被注入到目标可见上下文，仅为机会记录，不证明被检索或使用。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "If any DataFrame is empty or contains non-numeric data, raise the appropriate exception."
+        }
+      ],
+      "reason": "题面仅说\"适当的异常\"未指明类型，而隐藏测试（见reference）要求非数值抛TypeError、空表抛ValueError；题面与测试间存在可能的契约模糊，仅标候选。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "题面\"appropriate exception\"本身不指定类型，任何不参考隐藏测试的求解者都可能合理选择ValueError，与记忆无关",
+    "source_provenance_injected=false且注入的是4条无关任务记忆，源经验内容可能根本未出现在可见上下文中，无法区分'未检索'与'检索后未采纳'"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "记忆库中是否存有源题的TypeError规则及其保真度（memory内容未提供）",
+    "私有推理不可见，无法确认agent是否参考了任何源经验",
+    "修正TypeError后其余隐藏测试（如common-columns交集、空列表行为）是否通过——reference用concat后调用task_func，合并语义可能还有其他分歧"
+  ],
+  "minimal_intervention": {
+    "change": "将非数值数据分支改为raise TypeError（与源经验及隐藏测试一致），其余代码不变",
+    "fixed": "相同的历史/记忆库/注入与字节预算、相同目标题面",
+    "falsifier": "若仅改TypeError后离线评测通过且注入无关记忆组的对照也通过，则USE_TRANSFER候选被削弱；若仍失败则存在其他契约分歧"
+  },
+  "causal_claim": false
+}

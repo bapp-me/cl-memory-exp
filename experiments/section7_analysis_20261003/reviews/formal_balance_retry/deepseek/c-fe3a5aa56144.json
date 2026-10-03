@@ -1,0 +1,123 @@
+{
+  "case_id": "c-fe3a5aa56144",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Performs an OLS linear regression on a subset of the provided DataFrame."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "AssertionError: Lists differ: ['Height', 'Weight'] != ['const', 'Height', 'Weight']"
+        }
+      ],
+      "reason": "配对源是同族单表 OLS 题且可评分，但其自身评测失败（缺 sm.add_constant），只提供部分可用的模板。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/6",
+          "quote": "adding a constant with `sm.add_constant(X)`"
+        }
+      ],
+      "reason": "注入内容中关于回归需加常数项的表述与目标题意/参考解一致（目标测试要求 params.index 含 'const'），属必要内容且表述忠实。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "perform an OLS linear regression for each dataset"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Check the precondition(s) relevant to the task"
+        }
+      ],
+      "reason": "回归核心（过滤 + OLS + 加常数）适用，但目标新增按 DatasetID 分组与字典返回，且源可见实现缺少 add_constant；注入的守卫流程要求空 df 抛 ValueError，而目标契约为该数据集返回 None。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "X = sm.add_constant(X)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "for dataset_id, sub in df.groupby('DatasetID'):"
+        }
+      ],
+      "reason": "提交行为与注入的 Model Fit / 守卫指引一致，并把单表回归适配为按数据集循环；这只是可见行为对应，不构成记忆导致成功的因果证据。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/6",
+          "quote": "adding a constant with `sm.add_constant(X)`"
+        },
+        {
+          "section": "target_visible",
+          "quote": "X = sm.add_constant(X)"
+        }
+      ],
+      "reason": "记忆中加常数项的指引与提交代码中 sm.add_constant 可见对应，且源可见实现缺少该步骤；不能据此证明是记忆而非模型自身知识带来正确性。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": false"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "source ID coverage is not content fidelity; entire unselected library is not presented"
+        }
+      ],
+      "reason": "存在配对源（同族 OLS 过滤题）且其来源被注入，但来源覆盖不代表内容保真或适用；源本身失败，不能按来源存在推断内容有效。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "model = sm.OLS(y, X).fit()"
+        },
+        {
+          "section": "injection/6",
+          "quote": "adding a constant with `sm.add_constant(X)`"
+        }
+      ],
+      "reason": "记忆以抽取式工作流表述，聚合表述中含 add_constant，而源 episode 的可见代码不含该步骤；这只说明表征层面的差异，不能证明源经验被正确保留或称其“遗忘”。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "目标成功可能来自模型自身对 statsmodels/sm.add_constant 的先验知识，而非注入记忆。",
+    "注入的 8 条工作流为通用聚合摘要，无法确认哪条被阅读或实际影响生成；无消融对照。",
+    "源 episode 失败与目标成功之间缺少反事实，不能排除目标独立复现正确实现。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "注入记忆是否被显式读取/引用不可见。",
+    "守卫流程对整表空 DataFrame 抛 ValueError 与目标“该数据集为空返回 None”的契约是否冲突未被测试覆盖（7 项检查通过）。",
+    "未提供的完整记忆库内容无法判断是否有其他更相关经验。"
+  ],
+  "minimal_intervention": {
+    "change": "在一次对照中移除注入记忆里关于 sm.add_constant 的回归指引（保持其余工作流与提示不变），观察提交是否仍含加常数项并通过。",
+    "fixed": "相同目标提示、相同随机种子/数据、相同注入格式与预算。",
+    "falsifier": "若消融后目标仍写出 sm.add_constant 并全部通过，则“记忆复用促成该步骤”的候选被反驳。"
+  },
+  "causal_claim": false
+}

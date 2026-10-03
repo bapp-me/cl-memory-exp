@@ -1,0 +1,127 @@
+{
+  "case_id": "c-c7823d8b0e97",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_visible",
+          "quote": "The output matches the docstring example exactly (values 5, 0, 3 under seed 0)."
+        }
+      ],
+      "reason": "配对的源题在自身测试下通过（6 tests OK），是同族任务；但源契约更窄（单个 DataFrame + 单个 key，无多数据集唯一列名，且异常类型为 ValueError），不能整体照搬到目标。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "`raise ValueError` (or `TypeError` for wrong-type cases) with a descriptive message"
+        }
+      ],
+      "reason": "注入的验证守卫工作流保留了“isinstance 检查 + 具名报错”的结构，但把源实现里确定的 ValueError 折成 ValueError/TypeError 二选一的模糊表述，与目标隐藏判定所依赖的异常类型不再一一对应。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "ensure that the new column is named uniquely for each dataset"
+        }
+      ],
+      "reason": "目标新增了“数据集列表 + 每个数据集唯一列名 + 非 DataFrame 报错”的条件，源的单表 key 经验只覆盖其中一部分；异常类型约定属于新增/改变的条件。"
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "`raise ValueError` (or `TypeError` for wrong-type cases) with a descriptive message"
+        },
+        {
+          "section": "target_visible",
+          "quote": "Dataset at index {i} is not a pandas DataFrame."
+        }
+      ],
+      "reason": "目标确实写入了守卫并按记忆里“错误类型可用 TypeError”的分支报 TypeError，与隐藏判定的 ValueError 期望冲突；这只是行为代理，不能证明记忆导致失败。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "the function should raise an appropriate exception"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "except ValueError:"
+        }
+      ],
+      "reason": "题面只要求“适当的异常”，而对类型错误的输入 TypeError 在 Python 里也属适当；隐藏测试却只捕获 ValueError，导致 run 在 line 103 直接抛出未捕获的 TypeError。作为题意/测试可能不一致的候选，不重打分。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "`raise ValueError` (or `TypeError` for wrong-type cases) with a descriptive message"
+        },
+        {
+          "section": "target_visible",
+          "quote": "raise TypeError(f\"Dataset at index {i} is not a pandas DataFrame.\")"
+        }
+      ],
+      "reason": "注入的通用守卫记忆明确许可 wrong-type 用 TypeError，目标选中的正是这一分支；可支持“沿用了该记忆的模糊分支”，但无对照干预，不能断言记忆造成失败。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "2. If a check fails, `raise ValueError` (or `TypeError` for wrong-type cases)"
+        }
+      ],
+      "reason": "该工作流条目把源实现中确定的单一异常类型抽象成二选一，丢失了隐藏判定键控的具体类型信息；这是抽象表示层面的信息损失，不等同于检索失败或内容被删除。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "The output matches the docstring example exactly (values 5, 0, 3 under seed 0)."
+        }
+      ],
+      "reason": "存在一个通过测试的同族源 episode（随机列写入 + 类型守卫），构成合法经验机会；但机会存在不代表其中具体异常约定被保留或适用。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "目标独立地按 Python 惯例对类型错误选择 TypeError，与记忆无关。",
+    "通用守卫记忆的 ValueError/TypeError 二选一分支诱导了错误分支（USE_TRANSFER 方向）。",
+    "源 episode 的确定性 ValueError 约定未被保真传递到 D1 摘要（REPRESENTATION 方向）。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "源 episode 的原始代码文本是否作为内容注入，还是仅注入了 8 条工作流摘要，证据不足以判定。",
+    "隐藏测试 case 1（列名/取值范围）是否通过未知：tests_run=0，执行在 line 103 即崩溃。",
+    "目标改用 np.random.uniform 而非源/参考的 np.random.randint 是否影响任何隐藏检查，无法判断。",
+    "没有反事实运行，无法量化记忆对 TypeError 选择的贡献。"
+  ],
+  "minimal_intervention": {
+    "change": "把非 DataFrame 输入的 raise TypeError(...) 改为 raise ValueError(...)（或改为两者共同可捕获的异常子类）。",
+    "fixed": "保持相同题面、相同注入记忆集合、相同预算与提交流程。",
+    "falsifier": "若改为 ValueError 后隐藏测试仍失败（如列名或取值检查不过），或同一提交在只捕获 TypeError 的题面下通过，则反证该候选。"
+  },
+  "causal_claim": false
+}

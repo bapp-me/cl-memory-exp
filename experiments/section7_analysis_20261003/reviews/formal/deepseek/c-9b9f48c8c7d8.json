@@ -1,0 +1,143 @@
+{
+  "case_id": "c-9b9f48c8c7d8",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=23:False:5"
+        },
+        {
+          "section": "source_visible",
+          "quote": "KeyError: 'zz'"
+        }
+      ],
+      "reason": "The paired source episode failed its hidden tests 5/5 and was marked source_correct false, so it is not a clean reusable source."
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "return {''.join(p): pairs[p] for p in itertools.permutations(string.ascii_lowercase, 2)}"
+        },
+        {
+          "section": "target_submission",
+          "quote": "for combo in itertools.product(string.ascii_lowercase, repeat=2):"
+        }
+      ],
+      "reason": "The source record preserves consecutive-bigram counting but its key-generation rule uses permutations only, omitting doubled-letter keys required by the target gold; it was also not injected."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Create a dictionary containing all possible two-letter combinations of the lowercase English alphabets."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of words, create a dictionary where each key is a two-letter combination of the lowercase English alphabets"
+        }
+      ],
+      "reason": "The domains overlap, but the source is single-word and omits doubled-letter combinations, while the target aggregates across a word list and needs all 676 keys."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection/2",
+          "quote": "compute the Euclidean distance for each pair"
+        },
+        {
+          "section": "target_visible",
+          "quote": "for combo in itertools.product(string.ascii_lowercase, repeat=2):"
+        }
+      ],
+      "reason": "Injected D1 episodes are unrelated tasks, and the target solution constructs its own Counter/product logic; this is a behavioral proxy, not proof of absence of latent influence."
+    }
+  },
+  "labels": [
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_episode_byte_budget"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "Retrieval surfaced candidates, but oldest complete episodes were dropped under byte budget and the source provenance was not injected. This explains source absence from context, not retrieval failure or target success."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/2",
+          "quote": "compute the Euclidean distance for each pair"
+        },
+        {
+          "section": "target_visible",
+          "quote": "for combo in itertools.product(string.ascii_lowercase, repeat=2):"
+        }
+      ],
+      "reason": "The injected candidate belongs to an unrelated Euclidean-distance task, and the target code shows no visible reuse of it. This cannot prove the memory had no hidden effect."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": false"
+        },
+        {
+          "section": "source_visible",
+          "quote": "650 keys (all two-letter permutations of distinct lowercase letters)"
+        }
+      ],
+      "reason": "A related source episode existed, but it was itself failed/partial and not injected. Source availability alone does not support successful reuse or correctness."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "The function uses the `itertools.permutations` method to generate all two-letter combinations of alphabets."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "KeyError: 'zz'"
+        }
+      ],
+      "reason": "The source prompt's stated permutations method yields 650 keys without aa/zz, while source hidden tests require those keys. This is a source-contract/method mismatch candidate, not a target failure."
+    }
+  ],
+  "primary_hypothesis": "unknown",
+  "competing_explanations": [
+    "The target may have been solved independently from the task prompt; injected unrelated D1 episodes left no visible trace, so no memory effect is established.",
+    "The source-relevant episode was excluded by packing, so source transfer cannot be observed even though source provenance appeared in retrieval candidates.",
+    "The source failure may reflect its own contract/method mismatch rather than useful or harmful memory content."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "No counterfactual run shows whether any injected or dropped memory changed behavior.",
+    "Retrieval scores are null, so candidate ranking strength cannot be assessed.",
+    "The full unselected memory library is absent, so absence of other relevant memories cannot be inferred.",
+    "Post-target state/update content is unavailable and cannot explain target behavior."
+  ],
+  "minimal_intervention": {
+    "change": "Inject the related source episode instead of one unrelated recent episode, holding the target, model, and budget fixed.",
+    "fixed": "Same target task, same source episode, same model, same total injection budget, and same submission/evaluation protocol.",
+    "falsifier": "If target behavior and correctness are unchanged with the source episode injected, packing exclusion is not behaviorally relevant; if correctness changes, source content is behaviorally relevant."
+  },
+  "causal_claim": false
+}

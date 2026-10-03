@@ -1,0 +1,148 @@
+{
+  "case_id": "c-17857f86fdb4",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=32:True:10"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(text, seed=None):"
+        }
+      ],
+      "reason": "Source passed its own tests and is a valid single-text experience, but its scope is narrower than the target list task. It does not by itself guarantee correct list/seed adaptation."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "def task_func(text, seed=None):"
+        },
+        {
+          "section": "injection/1",
+          "quote": "if seed is not None:"
+        }
+      ],
+      "reason": "Injected source preserves the single-text scrambling signature and seed handling. It is faithful to source, though it does not contain target-specific list wrapper/seed-reset semantics."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should output a list of scrambled texts, one for each input text."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "return [task_func(text, seed) for text in texts]"
+        }
+      ],
+      "reason": "Source machinery applies per text, but target adds a list output and hidden reference expects per-text seed reuse. Direct one-seed-for-all-list adaptation is only partially applicable."
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The behavior matches the established pattern (global seed once"
+        },
+        {
+          "section": "target_submission",
+          "quote": "def new_task_func(texts, seed=None):"
+        }
+      ],
+      "reason": "Visible target code and message reuse source mechanics but explicitly seed once for the list; the hidden test expects per-text seed. This is a behavioral proxy, not causal proof."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(new_task_func(['Hello world! This is a test.', 'Python is fun and powerful.'], 123)"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": false"
+        }
+      ],
+      "reason": "Submitted implementation was scored false; the hidden first assert using seed 123 failed. This records the execution failure, not why it occurred."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "def task_func(text, seed=None):"
+        },
+        {
+          "section": "target_submission",
+          "quote": "random.seed(seed)"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "return [task_func(text, seed) for text in texts]"
+        }
+      ],
+      "reason": "The source single-text pattern is visible in the target submission, while the reference expects per-text task_func calls. Supports a misadaptation candidate, but no counterfactual proves memory caused it."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should output a list of scrambled texts, one for each input text."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "return [task_func(text, seed) for text in texts]"
+        }
+      ],
+      "reason": "The target prompt does not explicitly state per-text seed reset, while the hidden reference/test expects it. This is a possible under-specification or contract mismatch candidate."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true"
+        },
+        {
+          "section": "injection/1",
+          "quote": "def task_func(text, seed=None):"
+        }
+      ],
+      "reason": "A correct source episode was injected and retained in provenance, supplying a legal single-text component. It does not prove the memory was read, selected, or sufficient for the target."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "TASK_EXECUTION: the failure may be an implementation bug in seed scope, independent of memory.",
+    "EVAL_CONTRACT: the target prompt may be under-specified on whether the seed resets per text or applies once to the whole list.",
+    "The agent may not have consulted injection/1; the code could be reconstructed from prompt knowledge alone.",
+    "The hidden test/reference expectation is a scoring choice and should not be treated as absolute truth beyond the fixed mask."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the agent actually read or selected injection/1 versus relying on base knowledge.",
+    "Whether per-text seed resetting is required by the natural-language target contract or only by the hidden test/reference.",
+    "The unselected memory library and retrieval scores are absent, so selection and interference cannot be measured.",
+    "No counterfactual run without memory is available."
+  ],
+  "minimal_intervention": {
+    "change": "In new_task_func, call the single-text task_func(text, seed) for each text, or reset random.seed(seed) inside each per-text call, instead of seeding once before the whole list.",
+    "fixed": "Same injected sources, target prompt, hidden tests, and tool budget.",
+    "falsifier": "A run with per-text seed reset still failing, or the same global-seed-once code passing the hidden tests, would weaken the USE_TRANSFER candidate."
+  },
+  "causal_claim": false
+}

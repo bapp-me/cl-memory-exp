@@ -1,0 +1,128 @@
+{
+  "case_id": "c-87c134534780",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=23:False:5"
+        },
+        {
+          "section": "source_visible",
+          "quote": "KeyError: 'aa'"
+        }
+      ],
+      "reason": "源题离线评测 correct=false，5 个用例全部因缺 'aa'/'zz' 键报 KeyError；失败恰在其用 itertools.permutations 生成 650 键、遗漏重复字母组合，故源语法经验只能算部分可用。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "目标上下文中没有任何记忆内容被注入，因此不存在可判定的、源自合法源的记忆保真度；这不能反推模型自身先验知识的质量。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "the value is a list of frequencies of this combination across all words"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Create a dictionary containing all possible two-letter combinations of the lowercase English alphabets."
+        }
+      ],
+      "reason": "源题只处理单个 word 的二位组合计数，目标把同一计数按词聚合成列表并要求键集覆盖含重复字母的全部组合，属同族但条件有新增/改变，只可算部分适用。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "combos = [''.join(pair) for pair in itertools.product(string.ascii_lowercase, repeat=2)]"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "目标可见解法用 itertools.product 生成 676 个键，与源题失败的 permutations 写法不同，且无任何记忆注入，故看不到记忆复用痕迹；这只是行为代理，不是因果证据。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Create a dictionary containing all possible two-letter combinations of the lowercase English alphabets."
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": false"
+        }
+      ],
+      "reason": "存在同族的合法源经验（同一二位组合计数题，且已知失败模式为漏掉重复字母键），构成潜在机会；但源题结束时状态未保留、也未注入，故只能说机会存在，不能证明被利用。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "source_state_summary",
+          "quote": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      ],
+      "reason": "策略为 disabled 且源题前后状态哈希一致、raw_source_episode_retained_in_method_state=false，说明没有内容被写入/准入；这只能说明本题无记忆通道，不能说明源经验本身无价值。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "result[combo].append(counts.get(combo, 0))"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "EVALUATOR_RESULT=3:True:0"
+        }
+      ],
+      "reason": "目标先跑探针再提交，可见执行与离线评测均通过（correct=true，3 项检查）；这支持任务自身完成，但不构成对记忆效用的任何证明。"
+    }
+  ],
+  "primary_hypothesis": "WRITE_ADMISSION",
+  "competing_explanations": [
+    "目标正确也可能来自模型对该题族的自身先验：题面已完整给出要求与示例，无需任何记忆即可写出 product+Counter 解法，无注入即无反事实。",
+    "源题失败源于 permutations 不含重复字母，与目标是否使用记忆无关，不能据此推断记忆有害或负迁移。",
+    "离线目标评测显示 'Ran 0 tests' 而 checks_executed=3，可能只是断言式测试风格造成的统计差异，而非契约不一致。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "injection_metadata 为空是否等同全程零注入，还是仅未记录注入内容。",
+    "未提供未选中的完整记忆库，无法判断是否存在其他可检索条目或旧经验残留。",
+    "没有 target_update 之后的内容，UPDATE_RETENTION 无法评估。",
+    "目标隐藏正确性只由离线评测给出，未直接可见。"
+  ],
+  "minimal_intervention": {
+    "change": "在目标提示中注入源题的失败写法要点（itertools.permutations 生成 650 键、缺 'aa'/'zz'），观察目标是否复现该缺陷。",
+    "fixed": "保持相同目标题目、相同工具集与相同 token 预算及无其他记忆源的上下文。",
+    "falsifier": "若注入后目标改用 permutations 并缺失重复字母键（出现 aa/zz KeyError）则支持记忆重用；若仍用 itertools.product 生成 676 键，则重用候选被否定。"
+  },
+  "causal_claim": false
+}

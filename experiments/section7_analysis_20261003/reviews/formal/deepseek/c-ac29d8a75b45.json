@@ -1,0 +1,112 @@
+{
+  "case_id": "c-ac29d8a75b45",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=14:True:7"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(word: str) -> dict:"
+        }
+      ],
+      "reason": "源题在隐藏评测中通过，但源题契约是单字符串输入；本题要求跨多个单词聚合，源经验只覆盖核心逐词逻辑。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "sanitized = re.sub(r'[^a-zA-Z]', '', word)"
+        },
+        {
+          "section": "source_visible",
+          "quote": "result[sanitized[i:i+2]] += 1"
+        }
+      ],
+      "reason": "注入源经验的核心实现与源可见执行中的同一片段一致，未发现内容被改写；这只说明与目标相关部分保真，不等于整条记忆准确。"
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "find the occurrences of each two-letter combination across all words"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Find the occurrences of each two-letter combination in the sanitized word"
+        }
+      ],
+      "reason": "源的单字符串“清洗+重叠二元组计数”逻辑直接适用于本题的逐词计数，新增条件只是外层跨词累加。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "result[sanitized[i:i+2]] += 1"
+        },
+        {
+          "section": "target_submission",
+          "quote": "for i in range(len(sanitized) - 1):"
+        }
+      ],
+      "reason": "目标提交沿用了源经验中相同的清洗与重叠二元组计数写法，并外包一层按词循环累加；这是行为代理，不是复用导致成功的证明。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": true"
+        }
+      ],
+      "reason": "存在配对且通过评测的源题，其来源信息也被注入；这只证明经验来源可用，不证明其内容被读取或适用。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "sanitized = re.sub(r'[^a-zA-Z]', '', word)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "sanitized = re.sub(r'[^a-zA-Z]', '', word)"
+        }
+      ],
+      "reason": "目标实现与源实现出现同一片段和同一重叠计数结构，构成可见的语义承接候选；代码重合只是代理，无干预不能断言迁移因果。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "该题实现是常见惯用法，目标提示本身已足够推出清洗+重叠二元组计数，没有反事实就无法排除与记忆无关的独立复现。",
+    "注入中还含两个与本题无关的任务经验（如 department/JSON 与 pandas 过滤），但按规则仅凭其存在不能推断干扰或负迁移。",
+    "成功也可能来自冗余或错误记忆，本题可见证据不足以判定实际有效复用程度。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法确认目标回合是否真的读取了注入的源经验，还是仅凭提示作答。",
+    "未提供未选中的完整记忆库与预算明细，不能判断是否存在 PACKING_VISIBILITY 淘汰。",
+    "目标回合之后的更新不在证据内，不能用于解释本题表现。"
+  ],
+  "minimal_intervention": {
+    "change": "在不改变目标提示的前提下移除注入的源经验（消融该条），重跑同一评测。",
+    "fixed": "相同的目标提示、隐藏测试、提交协议与预算/环境。",
+    "falsifier": "若移除源经验后仍提交同样正确实现，则可见承接更可能来自提示本身，而非该源经验的贡献。"
+  },
+  "causal_claim": false
+}

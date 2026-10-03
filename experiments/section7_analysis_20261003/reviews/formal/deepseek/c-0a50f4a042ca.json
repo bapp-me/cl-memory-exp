@@ -1,0 +1,135 @@
+{
+  "case_id": "c-0a50f4a042ca",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_visible",
+          "quote": "leap_count = int(np.sum(LEAP_SECONDS >= start.year))"
+        }
+      ],
+      "reason": "Source episode passed its own scorable tests, so it is a legitimate solved source. Limit: its leap-count rule is a single-date, start-year-inclusive convention; target adds list aggregation and a stricter current-year-capped comparison, so source validity does not guarantee target correctness."
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "leap_count = int(np.sum(LEAP_SECONDS >= start.year))"
+        },
+        {
+          "section": "injection/0",
+          "quote": "calculate and plot the Voronoi diagram"
+        }
+      ],
+      "reason": "The retained source content faithfully shows the inclusive leap-count rule relevant to the target. However the actual injected memory set shown in injection/0..4 contains unrelated coding tasks, so the target-visible memory context carries none of that relevant rule."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(date_str):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def total_elapsed_seconds(date_list):"
+        }
+      ],
+      "reason": "Source and target share the same date/leap-second domain and constants, and the reference target literally sums per-date source calls. But the target changes the interface from one date string to a list and requires a sum, so the source needs adaptation."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "injection/0",
+          "quote": "calculate and plot the Voronoi diagram"
+        }
+      ],
+      "reason": "The relevant source was not injected; the injected episodes are unrelated. Target code also uses `> dt.year` where the source rule used `>= start.year`, so there is no visible adaptation of the source experience."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "np.sum((LEAP_SECONDS > dt.year) & (LEAP_SECONDS <= now.year))"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "leap_seconds = np.sum(LEAP_SECONDS >= given_date.year)"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": false"
+        }
+      ],
+      "reason": "The target implementation counts leap seconds strictly after the date's year and up to the current year, while the hidden reference counts table entries with year greater than or equal to the given date's year. This boundary difference makes the asserted equality fail for dates such as 1972 and 2020. It shows an execution/contract mismatch but does not prove any memory caused it."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_in_observable_retrieval_candidates\": true"
+        },
+        {
+          "section": "source_visible",
+          "quote": "leap_count = int(np.sum(LEAP_SECONDS >= start.year))"
+        }
+      ],
+      "reason": "A correct, closely related source experience existed and appears in observable retrieval provenance, but it was not injected into the target context. The opportunity to reuse the source's inclusive leap-count rule was therefore not exercised; this cannot prove that injecting it would have fixed the target."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_episode_byte_budget\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 5"
+        }
+      ],
+      "reason": "Retrieval/selection had many candidates before packing, but only five were injected and many older episodes were dropped for byte-budget reasons. The relevant source may have been among the non-injected candidates, which is a packing/visibility issue rather than evidence of retrieval failure. It cannot prove that the source was dropped or that this caused the failure."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "The hidden test enforces a reference `task_func` with start-year-inclusive leap counting; prompt ambiguity about same-year leap seconds could be flagged as an EVAL_CONTRACT candidate, though the target's strict `> dt.year` still appears too narrow for a period starting within that year.",
+    "No controlled memory-off counterfactual exists; because the relevant source was not injected, the observed failure may be independent of memory entirely."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Which memory ID corresponds to the date source and whether it was dropped before packing or simply not selected for injection.",
+    "The full hidden test suite and exact timing used by the offline evaluator.",
+    "Whether injecting the source rule would have prevented the target failure.",
+    "Whether any injected unrelated task influenced the target's reasoning."
+  ],
+  "minimal_intervention": {
+    "change": "Change the per-date leap count to include the start year, e.g. use `np.sum(LEAP_SECONDS >= dt.year)` per date before summing.",
+    "fixed": "Same target prompt, same date strings, same current-time evaluation, same hidden test contract, and no memory changes are required to test this change.",
+    "falsifier": "If the target with `np.sum(LEAP_SECONDS >= dt.year)` still fails the same hidden assertion, or if the reference actually used `> dt.year`, the off-by-boundary execution hypothesis is refuted."
+  },
+  "causal_claim": false
+}

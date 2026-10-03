@@ -1,0 +1,142 @@
+{
+  "case_id": "c-a3416c59af1e",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=27:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "The dataframe should also include a column 'Mean' which is the average value of each component value per row"
+        }
+      ],
+      "reason": "源题 5 个测试全过，但其 'Mean' 是逐行均值列且只处理单个矩阵，与目标口径不同，属有限可用。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/5",
+          "quote": "a per-row aggregate (`<df>[<cols>].mean(axis=1)`)"
+        },
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "df['Mean'] = df[<component_cols>].mean(axis=1)"
+        }
+      ],
+      "reason": "注入的 DataFrame 工作流把 Mean 描述为逐行聚合，与源实现一致；未发现矛盾，但整库逐源保真无法核验。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "apply PCA with n_components components to each matrix"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Apply PCA with n_components components to a 2D data matrix"
+        }
+      ],
+      "reason": "源经验覆盖 PCA/DataFrame/累计方差图，但目标新增多矩阵列表与跨矩阵聚合，源只处理单矩阵，仅部分适用。"
+    },
+    "visible_use": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "component_means = transformed.mean(axis=0)"
+        },
+        {
+          "section": "injection/6",
+          "quote": "`<pca>.explained_variance_ratio_`"
+        }
+      ],
+      "reason": "可见代码与记忆的通用 PCA/绘图片段重合，但未体现记忆特有的按行 'Mean' 列模式；无对照，不能判定复用或误用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "'Each dataframe should have a Mean column'"
+        },
+        {
+          "section": "target_submission",
+          "quote": "mean_row = pd.DataFrame([component_means], columns=col_names, index=[\"Mean\"])"
+        }
+      ],
+      "reason": "提交实现把均值作为索引为 'Mean' 的行而非列，隐藏断言直接失败；这是执行层结构选择，无需记忆参与即可解释。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "return the cumulative explained variance of the components across all matrices in a single plot"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert len(ax.lines) == 3, 'There should be a line for each matrix in the plot'"
+        }
+      ],
+      "reason": "题面说“单张图汇总所有矩阵”，agent 画 1 条聚合线，测试却要求每条矩阵一条线；'mean of each component' 与 'Mean' 列口径也存疑，仅标为题意/测试可能不一致的候选。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "Add any required derived column by computing row-wise or column-wise aggregates (e.g., `df['Mean'] = df[<component_cols>].mean(axis=1)`)"
+        },
+        {
+          "section": "injection/6",
+          "quote": "extract the required outputs — e.g., `<pca>.explained_variance_ratio_`"
+        }
+      ],
+      "reason": "被注入的来源经验含 PCA、Mean 列与累计方差图，与目标高度重叠，存在可利用机会；但源为单矩阵，机会是部分的，不等于已被采用。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/5",
+          "quote": "a per-row aggregate (`<df>[<cols>].mean(axis=1)`)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "component_means = transformed.mean(axis=0)"
+        }
+      ],
+      "reason": "可见实现用逐组件均值（axis=0）作行，未复现记忆中的逐行 'Mean' 列，故该经验未见有效迁移；无反事实，不能断言记忆导致失败或迁移本可修复。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "题意/测试口径不一致（EVAL_CONTRACT）：agent 的 'Mean' 行与单线汇总图可能符合题面却被隐藏测试判错。",
+    "记忆中的 'Mean' 名称可能诱导了错误数据结构（误用候选），但无对照条件无法验证。",
+    "Python 代码与注入工作流的重合多为任务必需的标准写法，可能只是可见代理而非真实复用。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "agent 是否实际读取了这 8 条注入记忆。",
+    "来源 episode 内容在注入库中的逐条保真度无法核验。",
+    "隐藏测试要求 'Mean' 列是否确为题意本意，还是沿用源题口径的残留。"
+  ],
+  "minimal_intervention": {
+    "change": "让每个返回 DataFrame 具有名为 'Mean' 的列（逐行组件均值），而非索引为 'Mean' 的额外行。",
+    "fixed": "保持相同的历史、注入记忆库、环境与预算。",
+    "falsifier": "若在相同注入下改成 'Mean' 列后仍因同类断言失败，或移除记忆后结果不变，则记忆相关候选被反驳。"
+  },
+  "causal_claim": false
+}

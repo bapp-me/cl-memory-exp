@@ -1,0 +1,124 @@
+{
+  "case_id": "c-78ae5f75b479",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"tests_run\": 10,\n  \"checks_executed\": 22,\n  \"correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(amplitude, frequency, time):"
+        }
+      ],
+      "reason": "源题是可评分的合法经验且通过（22 项检查 OK），但其契约是单谐波且返回 (wave, fig, ax)；目标改为多谐波、amplitudes/frequencies 输入，故源经验仅部分沿用。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/48",
+          "quote": "np.abs(wave) == amplitude * hann_window"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": [\n    \"sai-00063\",\n    \"sai-00065\",\n    \"misc-00064\"\n  ]"
+        }
+      ],
+      "reason": "保真到目标的窗函数/复波幅度恒等内容忠实于源；但源解显式返回 fig 的返回约定在注入内容中未见，故对目标所需内容只覆盖一部分。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Apply a Hann window to each harmonic to reduce edge effects."
+        },
+        {
+          "section": "injection/48",
+          "quote": "Verifying this identity in the sandbox instantly confirms the window was applied to the complex wave"
+        }
+      ],
+      "reason": "Hann 窗作用于复波的经验直接适用于目标的加窗要求，但不涉及多谐波求和与返回 fig/ax 的元组约定。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "the exact magnitude identity `|wave| == |amplitude| * hann_window` (misc-00064-style check"
+        }
+      ],
+      "reason": "可见执行把窗函数幅度恒等检查用于单谐波验证并与任务一致；这只表明记忆被使用，不证明其带来成功，也未覆盖导致失败的返回约定。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ValueError: not enough values to unpack (expected 3, got 2)"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "The function should return the combined complex wave and a plot displaying both the real and imaginary parts of the combined wave."
+        }
+      ],
+      "reason": "题面只说返回复波和“a plot”，而离线评测按三元组 (combined_wave, fig, ax) 解包，说明契约对 figure/axes 元数欠定；仅表明可能存在题意/测试不一致候选，不证明题面必然要求 fig。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "    return wave, ax"
+        },
+        {
+          "section": "target_visible",
+          "quote": "w1, ax1 = generate_complex_wave_with_harmonics([2.0], [5.0], t)"
+        }
+      ],
+      "reason": "提交与沙箱验证都按二元组 (wave, ax) 解包并使用，从未断言返回元数；这直接解释评测的 unpack 失败，但不说明记忆内容或来源质量。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "the exact magnitude identity `|wave| == |amplitude| * hann_window` (misc-00064-style check"
+        },
+        {
+          "section": "injection/48",
+          "quote": "Quick arithmetic check for windowed complex waves"
+        }
+      ],
+      "reason": "窗函数幅度恒等（misc-00064）在可见执行中被显式迁移用于加窗验证，属语义候选；它不能证明记忆造成成功或失败，任务失败点（返回元数）不在该内容覆盖内。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "TASK_EXECUTION：agent 自身实现只返回 (wave, ax) 且未对返回元数做任何断言，单纯实现遗漏也能解释该 ValueError",
+    "记忆缺口：源解返回 (wave, fig, ax) 的约定可能从未被写成经验或未被选中注入，现有证据无法区分 WRITE_ADMISSION 与 RETRIEVAL/PACKING",
+    "题面“a plot”是否本应指 figure+axes 尚不明确，可能是题意与隐藏测试不一致而非 agent 过错"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏评测除解包错误外的其它断言未知，无法确定 fig 之外还有哪些契约",
+    "sai-00063/sai-00065 的具体内容不可见，无法判断是否存在可迁移的返回约定",
+    "源解返回 fig 的约定是否被写入记忆并被检索，缺证据；不能由源通过推断其所有陈述正确",
+    "无对照干预，无法判定若注入返回约定记忆任务是否成功"
+  ],
+  "minimal_intervention": {
+    "change": "将提交函数返回值改为三元组 (combined_wave, fig, ax)，与同族任务参考解一致，并在沙箱加入返回元数断言",
+    "fixed": "保持相同的目标题面、注入记忆、预算与评测环境不变",
+    "falsifier": "若隐藏测试接受二元组 (wave, ax) 或评测通过，则返回元数假设被反驳"
+  },
+  "causal_claim": false
+}

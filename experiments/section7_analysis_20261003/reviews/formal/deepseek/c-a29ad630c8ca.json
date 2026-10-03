@@ -1,0 +1,130 @@
+{
+  "case_id": "c-a29ad630c8ca",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Calculate the mean, median, and mode of values in a list of lists."
+        }
+      ],
+      "reason": "源题为同一均值/中位数/众数家族且其自身测试通过，但其把填充值并入总体、且无逐列表输出的做法与目标契约并不完全一致，故仅 pass_with_limits。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "values.extend([random.randint(0, 100) for _ in range(size)])"
+        }
+      ],
+      "reason": "源经验忠实覆盖了“空列表用 size 个 [0,100] 随机整数填充并用 seed 复现”这一核心规则，但没有任何逐列表统计或字典输入/输出契约，故只算部分覆盖。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Given a dictionary where each key maps to a list of integers"
+        }
+      ],
+      "reason": "目标把输入从 list of lists 改成 dict、新增了逐列表统计要求，并改变输出契约，因此同一任务家族只部分适用。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "calculate the total travel distance for a path that starts at the first point"
+        }
+      ],
+      "reason": "实际注入的 5 条是旅行距离、回归、菜单、日期、DataFrame 等无关任务，其代码/术语均未出现在目标提交中；这只是行为代理，不能判断是否存在未可见的语义影响。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "result['per_list'] = per_list_stats"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "The function should output a dictionary with the overall statistics."
+        }
+      ],
+      "reason": "提交返回了额外的 per_list 键且用填充后的值计算总体统计，无法等于期望的仅总体统计字典，属可见执行偏差；不能据此推断记忆造成失败。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "new_task_func({'a': [1, 2, 3], 'b': [], 'c': [4, 5, 6]}, size=5, seed=0) == {'mean': 3.5, 'median': 3.5, 'mode': 1}"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "overall_values.extend(value)"
+        }
+      ],
+      "reason": "期望值 3.5 等于原始非空值的均值，即填充的随机数被排除在总体之外，这与题面“先填充再求所有列表总体统计”的读法可能冲突；仅标为候选，不重打分。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_episode_byte_budget\""
+        }
+      ],
+      "reason": "可适用的源经验出现在可观察检索候选中却未被注入，最终只注入最新的 5 条无关回合，符合按字节预算淘汰旧回合的打包层现象；这不证明注入源就会改变结果。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"injected_utf8_bytes\": 45053"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"totalTokens\": 79475"
+        }
+      ],
+      "reason": "约 45KB 注入预算与本次约 79k token 消耗承载的是与目标无关的回合，可比描述其开销；本题不足以断言无收益或性价比差。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "失败可能主要来自评测契约（隐藏测试把填充随机数排除在总体之外）而非 agent 输出选择。",
+    "最相关的源经验在打包阶段被字节预算淘汰，可能移除了可借鉴信息，但无反事实无法确认因果。",
+    "注入的 5 条无关记忆是否影响了任何设计决策，现有证据无法判断。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "源回合究竟是在 dropped 列表中被淘汰，还是从未真正进入可注入集合。",
+    "任何注入记忆是否在不可见的推理中被使用。",
+    "目标期望语义究竟是否要求把填充值纳入总体统计。"
+  ],
+  "minimal_intervention": {
+    "change": "在题面/校验中显式固定目标输出契约（仅返回总体统计字典；并说明填充随机数是否计入总体）。",
+    "fixed": "保持相同的历史、注入记忆集合与字节预算。",
+    "falsifier": "若在输出契约被明确为“仅总体统计”后仍返回 per_list 键或均值/中位数/众数不符，则 TASK_EXECUTION 候选被反驳。"
+  },
+  "causal_claim": false
+}

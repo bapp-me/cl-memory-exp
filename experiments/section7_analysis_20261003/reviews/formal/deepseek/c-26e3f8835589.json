@@ -1,0 +1,123 @@
+{
+  "case_id": "c-26e3f8835589",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_visible",
+          "quote": "mean, std = norm.fit(data)"
+        }
+      ],
+      "reason": "源 episode 自测通过（5 tests OK），其 norm.fit 实现与题面一致；但它只覆盖单数组，未覆盖目标的分组字典契约。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "outliers = np.where(np.abs(z_scores) > threshold)[0].tolist()"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "If the standard deviation is 0, an empty list is returned as outliers."
+        }
+      ],
+      "reason": "留存源内容忠实编码了 Z 分数越界与 std==0 返回空列表两条关键规则，未见与目标相关内容的矛盾。"
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(data: np.ndarray, threshold: float = 2.0) -> list:"
+        }
+      ],
+      "reason": "源是单数组版本，目标仅增加 per-group 循环与 dict 汇总，核心算法可直接迁移。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "variance = np.var(data)  # MLE variance (ddof=0)"
+        }
+      ],
+      "reason": "目标改用 np.mean/np.var 自行实现，未调用源所用的 norm.fit，轨迹中看不到复用源方案的痕迹。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_episode_byte_budget\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 6"
+        }
+      ],
+      "reason": "候选包含全部 70 条，但按字节预算只注入最近 6 条（均为无关任务），合法的 Z 分数源经验在打包阶段被淘汰。只能说明可用性受限，不能证明它被检索到却未用。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AssertionError"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "818.2499999999999"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "mean, std_dev = norm.fit(data)"
+        }
+      ],
+      "reason": "隐藏断言用严格 == 比较，期望值来自 norm.fit 的 std**2；目标用 np.var 得 818.25，仅差末位 ULP 即失败。这标记契约对实现路径敏感，但评测 mask 固定，不重打分。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "variance = np.var(data)  # MLE variance (ddof=0)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "All tests pass: Z-score outliers are detected correctly"
+        }
+      ],
+      "reason": "目标执行未采用源记忆的 norm.fit 路径，属无可观察正向迁移；这不证明记忆无效或有害，也非真实遗忘证据。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "若源 Z 分数 episode 被注入且沿用（norm.fit），可能得到期望浮点值；但无干预，不能由本题断言记忆会导致成功。",
+    "目标可能是模型独立用 numpy 重写，失败更应归为其自身方法选择（TASK_EXECUTION），而非契约或记忆问题。",
+    "注入的 6 条无关 episode 是否造成任何干扰，现有证据无法判断。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "源 Z 分数 episode 在历史中的确切位置与注入形态（source_provenance_injected=false）无法核实。",
+    "失败是否确实仅由 np.var 与 norm.fit 的浮点末位差导致，未在本环境重跑验证。",
+    "注入的无关记忆是否影响了解答，缺乏反事实证据。"
+  ],
+  "minimal_intervention": {
+    "change": "在隐藏评测中以容差比较（如 np.isclose）替代对均值/方差的严格 == 判等。",
+    "fixed": "保持相同的历史、注入内容、目标题面与预算不变。",
+    "falsifier": "若在容差比较下该提交仍失败（存在真实语义差异），则 EVAL_CONTRACT 候选被推翻。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,136 @@
+{
+  "case_id": "c-296e371428d8",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "injection/5",
+          "quote": "Goal: open a door behind you"
+        },
+        {
+          "section": "injection/5",
+          "quote": "I found a blue closed door behind my original position. Let me go to it."
+        }
+      ],
+      "reason": "注入的 6 条轨迹中包含与目标同目标、同动作词表的完整源经验，属合法源；但未给出源的成功/失败标签，且该源结尾 submitted 为 false，成功性不明。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/5",
+          "quote": "I need to find a door behind me. Neither visible door is behind me, so let me turn around to look."
+        }
+      ],
+      "reason": "与目标相关的同题源项在注入文本中是自洽完整的（转身→找到身后门→go to→toggle→completed）；只能核对注入载荷本身，原始存储无法独立比对。"
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Goal: open a door behind you"
+        },
+        {
+          "section": "injection/5",
+          "quote": "Goal: open a door behind you"
+        }
+      ],
+      "reason": "目标与源目标文字完全相同，所需程序（转 180° 找身后的门、go to、toggle）一致；门颜色/位置的差异属无关细节。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "I need to find a door behind me. The red door is in front of me, so I'll turn around to look behind."
+        },
+        {
+          "section": "injection/5",
+          "quote": "I need to find a door behind me. Neither visible door is behind me, so let me turn around to look."
+        }
+      ],
+      "reason": "目标行为弧（两次 turn right、go to 蓝门、toggle）与同题注入轨迹平行；这只是可见代理，无对照不能证明来自记忆（BabyAI 惯用措辞也可能自生）。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/5",
+          "quote": "Goal: open a door behind you"
+        }
+      ],
+      "reason": "存在与目标同目标的合法源经验，构成潜在可复用机会；机会存在不等于被采用或内容正确地适用。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The task is completed. I turned around 180° to find a door behind my original position"
+        },
+        {
+          "section": "injection/5",
+          "quote": "I turned 180° to face it, navigated to it, and toggled it open"
+        }
+      ],
+      "reason": "目标的动作序列与终点叙述与同题注入轨迹高度平行，提示可见复用；无消融或反事实，不能证明成功由记忆造成。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"submit_calls\": 0"
+        },
+        {
+          "section": "target_submission",
+          "quote": "\"submitted\": false"
+        }
+      ],
+      "reason": "目标仅 4 次 ACTION 后结束、并宣称完成却无提交动作，固定评测 correct=false；可作失败相关候选，但无法证明提交动作在当时必需或可用。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The task is completed."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": false"
+        }
+      ],
+      "reason": "环境观察已宣告任务完成，而离线评测给 correct=false、progress=0.5，二者可能口径不一致（如须提交才算成功），仅标候选不重打分。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "失败可能只是评测口径/提交标志问题：环境已输出 'The task is completed.'，实际策略并未跑错。",
+    "目标行为与源平行可能来自 BabyAI 固定措辞（'turn around to look behind'）而非记忆读取，属可见重合而非复用证据。",
+    "同题注入源本身可能也是未提交的失败样例，若如此则存在把失败终止习惯一并迁移的可能，但当前无源标签可证。",
+    "检索给出 rank 1–6 且 score 全为 null，选择依据与是否截断均不可见，无法判断注入集是否最优。"
+  ],
+  "confidence": "low",
+  "uncertainties": [
+    "提交动作是否需要/是否可用，以及 progress=0.5 的具体判据。",
+    "6 条注入源的原始成功/失败标签与源题得分均未提供。",
+    "目标计划是否受记忆影响（无对照或反事实）。",
+    "检索分数为 null，选择与打包过程仅有 id 级覆盖，无法评估内容保真或截断。"
+  ],
+  "minimal_intervention": {
+    "change": "保持同题注入源不变，仅在 toggle 成功后再显式执行一次终止/提交动作。",
+    "fixed": "相同任务、相同观测序列、相同 6 条注入记忆与预算。",
+    "falsifier": "若显式提交后仍为 correct=false，则失败不在缺失提交，而在目标/评测口径或策略本身。"
+  },
+  "causal_claim": false
+}

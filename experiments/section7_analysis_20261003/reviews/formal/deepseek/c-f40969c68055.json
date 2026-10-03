@@ -1,0 +1,144 @@
+{
+  "case_id": "c-f40969c68055",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Generate a random poker hand consisting of five cards"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=30:True:5"
+        }
+      ],
+      "reason": "合法源题完成了单手牌生成与 rank 频次统计并通过检查，但不含4人胜负和平局逻辑，只对目标部分相关。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "rank_count = Counter(card[:-1] for card in hand)"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=30:True:5"
+        }
+      ],
+      "reason": "源题中发牌与 Counter 逻辑与其任务一致且通过检查，就可迁移的牌面/频次内容看是保真的；这不证明它被注入目标。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "simulates a game of poker with 4 players"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Generate a random poker hand consisting of five cards"
+        }
+      ],
+      "reason": "源经验只覆盖单手牌生成与 rank Counter，目标新增4人发牌、胜者及平局判定，因此为部分适用。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "def poker_game(seed=None):"
+        },
+        {
+          "section": "injection/1",
+          "quote": "def new_task_func(texts, seed=None):"
+        }
+      ],
+      "reason": "目标未要求 seed，却加入可选 seed 参数，与注入的另一任务签名一致，属可见适配代理；不能证明记忆造成成功。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func():"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=30:True:5"
+        }
+      ],
+      "reason": "存在合法且通过的源题，但其范围是单手生成，不能支持目标完整胜负逻辑。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_episode_byte_budget\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "源经验可检索但实际注入为6条无关任务；最老完整 episode 被字节预算淘汰，说明可见注入与相关性不匹配。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "def poker_game(seed=None):"
+        },
+        {
+          "section": "injection/1",
+          "quote": "def new_task_func(texts, seed=None):"
+        }
+      ],
+      "reason": "目标额外加入 seed 参数，与注入记忆的可选 seed 签名重合，属适配代理；不能证明该模式来自记忆或影响正确性。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should return a list of tuples"
+        },
+        {
+          "section": "target_submission",
+          "quote": "return hands, result"
+        }
+      ],
+      "reason": "题面字面要求返回 list of tuples，提交返回 (hands, result) 元组；离线评判仍判正确，reference/tests 也按元组索引，故只标契约歧义候选。"
+    }
+  ],
+  "primary_hypothesis": "PACKING_VISIBILITY",
+  "competing_explanations": [
+    "目标题面自包含，标准牌堆/洗牌实现即可成功，未依赖注入记忆。",
+    "额外 seed 参数可能来自 agent 自身习惯或源题 docstring 示例，而非注入记忆。",
+    "源经验只部分适用，即使被注入也未必改变目标实现。",
+    "注入的无关任务可能仍有未观测到的轻微影响，但现有证据不能判定。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试不可见，题面 list 与提交 tuple 的确切契约边界未完全确定。",
+    "源经验是否被写入、蒸馏或以何形式保留在方法状态中，缺少内容级证据。",
+    "可选 seed 参数是否由注入记忆引发，无法由可见行为唯一证明。",
+    "无法判断无关注入是否造成任何干扰或收益。"
+  ],
+  "minimal_intervention": {
+    "change": "在相同注入字节预算下，用源题单手 poker 经验替换一条无关注入，并观察目标代码/结果是否变化。",
+    "fixed": "保持目标题面、工具、字节预算、随机种子和环境条件相同。",
+    "falsifier": "若目标提交与现在逐字相同且结果无变化，则源经验对本次成功无可见因果作用。"
+  },
+  "causal_claim": false
+}

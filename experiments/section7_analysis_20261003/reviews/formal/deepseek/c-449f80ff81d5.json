@@ -1,0 +1,132 @@
+{
+  "case_id": "c-449f80ff81d5",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Performs an OLS linear regression on a subset of the provided DataFrame. The subset is created by filtering rows"
+        },
+        {
+          "section": "source_visible",
+          "quote": "subset = df[(df[col_height] > height) & (df[col_weight] < weight)]"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=13:True:5"
+        }
+      ],
+      "reason": "源题是合法且通过离线检查的过滤+OLS 经验，但其输入是单一 DataFrame、返回单个模型；目标新增按 DatasetID 分组并返回 dict，故源经验只覆盖部分语义，属可复用但有限。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "注入包内没有与目标必要内容（columns[1]/columns[2] 过滤、add_constant、OLS、空集返回 None）对应的语句，只有 Matplotlib/柱状图摘要；且无源—记忆配对，不能判断这些条目对其自身来源是否保真。"
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "perform an OLS linear regression for each dataset"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "实际注入内容是柱状图/绘图类任务描述，与目标的多数据集 OLS 回归无交集；配对源题虽结构相近，但并未出现在注入内容中。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "subset = group[(group[cond1_col] > height) & (group[cond2_col] < weight)]"
+        },
+        {
+          "section": "target_visible",
+          "quote": "results[ds_id] = model.fit()"
+        }
+      ],
+      "reason": "可见轨迹全部是 pandas/statsmodels 的 OLS 实现，没有出现注入内容中的 Matplotlib、value_counts 或柱状图痕迹；这只是行为代理，不能推出记忆对内部推理零影响。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Performs an OLS linear regression on a subset of the provided DataFrame. The subset is created by filtering rows"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Return a dictionary where the keys are the 'DatasetID' and the values are the results of the OLS regression for each dataset."
+        }
+      ],
+      "reason": "源题提供了可直接复用的过滤+OLS 核心，目标只在其上新增按 DatasetID 分组与 dict 返回；这证明存在复用机会，不证明复用发生。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "046fecd0-bb97-4487-aea7-9105b37efe5a"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "返回并被选中的候选是与目标主题不符的绘图类任务摘要，而非同源回归经验；只说明返回集合的相关性差，不说明库中别无相关记忆，也不解释成败。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "target_visible",
+          "quote": "results[ds_id] = model.fit()"
+        }
+      ],
+      "reason": "注入记忆的可辨识内容（Matplotlib/柱状图）在可见行为中无任何对应痕迹，解题实现完全可由题面直接推出；无反事实，不能断言记忆无效或有害。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "目标的筛选+add_constant+OLS 写法与源题实现高度相似，可能反映未被注入文本表达的潜在经验复用，而非从零实现；可见证据无法区分。",
+    "隐藏正确性在提交时不可得（'Hidden correctness is not available'），离线评估 correct 采用固定 mask，未覆盖分支行为未知。",
+    "未选中的完整记忆库未展示，源题经验可能以其他 id 存在于库中只是未被检索到；不得由本包推断其不存在。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "两条注入记忆的真实来源、写入时点与其自身来源记忆的原文。",
+    "token 预算（token_count 为 null、measurement 不可用）与注入两行摘要的实际成本收益。",
+    "源题结束时是否以其他形式留下经验（可见 update operations 为空，但全库状态未展示）。",
+    "模型内部是否曾参考注入内容，或是否参考了未被识别的记忆。"
+  ],
+  "minimal_intervention": {
+    "change": "把源题可复用的过程性经验（按 columns[1]/>height 与 columns[2]/<weight 过滤、add_constant、OLS、空集返回 None）作为一条过程记忆写入并命中，替换仅含 Matplotlib/柱状图的任务级摘要",
+    "fixed": "相同的目标题面、相同的隐藏检查、相同的模型与预算、相同的历史与检索协议",
+    "falsifier": "若注入该过程性记忆后可见行为仍不引用其中任何步骤且结果不变，则“相关源经验会被可见复用”的候选被反驳"
+  },
+  "causal_claim": false
+}

@@ -4,6 +4,8 @@ Training-free Agent memory 实验代码与研究证据。主要语言为中文�
 
 ## 从这里开始
 
+- [第 7.2 节 baseline 分析报告](experiments/section7_analysis_20261003/第7.2节baseline分析报告.md)：624 次执行重算、324 条审查、模型选择、失败诊断与证据边界。
+
 - [第 6 节完成报告](experiments/agent_memory_plan_20261002/第6节完成报告.md)：本轮结果、成本、协议变更与解释边界。
 - [完整实验过程](Agent_Memory_实验过程记录.md)：决策、修复、暂停、并发、资源采样和审计。
 - [原研究计划](Agent_Memory_Research_Plan_CN_v1.0_Final.md)：原文保留；实际执行以用户修订及过程记录为准。
@@ -13,6 +15,7 @@ Training-free Agent memory 实验代码与研究证据。主要语言为中文�
 
 | 目录 | 内容与状态 |
 |---|---|
+| `experiments/section7_analysis_20261003/` | 第 7.2 节全量离线分析、三方小样本校准、324 条审查、逐字证据与主 agent 复核、原始调用归档 |
 | `experiments/agent_memory_plan_20261002/` | 当前 00–06 执行：配置、Pi/工具适配、隔离评分、冻结协议、全部结果索引与审计 |
 | `experiments/memory_scope_fix_20261002/` | 历史跨任务效率迁移、writer scope、memory fix；10 组 a/b/c/d 实验及原始证据 |
 | `experiments/memory_direction_20261002/` | 更早的三个方向可行性探索、Hermes 适配、原始轨迹和分析 |
@@ -41,7 +44,17 @@ GLM 5.3 Flash，单次独立运行。代码复杂目标中，无记忆 18/46，�
 
 [记忆健康统计](experiments/section7_observability_20261002/records/memory-health.json)记录：Mem0 96 次代码更新中有 91 次空 facts、4 次原生 JSON 拒绝；AWM 有 49 次累计历史超过 320,000 字节请求预算，保留旧 workflow；ACE 有 3 次 Reflector 超时及 1 次 Solver 响应超时。前者均保留原失败，从核验未改变的提交状态继续；后者未提交答案并保留原评分，均不重跑。正式新代码共有 4 条未返回 usage 的 HTTP 请求，复用的 Mem0 BabyAI 另有 1 条。上述统计描述实际操作与预算，未进行语义或因果归因。
 
-新增正式代码的原始请求、工具轨迹、提交、记忆状态及失败证据已归档为 `experiments/section7_observability_20261002/artifacts/full-native-raw-runs.tar.gz`，12,649 个文件均逐成员核验哈希；[归档索引](experiments/section7_observability_20261002/records/full-native-raw-archive.json)保留摘要和逐文件 SHA256。下一阶段为 7.2 失败诊断；未自动运行第二次重复、第二遍、未见验证或最终测试。
+新增正式代码的原始请求、工具轨迹、提交、记忆状态及失败证据已归档为 `experiments/section7_observability_20261002/artifacts/full-native-raw-runs.tar.gz`，12,649 个文件均逐成员核验哈希；[归档索引](experiments/section7_observability_20261002/records/full-native-raw-archive.json)保留摘要和逐文件 SHA256。第 7.2 离线失败诊断已交付，见下文；未运行第二次重复、第二遍、D2 干预、未见验证或最终测试。
+
+## 第 7.2 节分析已交付
+
+六方法 624 次执行完成 D0 重算；276 条有效复杂目标和 48 条 BabyAI 共 324 条完成 DeepSeek 辅助审查。6 条相同样本先由 GPT 6.1 sol xhigh、DeepSeek、GLM 比较；DeepSeek 语义字段与 GPT 参照一致 20/24，GLM 原样 14/24、仅修复 JSON 括号后 18/24。此小样本只支持本轮标注器选择，不代表总体排名。
+
+主要发现：ICL 的 45/46 个对应源在包装阶段被丢弃；Mem0 多为空写入；AWM 索引 47–95 的 workflow 冻结；ACE 辅助计算及输入成本高。Jaccard 虽有本轮正确性收益，完整代码流 token 仍约为 No Memory 的 3.91 倍。16 条“源通过且已注入仍失败”混有目标新增条件及题意/测试疑点，不能直接认定为负迁移。
+
+新增审计发现 new:BigCodeBench/316 的测试覆盖被测函数；No Memory/new:BigCodeBench/954 多次提交 fetch failed。原分数、固定 mask 和 memory 均保留。自动标签还出现 D0/D1、来源/实际注入范围及 BabyAI 无 SUBMIT 协议的误判，因此主报告使用 D0 与逐例证据复核，不将原始标签频数当失败率；人类逐条签认尚未登记。
+
+审查共 362 个 HTTP 请求（含校准、参数拒绝、余额不足及用户充值后获批补齐），已知 9,700,314 tokens，与 baseline 成本分开。模型输出、失败记录和证据包共 2,094 个文件已归档并核验。见[完整报告](experiments/section7_analysis_20261003/第7.2节baseline分析报告.md)、[完成核对](experiments/section7_analysis_20261003/records/section7.2-completion-audit.json)、[审查费用](experiments/section7_analysis_20261003/records/review-costs.json)及[离线复核说明](experiments/section7_analysis_20261003/REPRODUCING.md)。下一阶段是讨论并冻结 7.3/7.4 的可证伪假设与有限干预，当前未执行。
 
 ## 数据与凭据边界
 

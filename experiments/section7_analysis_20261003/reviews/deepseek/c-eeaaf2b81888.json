@@ -1,0 +1,150 @@
+{
+  "case_id": "c-eeaaf2b81888",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=14:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(length, count, seed=0):"
+        },
+        {
+          "section": "source_visible",
+          "quote": "with the seed matches the example exactly"
+        }
+      ],
+      "reason": "源任务离线评测通过（5 测试 OK），且其可见轨迹找到了 random.choices+seed 的正确生成语义；但源接口是 (length,count) 单串计数，没有 most/least 与多长度接口，覆盖有限。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": []"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame"
+        }
+      ],
+      "reason": "与目标相关的成功源内容（random.seed+random.choices 的生成近似、Counter 用法）在注入文本中完全没有出现，注入内容是他域 pandas 画图摘要。"
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame"
+        }
+      ],
+      "reason": "实际注入的两条记忆描述 DataFrame 值计数柱状图任务，与纯 Python 字母频次任务的接口/语义无交集；同族源内容本身未出现。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "rng = random.Random(seed)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "The implementation works correctly. Here's my final solution:"
+        }
+      ],
+      "reason": "提交代码没有任何 pandas/matplotlib/柱状图痕迹，也未复用成功源的 random.choices 生成方式，全部为自写实现；这只能说明无明显复用代理，不能证明记忆造成结果。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "rng = random.Random(seed)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "most_frequent = max(letters, key=lambda l: (frequencies[l], [-ord(c) for c in l]))"
+        },
+        {
+          "section": "target_visible",
+          "quote": "The implementation works correctly. Here's my final solution:"
+        }
+      ],
+      "reason": "提交用独立 Random 实例逐位 choice 并自定字母序 tie-break，与期望的 seed+random.choices 和 Counter 序最值不同；可见自测只跑了自己的脚本即宣布正确。这只证明代码与该隐藏断言不匹配，不证明记忆导致失败。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "assert new_task_func([3, 4], [2, 3], 0) == (Counter({'c': 9, 'e': 3, 'd': 3, 'b': 3}), 'c', 'b')"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "identify the most frequent letter and the least frequent letter across all strings."
+        }
+      ],
+      "reason": "题面未规定并列最值的打破规则、是否补 0 计数键、返回结构，而隐藏断言要求精确 Counter 相等与 Counter 插入序 tie-break；契约欠定是并存的候选解释。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "retrieval",
+          "quote": "Native Qdrant top-5 returned set; complete persisted point pool separately snapshotted"
+        }
+      ],
+      "reason": "候选与注入集合只含柱状图/DataFrame 记忆，与目标主题无关；但没有反事实，不相关内容的出现不能证明干扰或无相关记忆缺失。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "source ID coverage is not content fidelity; entire unselected library is not presented"
+        }
+      ],
+      "reason": "最接近且成功的源（distance 25）内容未被保留、未注入、也不在可观察候选内，目标缺少可合法复用的机会；无法据此断言若注入即可修复。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "契约欠定（并列规则/输出形状）单独即可解释失败，与执行错误无法区分",
+    "注入不相关记忆无可见使用，但无干预条件下不能证明其对失败有因果贡献",
+    "同族成功源未保留/未注入，因此无法判断复用其 random.choices 语义是否会改变结果"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "未注入的完整记忆库是否含同族可用经验",
+    "隐藏测试的 tie-break 与返回结构是否有题面之外的额外约定",
+    "目标检索查询与实际排序上下文"
+  ],
+  "minimal_intervention": {
+    "change": "将提交对齐参考语义：用 random.seed(seed)+random.choices(letters, k=length) 生成，并由 Counter.most_common() 顺序取 most/least、不额外补 0 计数键",
+    "fixed": "保持相同目标题面、隐藏测试、模型与记忆注入预算不变",
+    "falsifier": "若按该语义重跑仍触发同一 AssertionError，则该执行侧候选被反驳"
+  },
+  "causal_claim": false
+}

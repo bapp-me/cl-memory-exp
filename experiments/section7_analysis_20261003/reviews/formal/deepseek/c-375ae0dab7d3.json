@@ -1,0 +1,142 @@
+{
+  "case_id": "c-375ae0dab7d3",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=15:True:6"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df, column, value):"
+        }
+      ],
+      "reason": "源题正确且可评分，但只覆盖单 DataFrame 单列最小实现；其新增经验中的 numpy 标量/空列建议未被源可见验证直接覆盖。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_block_byte_budget\""
+        }
+      ],
+      "reason": "来源经验对应 ID 的 provenance 保留但未注入；注入文本及 injected_ids 中未见来源相关记忆，故没有可核验的源相关内容送达目标。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df, column, value):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of pandas DataFrames, analyze each DataFrame's specified column"
+        }
+      ],
+      "reason": "源题单 DataFrame/单列，目标要求 dfs/columns 列表逐项处理并返回列表；严格大于与直方图逻辑可迁移，接口与循环维度是新增条件。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "count = int((series > value).sum())"
+        },
+        {
+          "section": "source_visible",
+          "quote": "bisect.bisect_right(sorted_data, value)"
+        }
+      ],
+      "reason": "目标用向量化 sum 而非来源的 bisect 惯例，且源记忆未注入；可见行为无法归因于来源记忆，也不能证明未使用其他通用注入记忆。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Ensure that the function raises a ValueError if any column does not exist in the corresponding DataFrame or if the value is not a number."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "EVALUATOR_RESULT=6:True:0"
+        }
+      ],
+      "reason": "目标契约、ValueError 条件与返回结构由离线评估直接确认满足；只证明契约匹配，不证明记忆起效。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "ALL CHECKS PASS"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "EVALUATOR_RESULT=6:True:0"
+        }
+      ],
+      "reason": "目标先运行沙箱验证再提交，验证返回码 0，离线评估亦正确；显示执行路径完整，但不涉及记忆因果。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=15:True:6"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df, column, value):"
+        }
+      ],
+      "reason": "存在同主题的合法源经验（严格大于计数、直方图、ValueError），但源接口是单 DataFrame，目标新增 dfs/columns 列表与多图维度。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_block_byte_budget\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "源相关 ID 在 selected_before_packing 中但被 byte budget 丢弃，且 provenance 标记未注入；因此这是打包淘汰，不是检索失败，也不能把目标成功归因于源经验。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "目标可能独立于任何记忆完成，因为多 DataFrame 循环与逐项 subplots 可直接从题面推出；无 counterfactual 不能证明记忆未起辅助作用。",
+    "注入的通用记忆（如 ValueError 约定、验证纪律）可能与目标行为一致，但可见重合只是代理，不能证明发生实际复用。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法从可见执行判断目标是否使用了任何注入记忆。",
+    "隐藏完整测试未提供，仅见 6 项 checks_executed，不能排除未覆盖的契约边界。",
+    "来源相关记忆内容未出现在注入文本中，无法核验其保真度或适用性。",
+    "无 counterfactual，不能判断记忆造成成功、负迁移或真实遗忘。"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "保持相同目标题面、离线评估、预算与注入历史。",
+    "falsifier": "若在相同条件下显式注入来源经验 sai-00023/24 后目标行为或结果改变，则说明此前存在可用但未注入的机会，且来源记忆可能影响复现。"
+  },
+  "causal_claim": false
+}

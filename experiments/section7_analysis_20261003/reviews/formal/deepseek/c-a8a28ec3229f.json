@@ -1,0 +1,147 @@
+{
+  "case_id": "c-a8a28ec3229f",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=16:True:5"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "Canonical pattern for 'standardize numeric columns and return correlation heatmap' tasks (StandardScaler variant of sai-00046)"
+        }
+      ],
+      "reason": "源题 5 项测试全过并逐字复现 docstring 示例，是合法经验；但其契约是单 DataFrame 返回 (standardized_df, Axes)，对列表/合并任务只部分适用。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/48",
+          "quote": "StandardScaler uses ddof=0 POPULATION std (identical to np.std), NOT pandas .std() which defaults to ddof=1"
+        },
+        {
+          "section": "injection/48",
+          "quote": "per-column standardization is an affine transform, so df.corr() computed on the standardized DataFrame equals df.corr() on the mean-filled (unstandardized) data"
+        }
+      ],
+      "reason": "被注入的源派生条目（ddof=0、标准化是仿射变换故 corr 不变）与源题已验证行为一致，未见过度或矛盾陈述。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/48",
+          "quote": "so either frame is valid input to sns.heatmap"
+        },
+        {
+          "section": "target_submission",
+          "quote": "matplotlib.figure.Figure : the combined heatmap figure, with exactly one"
+        }
+      ],
+      "reason": "填充顺序、ddof=0、corr 对标准化不变这些数学面直接适用；但源的逐 DataFrame 返回 Axes 契约与目标'合并相关矩阵'契约不同。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "correlation is invariant to standardization, so expected corr == corr of filled data"
+        },
+        {
+          "section": "target_visible",
+          "quote": "standardization via `StandardScaler` (population std, ddof=0 per err-00005)"
+        }
+      ],
+      "reason": "可见轨迹把源派生不变性与 ddof=0 当作独立 oracle 使用，与该记忆内容一致；未见对返回契约模式的显式引用，故记忆在失败返回类型上的作用不可证。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "Canonical pattern for 'standardize numeric columns and return correlation heatmap' tasks (StandardScaler variant of sai-00046)"
+        },
+        {
+          "section": "injection/48",
+          "quote": "per-column standardization is an affine transform, so df.corr() computed on the standardized DataFrame equals df.corr() on the mean-filled (unstandardized) data"
+        }
+      ],
+      "reason": "源题结束写入的新经验（同族 canonical pattern 与仿射不变性注记）确实进入记忆并在目标中被注入；这仅证明写入/注入，不证明其适用或造成任何结果。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "assert combined_corr.shape == (2, 4)"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "The function should output the combined heatmap of the correlation matrices."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AttributeError: 'Figure' object has no attribute 'shape'"
+        }
+      ],
+      "reason": "隐藏测试检查返回对象的 .shape==(2,4)，即合并后的相关矩阵 DataFrame，而题面只说'output the combined heatmap'；返回类型存在题意/测试可能不一致，仅标候选。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The colorbars from seaborn add extra Axes. I'll set `cbar=False` so the figure has exactly one Axes per DataFrame"
+        },
+        {
+          "section": "target_submission",
+          "quote": "fig, axes = plt.subplots(1, len(list_of_dfs), figsize=(6 * len(list_of_dfs), 5), squeeze=False)"
+        }
+      ],
+      "reason": "agent 自选'一图多子图、每 DataFrame 一张热力图'结构，并用自写 Axes 计数断言（cbar=False）固化它，直接决定返回 Figure 而非合并矩阵；这是执行侧证据，不构成因果。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/48",
+          "quote": "so either frame is valid input to sns.heatmap"
+        },
+        {
+          "section": "target_visible",
+          "quote": "standardization via `StandardScaler` (population std, ddof=0 per err-00005)"
+        }
+      ],
+      "reason": "源派生数学被可见复用；但同一源经验的逐 DataFrame 返回契约维度没有迁移到目标，说明旧经验只局部适用，需要补充目标新增的'合并/返回矩阵'条件。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "目标题'matplotlib.figure.Figure : the combined heatmap figure'被自选结构固化（TASK_EXECUTION），即纯执行选择而非契约不一致。",
+    "源经验 'sns.heatmap returns a matplotlib Axes as required' 的产物化倾向可能造成范围干扰，但可见轨迹未引用该条，无法证实。",
+    "也可能题面本身即应按参考解读作返回合并相关矩阵，agent 单纯误读，测试无问题。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无对照运行，无法判断若返回合并相关矩阵是否会通过全部隐藏测试。",
+    "无法确定 sai-00068/源 canonical pattern 是否实际影响 agent 的 Figure 选择（轨迹未引用）。",
+    "被预算淘汰的旧 sai-* 条目内容未提供，不能推断被丢弃经验是否含合并/返回契约提示。",
+    "目标后续 target_update 属目标之后，不能作为本题失败原因。"
+  ],
+  "minimal_intervention": {
+    "change": "把目标题返回契约写显式（例如'return the concatenated correlation-matrix DataFrame，并另外绘制其热力图'），或在源写回时注明逐 DataFrame 的 (standardized_df, Axes) 契约不推广到合并相关矩阵任务。",
+    "fixed": "相同源 episode/写入状态、相同注入记忆集合与预算、相同工具与环境。",
+    "falsifier": "在返回契约明确（或记忆不变）的情况下 agent 仍返回 Figure 而失败，或隐藏测试接受 Figure，则削弱 EVAL_CONTRACT 候选。"
+  },
+  "causal_claim": false
+}

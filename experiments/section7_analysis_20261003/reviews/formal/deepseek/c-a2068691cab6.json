@@ -1,0 +1,143 @@
+{
+  "case_id": "c-a2068691cab6",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "2 Value Distribution Value Count"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "pre-registered scorer defect; task retained, excluded from scores"
+        }
+      ],
+      "reason": "源题可见执行通过了自测并返回预期标签，但官方评分因预先登记的评分器缺陷而不可用，因此只能算有限通过。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "没有注入任何记忆内容，也没有保留源经验，因而无法评估对目标相关内容的记忆保真度。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Draw a bar chart of the counts of each unique value in the 'value' column"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "bar chart showing the distribution of transaction counts across categories"
+        }
+      ],
+      "reason": "源题是柱状图计数辅助函数，可部分覆盖目标的图表部分；目标要求的汇总字典键名并未由源题覆盖。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "ax.set_title('Transaction Counts by Category')"
+        },
+        {
+          "section": "source_visible",
+          "quote": "2 Value Distribution Value Count"
+        }
+      ],
+      "reason": "目标提交自行设置图表标题和标签，没有出现对源题 task_func 或源标签的可见复用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "create a function that generates a summary report"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "'total_amount_per_category': category_totals"
+        }
+      ],
+      "reason": "目标提示只描述汇总内容，未给出隐藏测试要求的精确键名和图表标签；这支持契约欠明确，但不能单独证明失败原因。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "'total_amount': group['amount'].sum()"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "KeyError: 'total_amount_per_category'"
+        }
+      ],
+      "reason": "提交实现返回了不同的字典结构和图表标签，离线评估因此触发 KeyError；这只展示可见执行与隐藏测试的错配，不解释选择原因。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Draw a bar chart of the counts of each unique value in the 'value' column"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "源题经验在图表部分具有可迁移性，但本题没有任何注入或可见检索证据；不能据此断言记忆本可修复失败。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        }
+      ],
+      "reason": "源经验未被写入/保留到方法状态，因此目标没有可用记忆；这是缺失条件，不是已存但未检索到的证据。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "TASK_EXECUTION：目标 agent 自行选择了嵌套键名和图表标签，即使契约模糊也可归因于其实现选择。",
+    "OPPORTUNITY_SOURCE/WRITE_ADMISSION：源柱状图经验未被注入或保留，缺少可引导精确输出契约的记忆；但无记忆不等于失败原因。",
+    "当前没有反事实干预，无法判断若提示精确指定键名或注入源辅助函数，结果是否会改变。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试要求的精确键名与图表标签是否属于题意本意，还是测试实现副作用，无法由现有证据确定。",
+    "无法判断源题 task_func 是否本应在目标环境中可见，或是否应通过记忆注入提供。",
+    "没有反事实运行，不能断言记忆缺失或契约模糊必然导致失败。",
+    "离线评估只显示了首个断言失败，未执行其余检查。"
+  ],
+  "minimal_intervention": {
+    "change": "在目标提示中明确输出契约：汇总字典必须使用 'total_amount_per_category' 和 'average_amount_per_category'，柱状图标题/轴标签需符合隐藏测试期望。",
+    "fixed": "保持相同隐藏测试、相同无记忆注入环境和相同工具预算。",
+    "falsifier": "若给出精确输出契约后目标仍失败，或隐藏测试实际接受目标 agent 的嵌套键名，则契约欠明确这一候选被削弱。"
+  },
+  "causal_claim": false
+}

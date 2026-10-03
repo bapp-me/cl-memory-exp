@@ -1,0 +1,155 @@
+{
+  "case_id": "c-79d2ecf67c8c",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=36:True:6"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df):"
+        }
+      ],
+      "reason": "Source passed its own 6 tests, but its function scope is a single DataFrame, not the target's list wrapper."
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "draw a distribution chart for each numeric column after replacing the NaN values with the average of the column."
+        }
+      ],
+      "reason": "Injected memory 0 is only broad/faithful, and memory 1 names a bar-chart/value-counts behavior that conflicts with the source distribution-chart task; key output contract details are omitted."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of dataframes"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df):"
+        }
+      ],
+      "reason": "Core fillna/describe/distribution steps transfer, but target changes input scope to a list and changes the required tuple output."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "sns.histplot(df[col], ax=ax, kde=True, color="
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "Target's visible chart call is a histplot distribution chart required by the prompt, not the injected value_counts bar-chart behavior; no memory-specific contract detail appears."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "return a list of tuples, where each tuple contains a processed dataframe with statistics"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "KeyError: 'count'"
+        }
+      ],
+      "reason": "Hidden evaluation treats results[i][0] as the statistics frame, but the prompt wording allowed a triple starting with the processed frame; this mismatch alone explains correct:false and does not prove memory influence."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "NaNs remaining: 0"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "KeyError: 'count'"
+        }
+      ],
+      "reason": "The visible solution ran to returncode 0 and reported no remaining NaNs, so the failure is not a tool/runtime crash; it occurs only at hidden tuple-contract checking."
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "draw a distribution chart for each numeric column after replacing the NaN values with the average of the column."
+        }
+      ],
+      "reason": "The injected D1 summaries retain only generic or inconsistent topics; they lack the source's tuple/plot contract and cannot show the target saw the needed source details."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Describe a dataframe and draw a distribution chart for each numeric column after replacing the NaN values with the average of the column."
+        },
+        {
+          "section": "source_visible",
+          "quote": "sns.histplot(data=df, x=col, bins=10, ax=ax)"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "source ID coverage is not content fidelity; entire unselected library is not presented"
+        }
+      ],
+      "reason": "A correct, related source with a concrete bins/Axes contract existed, but packet shows source provenance/content was not directly injected; this suggests a missing-opportunity candidate, not proof it would fix the output."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "The target may have simply chosen one plausible reading of the ambiguous prompt and never relied on injected memory.",
+    "The lossy D1 summaries may have omitted the source's output tuple contract, but without an injection counterfactual this cannot be confirmed.",
+    "The source's single-DataFrame scope versus the target's list-of-DataFrames could contribute to wrapper/output confusion, though the target did wrap the input list."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the hidden evaluator's expected tuple order is fully determined by the visible prompt is unresolved.",
+    "Whether injected memories were attended/read by the target and whether any source content beyond the summaries was available is not observable.",
+    "Whether injection/1 originates from the same source as source_index 22 is unknown.",
+    "No counterfactual intervention exists to test memory influence."
+  ],
+  "minimal_intervention": {
+    "change": "Make prompt and hidden evaluator agree on tuple contents, e.g., explicitly require per-dataframe (statistics_frame, plots) or adjust submission to put stats first; if memory is implicated, inject the full source output contract.",
+    "fixed": "Keep the same target dataframes, hidden reference contract, memory budget, and source history.",
+    "falsifier": "If an explicit contract or full source-output injection still yields a triple/processed-frame-first result, the EVAL_CONTRACT/representation candidate is weakened."
+  },
+  "causal_claim": false
+}

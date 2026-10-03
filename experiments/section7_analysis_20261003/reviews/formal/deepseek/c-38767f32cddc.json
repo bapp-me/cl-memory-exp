@@ -1,0 +1,123 @@
+{
+  "case_id": "c-38767f32cddc",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "pre-registered scorer defect; task retained, excluded from scores"
+        }
+      ],
+      "reason": "源题被排除评分、source_correct 为 null，无法确认该源经验本身是否正确或完整，故只能判 unknown。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "This function use \"Value Distribution\" for the plot title."
+        },
+        {
+          "section": "injection/4",
+          "quote": "Set the required text elements — `ax.set_title(<title>)`"
+        }
+      ],
+      "reason": "注入的工作流只保留结构模板（subplots/ax.bar/设置标签），源题的具体标题与轴标签常量（'Value Distribution'/'Value'/'Count'）被抽象掉，与目标隐藏契约相关的具体常量未保留。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/4",
+          "quote": "Produce a matplotlib histogram/bar chart and return the Axes (and optionally Figure) object."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "The function should return the summary report as a dictionary and the Axes object of the bar chart."
+        }
+      ],
+      "reason": "通用绘图/校验模式可迁移到本题，但源题按 df['value'] 计数、键名与轴标签约定均不覆盖目标所需的分组聚合键名与隐藏标签。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "required columns present (`<required_set>.issubset(<df>.columns)`)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "required.issubset(txn.keys())"
+        }
+      ],
+      "reason": "提交代码里的类型/非空/必需字段校验与注入的 Input Validation Guard 结构一致，说明该模式被实际复用；但最终报错在键名，非该模式所致。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "summary_report['total_amount_per_category'] == {'food': 150, 'travel': 350, 'shopping': 300})"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "The function should return the summary report as a dictionary and the Axes object of the bar chart."
+        }
+      ],
+      "reason": "隐藏测试要求精确键名与图表标签，而题面只说返回摘要字典与 Axes，未给出键名/标题契约；这解释了直接失败点，但只说明题面欠定义，不证明记忆有害。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "'total_per_category': total_per_category,"
+        },
+        {
+          "section": "target_visible",
+          "quote": "The implementation works correctly. I'll add a validation guard for empty input and finalize the function."
+        }
+      ],
+      "reason": "代码可运行且自测通过，但自行命名的键与隐藏期望不符，属目标侧输出/契约不符，不是检索或注入失败。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "If a check fails, `raise ValueError` (or `TypeError` for wrong-type cases) with a descriptive message naming the offending parameter."
+        },
+        {
+          "section": "target_submission",
+          "quote": "raise TypeError(\"transactions must be a list of dictionaries\")"
+        }
+      ],
+      "reason": "可见校验结构与该注入工作流高度一致，支持'记忆被复用'的候选；但无对照，不能断言记忆带来成功或造成本题失败。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "失败可能只是目标契约欠定义所致的普通执行偏差，与任何记忆机制无关，注入工作流仅提供风格结构。",
+    "若记忆保留了源题的具体键名/图表标签常量，模型或可命中隐藏断言，但缺少反事实无法确认。",
+    "校验守卫与 bar-plot 结构可能与多种通用模板重合，不能据此因果归因于本次注入。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试是否复用了源题 task_func（同样的 'Value Distribution'/'Value'/'Count'）仅由标签吻合推测，未确认。",
+    "未被选中的完整记忆库未提供，无法排除库中存在含正确键名/标签的条目。",
+    "键名选择是否受任何记忆影响无法判断：注入内容未提及报告字典键名。"
+  ],
+  "minimal_intervention": {
+    "change": "在目标题面中显式给出报告字典的精确键名与图表标题/xlabel/ylabel，或让记忆保留源题的具体标签约定。",
+    "fixed": "保持同一注入记忆库、同样的单次任务预算与同一隐藏测试。",
+    "falsifier": "若给出精确键名与标签后仍产出不符的键/标签，或注入含具体标签的记忆却未改变输出，则该契约假设被反驳。"
+  },
+  "causal_claim": false
+}

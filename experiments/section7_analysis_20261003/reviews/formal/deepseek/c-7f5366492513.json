@@ -1,0 +1,120 @@
+{
+  "case_id": "c-7f5366492513",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=39:True:6"
+        }
+      ],
+      "reason": "源任务自身通过全部测试，因此是合法通过来源；但其具体契约（5 列 'A'-'Response' 返回元组）与目标的多数据集报告契约不同，只能算有限可复用。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "DataFrame with columns 'A', 'B', 'C', 'D', 'Response'."
+        },
+        {
+          "section": "injection/5",
+          "quote": "Convert raw lists/dicts/arrays into a pandas DataFrame with specified column names or indices"
+        }
+      ],
+      "reason": "注入的流程记忆保留了验证、DataFrame 构建、加常数、OLS 拟合等通用步骤，但把源题具体的列名与返回契约抽象掉了；对目标相关的过程内容保真，具体命名/返回信息未保留。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "create a DataFrame, separate independent and dependent variables, add a constant to the model, and fit a linear regression using statsmodels"
+        }
+      ],
+      "reason": "源/记忆中的单数据集建模流程适用于目标的每个数据集，但目标是多数据集+汇总报告这一新增层，源经验未覆盖。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "X_const = sm.add_constant(X)"
+        },
+        {
+          "section": "injection/6",
+          "quote": "sm.OLS(y, X)"
+        }
+      ],
+      "reason": "可见代码按记忆工作流的一致模式执行验证、加常数与 OLS；这只是行为代理，不能证明记忆带来成功或失败。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should return a summary report with the details of each regression analysis."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "KeyError: 'Dataset 1'"
+        }
+      ],
+      "reason": "题面只说返回 summary report，未给出报告的键结构，而隐藏测试按 'Dataset 1' 取值，故提交的 dataframes/best_dataset 键与之不匹配。不能证明 agent 见过完整契约——target_prompt 在函数签名处即中断，可能被截断。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Generate a Pandas DataFrame from a 2D list and perform a multiple linear regression."
+        },
+        {
+          "section": "injection/5",
+          "quote": "Workflow DataFrame Construction with Named Columns"
+        }
+      ],
+      "reason": "源题是与目标高度相邻的 DataFrame+回归任务，提供了部分可复用的过程经验，但源与注入记忆都不含多数据集报告聚合结构，因此不能据此断言缺失的 schema 曾被提供。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/6",
+          "quote": "sm.OLS(y, X)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "X_const = sm.add_constant(X)"
+        }
+      ],
+      "reason": "目标代码可见地沿用记忆中的加常数/OLS 拟合模式，属一致的流程复用；无反事实，不能证明该复用导致了本次成功或失败。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "target_prompt 疑似被截断，若完整契约其实规定了 'Dataset i' 键，则失败属 TASK_EXECUTION 而非契约模糊，记忆无关。",
+    "输出键（dataframes/best_dataset）是 agent 的自主设计选择，不依赖记忆内容；无记忆时也可能得到同样输出。",
+    "隐藏测试是否还断言列名 'A'-'Response' 或返回对象类型，当前不可见。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "目标题面是否被截断、完整契约是否指定报告键名与列名。",
+    "离线评测失败后的完整测试覆盖范围（tests_run=0、checks_executed=0）。",
+    "注入的 8 条工作流在目标中的实际可见文本边界与模型注意力分布。",
+    "没有无记忆对照，无法归因记忆对本次结果的作用。"
+  ],
+  "minimal_intervention": {
+    "change": "在目标题面中明确报告结构（以 'Dataset {i+1}' 为键、含 'DataFrame'/'Regression Results'/'R-squared'），或在不改记忆的前提下使契约与隐藏测试一致。",
+    "fixed": "保持相同的 8 条注入工作流记忆、相同隐藏测试与相同模型/预算。",
+    "falsifier": "若在完整未截断题面且记忆不变的情况下，agent 仍返回 dataframes/best_dataset 键，则契约模糊解释被削弱，应转向 TASK_EXECUTION/REPRESENTATION。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,137 @@
+{
+  "case_id": "c-1dc0c2d9133b",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=16:True:7"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Create a Pandas DataFrame with random alphabets in each cell."
+        }
+      ],
+      "reason": "源题离线评测 7 项测试/16 检查全部通过，属合法成功源。但源成功只保证其自身题面正确，不保证其做法对目标新增条件仍适用。"
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "记忆策略禁用、注入计数为 0，没有对目标呈现任何记忆内容，因此无保真度可评。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Each column is named with a string from the list ['a', 'b', 'c', ...]"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "concatenates them vertically to form a single large DataFrame"
+        }
+      ],
+      "reason": "源的“随机字母 DataFrame + a,b,c 列名”部分与目标子步骤重合，但目标新增了多表循环生成与纵向 concat、index 复位等条件；且这些内容从未被注入。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        }
+      ],
+      "reason": "没有任何注入文本或检索候选出现，目标代码无从体现对源经验的使用；提交正确但仅为可执行代理，不能推断复用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Create a Pandas DataFrame with random alphabets in each cell."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=16:True:7"
+        }
+      ],
+      "reason": "源题成功且含目标所需的核心构件（np.random.choice 字母表、按列数取 a,b,c 列名），构成合法可迁移机会。仅说明机会存在，不能证明被利用。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_state_summary",
+          "quote": "\"before_target_hash\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_retained\": false"
+        }
+      ],
+      "reason": "源题前后状态哈希相同且源经验/来源未保留，说明源内容未进入方法状态。这属于未写入/未准入，不等于“已存但未检索到”。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_text_utf8_bytes\": 0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "无可注入的语义候选，故目标成功不能归因于记忆迁移或负迁移；可见代码相似（同为 np.random.choice）只是字符串重合代理。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "Ran 0 tests in 0.000s"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"checks_executed\": 3"
+        }
+      ],
+      "reason": "目标评测以 3 项检查判对而 unittest 计数为 0，评分走检查路径而非测试文件；这只提示契约口径差异，不指示失败。"
+    }
+  ],
+  "primary_hypothesis": "WRITE_ADMISSION",
+  "competng_explanations": [
+    "目标仅凭 prompt 与模型自身能力解出，与源经验无关；源/目标代码相似源于题面同构而非复用。",
+    "本包未包含完整记忆库与检索候选（observable_retrieval_candidates 为 null），不能排除包外存在未被观测的记忆流程。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "包外是否存在未展示的记忆库或检索步骤，无法由现有证据判断。",
+    "目标新增条件（>26 列、非正参数、是否需要 index 复位）是否被隐藏检查覆盖，未给出测试正文。",
+    "无法比较有/无注入的耗时或收益，故不就成本效用下结论。"
+  ],
+  "minimal_intervention": {
+    "change": "在相同题面下保留并注入源题的成功经验（随机字母表构造与列名生成），与本次无注入运行对比。",
+    "fixed": "相同目标 prompt、相同随机种子/环境、相同预算与提交协议（memory_policy 保持一致才可比）。",
+    "falsifier": "若注入源经验后目标代码/评分与无注入完全一致，则该候选（源内容可带来可见复用）被反驳。"
+  },
+  "causal_claim": false
+}

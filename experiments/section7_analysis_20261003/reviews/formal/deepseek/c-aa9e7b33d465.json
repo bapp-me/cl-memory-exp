@@ -1,0 +1,114 @@
+{
+  "case_id": "c-aa9e7b33d465",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        }
+      ],
+      "reason": "源题在离线评测中 5 个测试全过、可评分，但其覆盖范围只是单个 dict-of-list 的编码，不含多数据集循环。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Encodes a dict of list as a Base64 string. The dict is first converted to a Pandas DataFrame."
+        },
+        {
+          "section": "source_visible",
+          "quote": "csv = df.to_csv(index=False)"
+        }
+      ],
+      "reason": "注入的源经验保留了源题的核心流程（DataFrame→to_csv(index=False)→base64），与 source_prompt/source_visible 一致，未看到内容被改写或丢失。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Write a function that processes each dataset and returns a list of Base64 encoded strings corresponding to each dataset."
+        }
+      ],
+      "reason": "源经验覆盖“单数据集编码”这一子步骤，但目标新增了列表遍历与列表返回的包装层，属于部分适用。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "This task builds on the previous DataFrame-to-CSV-Base64 encoding."
+        }
+      ],
+      "reason": "可见行为把源编码步骤扩展为循环并对每项复用，且自检“matches single encoding: True”只证明结果一致，是行为代理而非因果证据。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Each dataset (dict of lists) should be converted to a DataFrame, serialized to CSV, and Base64 encoded."
+        },
+        {
+          "section": "injection/1",
+          "quote": "return base64.b64encode(csv.encode(\"utf-8\")).decode(\"utf-8\")"
+        }
+      ],
+      "reason": "目标提交的逐数据集编码与注入源经验逐句同构，只外加 for 循环，支持“沿用/迁移”的候选；无对照条件，不能证明成功由记忆造成。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df):"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        }
+      ],
+      "reason": "存在通过评测的合法源经验且被注入（injection/1 即源题本体），构成可迁移机会；源通过不等于目标新增的列表接口自动正确。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Generate a JSON object from employee data based on given department codes and their employee counts."
+        },
+        {
+          "section": "injection/2",
+          "quote": "The function filters rows in a dict of list in which the values of the 'Word' column begin with a specified letter."
+        }
+      ],
+      "reason": "打包进上下文的 3 条注入中至少两条（随机员工等级 JSON、单词前缀过滤）与目标无关，说明可见上下文含冗余内容；这不能证明干扰，也不能说明有经验被检索遗漏。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "目标提示本身已说明“多数据集/返回列表”，模型可能仅凭题面就写出循环，与记忆无关（无对照不可区分）。",
+    "无关于目标的经验也可能只是同源基准的其他源题被一并打包，未参与本次推理。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "没有反事实运行，无法判断移除 injection/1 后提交是否改变。",
+    "offline_target_evaluation 显示 'Ran 0 tests in 0.000s' 且 checks_executed=1、correct=true，隐藏测试对边界（空 dict、混合列）的覆盖程度不可知。",
+    "未选中/未写入的记忆库内容未提供，无法判断是否存在其它候选或被淘汰项。"
+  ],
+  "minimal_intervention": {
+    "change": "在同题同预算下不注入源题经验的单数据集编码记录，只保留目标题面，观察提交是否仍写出 index=False 的逐项编码循环。",
+    "fixed": "目标题面、隐藏测试、可见工具与上下文预算保持不变。",
+    "falsifier": "若在无该源经验条件下仍产出相同结构与正确结果，则 USE_TRANSFER 作为主要机制被反驳。"
+  },
+  "causal_claim": false
+}

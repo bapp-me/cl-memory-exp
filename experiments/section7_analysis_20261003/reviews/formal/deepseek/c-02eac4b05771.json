@@ -1,0 +1,135 @@
+{
+  "case_id": "c-02eac4b05771",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=23:False:5"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "KeyError: 'zz'"
+        }
+      ],
+      "reason": "源题被判定为不正确，5 个测试全部因缺少 'zz'/'aa' 这类双字母键而报错，说明源经验的关键生成部分（只用 permutations，漏掉 26 个重复字母组合）并不可靠，只有计数切片部分可能仍有价值。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/2",
+          "quote": "slice consecutive characters (`<text>[i:i+2]`, `zip(<word>, <word>[1:])`)"
+        }
+      ],
+      "reason": "注入的工作流忠实覆盖了“按连续两字符计数”这一部分，且未把源的 permutations 错误陈述为正确做法，但对目标必需的 676 个键（含 'aa'、'zz'）如何枚举没有任何承载，故只覆盖了部分必要内容。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "the value is a list of frequencies of this combination across all words"
+        },
+        {
+          "section": "injection/2",
+          "quote": "## Workflow Frequency Counting with Counter"
+        }
+      ],
+      "reason": "计数工作流对目标频率统计部分适用，但目标新增了跨词聚合成列表与完整 26×26 键集合这两个源题没有的条件，源经验不能整体照搬。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "injection/2",
+          "quote": "slice consecutive characters (`<text>[i:i+2]`, `zip(<word>, <word>[1:])`)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "if word[i:i + 2] == combo"
+        }
+      ],
+      "reason": "目标用索引切片逐年统计连续两字符，与注入计数工作流的做法一致而非照抄 zip/Counter 写法，属于可见行为层面的适配代理。"
+    },
+    "visible_use_note": null
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/2",
+          "quote": "slice consecutive characters (`<text>[i:i+2]`, `zip(<word>, <word>[1:])`)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "count = sum(1 for i in range(len(word) - 1) if word[i:i + 2] == combo)"
+        }
+      ],
+      "reason": "目标计数实现与注入的连续切片模式重合，支持“模式被适配使用”的候选；但代码/字符串重合只是可见代理，且由提示自带的 itertools 说明与完整题面同样能产生该实现，不能证明记忆造成成功。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": true"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\""
+        }
+      ],
+      "reason": "同源 episode 的来源覆盖被保留并注入，8 条候选全部进入注入集合，说明源机会与注入通道确实存在；这只证明来源覆盖，不证明内容保真或对目标适用。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_update_operations",
+          "quote": "\"operations\": []"
+        }
+      ],
+      "reason": "目标结束后没有任何写入操作记录，说明本题未产生新的专门经验；按规则这属于写入/更新层面的空白，不能解读为“已存但未检索到”或检索失败。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "EVALUATOR_RESULT=3:True:0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "目标提交经离线评测 3 项检查通过，实际执行与提交链路完整（PYTHON 验证→SUBMIT），说明本题是可评分的成功执行，而非基础设施或协议故障。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "题面骨架本身已给出 `from collections import Counter`/`import itertools`/`import string` 与完整契约，目标是自足任务，成功可由题面单独解释，无需记忆。",
+    "源题的错误键集合（permutations→650 键）并未出现在任何注入文本中，目标改用 product 得到 676 键更可能来自题面“two-letter combination”的表述，因此源失败到目标成功的反转无法归因于记忆。",
+    "连续切片与提交前跑样例验证是近乎普遍的做法（injection/7 自称覆盖几乎所有 query），可见重合特异性低，也可能是通用习惯而非记忆影响。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无记忆关闭/替换的反事实条件，无法判断可见适配是否因果来自注入。",
+    "未看到注入内容的完整原文与源 episode 的完整轨迹，无法判断源的两字母键生成错误是否以任何形式被保留。",
+    "目标隐藏测试的具体断言未知（仅离线评测给出 3 项检查通过），不能排除边缘契约差异。"
+  ],
+  "minimal_intervention": {
+    "change": "移除或替换注入集合中的“Frequency Counting with Counter”工作流条目，保持其余注入与题面不变，重跑观察计数实现是否改变",
+    "fixed": "相同 target prompt 骨架、相同工具集与预算、相同其余 7 条注入内容与相同环境",
+    "falsifier": "若去掉该条记忆后目标仍产出同样的连续切片计数实现并通过评测，则 USE_TRANSFER 候选被反驳；若实现明显退化或改用源题式 permutations 键集合，则支持复用候选。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,127 @@
+{
+  "case_id": "c-370c13fe1ce3",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Determine the outlier indices in a 1D numpy array based on the Z score."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=20:True:5"
+        }
+      ],
+      "reason": "源题是一道可评分且通过的单数组 Z-score 任务，合法但范围只覆盖单组，不能覆盖目标的多组/dict 契约。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/2",
+          "quote": "mean, std = norm.fit(data)\n    if std == 0:\n        return [], mean, std ** 2"
+        }
+      ],
+      "reason": "注入片段中保留的 per-group 逻辑（norm.fit、std==0 回退、std**2 方差）与 source_prompt/source_visible 一致，与目标相关的必要内容未见失配。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "return a dictionary where the keys are the indices of the groups"
+        }
+      ],
+      "reason": "per-group 的 norm.fit/Z-score/std==0/方差逻辑可直接迁移，但目标新增了遍历 list 并以组索引为键的 dict 包装，属新增条件。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "group results match the single-group behavior verified previously"
+        },
+        {
+          "section": "target_submission",
+          "quote": "([6], 17.285714285714285, 1142.7755102040817)"
+        }
+      ],
+      "reason": "目标代码复用了源的单组结构并以组循环包装，且显式引用先前验证的单组输出；这是行为代理，不是因果证明。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Determine the outlier indices in a 1D numpy array based on the Z score."
+        }
+      ],
+      "reason": "上下文中确实存在与目标同域的单数组 Z-score 源片段，构成可利用来源；但来源存在不等于其内容被使用或全部适用。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "group results match the single-group behavior verified previously"
+        },
+        {
+          "section": "injection/2",
+          "quote": "outliers = np.where(z_scores > threshold)[0].tolist()"
+        }
+      ],
+      "reason": "目标可见地重用了源的关键实现（norm.fit、abs z-score、>threshold 索引、std==0 空列表）并加上组循环；可见一致适应不能排除仅凭目标题面独立重写。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "EVALUATOR_RESULT=1:True:0"
+        }
+      ],
+      "reason": "目标提交被判 correct 且 scorable，执行层无协议或基础设施问题。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_text_utf8_bytes\": 13780"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Calculate the Euclidean distances between consecutive points"
+        }
+      ],
+      "reason": "注入载荷含 3 段、约 13.8KB，其中至少两段与目标无关，属可观测上下文开销；本题为成功案例，不能据此断言无收益或性价比差。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "目标题面已完整描述多组 Z-score 需求，最终代码可能由题面独立重写而非记忆迁移。",
+    "三次注入的选取机制未知（检索 vs 固定打包），无法判断为何注入两个无关任务片段。",
+    "无反事实运行，成功不能归因于记忆。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法确认注入片段是被检索选中还是固定打包插入。",
+    "无法确认目标是否在无记忆条件下也能得到同构代码。",
+    "不相关内容（Euclidean、histogram 片段）是否造成任何干扰不可由现有证据判断。",
+    "target_update 与 source_update 之后的记忆状态变化不在本包内。"
+  ],
+  "minimal_intervention": {
+    "change": "在相同目标提示、工具与预算下做一次无记忆注入的消融重跑。",
+    "fixed": "保持同一 target_prompt、同一 PYTHON/SUBMIT 工具链与同等预算。",
+    "falsifier": "若消融重跑仍逐字复现 norm.fit / z_scores>threshold / std==0 的同一结构，则迁移候选减弱，倾向题面独立重写。"
+  },
+  "causal_claim": false
+}

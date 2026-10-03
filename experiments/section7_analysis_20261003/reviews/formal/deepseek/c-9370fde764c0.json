@@ -1,0 +1,142 @@
+{
+  "case_id": "c-9370fde764c0",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"tests_run\": 9,"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "str: The SHA256 hash of the cleaned string."
+        }
+      ],
+      "reason": "源题离线判定 correct/scorable（9 项测试通过），是合法可用的源经验；但其契约只覆盖单字符串→单哈希，未覆盖目标新增的列表与最频哈希。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "cleaned_str = re.sub(r'[^a-zA-Z0-9]', '', input_str)"
+        },
+        {
+          "section": "source_visible",
+          "quote": "return hashlib.sha256(cleaned_str.encode()).hexdigest()"
+        }
+      ],
+      "reason": "被注入的源 episode 内容与源可见轨迹的可工作解法一致（清洗正则与 SHA256 步骤都在），对目标有用的核心内容被保留。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Additionally, find the most common hash among them and return it along with the list of hashes."
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Parameters:\n    input_str (str): The input string to be cleaned and hashed."
+        }
+      ],
+      "reason": "清洗+SHA256 部分可直接迁移，但目标是列表输入、返回 (hashes, 最频哈希) 元组并需 Counter 聚合，源经验不覆盖这些新增条件。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "cleaned = [re.sub(r'[^a-zA-Z0-9]', '', s) for s in input_list]"
+        },
+        {
+          "section": "target_visible",
+          "quote": "print(hashlib.sha256('Specialcharactersspaces888323'.encode()).hexdigest())"
+        }
+      ],
+      "reason": "目标把源的同一清洗正则套用到列表推导并加 Counter 聚合，且复现了源轨迹里同一条字面量校验打印；这只是可见行为代理，不是因果证据。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "cleaned_str = re.sub(r'[^a-zA-Z0-9]', '', input_str)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "return hashes, most_common_hash"
+        }
+      ],
+      "reason": "目标解法沿用了源的正则清洗与 hashing 骨架并扩展到列表/聚合；字符串高度重合只表明可迁移的可见代理，不能证明记忆造成了成功。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Returns:\n    str: The SHA256 hash of the cleaned string."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of strings, remove all special characters, punctuation marks, and spaces from each string"
+        }
+      ],
+      "reason": "源提供了同类但更窄的机会（单串→单哈希），目标新增列表与最频哈希两个条件；源经验只部分适用，未覆盖新增聚合需求。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "find the most common hash among them and return it along with the list of hashes."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert new_solution(['Hello, World!', 'Python3', '123 Main St.'])[0] =="
+        }
+      ],
+      "reason": "题面“return it along with the list of hashes”的语序暗示最频值在前，而参考测试要求 [0] 为哈希列表；仅作为题意/测试可能不一致的候选，不改动评分。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 3"
+        },
+        {
+          "section": "injection/2",
+          "quote": "Find the occurrences of each two-letter combination in the sanitized word,"
+        }
+      ],
+      "reason": "为这个简单任务打包了 3 条共 10305 字节经验，其中含与本目标无关的 episode，构成可见上下文开销；本题成功，不能据此断言收益或性价比差。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "无对照实验：目标的正则与字面量校验打印也可完全由题面示例（'Special $#! characters   spaces 888323'）独立推导，未必来自注入的源 episode。",
+    "解题成功本身不排除存在错误或冗余记忆被复制；也可能是模型自纠（初次 dev 代码返回 most_common 在前，提交时改成 hashes 在前），可见轨迹未保留推理过程。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "未给出目标 agent 实际看到的记忆文本，无法确认注入内容与最终提交之间的直接对应。",
+    "隐藏测试内容与判分细节不可见，仅知离线评估 correct=true、checks_executed=2。",
+    "未提供未选中的完整记忆库，不能推断缺失或遗忘；也无反事实运行。",
+    "提交时返回顺序由 most_common 改为 hashes 的原因（题面语序 vs 记忆/测试提示）不可由现有证据确定。"
+  ],
+  "minimal_intervention": {
+    "change": "在保持相同目标题面与预算下，重跑一次不注入源 episode（仅注入源 provenance 或空记忆）的对照，比较清洗正则、返回顺序与正确性。",
+    "fixed": "相同模型、相同题面、相同工具与 token/packing 预算、相同评分 mask。",
+    "falsifier": "若无源 episode 注入时出现同样的正则、同样的校验打印与同样的返回顺序且同样正确，则 USE_TRANSFER 候选被削弱。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,128 @@
+{
+  "case_id": "c-8ba85bca67bf",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=12:True:4"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Performs linear regression on a DataFrame using 'date' (converted to ordinal) as the predictor for 'value'."
+        }
+      ],
+      "reason": "源题离线评测通过（4 测试 OK），且与目标同族（date 转 ordinal 的 LinearRegression + 校验 + 绘图），但源只处理单个 df、无聚合与多数据集契约，属通过但有适用范围限制。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "dtype checks (e.g., `pd.api.types.is_datetime64_any_dtype(<col>)`), or shape/range checks."
+        },
+        {
+          "section": "injection/4",
+          "quote": "`ax.set_title(<title>)`, `ax.set_xlabel(<xlabel>)`, `ax.set_ylabel(<ylabel>)`"
+        }
+      ],
+      "reason": "抽象工作流与源做法一致（同用 is_datetime64_any_dtype 校验、同用 toordinal 拟合），但以占位符 <title>/<xlabel> 表示标题，未保留源记录中的具体字面量字符串，故为部分保真而非完整记录。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "After obtaining the predictions for each dataset, you need to aggregate these predictions into a single DataFrame"
+        },
+        {
+          "section": "injection/6",
+          "quote": "converting dates via `map(pd.Timestamp.toordinal)`"
+        }
+      ],
+      "reason": "校验、按 ordinal 拟合、subplots/Axes 返回等条目可直接适用；目标新增多数据集循环、groupby 聚合与隐藏的标题字面量要求，超出记忆覆盖范围。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "x = clean['date'].map(pd.Timestamp.toordinal).to_numpy().reshape(-1, 1)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "if not pd.api.types.is_datetime64_any_dtype(df['date']):"
+        }
+      ],
+      "reason": "可见代码按记忆模式组织（守卫校验→ordinal 拟合→Axes 返回）并合理扩展到循环聚合，属一致改编；标题自拟一节无记忆条目要求具体字面量，不能据此判为误用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The final plot should show the overall trend of the aggregated predictions."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AssertionError: Plot title should be 'Aggregated Predictions vs Date'."
+        }
+      ],
+      "reason": "可见题面只要求“展示整体趋势”，未给出任何标题字面量，而隐藏评分断言固定标题 'Aggregated Predictions vs Date'，失败点正是该未表达约束；不能证明是记忆导致的失败。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/4",
+          "quote": "`ax.set_title(<title>)`, `ax.set_xlabel(<xlabel>)`, `ax.set_ylabel(<ylabel>)`"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "The Axes object will have a title 'Value vs Date (Linear Regression Prediction)'"
+        }
+      ],
+      "reason": "注入的是以占位符表示标题的通用工作流模板，源记录中的具体标题字符串未被保留，可能使字面量约束在迁移中被稀释；仅示形态差异，不证明造成本次失败。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "If a check fails, `raise ValueError` (or `TypeError` for wrong-type cases) with a descriptive message naming the offending parameter."
+        },
+        {
+          "section": "target_visible",
+          "quote": "raise ValueError(f\"Dataset at index {i} lacks required 'date'/'value' columns\")"
+        }
+      ],
+      "reason": "目标代码的守卫式 ValueError 与 ordinal 拟合结构与注入条目同形，表明条目至少可见地被改编使用；无对照，不能证明记忆造成成功或失败。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "题面本身缺失标题字面量，任何无该信息的解法都会失败，与记忆无关。",
+    "注入条目仅为通用模板，检索/注入全部 8 条但相关性不可核验，重复的校验与拟合模式也可能来自常识而非记忆。",
+    "离线参考解与可见题面在标题字符串上不一致，说明可见契约不足以推断隐藏断言，失败可完全由题面欠定解释。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无记忆关闭或替换的反事实运行，无法判断记忆对最终代码的具体贡献。",
+    "隐藏测试的全部检查项与其余字面量要求（除标题外）未知。",
+    "token_count 不可得，无法评估注入预算对结果的影响。",
+    "未提供完整未选中记忆库，不能据注入集合推断检索缺失或干扰。"
+  ],
+  "minimal_intervention": {
+    "change": "在可见题面中写明所需图标题字符串 'Aggregated Predictions vs Date'（或让评分不校验该具体标题字面量）。",
+    "fixed": "保持相同的历史来源、注入的 8 条记忆、同一 PYTHON/SUBMIT 环境与调用预算。",
+    "falsifier": "若题面已给出标题字面量、而同一记忆配置下提交仍采用自拟标题并失败，则 EVAL_CONTRACT 作为主因的候选被削弱。"
+  },
+  "causal_claim": false
+}

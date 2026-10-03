@@ -1,0 +1,133 @@
+{
+  "case_id": "c-9ecf4e2a66a0",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "The packet exposes only memory_ids and the injected workflow text; no source-task pairing or outcome for those ids is given, so provenance alone cannot establish the legitimacy or fidelity of the originating experience."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/3",
+          "quote": "Issue `ACTION` with `toggle and go through <door_name>` to open the door and move through it."
+        },
+        {
+          "section": "target_visible",
+          "quote": "You can take the following actions: turn left, turn right, move forward, toggle and go through green closed door 1, go to green closed door 1, check available actions"
+        }
+      ],
+      "reason": "The generic mechanics asserted by the workflows (turn, go to, toggle and go through, check available actions) are corroborated verbatim by the environment's own action list, so the injected procedure content is not contradicted here."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Goal: open the door on your left"
+        },
+        {
+          "section": "injection/3",
+          "quote": "Issue `ACTION` with `toggle and go through <door_name>` to open the door and move through it."
+        }
+      ],
+      "reason": "The turn-and-navigate steps fit, but the goal only asks to open the left door while the applied workflow conflates opening with passing through, so the memory covers the task only partially."
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "If the target object is not visible in the current observation, issue `ACTION` with `turn left`"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"progress\": 0.5"
+        }
+      ],
+      "reason": "The four visible actions mirror the four injected workflows in order, yet the run was scored incorrect with progress 0.5 and the agent declared success after passing through, suggesting the applied sequence did not match the target conditions."
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "If the target object is not visible in the current observation, issue `ACTION` with `turn left`"
+        },
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"turn left\""
+        }
+      ],
+      "reason": "The action sequence reproduces the injected workflows (turn to scan, check actions, go to, toggle and go through), which is a visible behavioural correspondence; it does not establish that the memory caused selection or the outcome."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"submit_calls\": 0"
+        }
+      ],
+      "reason": "Direct record shows the episode ended without satisfying the goal (correct false, progress 0.5, no submit call); this documents the outcome, not its cause."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Goal: open the door on your left"
+        },
+        {
+          "section": "target_visible",
+          "quote": "toggle and go through green closed door 1"
+        }
+      ],
+      "reason": "The stated goal (open a door on the left) is narrower than what the agent executed and claimed (toggled and moved through the green door), so a goal-versus-action or door-identification mismatch is a candidate; the evidence cannot decide it."
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"injected_utf8_bytes\": 2727"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 4"
+        }
+      ],
+      "reason": "Four workflow memories (~2.7 KB injected) were loaded for a task solved in four actions, so prompt overhead is observable; no evidence here shows net benefit or net harm."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "The 0.5 progress may stem from door-identification/scoring semantics of the environment rather than from the injected memory.",
+    "The same action sequence could arise from generic BabyAI strategy without any memory influence, since no counterfactual was run."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Which door was the intended 'door on your left' and why scoring stopped at 0.5.",
+    "Whether any injected memory actually governed the action choices (no controlled counterfactual).",
+    "Whether the source tasks behind the injected memory ids were successful, since no source pairing is supplied.",
+    "Whether the absent submit call affects scoring versus automatic per-action evaluation."
+  ],
+  "minimal_intervention": {
+    "change": "Make the memory distinguish 'toggle the target door' from 'toggle and go through the door', so a goal that only asks to open a door does not trigger passing through.",
+    "fixed": "Same environment, observation history, retrieved candidates, packing budget and step limit.",
+    "falsifier": "If the toggle-only variant still yields correct false with progress 0.5, the over-action/misapplication candidate is rejected."
+  },
+  "causal_claim": false
+}

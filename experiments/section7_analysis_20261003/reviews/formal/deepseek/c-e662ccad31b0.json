@@ -1,0 +1,142 @@
+{
+  "case_id": "c-e662ccad31b0",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "The task is completed."
+        },
+        {
+          "section": "injection/3",
+          "quote": "Goal: go to a green door"
+        }
+      ],
+      "reason": "Injected sources show successful go-to-door episodes, but they cover navigation only, not the target open-right/toggle contract."
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "No independent source record or source_update is provided to compare against the injected D1 candidates; self-consistency does not establish fidelity."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Goal: open a door on your right"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Goal: go to the yellow door"
+        }
+      ],
+      "reason": "Sources share door navigation and action checking, but not opening a door or the right-side spatial requirement."
+    },
+    "visible_use": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Let me check available actions."
+        },
+        {
+          "section": "injection/0",
+          "quote": "First, let me check available actions."
+        }
+      ],
+      "reason": "The check-then-go pattern weakly aligns with source behavior, but no explicit memory reference or unique memory-derived action separates use from task-driven policy."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The task is completed."
+        },
+        {
+          "section": "target_submission",
+          "quote": "\"submitted\": false"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": false"
+        }
+      ],
+      "reason": "The environment terminal observation says completion, while the offline scorer marks incorrect and the submission is false; this points to a submission/scoring contract mismatch rather than a memory mechanism. It does not prove memory presence or absence was harmless."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "I'll use it to open the grey door."
+        },
+        {
+          "section": "target_visible",
+          "quote": "There is a grey open door 1 right in front of you 1 steps away."
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"submit_calls\": 0"
+        }
+      ],
+      "reason": "The visible sequence plausibly opens the grey door on the right; execution is not visibly erroneous, and the missing submit call is a separate scoring/terminal issue. This cannot show memory caused success or failure."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Goal: go to the yellow door"
+        },
+        {
+          "section": "injection/3",
+          "quote": "Goal: go to a green door"
+        }
+      ],
+      "reason": "Legal source episodes exist and are partly relevant for navigation/checking actions, but none covers opening a door on the right, so the opportunity is limited. Source pass does not make them fully applicable or faithful."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"dropped\": []"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 4"
+        }
+      ],
+      "reason": "All four retrieved candidates were selected and injected with no budget drop, so the D1 content was visible in context. Visibility does not show retrieval quality, attention, or causal use."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "Without a counterfactual, the same visible action sequence could occur without memory, so memory benefit or harm cannot be inferred.",
+    "The correct=false result may reflect a missing explicit submission or protocol step rather than the environment/task contract itself.",
+    "D1 sources are only go-to-door examples and may be irrelevant to open-right, so partial applicability alone does not explain the final false score."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Why offline_target_evaluation reports correct=false even though target_visible says the task is completed.",
+    "Whether the benchmark requires an explicit submit action and whether such an action was available.",
+    "Whether the four injected D1 candidates actually influenced any target action.",
+    "Whether the injected source episodes faithfully preserve their original source updates."
+  ],
+  "minimal_intervention": {
+    "change": "Align terminal completion with submission/scoring: ensure a completion signal is submitted or registered when the environment reports 'The task is completed', while keeping the same four injected memories and budget.",
+    "fixed": "Same target task, same four D1 injections, same BabyAI environment, same action budget.",
+    "falsifier": "If an explicit submission or completion registration still results in correct=false, then EVAL_CONTRACT/submission mismatch is not the explanation and task-execution or scorer mismatch remains."
+  },
+  "causal_claim": false
+}

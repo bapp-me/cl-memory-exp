@@ -1,0 +1,131 @@
+{
+  "case_id": "c-42104848d8ae",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"tests_run\": 5,\n  \"checks_executed\": 14,"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true,"
+        }
+      ],
+      "reason": "源题通过全部 5 个测试且可评分，但其接口是 (length:int, count:int)->Counter，仅部分映射到目标（列表输入 + 极值输出）。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0,"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "本次目标上下文没有任何记忆注入（injection_metadata 为空），因此无内容可判保真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(length, count, seed=0):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def new_task_func(lengths, counts, seed=0):"
+        }
+      ],
+      "reason": "随机串生成与 Counter 统计思路可迁移，但目标要求并行长度/计数列表与最频/最频字母输出，接口已改变。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0,"
+        }
+      ],
+      "reason": "无注入内容，可见代码中没有任何可归因于被注入记忆的适配或误用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(new_task_func([3, 4], [2, 3], 0) == (Counter({'c': 9, 'e': 3, 'd': 3, 'b': 3}), 'c', 'b'))"
+        },
+        {
+          "section": "target_submission",
+          "quote": "'letter_counts': ordered_counts,"
+        },
+        {
+          "section": "target_submission",
+          "quote": "rng = random.Random(seed)"
+        }
+      ],
+      "reason": "提交返回 dict 而非 (Counter, 最频字母, 最低频字母) 三元组，且改用私有 Random 实例替代源题的 random.seed/choices，首个断言即失败；这只能说明产物与用例不符，不能说明记忆造成成功或失败。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "# Given a list of random strings generated from a fixed set of letters ('a', 'b', 'c', 'd', 'e'), each with a specified length"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"checks_executed\": 0,"
+        }
+      ],
+      "reason": "可见题面未规定返回结构，而隐藏测试按元组严格相等比较，二者可能不一致（仅列为候选）；不能据此断定模型必然可推断正确形状。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false,"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "源题经验未被保留/写入方法状态且记忆策略关闭，故本次不存在可被检索的条目；这只说明没有写入机会，不证明若写入就能改善结果。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "题面缺失返回格式，字典结构可能被题面歧义合理导出（EVAL_CONTRACT 候选）",
+    "无任何注入与写入，失败可完全由无记忆环境下的常规编码选择解释，与记忆质量无关",
+    "即使返回形状正确，随机数消费方式（Choice 循环 vs choices）也可能使数值不匹配"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "目标题面是否完整（是否另有说明返回元组），截断文本无法判断",
+    "目标环境是否本来可访问基础仓库中的 task_func 或源经验",
+    "修好返回形状后数值是否仍会因 RNG 用法不同而失配"
+  ],
+  "minimal_intervention": {
+    "change": "把返回值改为 (Counter 频率, most_frequent, least_frequent) 三元组，并沿用 random.seed(seed)+random.choices 的源题随机化方式",
+    "fixed": "相同目标题面、相同隐藏测试与无记忆（memory_policy disabled）环境，相同源题历史与预算",
+    "falsifier": "若改为元组返回后仍失败，则返回形状解释被反驳；若题面/契约明确要求字典返回，则契约不一致候选被反驳"
+  },
+  "causal_claim": false
+}

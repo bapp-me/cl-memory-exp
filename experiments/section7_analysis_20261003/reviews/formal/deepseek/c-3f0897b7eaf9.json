@@ -1,0 +1,135 @@
+{
+  "case_id": "c-3f0897b7eaf9",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"tests_run\": 5,"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(rolls, seed=None):"
+        }
+      ],
+      "reason": "源 episode 自身单组骰子任务通过 5 项测试，属合法源经验；但其契约是单次 task_func(rolls, seed)，与目标的多组累加契约不同，只部分适用。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "source ID coverage is not content fidelity; entire unselected library is not presented"
+        }
+      ],
+      "reason": "注入摘要描述的是 pandas DataFrame 取值计数任务，而配对源是骰子模拟，且 source_provenance 未列 memory_ids，无法确认这些条目是否忠实代表任何源 episode 内容。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        }
+      ],
+      "reason": "matplotlib 绘图技能与目标相关，但 DataFrame/'value' 列语义与本题 numpy+random 骰子频次无关，仅部分适用。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "rolls = [random.randint(1, 6) for _ in range(rolls_per_set)]"
+        }
+      ],
+      "reason": "目标用纯 random+numpy 手动计数并自绘柱状图，无任何 pandas/DataFrame 结构或注入摘要痕迹；但这只是可见代理，不能证明未被使用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "source ID coverage is not content fidelity; entire unselected library is not presented"
+        }
+      ],
+      "reason": "被注入的候选经验主题（DataFrame 取值计数）与配对源（骰子模拟）不同域，且源溯源未列出任何 memory_id，说明本题可用的源域经验覆盖不足；这不证明注入内容有害，也不证明源题曾生成过相关经验。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": [],"
+        },
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "\"role\": \"001-writer\""
+        }
+      ],
+      "reason": "源题结束时写入操作为空、writer 返回空 facts，即源 episode 没有产出专门经验条目，故本题检索到的两条条目并非来自该源的定向写入；这不能说明记忆库为空或检索失败。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "combined_freq = np.zeros(len(NUMBERS), dtype=int)"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "目标最终正确，但代码为逐组手动计数并自绘柱状图，看不到对注入内容的特征性复用或改编，成功不能归因于记忆复用；同样不能据此判定记忆无效或存在负迁移。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"checks_executed\": 3"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"tests_run\": 0,"
+        }
+      ],
+      "reason": "离线评测记录显示执行了 3 项检查却运行 0 个测试，说明可见层面缺少目标契约的逐测试证据；这只标记评测记录的粒度不一致，不推翻 correct=true 的判定。"
+    }
+  ],
+  "primary_hypothesis": "unknown",
+  "competing_explanations": [
+    "两条注入摘要来自其他域（DataFrame 取值计数），目标仍是纯随机骰子实现；缺少无注入反事实，无法区分“记忆未被使用而自解”与“通用绘图提示有轻微帮助”。",
+    "源 episode 写入操作为空且溯源未列出 memory_id，注入条目可能来自库中其它历史条目，而非本题配对源；无法核实其真实来源。",
+    "参考解按 task_func(seed+i) 逐组调用来定义组合语义，而目标用单一连续随机流，二者在随机数消费上不同；离线评测仍判 correct，说明隐藏检查可能不同于参考解所附测试，契约细节不可由现有证据确定。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "两条注入条目到底来自哪个历史 episode，是否与配对源有关。",
+    "若在相同题目与预算下移除这两条注入，目标结果或代码形状是否改变（无反事实）。",
+    "隐藏检查的具体内容，以及它们是否等价于参考解列出的那三条测试。",
+    "retrieval 中 token_count 为空、injected_utf8_bytes(342) 与 mechanical(148) 不一致，实际注入文本与所见摘要的对应关系不明。"
+  ],
+  "minimal_intervention": {
+    "change": "none（本题成功且无可见缺陷；如需因果判断，唯一变量是在同一历史、同一预算与同一题目下移除这两条注入后重跑）",
+    "fixed": "相同目标提示、相同检索/注入配置与预算、相同工具与提交协议",
+    "falsifier": "若在同条件下无注入运行仍得到 correct=true 且代码形状不变，则支持注入内容对本题无因果作用；若结果或代码特征随之改变，则反驳该判断并支持记忆影响。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,86 @@
+{
+  "case_id": "c-4167b783e9b9",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "No source-task or memory artifact is present; the packet only contains the target run and metadata."
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "No memory content was injected or selected, so fidelity to a memory record cannot be assessed."
+    },
+    "target_applicability": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "The target ran with memory disabled and zero injected text; there is no memory item to apply."
+    },
+    "visible_use": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "No memory was injected, so visible memory use cannot be observed."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"submit_calls\": 0"
+        },
+        {
+          "section": "target_visible",
+          "quote": "toggle and go through grey closed door 1"
+        }
+      ],
+      "reason": "The agent performed ACTION calls and ended with a natural-language completion claim, but no submit action occurred; this supports an execution gap but does not show why the evaluator marked correct false."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "\"submitted\": false"
+        },
+        {
+          "section": "target_visible",
+          "quote": "has been accomplished."
+        }
+      ],
+      "reason": "The visible answer asserts success while the submission record is false and mechanical correct false, indicating a possible mismatch between final text and the required scored submission artifact."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "The evaluator may mark correct false because the chosen grey door was not the intended right-hand door, not because submission was missing.",
+    "Submission may be optional in this BabyAI variant, making the absent submit an artifact rather than the failure cause.",
+    "No memory evidence exists, so any memory-related explanation is unsupported."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether explicit submission is mandatory for success in this target.",
+    "Whether the grey door matched the intended target door under the environment's right-side semantics.",
+    "Whether hidden memory content existed outside injection_metadata and mechanical counts."
+  ],
+  "minimal_intervention": {
+    "change": "Add an explicit submit action after opening the door and keep the same action history and memory-disabled environment.",
+    "fixed": "Same initial prompt, tool set, budget, and zero injected memory.",
+    "falsifier": "If an explicit submit still yields correct false, the missing submit is not the primary cause."
+  },
+  "causal_claim": false
+}

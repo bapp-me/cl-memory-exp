@@ -1,0 +1,143 @@
+{
+  "case_id": "c-ba36c481c0a4",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "df (DataFrame): DataFrame containing 'group', 'date' (in datetime format), and 'value' columns."
+        }
+      ],
+      "reason": "源题可评分且4项测试通过，属合法经验；但其范围是单 DataFrame 且含 'group' 列、标题为 'Value vs Date (Linear Regression Prediction)'，与目标契约不同。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "ax.set_title('Value vs Date (Linear Regression Prediction)')"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": true"
+        }
+      ],
+      "reason": "注入的源内容（源题描述、经验证代码、同样的标题串）与 source_visible 中源提交一致，未见与源记录相抵触的改写。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "DataFrame containing 'group', 'date' (in datetime format), and 'value' columns."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "each containing 'date' and 'value' columns."
+        }
+      ],
+      "reason": "日期序号化回归与 ValueError 校验阶梯可迁移；目标新增多数据集聚合、不同必需列集合和精确标题要求，源经验只部分适用。"
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "ax.set_title('Value vs Date (Linear Regression Prediction)')"
+        },
+        {
+          "section": "target_submission",
+          "quote": "ax.set_title('Aggregated Predictions vs Date (Overall Trend)')"
+        }
+      ],
+      "reason": "目标沿用了源题“主标题+(括号限定)”的写法并附加后缀，最终断言因标题字符串不等而失败；这只是行为代理，不能证明记忆导致失败。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The final plot should show the overall trend of the aggregated predictions."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "Plot title should be 'Aggregated Predictions vs Date'."
+        }
+      ],
+      "reason": "可见目标说明只要求“展示总体趋势”，未给出精确标题串，而隐藏断言要求标题完全等于 'Aggregated Predictions vs Date'，存在说明与测试字面要求不齐的候选；这不能证明记忆有害。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "ax.set_title('Aggregated Predictions vs Date (Overall Trend)')"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"returncode\": 1,"
+        }
+      ],
+      "reason": "直接可见的记录是：代码可运行、校验与聚合输出正常，但提交标题多了后缀使其与断言不匹配；这只说明该次运行的字面失败点，不说明原因归属。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "X = df['date'].map(pd.Timestamp.toordinal).values.reshape(-1, 1)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "X = df['date'].map(pd.Timestamp.toordinal).values.reshape(-1, 1)"
+        }
+      ],
+      "reason": "源与目标的日期转序号、校验阶梯和标题风格高度逐字重合，提示源经验被复用；字符串/代码重合只是可见代理，既不能证明注入内容被实际读取，也不能证明它造成标题后缀选择。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "task_func(df)"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": true"
+        }
+      ],
+      "reason": "确有合法的源题片段被保留并注入，构成可复用机会；但来源覆盖不等于其契约适用于目标新增的多数据集与精确标题要求。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "若原题说明实际写明了精确标题（本包 target_prompt 可能截断），则属纯 TASK_EXECUTION 字面失误，而非契约缺口。",
+    "标题后缀可能只是模型对“show the overall trend”的自发措辞，而非来自源题 '(Linear Regression Prediction)' 风格迁移，即与记忆无关。",
+    "源与目标代码重合可能来自同一代码风格或模板，而非注入记忆被实际使用。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法确认原题说明是否完整包含精确标题串要求。",
+    "无法观察模型内部是否真正读取了注入的源片段，也无可控反事实。",
+    "未给出的完整记忆库与未选候选内容不可推断。",
+    "源题通过后方法状态是否保留每条源内容不得而知。"
+  ],
+  "minimal_intervention": {
+    "change": "在目标说明中显式固定绘图标题字符串为 'Aggregated Predictions vs Date'（或在实现中不添加额外后缀）。",
+    "fixed": "保持相同源历史、相同注入记忆、相同预算与工具环境。",
+    "falsifier": "若原题说明已明确给出精确标题而模型仍加后缀，或去掉注入记忆后标题仍出现同样后缀，则契约缺口/迁移候选被反驳。"
+  },
+  "causal_claim": false
+}

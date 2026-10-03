@@ -1,0 +1,147 @@
+{
+  "case_id": "c-65713465865f",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=18:True:7"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Analyzes a list of numerical data, identifies values greater than the average,"
+        }
+      ],
+      "reason": "Source episode passes its own tests and is scorable, but it only covers single-list input and a two-value return, not the target's per-sublist/combined contract."
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "avg = statistics.mean(data)"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "identify values greater than the average for each sublist"
+        }
+      ],
+      "reason": "Source faithfully implements single-list above-average and threshold-count logic, but target requires per-sublist aggregation and combined ndarray, so relevant memory content is only partial."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(data, value):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "identify values greater than the average for each sublist"
+        }
+      ],
+      "reason": "Source logic is conceptually related but signature/data shape and return contract differ; only partial applicability."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "apply PCA with n_components components to each matrix"
+        },
+        {
+          "section": "injection/1",
+          "quote": "plot a histogram of the normalized data from each array"
+        }
+      ],
+      "reason": "Visible injected candidates are unrelated PCA/histogram tasks and target actions track the target prompt; no memory-specific adaptation is visible. This proxy cannot prove absence of internal recall."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Additionally, return the total count of values greater than the specified value across all sublists and the combined numpy.ndarray of values greater than the average from all sublists."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(np.array_equal(new_task_func([[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]], 6)[0], np.array([4, 5, 9, 10])))"
+        }
+      ],
+      "reason": "Prompt states count first then combined array, but hidden assertion indexes [0] as the combined ndarray; the agent followed the prompt order and failed. This shows contract/test mismatch, not memory causation."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "return total_count, combined_array, per_sublist_counts, ax"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": false"
+        }
+      ],
+      "reason": "Submitted function visibly returns a 4-tuple with total_count at index 0, so hidden first assertion fails. Execution explains failure; it cannot explain why that order was chosen or rule out memory influence."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(data, value):"
+        },
+        {
+          "section": "source_visible",
+          "quote": "greater_avg, count = task_func([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 5)"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "A correct, similar single-list source episode existed in observable retrieval candidates, giving a legitimate source opportunity, but its provenance was not injected. Opportunity does not prove use or transfer."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_episode_byte_budget\""
+        },
+        {
+          "section": "retrieval",
+          "quote": "8f464e4d32c4ba7b72826d44c2bebf70c6e4df43ad5c41e585baea4ee220144e"
+        }
+      ],
+      "reason": "Retrieval selected all 94 before packing, then dropped the oldest 90 by complete-episode byte budget and injected only four latest memories; this is packing/visibility behavior, not a retrieval failure and not evidence of interference."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "TASK_EXECUTION: the agent may have simply chosen the prompt's count-first order and extra return values without checking hidden tests.",
+    "OPPORTUNITY_SOURCE: a correct single-list source existed but was not injected, so absence of correction may reflect no available source, though no counterfactual.",
+    "PACKING_VISIBILITY: age-based byte-budget packing removed older candidates, possibly including useful source/provenance, but injected/unselected contents do not show which exact memory was relevant."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "Whether target prompt is intentionally ambiguous or hidden tests are misordered.",
+    "Whether any relevant D0/D1 memory was actually rendered in target prompt; source_provenance_injected is false and visible trajectory shows no memory text.",
+    "Whether extra per_sublist_counts/ax return values are accepted by hidden tests; only first two indices were inspected.",
+    "No controlled intervention, so memory causal effect cannot be established."
+  ],
+  "minimal_intervention": {
+    "change": "Swap the first two return values in new_task_func to combined_array, total_count (or update hidden tests/contract to match the prompt's count-first order).",
+    "fixed": "Keep same inputs, per-sublist above-average computation, threshold counts, combined sorted histogram, and same memory/injection history.",
+    "falsifier": "If hidden tests still fail after aligning the first two return values, or if prompt truly requires count-first, the EVAL_CONTRACT candidate is wrong."
+  },
+  "causal_claim": false
+}

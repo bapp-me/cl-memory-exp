@@ -1,0 +1,89 @@
+{
+  "case_id": "c-870a8297aec2",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "包内没有源题、源事件内容或 BabyAI 源配对，只有 target 轨迹与事后 update 哈希，无法评估源经验质量。"
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "本题没有任何注入的记忆内容可供比对保真度。"
+    },
+    "target_applicability": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"observable_candidates\": [],"
+        }
+      ],
+      "reason": "检索候选为空且注入为空，没有可供判断适用性的记忆内容。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0,"
+        }
+      ],
+      "reason": "注入元数据为空、机械统计注入数为 0，可见轨迹里只有环境动作，没有可归因于记忆的适配行为。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"go to yellow closed door 1\""
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true,"
+        }
+      ],
+      "reason": "两次 ACTION 调用（查看可用动作后直接前往黄门）即完成目标；这只说明该回合由直接环境交互解决，不能证明记忆中任何内容被复用。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"injected_utf8_bytes\": 2,"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": [],"
+        }
+      ],
+      "reason": "注入体积仅 2 字节（空对象），说明打包后送入上下文的内容为空；但库内是否存在内容未给出，故不能据此断言检索或打包失败。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "记忆库可能已有可用经验但本题未产生任何候选/注入，样本不足以外推检索层行为。",
+    "成功也可能来自环境动作空间直接可用（toggle and go through yellow closed door 1），与记忆无关。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "未提供源题与源事件内容，无法判断源经验质量或是否存在源配对。",
+    "target_update_operations 仅给出前后哈希，未提供 workflow library 内容，无法评估更新与保留。",
+    "记忆库完整内容缺失，不能由空检索结果推断检索失败或遗忘。"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "保持相同环境、相同观测文本与动作预算（2 次 ACTION 内提交）",
+    "falsifier": "若给出非空 injected_ids 且可见行为逐字复用其中内容，则 no_visible_use 与当前候选被反驳。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,146 @@
+{
+  "case_id": "c-943253bf2391",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=16:True:7"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Create a Pandas DataFrame with random alphabets in each cell."
+        }
+      ],
+      "reason": "源题自身通过全部检查且可评分，但它是单 DataFrame 的较窄任务，源通过不代表其陈述可无差别外推。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "`np.random.choice(<population>, size=<shape>)`"
+        },
+        {
+          "section": "injection/5",
+          "quote": "Build the frame via `pd.DataFrame(<data>, columns=<col_names>)`"
+        },
+        {
+          "section": "source_visible",
+          "quote": "np.random.choice(list(string.ascii_lowercase), size=(rows, columns))"
+        }
+      ],
+      "reason": "与目标相关的那部分注入工作流（np.random.choice + pd.DataFrame(columns=...) + ValueError 守卫）与源实现所用机制一致。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "concatenates them vertically to form a single large DataFrame"
+        },
+        {
+          "section": "injection/5",
+          "quote": "Convert raw lists/dicts/arrays into a pandas DataFrame with specified column names"
+        }
+      ],
+      "reason": "单帧随机字母与列名部分直接适用，但目标新增了多帧生成与纵向 concat 的条件，注入工作流未直接覆盖该步骤。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "data = np.random.choice(alphabet, size=(rows_per_df, columns_per_df))"
+        },
+        {
+          "section": "target_submission",
+          "quote": "combined_df = pd.concat(dataframes, ignore_index=True)"
+        }
+      ],
+      "reason": "可见代码沿用了采样与具名列构造模式，并把本来单帧的步骤扩成循环+纵向拼接；这是行为代理，不是因果证明。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Create a Pandas DataFrame with random alphabets in each cell."
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"distance\": 53"
+        }
+      ],
+      "reason": "源题与目标高度同族（单帧→多帧+拼接），存在可迁移机会；但配对距离小也不证明目标必然复用了源经验。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"selected_before_packing\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 8"
+        }
+      ],
+      "reason": "检索记录显示 8 条候选在同一顺序下被选中且全部注入；分数为 null，故不能说明排序质量或语义相关性。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Seed the random number generator for reproducibility"
+        },
+        {
+          "section": "injection/1",
+          "quote": "If a check fails, `raise ValueError`"
+        }
+      ],
+      "reason": "记忆以参数化工作流步骤（而非字面代码）表示采样与校验，形式上便于改写；这只描述表示形式，不证明被使用。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "import pandas as pd\\nimport numpy as np\\nimport string, random"
+        },
+        {
+          "section": "injection/7",
+          "quote": "Write a PYTHON tool call that defines the candidate function and executes it"
+        }
+      ],
+      "reason": "目标先跑 PYTHON 自验再 SUBMIT，与注入的验证循环工作流形态一致；无对照条件，不能断言迁移成功或记忆导致通过。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "目标代码只用了 pandas/numpy 常规写法，也可能是模型自有先验而非记忆复用（无对照组）。",
+    "注入项没有直接包含多帧纵向 concat 步骤，该步骤更可能来自模型自身知识。",
+    "检索分数为 null 且未呈现完整记忆库，无法确认这些条目就是任务最相关的记忆。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无干预/反事实，无法量化记忆对成功或开销的贡献。",
+    "8 条注入记忆各自的完整内容与来源覆盖率未给出，无法判断是否有冲突或冗余。",
+    "target_update_operations 为空，无法判断目标经验是否被写入或保留。"
+  ],
+  "minimal_intervention": {
+    "change": "在同一目标下移除与随机采样/DataFrame 具名列构造直接对应的注入工作流条目（保留其余），观察核心代码形态是否改变。",
+    "fixed": "相同目标提示、相同模型与预算、相同源配对历史与注入预算。",
+    "falsifier": "若移除后仍写出 np.random.choice(size=(rows, columns)) + pd.DataFrame(columns=...) + ValueError 守卫，则这些对应关系不足以归因于记忆。"
+  },
+  "causal_claim": false
+}

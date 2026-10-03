@@ -1,0 +1,133 @@
+{
+  "case_id": "c-396e48b251ee",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "Ran 10 tests in 0.109s"
+        },
+        {
+          "section": "source_visible",
+          "quote": "return wave, fig, ax"
+        }
+      ],
+      "reason": "源题自身通过全部测试，其 Hann 窗复数波构造可用；但它是单谐波函数、标题为 'Complex Wave with Hann Window'，与目标的多样谐波合并、不同标题只部分重合。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0,\n  \"injected_text_utf8_bytes\": 0,\n  \"memory_policy\": \"disabled\","
+        }
+      ],
+      "reason": "包内没有任何被注入或呈现的记忆内容，无法判断保留内容对源题的保真度；源片段未被保留在方法状态中。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "matplotlib.axes.Axes: The axes object of the plot."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "The function should return the combined complex wave and a plot displaying both the real and imaginary parts of the combined wave."
+        }
+      ],
+      "reason": "窗化复数指数逐谐波叠加的思路可迁移，但源题返回三元组且单谐波，目标按字面只要求返回波与图，返回元数这一关键条件已改变。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0,\n  \"injected_text_utf8_bytes\": 0,\n  \"memory_policy\": \"disabled\","
+        }
+      ],
+      "reason": "目标上下文中注入数为 0；提交代码与源码的字符串重合（get_window('hann'), np.exp(2j*np.pi*...)）只是可见代理，不能证明记忆被复用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should return the combined complex wave and a plot displaying both the real and imaginary parts of the combined wave."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ValueError: not enough values to unpack (expected 3, got 2)"
+        }
+      ],
+      "reason": "题面要求返回波与图（两值），离线评分却按三元组解包，二者对返回契约不一致；该离线证据原 agent 不可见，只能标为候选，不能证明题面措辞有误。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "return combined_wave, fig"
+        },
+        {
+          "section": "target_visible",
+          "quote": "Complex Wave with Multiple Harmonics and Hann Window | Time | Amplitude"
+        }
+      ],
+      "reason": "提交实现构建了逐谐波加窗的复数波并返回二元组，可见自测只验证了二元组与标题/轴标签，元数需求在本地从未被触发；不能据此断定三元组是必需契约。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "matplotlib.axes.Axes: The axes object of the plot."
+        },
+        {
+          "section": "source_visible",
+          "quote": "return wave, fig, ax"
+        }
+      ],
+      "reason": "存在一条通过的合法源经验，含同类 Hann 窗复数波写法且返回三元组，说明相关经验可得；可得性不等于它被保留、被注入或被采用。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0,\n  \"injected_text_utf8_bytes\": 0,\n  \"memory_policy\": \"disabled\","
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        }
+      ],
+      "reason": "本目标运行没有任何记忆被写入注入，源片段也未留在方法状态中，D0→D1 通道在可观察层面为空；未注入不等于已存而检索失败，也不等于遗忘。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "若三元组返回确为题面隐含要求，则同一结果只是普通 TASK_EXECUTION 错误，离线参考解无法单方面判定措辞歧义。",
+    "无对照干预：注入数与记忆策略均为空/禁用，失败不能归因于记忆的复用或负迁移。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试究竟要求 (wave, fig, ax) 还是也接受 (wave, fig)。",
+    "目标之前是否存在任何记忆状态；full_unselected_state_presented 为 false 且前后哈希均为空值哈希。",
+    "本回合 memory_policy 为何为 disabled。"
+  ],
+  "minimal_intervention": {
+    "change": "把提交改为返回坐标轴对象，即 `return combined_wave, fig, ax`",
+    "fixed": "保持相同题面、相同 amplitudes/frequencies/time 输入、相同 get_window('hann', n) 窗化语义与相同的标题/轴标签",
+    "falsifier": "若返回 (combined_wave, fig, ax) 的重跑仍不通过隐藏检查，则返回元数契约假设被反驳"
+  },
+  "causal_claim": false
+}

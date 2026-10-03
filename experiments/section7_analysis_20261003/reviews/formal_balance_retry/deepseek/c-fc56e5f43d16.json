@@ -1,0 +1,131 @@
+{
+  "case_id": "c-fc56e5f43d16",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Analyze a text by creating a document term matrix with CountVectorizer."
+        }
+      ],
+      "reason": "源题是单文本 task_func 且自身测试通过，可作合法经验；但它只覆盖单文档切句+DTM，未覆盖多文档拼接契约。"
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "本题记忆通道关闭且注入为 0，没有可评估保真度的已注入记忆内容。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "The text contains several sentences, each separated by a period."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of documents, each containing multiple sentences separated by periods"
+        }
+      ],
+      "reason": "切句、CountVectorizer、DataFrame 列名这些部分仍适用；但目标新增了“多文档合并”的方向/行语义，源经验不决定该点。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "可见执行中无任何记忆/来源注入，代码与源题字符串重合只能算可见代理，不能当作复用证据。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "and then all these matrices should be concatenated horizontally to form a single combined matrix"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "where each row corresponds to a sentence from the original documents"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "combined_df = pd.concat(all_dtm, axis=0, ignore_index=True)"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(result.shape == (4, 11))"
+        }
+      ],
+      "reason": "题面同时要求“水平拼接”和“每行对应一个句子”，隐藏测试与参考解却按 axis=0 垂直堆叠得 4 行；契约内部/与测试冲突，只能证明题面歧义，不证明实现存在算法缺陷。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "combined = pd.concat(matrices, axis=1)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "(3, 21)"
+        }
+      ],
+      "reason": "目标 agent 按题面字面取 axis=1 并为不同文档加 doc 前缀，自测通过后提交；这解释了失败路径，但无法说明若题面为垂直拼接通则是否能通过。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        }
+      ],
+      "reason": "源题虽正确且与目标同族，但原始源情节与来源标记既未保留也未注入，本题不存在可用的 D1 通道；这不等于“已存但未检索到”。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "TASK_EXECUTION：题面“每行对应一个句子”本可推断应垂直堆叠，实现选择水平拼接也可归为执行判断偏差。",
+    "列名处理差异（加 doc 前缀）是否也会被隐藏测试判错，本次断言未走到该检查，无法区分。",
+    "源经验可能只部分适用，但本题无注入，无法判断若有记忆会改变哪个决策。"
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "隐藏测试完整内容未知，无法判断除行数外还对列名/NaN 等有何要求。",
+    "源题情节未保留，无法得知潜在记忆内容会如何描述拼接方向。",
+    "无任何对照干预，不能评估记忆对本题结果的作用。"
+  ],
+  "minimal_intervention": {
+    "change": "把目标题面改为“各文档逐句向量化后垂直拼接（axis=0）”，或修正隐藏测试以接受水平拼接语义，使题面与测试一致。",
+    "fixed": "保持相同的源题历史、运行环境、工具集与记忆策略（disabled）。",
+    "falsifier": "若按题面字面“horizontally”加 doc 前缀的实现在同一隐藏测试下也通过，则 EVAL_CONTRACT 冲突假设被反驳。"
+  },
+  "causal_claim": false
+}

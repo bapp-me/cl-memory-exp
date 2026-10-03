@@ -1,0 +1,146 @@
+{
+  "case_id": "c-85ffc6ac0a11",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Goal: go to the yellow door"
+        },
+        {
+          "section": "injection/0",
+          "quote": "The task is completed."
+        },
+        {
+          "section": "injection/0",
+          "quote": "go to yellow closed door 1"
+        }
+      ],
+      "reason": "注入的是单个 BabyAI 同类目标任务的完整成功轨迹，自洽且提交完成；但没有其独立评分，且仅是单一示例。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "In front of you in this room, you can see several objects: There is a yellow closed door 1 right in front of you 1 steps away."
+        },
+        {
+          "section": "injection/0",
+          "quote": "The task is completed."
+        }
+      ],
+      "reason": "所注入轨迹与终局观测一致，未见与源记录相矛盾的内容；仅限这一条源，无法核对其原始得分。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Goal: go to the yellow door"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Goal: go to the purple door"
+        }
+      ],
+      "reason": "同类环境与动作集相同，但目标门颜色改变且目标门初始不可见，源经验只覆盖“目标门可见时直接前往”的情形。"
+    },
+    "visible_use": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "There's no purple door visible in this room, so it's likely behind one of the doors. Let me explore."
+        },
+        {
+          "section": "target_visible",
+          "quote": "go to purple closed door 1"
+        }
+      ],
+      "reason": "源所示模式（目标门可见即直接前往）在目标初始状态不可用，末尾直接前往也是动作列表中的通用选项，故行为无法区分是否复用记忆。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Goal: go to the yellow door"
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "\"sequence\": 0"
+        }
+      ],
+      "reason": "确有合法同类源经验被提供给本题，构成一次机会；但源内容针对可见目标门，不能证明它适用于本题的探索需求。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 1"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Goal: go to the yellow door"
+        }
+      ],
+      "reason": "本题实际注入了一条源经验，说明检索/注入环节产出了内容；单条注入无法判断排序或召回，也不能说明未注入的记忆不存在。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "toggle and go through blue closed door 1"
+        },
+        {
+          "section": "target_visible",
+          "quote": "go to purple closed door 1"
+        }
+      ],
+      "reason": "首步是与源示范不同的探索动作，末步直接前往又属通用可用动作，均不能作为记忆迁移或负迁移的判别证据。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "There is a purple closed door 1 4 steps in front of you and 2 steps to your left."
+        },
+        {
+          "section": "target_visible",
+          "quote": "The task is completed."
+        }
+      ],
+      "reason": "可见轨迹显示成功由自身探索（穿过蓝门、两次右转发现紫门）完成；这解释结果，但不能排除记忆对探索倾向的隐含影响。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "记忆可能只是改变了探索倾向（如先试探性穿门），但无对照无法验证。",
+    "注入的可见目标门捷径经验可能对本题无用或冗余，成功可完全由环境反馈解释。",
+    "可能存在未包含在本包中的其他记忆条目影响行为，注入单条不足以判断检索全集。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法确定注入的记忆是否影响任何决策（无 memory-off 反事实）。",
+    "没有源题的独立评分或配对 gold 证据，源质量仅能按轨迹自洽判断。",
+    "未选中的记忆库内容未知，不能推断检索缺失或干扰。"
+  ],
+  "minimal_intervention": {
+    "change": "保持任务与预算不变，仅去除该条注入源经验（或替换为“目标门初始不可见时需探索”的同类源）后重跑。",
+    "fixed": "相同的 BabyAI 场景、动作集、工具调用上限与任务提示。",
+    "falsifier": "若去除记忆后首步动作、轨迹长度或成功率显著变化，则支持记忆对行为有影响；若无变化，则迁移主张不成立。"
+  },
+  "causal_claim": false
+}

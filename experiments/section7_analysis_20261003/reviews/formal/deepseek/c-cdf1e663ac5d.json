@@ -1,0 +1,132 @@
+{
+  "case_id": "c-cdf1e663ac5d",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "Ran 6 tests in 0.197s"
+        }
+      ],
+      "reason": "源 episode 在其自身 6 项测试上 returncode 0、correct=true，是合法源经验；局限在于它只覆盖单 DataFrame 的 (description, plots) 契约，比目标的多 DataFrame/list-of-tuples 契约窄。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "filling NaN with column means BEFORE calling describe() makes count report the full row count"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "return (description, list_of_axes)"
+        }
+      ],
+      "reason": "由源题写出的策略记忆（sai-00045/46）忠实记录了已验证的 fill-then-describe 顺序与 (description, plots) 返回形状，与源题通过行为一致；但这只说明源内容本身保真，不说明它对目标充分。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should return a list of tuples, where each tuple contains a processed dataframe with statistics and a list of distribution plots for each numeric column in the dataframe."
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "return (description, list_of_axes)"
+        }
+      ],
+      "reason": "数值列选择/均值填充/逐列画图与 fill-before-describe 顺序仍适用；但目标新增了 list-of-dataframes 包装，且其元组措辞并未明确等于源题的单 2 元组契约。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Fixing the oracle, not the code"
+        },
+        {
+          "section": "target_visible",
+          "quote": "Clean exit-0 run with all checks passing"
+        }
+      ],
+      "reason": "可见行为（沙箱先跑、把失败归因于手写 oracle 并只改 oracle、再跑到 exit-0 才提交）与注入的验证纪律型 err-* 记忆方向一致；这是行为代理，不能证明因果或证明记忆有效。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "processed.append((df, stats, plots))"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "np.allclose(results[i][0].loc[stat], description.loc[stat])"
+        }
+      ],
+      "reason": "提交物每项返回 3 元组且首元素是均值填充后的 DataFrame，而离线评测把 results[i][0] 当作 describe 统计帧取 .loc['count']，直接触发 KeyError；只能证明可见产物与被测契约不一致，不能证明任何记忆导致该选择。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should return a list of tuples, where each tuple contains a processed dataframe with statistics and a list of distribution plots for each numeric column in the dataframe."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "return description, plots"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "KeyError: 'count'"
+        }
+      ],
+      "reason": "题面“a processed dataframe with statistics and a list of distribution plots”可被读成含处理帧的元组，而参考解/测试要求 2 元组且统计帧在 [0]；这构成题意与测试可能不一致的候选，仅标记不重打分。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"memory_id\": \"sai-00045\""
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_block_byte_budget\""
+        }
+      ],
+      "reason": "源题派生策略 sai-00045/46（含 2 元组返回模式）出现在检索候选中却被 byte-budget 淘汰，injected_ids 里只有 err-*/misc-*；这是选中后打包淘汰，不是检索失败，也不能证明它们若注入就会改变结果。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "EVAL_CONTRACT：题面元组措辞含糊，可能本来就存在题面/隐藏测试的表述落差，而非单纯执行错误。",
+    "PACKING_VISIBILITY：源题派生的 (description, plots) 模式（sai-00046）在注入前被预算淘汰，目标运行缺少该形状提示；无对照，不能断言因果。",
+    "agent 自写的沙箱 oracle 与其 3 元组解释同构（p1/s1/pl1），因此验证本身无法暴露返回契约偏差。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "题面与隐藏测试的元组形状是否真属歧义，无法在离线条件下重评或求证作者意图。",
+    "注入的 46 条 err-*/misc-* 记忆是否影响返回形状选择，无反事实可判。",
+    "未被注入的其余检索候选与未选中记忆库内容未给出，不能据此推断缺失或干扰。",
+    "若 sai-00045/46 未遭淘汰是否会让返回形状变为 2 元组，未知。"
+  ],
+  "minimal_intervention": {
+    "change": "让每个 DataFrame 对应元素返回 2 元组且首元素为 describe 统计帧，即 (stats, plots)，去掉前置的均值填充帧。",
+    "fixed": "保持相同源历史、相同注入记忆集合与字节预算、相同隐藏测试与评测器。",
+    "falsifier": "同一份 3 元组提交在被测隐藏测试上通过，或题面被正式澄清为元组内必须包含处理后的 DataFrame。"
+  },
+  "causal_claim": false
+}

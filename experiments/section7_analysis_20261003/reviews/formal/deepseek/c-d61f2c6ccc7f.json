@@ -1,0 +1,128 @@
+{
+  "case_id": "c-d61f2c6ccc7f",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "Expected 'show' to have been called once. Called 0 times."
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": false"
+        }
+      ],
+      "reason": "配对源题可评分但自身仅通过 18 项检查中的部分、7 个测试中 1 个失败，故源经验本身不是已验证正确解。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "numpy.ndarray: An array of values from the data that are greater than the average"
+        }
+      ],
+      "reason": "注入内容只保留了“matplotlib/编码任务”这类表层描述，未保留源题关于返回顺序、逐子列表平均等的契约信息，且描述提到 DataFrame 与源题列表语义不一致。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "plot the histogram of the sorted numbers from all sublists combined"
+        }
+      ],
+      "reason": "仅“画图/编码”这一泛化层面适用；记忆主体是 DataFrame 计数柱状图，未覆盖本题的子列表平均与返回签名。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "plt.hist(sorted_numbers, bins=10, edgecolor='black')"
+        },
+        {
+          "section": "target_submission",
+          "quote": "return total_count, counts_per_sublist, np.array(greater_than_avg_combined)"
+        }
+      ],
+      "reason": "提交代码中没有 DataFrame、value-count 柱状图等注入内容痕迹，其返回结构与注入描述也无对应关系；这只是行为代理，不能证明记忆未被使用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "return the total count of values greater than the specified value across all sublists and the combined numpy.ndarray"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "new_task_func([[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]], 6)[0], np.array([4, 5, 9, 10])"
+        }
+      ],
+      "reason": "题面把 total count 列在前、组合数组列在后，而隐藏测试以第 0 位必须是 above-average 数组，存在题意/测试可能不一致的候选；但测试为固定评分 mask，不据此重打分。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "return total_count, counts_per_sublist, np.array(greater_than_avg_combined)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "print(new_task_func(data, 3))"
+        }
+      ],
+      "reason": "提交返回三元组且首元素为计数，而测试只接受两元素且首元素为数组；自测只 print 未断言返回结构，未能暴露签名偏差。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "{\"facts\": []}"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        }
+      ],
+      "reason": "源题结束时的写入为空（无事实/操作），说明本可迁移的返回契约与绘图调用约束没有作为经验写入；这不等于已写入但检索不到。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "即便顺序按题面解读，提交多返回了 counts_per_sublist，三元组本身也不符合任何两元素契约，属实现层面的 TASK_EXECUTION 偏差。",
+    "隐藏测试未公开，无法排除测试期望的返回顺序/长度来自题面之外的隐含约定；本次离线评测只展示首个断言失败。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "注入记忆 96e021ae…/046fecd0… 与配对源题 episode 的对应关系无法确认（source_provenance_at_target 的 memory_ids 为空，注入文本又提 DataFrame）。",
+    "隐藏测试是否接受其他返回顺序或长度不可知。",
+    "token_count 未提供，注入开销只能用字节数（342）近似。",
+    "未选中的完整记忆库未提供，不能据本包推断记忆缺失。",
+    "target_update_operations 在目标结束之后，不能解释本题行为。"
+  ],
+  "minimal_intervention": {
+    "change": "把返回契约统一为 (combined above-average np.ndarray, total_count) 两个值并去掉 counts_per_sublist，同时据此修订题面措辞。",
+    "fixed": "相同的输入数据、value、隐藏测试与评分 mask、相同的两条注入记忆与预算。",
+    "falsifier": "若某次提交返回三元组 (total_count, counts_per_sublist, 数组) 仍通过全部隐藏测试，则契约不一致这一候选被反驳。"
+  },
+  "causal_claim": false
+}

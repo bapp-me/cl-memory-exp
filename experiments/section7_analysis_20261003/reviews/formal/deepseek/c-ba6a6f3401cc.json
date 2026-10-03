@@ -1,0 +1,119 @@
+{
+  "case_id": "c-ba6a6f3401cc",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Apply PCA with n_components components to a 2D data matrix"
+        }
+      ],
+      "reason": "源题自身5项测试通过，但其契约是单矩阵，未覆盖目标的多矩阵逐矩阵绘图要求，故只算在自身范围内合格。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "The dataframe should also include a column 'Mean' which is the average value of each component value per row"
+        },
+        {
+          "section": "target_visible",
+          "quote": "df['Mean'] = transformed.mean(axis=1)"
+        }
+      ],
+      "reason": "目标复用了源题每矩阵PCA、Component列+Mean列与给定xlabel/ylabel，单矩阵示例值也一致，与目标相关的必要内容被忠实保留。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "return the cumulative explained variance of the components across all matrices in a single plot"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "plt.plot(range(1, len(cumulative_variance) + 1), cumulative_variance, label=f'Matrix {i+1}')"
+        }
+      ],
+      "reason": "源经验覆盖了每矩阵变换与标签，但目标的跨矩阵单图中“每条矩阵一条线”属新增条件，源未提供对应做法。"
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "the single-matrix case matches the known expected output from the prior PCA task"
+        },
+        {
+          "section": "target_visible",
+          "quote": "mean_evr = np.mean(all_evr, axis=0)"
+        }
+      ],
+      "reason": "可见行为显示按源模式复用了每矩阵绘图，但把跨矩阵结果取均值画成单线，与所需逐矩阵线不符；这只是行为代理。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "return the cumulative explained variance of the components across all matrices in a single plot"
+        }
+      ],
+      "reason": "题面只说“across all matrices in a single plot”，未说明每矩阵一条线，测试却要求3条线；支持契约表述欠明确，不能证明记忆无效。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AssertionError: There should be a line for each matrix in the plot"
+        }
+      ],
+      "reason": "确定性失败点是绘图线数与契约不符，属可见执行结果，不能说明原因归属。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "the single-matrix case matches the known expected output from the prior PCA task"
+        },
+        {
+          "section": "injection/0",
+          "quote": "ax.plot(range(1, n_components+1), cum_var, marker='o')"
+        }
+      ],
+      "reason": "源为单矩阵单线绘图，目标沿用该模式并把多矩阵聚合成均值单线；支持迁移候选，但无反事实，不能证明是记忆导致失败。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "题面可用“聚合理解”解释；无源经验时也可能选平均单线",
+    "源经验的单矩阵单线模式被延用造成偏置，但无对照不能归因",
+    "隐藏测试可能被判分口径覆盖，也可能测试与题意不一致"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "题面本意究竟是逐矩阵多线还是跨矩阵聚合曲线",
+    "若不给源经验是否会得到不同绘图",
+    "未选中记忆库内容未知，不能推断检索缺失"
+  ],
+  "minimal_intervention": {
+    "change": "改为对每个矩阵分别绘制其累计解释方差为独立一条线（可复用参考解的逐矩阵循环），而非对解释方差比例取均值画单线",
+    "fixed": "保持相同题面、相同n_components与输入矩阵、相同可视化后端预算",
+    "falsifier": "若改为逐矩阵多线且标签正确后隐藏断言仍失败，或在与参考解相同条件下仍产出单线，则本候选被反驳"
+  },
+  "causal_claim": false
+}

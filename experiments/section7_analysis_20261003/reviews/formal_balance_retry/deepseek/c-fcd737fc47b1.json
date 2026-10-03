@@ -1,0 +1,149 @@
+{
+  "case_id": "c-fcd737fc47b1",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=14:True:5"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Generate a random float number from a list of hexadecimal strings and then round the float number to 2 decimal places."
+        }
+      ],
+      "reason": "源题离线评估通过（14 检查 / 5 测试、correct=true），但契约是随机取单个键返回标量，与目标“对给定列表逐个转换”不同，因此只是有保留的通过。"
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "本次运行没有任何记忆内容被写入或注入，无法评价某条被交付记忆对目标必要内容的保真度。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(hex_key=None):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def generate_rounded_floats(hex_keys):"
+        }
+      ],
+      "reason": "两者共享“十六进制串按大端 IEEE-754 单精度解码再 round(…,2)”的核心转换，但输入/输出契约不同（随机单值 vs 给定列表逐个）。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "target_visible",
+          "quote": "float_value = struct.unpack('!f', struct.pack('!I', int_value))[0]"
+        }
+      ],
+      "reason": "上下文中无任何记忆片段，提交实现是自洽写法（用 pack('!I') 而非源题 bytes.fromhex），看不到对源经验的显式复用或误用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "[36806.08, 2355589.0, 20941864.0, 75378848.0, 268198208.0]"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "agent 自行写出函数并在工作区运行得到期望列表，离线评估判为正确；这只证明本任务被执行成功，不证明任何记忆参与。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_state_summary",
+          "quote": "\"before_target_hash\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\""
+        },
+        {
+          "section": "source_state_summary",
+          "quote": "\"after_source_hash\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\""
+        }
+      ],
+      "reason": "源题结束时方法状态哈希与目标前一致，说明源经验没有被写入/纳入状态；这不等于“已存但没检索到”，也不说明内容保真。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "无注入内容可用，故无法显示源经验向目标的迁移；同样不能反证 agent 未从该概念中获益（无对照条件）。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Hidden correctness is not available."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "return [task_func(hex_key) for hex_key in hex_keys]"
+        }
+      ],
+      "reason": "在带内提交只回显“隐藏正确性不可用”，而离线参考解依赖源题的 task_func 助手；这属评分/题意边界细节，标为候选，不影响本 case 的 correct 判定。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "正确结果也可能来自模型对 struct 大端解码的既有能力，与源题经验无因果关系；无对照条件无法区分。",
+    "源题经验可能以某种未记录的隐式方式影响目标，但 injection_metadata 为空且 memory_policy 为 disabled，本包内不可证实。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "未给出未被选中的完整记忆库，故不能从本包断言“没有任何相关经验存在”。",
+    "隐藏测试与离线评估是否完全一致未知；带内仅显示隐藏正确性不可用。",
+    "源题结束时的状态哈希只反映被检查的状态文件，是否有包外写入不可从证据判断。"
+  ],
+  "minimal_intervention": {
+    "change": "none；如需检验记忆作用，唯一关键改动是在同题上启用写入并在目标注入源经验做对照，而非修改提交代码",
+    "fixed": "相同源题 episode、相同目标 prompt、相同工具与预算",
+    "falsifier": "若目标上下文出现非空注入且其片段与提交中的 struct 解码写法对应，则 visible_use 应改为 consistent_adaptation；若源码改动后同题失败，才可能支持负迁移候选"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,146 @@
+{
+  "case_id": "c-fda7d5f12abf",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        },
+        {
+          "section": "source_visible",
+          "quote": "pdf.to_csv(index=False)"
+        }
+      ],
+      "reason": "来源题（dict of list → DataFrame → CSV → Base64）通过了全部5个测试/10个检查，故为 pass；但其作用域是单个 dict，而目标要求对 list of dicts 逐个编码，属需扩展的有限适用。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": []"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "与目标必要内容（pd.DataFrame(dict).to_csv(index=False)→base64）在被注入/可观测集合中完全没有出现，且来源溯源为空；此判断仅限可观测集合，未选中的完整库不可见。"
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Encodes a dict of list as a Base64 string. The dict is first converted to a Pandas DataFrame."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Each dataset needs to be encoded into a Base64 string as described in the raw problem"
+        }
+      ],
+      "reason": "来源的核心转换规则正是目标每个 dataset 所需的同一步骤；目标新增的条件只是外层遍历 list of datasets，核心规则仍然适用。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "target_visible",
+          "quote": "serialized = json.dumps(payload, default=str)"
+        }
+      ],
+      "reason": "被注入候选的主题（matplotlib 柱状图/列计数）在可见轨迹中无任何痕迹，失败分支（对 plain dict 用 JSON）也不由任何被注入语句描述；轨迹中的 DataFrame→CSV 只能算任务自然写法，不足以证明复用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "serialized = json.dumps(payload, default=str)"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "process_datasets([{'name': ['Alice', 'Bob'], 'age': [25, 30]}"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "df = pd.DataFrame(dataset)"
+        }
+      ],
+      "reason": "可见执行只对 DataFrame 分支做 CSV 序列化，对普通 dict-of-lists 走了 JSON 分支，与契约要求的 pd.DataFrame(dataset).to_csv 不一致，故首个断言即失败；这是可直接观测的执行层偏差，不需要记忆即可解释。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        },
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "{\"facts\": []}"
+        }
+      ],
+      "reason": "来源题成功结束后没有产生任何写入操作，辅助 writer 也返回空 facts，说明该成功配方未被接纳为可复用条目；但这只说明来源侧未落库，不能推出任意一条已存条目被遗漏检索。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "被注入的两条候选是任务级自然语言概述（pandas/matplotlib、柱状图计数），既不含 base64/CSV 可执行规则，也不含返回结构与参数约束，表示层丢失了目标所需的操作细节。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "Native Qdrant top-5 returned set; complete persisted point pool separately snapshotted"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "source ID coverage is not content fidelity; entire unselected library is not presented"
+        }
+      ],
+      "reason": "本次只取回两条相关性很低的通用描述（0.414/0.230），且来源题没有进入候选或溯源标注，因此目标需要的那类经验根本没有进入可见上下文；这不等于它不存在于未展示的库中。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "目标提示只说 \"as described in the raw problem\" 而未在可见提示中复述 DataFrame→CSV 要求，契约可能被欠说明（EVAL_CONTRACT 候选），但参考解与来源题文档一致，倾向仍是执行偏差。",
+    "没有反事实：即使注入的通用候选完全无用，也无证据表明它们对结果有正面或负面影响；同理不能断言记忆导致失败。",
+    "完整持久化库未展示，无法排除某条适用的 base64 规则存在但未被本次检索返回。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法判断来源题是否在别处写入了可执行条目，也未观察到其原始 episode 是否留存。",
+    "token_count 为 null，无法衡量注入开销；未选中候选不得据本包推断为不存在。",
+    "目标失败仅由隐藏评测的单个断言暴露，隐藏测试的完整覆盖范围未知。"
+  ],
+  "minimal_intervention": {
+    "change": "把普通 dict 的序列化从 json.dumps 改为 pd.DataFrame(dataset).to_csv(index=False) 再做 base64 编码",
+    "fixed": "保持相同的提示、同样的两条注入候选与注入预算、相同的工具与提交协议",
+    "falsifier": "若做此改动后同一断言仍失败，或轨迹显示目标已按 DataFrame→CSV 处理却仍不通过，则该执行层假设被反驳"
+  },
+  "causal_claim": false
+}

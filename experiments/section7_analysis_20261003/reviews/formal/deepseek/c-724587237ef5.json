@@ -1,0 +1,112 @@
+{
+  "case_id": "c-724587237ef5",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "包内只有 target_update_的 source_event_ids 引用（stream.task-001.attempt-1），没有任何源题轨迹或源经验文本，无法核验这三条记忆是否来自合法源经验，故不虚构 gold source。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "无可比对的源内容；仅凭目标环境行为不能判定与来源经验的保真度，故记 unknown。"
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Goal: go to the purple door"
+        },
+        {
+          "section": "injection/0",
+          "quote": "When a high-level 'go to <object>' action is available, always prefer it over manual turn/move sequences."
+        }
+      ],
+      "reason": "注入内容直接针对 BabyAI 的 'go to <object>' 高层动作与按颜色精确选目标，与本题目标同构。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "No purple door is visible yet, so I'll explore through one of the available doors."
+        },
+        {
+          "section": "target_visible",
+          "quote": "go to purple closed door 1"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Before acting, check the available actions list first"
+        }
+      ],
+      "reason": "先 check available actions、未误选蓝色门、对目标色使用高层 go-to 并成功提交，行为与三条记忆一致；仅是可见行为代理。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "When a high-level 'go to <object>' action is available, always prefer it over manual turn/move sequences."
+        },
+        {
+          "section": "target_visible",
+          "quote": "go to purple closed door 1"
+        }
+      ],
+      "reason": "可见轨迹与该策略一致（最终以 go-to 高层动作完成、未做手工 turn/move 寻径），但无消融对照，不能证明记忆造成成功。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Before acting, check the available actions list first"
+        },
+        {
+          "section": "target_update_operations",
+          "quote": "If the goal object (e.g., a door of a specific color) is not visible in the current room, do not guess its location — explore first."
+        }
+      ],
+      "reason": "原注入记忆未覆盖“目标不可见时如何探索”的情形，而目标回合正遇到此缺口并由此产生新经验，说明源经验只部分适用；这只表明覆盖缺口，不说明旧记忆错误。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "observable_candidates"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Before acting, check the available actions list first"
+        }
+      ],
+      "reason": "三条候选全部进入注入、dropped 为空且分数缺失，说明本轮检索未做区分性筛选；这是可见性事实，不证明检索有益或有害。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "该轨迹也可由通用 BabyAI 解题惯例（先查看可用动作、目标不可见时探索、可用则用 go-to）解释，与注入记忆无关。",
+    "无源题轨迹，三条记忆的合法来源与保真度无法核验，故无法排除记忆内容与源经验不符。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "缺少源题轨迹/源经验文本，无法判定 source_quality 与 memory_fidelity。",
+    "无记忆关闭/单条注入的反事实对照，无法判断记忆对成功的因果贡献。",
+    "retrieval 中 score 为 null、token_count 未测，排序与预算占用情况不可见。"
+  ],
+  "minimal_intervention": {
+    "change": "在同一目标、同一环境下追加一次记忆屏蔽（或仅注入 sai-00001）的对照运行，比较动作序列与是否仍需探索。",
+    "fixed": "保持相同历史、相同环境种子/观测、相同工具与预算。",
+    "falsifier": "若屏蔽记忆后仍出现同样的 check-actions→探索→go-to 序列并成功，则 USE_TRANSFER 候选被削弱。"
+  },
+  "causal_claim": false
+}

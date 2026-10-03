@@ -1,0 +1,121 @@
+{
+  "case_id": "c-ef428b3c53ed",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "All verifications pass: both docstring examples reproduce exactly, the histogram's bar heights match the frequency array, and title/axis labels are set verbatim. Submitting."
+        },
+        {
+          "section": "source_prompt",
+          "quote": "The title of the histogram is \"Histogram of Dice Rolls\"."
+        }
+      ],
+      "reason": "Source episode solved its own task correctly, but it is a single-set variant whose histogram title/labels differ from the target contract, so it supports only the generic per-roll seeding/histogram technique."
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        }
+      ],
+      "reason": "The source record was neither retained in method state nor injected, so how faithfully any source content survives cannot be assessed from this packet."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The histogram should have the title 'Combined Histogram of Dice Rolls'"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "The title of the histogram is \"Histogram of Dice Rolls\"."
+        }
+      ],
+      "reason": "The internally-seeded generation idea transfers, but the target adds multi-set combination and changes the histogram title/y-axis labels, so only part of the source context applies."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "# 6) reproducibility: internal seeding makes same-seed deterministic (smoke, low weight)"
+        }
+      ],
+      "reason": "The solver ran cross-seed divergence, aggregate invariants and degenerate zero-probes and explicitly de-weighted the same-seed check, behavior consistent with injected guidance; a proxy, not proof it was read."
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "# 6) reproducibility: internal seeding makes same-seed deterministic (smoke, low weight)"
+        },
+        {
+          "section": "injection/35",
+          "quote": "keep it but relabel it explicitly as a zero-evidential-weight smoke test"
+        }
+      ],
+      "reason": "Target kept a same-seed check but relabeled it low-weight, matching the err-00132 disposition, and used cross-seed/degenerate probes per the err-00070 template; alignment is a visible proxy and cannot show memory caused the outcome."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_block_byte_budget"
+        }
+      ],
+      "reason": "The sai-* candidate blocks were dropped for byte budget while err-*/misc-* blocks were injected, i.e. a packing/selection event, not a retrieval miss or a content judgment about those blocks."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        }
+      ],
+      "reason": "No direct source record was retained, injected, or in observable candidates, so a D0 direct-reuse opportunity was absent; only generic semantic bullets were available."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "Target executed, submitted, and scored correct with a clean exit; it anchors that any attribution is to a success, not a failure."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The strong verification battery could come purely from the solver's own testing competence with no memory influence; no ablation or counterfactual exists.",
+    "The 'helpful' COUNTER_TAGS were produced in target_update (after the target) and cannot establish that those memories were consulted or caused success."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether any injected err-*/misc-* item was actually read or influenced choices.",
+    "Whether source-episode content was present in memory state at target time (provenance is absent).",
+    "Why the specific histogram-bin construction was chosen (memory vs. model default)."
+  ],
+  "minimal_intervention": {
+    "change": "Re-run this target with the err-*/misc-* injections disabled (ablation), holding everything else constant.",
+    "fixed": "Same source/target environment, same solver, same packing byte budget.",
+    "falsifier": "If the ablated run yields an equally correct submission with the same cross-seed, aggregate-invariant, degenerate-input battery and the same low-weight reproducibility labeling, the USE_TRANSFER candidate is not supported."
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,135 @@
+{
+  "case_id": "c-2a27f7e95f41",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_visible",
+          "quote": "level_data[department_code] = [random.choice(LEVELS) for _ in range(num_employees)]"
+        }
+      ],
+      "reason": "源题离线评测通过，且源实现按部门生成等级列表；但其实现只处理单个 dict，未按 PREFICES 过滤，通过不等于所有条件都适合目标。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "目标侧没有可见注入记忆文本，机械字段也显示记忆策略禁用且注入数为零，因此目标相关源内容未出现在目标上下文中。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "employee levels ('Junior', 'Mid', 'Senior') in that department"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert len(json.loads(new_solution([{'EMP$$': 3, 'MAN$$': 2}, {'DEV$$': 4, 'HR$$': 1}]))['EMP$$']) == 3"
+        }
+      ],
+      "reason": "源题的按部门采样等级列表思路可用于目标单条 dict 子问题，但目标还需要合并多个 dict 并返回列表形式，源经验只能部分覆盖。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "distribution[code] = _random_distribution(count)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "return json.dumps(distribution)"
+        }
+      ],
+      "reason": "最终提交输出每部门等级计数 dict，而不是源题式的 random.choice(LEVELS) 等级列表，未见源方法被可见采用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ValueError: Dictionary entry must contain a department code and a count: {'EMP$$': 3, 'MAN$$': 2}"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"tests_run\": 0"
+        }
+      ],
+      "reason": "提交代码在隐藏测试输入上直接抛异常且未通过测试，属于可见执行失败，不能证明记忆造成成功或负迁移。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "generate a JSON object that represents the distribution of employee levels across multiple departments"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert len(json.loads(new_solution([{'EMP$$': 3, 'MAN$$': 2}, {'DEV$$': 4, 'HR$$': 1}]))['EMP$$']) == 3"
+        }
+      ],
+      "reason": "目标题面描述与隐藏测试对输入/输出的具体契约存在潜在不一致候选，但这只是契约解释竞争项，不是记忆结论。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"distance\": 78"
+        }
+      ],
+      "reason": "存在正确且距离较近的源经验机会，但证据包明确显示源 provenance 未注入，不能据此推断目标实际检索或使用了该经验。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "目标题面可能未明确要求列表-of-dicts 输入和列表式等级输出，失败可能来自 EVAL_CONTRACT 歧义而非记忆。",
+    "机械字段显示记忆禁用且注入为零，目标失败可能与任何源经验无关。",
+    "目标代码对多种输入格式做过宽泛兼容，可能源于模型猜测而非记忆迁移。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "真实目标运行是否在证据包之外接触过源内容，无法由现有记录确认。",
+    "隐藏测试的输入/输出契约是否应被视为已由 target_prompt 完整表达，仍有解释空间。",
+    "若源方法曾被注入，是否会被检索并适配到列表-of-dicts 聚合场景，无法没有反事实地判断。"
+  ],
+  "minimal_intervention": {
+    "change": "让 new_solution 把每个列表元素当作 department-code 到 count 的映射，并按目标测试输出每部门等级列表，而不是等级计数 dict。",
+    "fixed": "保持相同源历史、禁用记忆设置、目标题面、工具和 token 预算不变。",
+    "falsifier": "若同一提交在不改代码时通过隐藏测试，或证据显示源方法被实际注入并可见采用，则 TASK_EXECUTION/no_visible_use 候选会被削弱。"
+  },
+  "causal_claim": false
+}

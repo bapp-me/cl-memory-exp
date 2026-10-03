@@ -1,0 +1,146 @@
+{
+  "case_id": "c-8f9b0246bcff",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(animal_dict, max_count=10, seed=0):"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=35:True:5"
+        }
+      ],
+      "reason": "Source passed 35 checks, but its single-dict random-count contract only partially matches target list/aggregate task."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "random.randint(1, max_count) for animal in ANIMALS"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "is a random integer between 1 and max_count (inclusive)"
+        }
+      ],
+      "reason": "Source artifact correctly implements its own prompt's random counts and list-valued reversal; this does not establish target applicability."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "list_of_animal_dicts"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(animal_dict, max_count=10, seed=0):"
+        }
+      ],
+      "reason": "Shares imports/ANIMALS/Counter/reverse structure, but target changes to list aggregation and actual occurrences per prompt, so source only partially applies."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "counter = collections.Counter(all_animals)"
+        },
+        {
+          "section": "source_visible",
+          "quote": "random.randint(1, max_count) for animal in ANIMALS"
+        }
+      ],
+      "reason": "Visible target code uses actual Counter counts and never calls source's random.randint; no visible reference to retrieved memories. Behavioral proxy only."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "count the occurrences of each predefined animal name across all groups"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "random.randint(1, max_count)"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "EVALUATOR_RESULT=6:True:0"
+        }
+      ],
+      "reason": "Prompt says actual occurrence counts across groups, while reference/tests expect random per-animal counts and all ANIMALS keys; offline still marks target correct. Candidate contract/test ambiguity, not proof of memory failure."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_episode_byte_budget\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "Source provenance was an observable candidate but not injected; oldest complete episodes were dropped by byte budget. This is packing visibility, not retrieval failure."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(animal_dict, max_count=10, seed=0):"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=35:True:5"
+        }
+      ],
+      "reason": "A legal correct source episode with reverse-dict/Counter/ANIMALS/seed elements existed, providing transfer opportunity; it does not prove target use."
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "animal: [name for name, _ in group]"
+        },
+        {
+          "section": "target_submission",
+          "quote": "reversed_list = [{v: k for k, v in d.items()} for d in list_of_animal_dicts]"
+        }
+      ],
+      "reason": "Source maps animal to list of names and random counts; target maps animal to single person and actual counts. Semantic shift may be target-appropriate or reference-misaligned; not causal."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "No visible source use; target success can be independent of memory.",
+    "PACKING_VISIBILITY dropped source provenance, so transfer could not be observed even if available.",
+    "Unselected complete memory library not included; absence of evidence is not evidence of absence."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Actual hidden target tests and intended max_count semantics are not fully visible.",
+    "Whether the target agent saw or used any injected memory is not observable from retained visible actions.",
+    "Why offline target evaluation reports correct despite mismatch with the provided reference/tests."
+  ],
+  "minimal_intervention": {
+    "change": "Clarify the target contract so max_count semantics (filter vs random upper bound) and reversed-dict value shape match the reference/tests.",
+    "fixed": "Same history/environment/budget.",
+    "falsifier": "If hidden tests confirm the target prompt's actual-count/filter semantics and the reference solution is only an alternative, the EVAL_CONTRACT candidate weakens."
+  },
+  "causal_claim": false
+}

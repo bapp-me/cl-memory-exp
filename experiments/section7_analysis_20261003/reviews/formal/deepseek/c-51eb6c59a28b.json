@@ -1,0 +1,142 @@
+{
+  "case_id": "c-51eb6c59a28b",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        },
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "{\"facts\": []}"
+        }
+      ],
+      "reason": "配对源题通过（5 tests / 10 checks），但源端未写入任何事实，可复用产物有限。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "source_visible",
+          "quote": "filtered = dataframe[dataframe['Word'].astype(str).str.startswith(letter, na=False)]"
+        }
+      ],
+      "reason": "注入文本只与源题共享 pandas DataFrame / value_counts 这类泛化概念，源题的按字母过滤语义与目标所需的按类别分组长度计数都不在其中，且提到 matplotlib/柱状图而源可见轨迹无此内容。"
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "target_submission",
+          "quote": "    return {category: dict(counter) for category, counter in counts_by_category.items()}"
+        }
+      ],
+      "reason": "目标只需按 Category 汇总词长计数的普通字典，不涉及绘图或 'value' 列，注入内容与目标契约无实质对应。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "target_submission",
+          "quote": "    words = re.findall(r\"[A-Za-z0-9]+(?:'[A-Za-z0-9]+)*\", content)"
+        }
+      ],
+      "reason": "提交实现只用 re 与 collections.Counter，可见轨迹中无 DataFrame/matplotlib/绘图痕迹，属行为代理而非因果结论。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "两个候选都是主题句级描述，无代码、无按类别分组或词长计数结构，能供目标复用的可操作内容很少；这只说明表示粒度，不证明库中无其他内容。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "target_submission",
+          "quote": "    return {category: dict(counter) for category, counter in counts_by_category.items()}"
+        }
+      ],
+      "reason": "最终提交与可见执行中看不到注入的 chart/'value' 列内容被采用或改编；仅证明无可见复用，不能证明记忆无效或造成成功。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": [],"
+        },
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "{\"facts\": []}"
+        }
+      ],
+      "reason": "源题结束时无任何写入操作且 writer 输出空 facts，因此后续任何泛化摘要都不可能携带源的过滤/计数细节；这是写入准入问题，不是已存未检索。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "Ran 0 tests in 0.000s"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"checks_executed\": 1"
+        }
+      ],
+      "reason": "目标判为 correct 仅由 1 项检查支撑且测试运行数为 0，判分深度不明，只标为契约候选，不重打分。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "该题是常规代码生成任务，无记忆也可完成；成功不能反推记忆被复用。",
+    "注入的两条摘要可能来自共享库中的其他来源而非 index 44 的配对源；provenance 未保留，绑定关系未知。",
+    "可见轨迹无法区分“注入内容被忽略”与“注入内容被读但未影响产出”。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "memory_ids 为空且 source_provenance 未注入，无法证明两条注入记忆与本配对源的来源关系。",
+    "隐藏测试深度未知（Ran 0 tests 与 checks_executed=1 并存）；目标 token 计数不可得。",
+    "未提供完整未选记忆库，不能据本包推断不存在其他相关记忆。"
+  ],
+  "minimal_intervention": {
+    "change": "在源题结束处写入一条提炼事实（按字母过滤 + 词长 value_counts 的操作语义），替代空 facts 与空 operations。",
+    "fixed": "保持相同的历史、相同的检索 top-5/Qdrant 池、相同的 2 条注入预算与相同目标提示。",
+    "falsifier": "若注入源特定事实后，目标提交与可见轨迹仍完全不出现 DataFrame/value_counts/绘图类痕迹，则“表示粒度缺口”解释被削弱。"
+  },
+  "causal_claim": false
+}

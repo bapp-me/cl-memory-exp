@@ -1,0 +1,139 @@
+{
+  "case_id": "c-27a382753b32",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=15:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Calculate the frequency of combinations of elements in a DataFrame."
+        },
+        {
+          "section": "source_visible",
+          "quote": "cols = ['item1', 'item2', 'item3', 'item4', 'item5']"
+        }
+      ],
+      "reason": "Source episode passed its own tests, but it solves a single DataFrame with hardcoded columns, so it is only a partial pattern source for the multi-DataFrame target."
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "No memory or source provenance was injected into the target and memory policy is disabled, so target-side fidelity of injected memory content is not applicable."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Given multiple DataFrames, each containing a set of items in rows"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df):"
+        },
+        {
+          "section": "source_visible",
+          "quote": "cols = ['item1', 'item2', 'item3', 'item4', 'item5']"
+        }
+      ],
+      "reason": "The source combination-frequency idea is conceptually relevant, but its single-DataFrame, hardcoded-column implementation does not directly cover the target's multiple-DataFrame contract."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "target_submission",
+          "quote": "def overall_combination_frequency(*dfs):"
+        }
+      ],
+      "reason": "The target final artifact is a standalone multi-DataFrame implementation and the mechanical record reports zero injected items; no visible source-derived content appears."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "items = [str(v) for col, v in row.items()"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "overall_combination_frequency(df1, df2, df3) == {(1, 4): 1, (2, 5): 2, (3, 6): 3, (4, 7): 2, (5, 8): 1}"
+        }
+      ],
+      "reason": "The submitted code stringifies row values, so integer combinations become string tuples and fail hidden assertions expecting integer tuple keys; this is directly visible execution, not proof of memory influence."
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "return tuple(sorted(items))"
+        },
+        {
+          "section": "target_submission",
+          "quote": "items = [str(v) for col, v in row.items()"
+        }
+      ],
+      "reason": "The chosen row representation is a sorted tuple of strings, which changes item identity/type relative to the expected native-value tuples; this is a code-level representation choice."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true"
+        }
+      ],
+      "reason": "A correct source episode exists, but no source provenance was injected and no memory text was added, so there is no observed retrieval/use opportunity; this does not show the source would have helped or harmed."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "The prompt does not explicitly require preserving native scalar types or sorting behavior, while the hidden test asserts integer tuple keys; this is a possible contract-under-specification candidate.",
+    "Memory was disabled/not injected, so the observed failure is not evidence of negative transfer, effective reuse, forgetting, or retrieval failure.",
+    "The source's single-DataFrame hardcoded-column pattern could have been only partially applicable if it had been injected, but no injection occurred here."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "Full unselected memory library is not included, so absence of other memory content cannot be inferred from this packet.",
+    "Whether the target's `str` conversion was influenced by any prior or latent memory cannot be determined from visible traces.",
+    "No source/target update contents are provided, so retention or post-task state changes cannot be assessed."
+  ],
+  "minimal_intervention": {
+    "change": "Remove `str(v)` from the target combination construction so native row values, including integers, are preserved as tuple keys.",
+    "fixed": "Keep the same target prompt, multi-DataFrame inputs, hidden tests, and disabled memory policy.",
+    "falsifier": "If a run without `str(v)` still fails the same type-key assertion, or if target traces show injected source provenance, the task-execution/no-memory explanation is weakened."
+  },
+  "causal_claim": false
+}

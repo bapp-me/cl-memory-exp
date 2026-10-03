@@ -1,0 +1,119 @@
+{
+  "case_id": "c-3742a336ab51",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Encodes a dict of list as a Base64 string."
+        }
+      ],
+      "reason": "源题同族（dict→DataFrame→CSV→Base64）并在 5 项测试上判为正确，是合法来源经验；局限在于源题只处理单个 dict，目标改为 dict 列表。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/29",
+          "quote": "do not let to_csv's default index=True leak into the output"
+        }
+      ],
+      "reason": "该条关于 to_csv 默认 index=True 会污染输出的陈述与参考解一致（参考解用 to_csv(index=False)），对目标必要内容保真。"
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "csv = df.to_csv(index=False)"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Each dataset needs to be encoded into a Base64 string"
+        }
+      ],
+      "reason": "目标仍是 CSV→Base64 序列化，index=False 直接适用；目标新增的是逐数据集迭代与顺序保持，记忆对此未覆盖但未冲突。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "per err-00074: must use `index=False` so no redundant index column leaks into the serialized CSV"
+        }
+      ],
+      "reason": "可见轨迹明确点名 err-00074 并采用 index=False，提交代码与之一致，无任何误用迹象；这是行为代理，不是因果证据。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "per err-00074: must use `index=False` so no redundant index column leaks into the serialized CSV"
+        },
+        {
+          "section": "injection/29",
+          "quote": "For DataFrame-to-CSV encoding tasks, do not let to_csv's default index=True leak into the output"
+        }
+      ],
+      "reason": "可见轨迹点名该记忆并应用其建议，与提交实现一致，支持一致的可见复用；但引用不能证明该记忆造成成功，源题在无记忆时也自然选了同一做法。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "to_csv() WITHOUT index=False prepends a redundant index column"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": [\n    \"sai-00073\",\n    \"err-00074\"\n  ]"
+        }
+      ],
+      "reason": "源题同族且成功，其在源结束时写入的 index=False 经验构成目标可用的合法来源，并被追踪到本目标；来源覆盖不等于内容在目标仍然必要或适用。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_block_byte_budget\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 48"
+        }
+      ],
+      "reason": "检索先选中约 110 条，随字节预算按 oldest_complete_block_byte_budget 淘汰，实际仅注入 48 条；被淘汰条目未出现在上下文，因此其存在不构成干扰或检索失败的证据。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "index=False 可能只是对 to_csv 默认行为的自然读法：源题 agent 在完全没有该记忆时也选了同一实现，故成功未必依赖该记忆，记忆可能冗余。",
+    "可见的 err-00074 引用可能是对已做出决策的事后命名，而非驱动决策的记忆检索，无反事实无法区分。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "目标隐藏正确性不可得，仅离线评估返回 correct=true、tests_run=0，无法进一步核验边界。",
+    "未注入的完整记忆库未提供，不能据本包断言缺席或推断无干扰。",
+    "无法确定若移除 err-00074，目标是否仍会选用 index=False 并通过。",
+    "源题原始 episode 未保留（raw_source_episode_retained_in_method_state=false），只能凭来源覆盖与更新操作推断内容。"
+  ],
+  "minimal_intervention": {
+    "change": "在保持目标提示、种子、预算与工具不变的前提下，仅从注入集中移除 err-00074。",
+    "fixed": "相同的目标 prompt、相同的检索/打包预算、相同模型与沙箱环境、相同的离线判分 mask。",
+    "falsifier": "若移除 err-00074 后目标仍产出逐数据集 index=False 的实现并通过，则说明该记忆对成功并非必要，可见复用主张被削弱。"
+  },
+  "causal_claim": false
+}

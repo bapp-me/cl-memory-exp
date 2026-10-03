@@ -1,0 +1,143 @@
+{
+  "case_id": "c-9c61b1c6a46c",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=27:True:5"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "df['Mean'] = df[columns].mean(axis=1)"
+        }
+      ],
+      "reason": "源任务单矩阵 PCA 通过且有合法派生经验；但源经验只覆盖单矩阵列/行均值与标签，未覆盖目标的多矩阵返回契约。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "df['Mean'] = df[columns].mean(axis=1)"
+        }
+      ],
+      "reason": "源派生的两条经验对源契约描述准确（行均值、Component i 命名、cumsum 画图），未见失真；但保真不等于在目标中可用。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "build output columns generically as [f'Component {i+1}' for i in range(n_components)]"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "return a list of dataframes, each containing the PCA transformed data and the mean of each component for the corresponding matrix"
+        }
+      ],
+      "reason": "源经验的列命名与均值语义可部分迁移到目标，但目标新增了多矩阵聚合与返回顺序契约，源未覆盖，故仅为部分适用。"
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "assert df.shape == (m.shape[0] + 1, 3), df.shape"
+        },
+        {
+          "section": "injection/30",
+          "quote": "Do not build verification fixtures that structurally mirror your implementation's own assumption"
+        }
+      ],
+      "reason": "可见的自检断言把实现自选的 +1 Mean 行写进 oracle，恰是被注入 err-00152 警告的不可判别夹具反模式；这仅为行为代理，不能证明记忆导致了失败。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "df.loc['Mean'] = transformed.mean(axis=0)"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert 'Mean' in df.columns, 'Each dataframe should have a Mean column'"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "TypeError: object of type 'Figure' has no len()"
+        }
+      ],
+      "reason": "提交体把均值做成额外行、列名用 PCn 且以 (fig, dfs) 返回，与测试要求的 (dfs, ax)、Mean 列、Component 命名直接冲突，是失败的直接原因；但不能据此归因于记忆。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"sai-00011\",\n    \"sai-00012\""
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_block_byte_budget\""
+        }
+      ],
+      "reason": "源派生且与目标契约相关的 sai-00011/sai-00012 已被检索并进入 selected_before_packing，却在打包阶段因字节预算被丢弃；这说明是打包淘汰而非检索失败，但无对照，不能据此断言注入后必成功。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Additionally, return a list of dataframes, each containing the PCA transformed data and the mean of each component for the corresponding matrix."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "dfs, ax = new_task_func(data_matrices, n_components=2)"
+        }
+      ],
+      "reason": "题面把图放在前、DataFrame 列表放在后，而测试与参考解按 (dfs, ax) 解包，存在顺序歧义/潜在题测不一致；仅作为候选，需题面或评分说明澄清。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "assert df.shape == (m.shape[0] + 1, 3), df.shape"
+        },
+        {
+          "section": "injection/30",
+          "quote": "Do not build verification fixtures that structurally mirror your implementation's own assumption"
+        }
+      ],
+      "reason": "注入的验证类经验要求夹具能判别竞争解释，而本题自检 oracle 与实现假设同构（额外行/额外曲线），因此通过并不构成证据；无法证明记忆因果作用。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "源派生经验在打包时被丢弃（PACKING_VISIBILITY），无法断定记忆缺失是失败原因；无该经验的反事实。",
+    "题面返回顺序本身可能被合法读成 (plot, list)，失败也可能是题测契约不清而非执行错误。",
+    "没有反事实对照，成功/失败都不能归因于记忆，可能只是模型对输出契约的独立解读选择。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "若仅修正返回顺序但保留 Mean 行，是否能通过隐藏测试（测试还会检查 'Mean' in df.columns）。",
+    "sai-00011/sai-00012 若被实际注入是否改变结果。",
+    "注入的 45 条 err-*/misc-* 中是否有任何一条被可见使用，无法从轨迹区分。",
+    "未选中的完整记忆库内容未知，不能据此推断记忆缺失。"
+  ],
+  "minimal_intervention": {
+    "change": "让源派生的输出契约经验（Component i 列命名、Mean 作为列而非行，以及正确返回顺序）在打包阶段不被字节预算淘汰而实际进入目标上下文。",
+    "fixed": "同一目标题、同一源历史与源更新、相同的检索候选与整体预算。",
+    "falsifier": "若注入 sai-00011/sai-00012 后提交仍采用 Mean 行/反转返回顺序，则打包假设被反驳。"
+  },
+  "causal_claim": false
+}

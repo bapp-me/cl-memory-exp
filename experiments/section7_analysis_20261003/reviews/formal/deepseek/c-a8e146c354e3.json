@@ -1,0 +1,138 @@
+{
+  "case_id": "c-a8e146c354e3",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=39:True:6"
+        }
+      ],
+      "reason": "源题自身 6 项测试通过、39 项检查通过，是合法源经验；但它只覆盖单数据集 task_func，不足以覆盖目标新增的报告结构。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "X = sm.add_constant(X)"
+        },
+        {
+          "section": "source_visible",
+          "quote": "X = sm.add_constant(X)"
+        }
+      ],
+      "reason": "注入的源 episode 复现了源函数的校验、add_constant、OLS 等核心内容，未见内容被改写或丢失；这只涉及源内容本身，不覆盖目标报告键名。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(\n    array: list, random_seed: int = 0"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "# You are given multiple 2D lists representing different datasets."
+        }
+      ],
+      "reason": "源是单 2D 列表返回 (df, results)，目标要多数据集循环并生成带指定键的报告；回归核心可迁移，外层报告契约是新增条件。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "for i, array in enumerate(arrays, start=1):"
+        },
+        {
+          "section": "target_visible",
+          "quote": "X = sm.add_constant(X)"
+        }
+      ],
+      "reason": "可见行为把源的逐数据集回归配方套用到多数据集循环，属一致的适配；这部分与源一致，不能据此判定外层报告结构选择由记忆造成。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "KeyError: 'Dataset 1'"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "reports[f'Dataset {i+1}']"
+        }
+      ],
+      "reason": "提交的报告用 'Dataset_1' 且把 dataframes/regression_results/r_squared_comparison 平铺在顶层，而隐藏测试读取 report['Dataset 1']['DataFrame']，导致 KeyError。这只说明可见产物不符合测试契约，不说明记忆造成了失败。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "return a summary report with the details of each regression analysis."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "'DataFrame': df,"
+        }
+      ],
+      "reason": "可见 prompt 未给出报告键名与嵌套结构（'Dataset {i+1}' 及 'DataFrame'/'Regression Results'/'R-squared' 仅见于参考解与测试）。按规则只标为题意/测试可能不一致的候选。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "X = sm.add_constant(X)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "for i, array in enumerate(arrays, start=1):"
+        }
+      ],
+      "reason": "源回归配方在目标按数据集循环复用，说明存在跨任务复用痕迹；但源 episode 中没有报告 schema，无法证明该复用带来成功或失败。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": ") -> (pd.DataFrame, sm.regression.linear_model.RegressionResultsWrapper):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def summary_report(arrays: list, random_seed: int = 0) -> dict:"
+        }
+      ],
+      "reason": "源返回 (df, results) 元组，目标要求返回嵌套 dict 报告，接口/表示发生改变；该表示差异可能影响外层的键名设计，但不能由现有证据证明记忆导致。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "EVAL_CONTRACT：所需键名/嵌套只存在于隐藏测试，失败可能源于 prompt 欠规范而非 agent 实现缺陷。",
+    "源记忆未包含报告格式信息，agent 只能自行猜测外层结构；这是记忆内容缺失（而非误用）的可能解释。",
+    "其余注入来源（Base64 编码、DatasetID 分组回归）若被部分照搬也可能影响结构选择，但证据不足以支持干扰判断。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "原始题面是否在未展示部分规定过输出键名与嵌套结构，无法确认。",
+    "未选中记忆库未提供，不能推断是否存在其它相关经验。",
+    "无法判断 agent 选择 'Dataset_1' 命名是否受任一注入来源影响。"
+  ],
+  "minimal_intervention": {
+    "change": "把报告构造改为 reports[f'Dataset {i+1}'] = {'DataFrame': df, 'Regression Results': results, 'R-squared': results.rsquared}。",
+    "fixed": "保持相同源记忆注入、相同预算与相同隐藏测试。",
+    "falsifier": "若按参考键名改写后测试仍失败，则说明失败并非报告契约不匹配，候选被反驳。"
+  },
+  "causal_claim": false
+}

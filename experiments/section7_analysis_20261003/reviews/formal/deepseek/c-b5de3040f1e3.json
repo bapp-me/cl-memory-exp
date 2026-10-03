@@ -1,0 +1,135 @@
+{
+  "case_id": "c-b5de3040f1e3",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(text, seed=None):"
+        },
+        {
+          "section": "source_visible",
+          "quote": "random.seed(seed)"
+        }
+      ],
+      "reason": "Source passed its own tests and contains the needed scramble algorithm, but it is a single-text function with global random.seed semantics; target requires a list output and per-text seeding."
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "Memory policy is disabled and no memory content was injected, so target-relevant memory fidelity cannot be assessed."
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "return [task_func(text, seed) for text in texts]"
+        }
+      ],
+      "reason": "Reference solution shows the source single-text function is directly applicable per target text; only a list wrapper is needed."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "No memory was injected, so the visible target code cannot be attributed to memory use; code similarity alone is not use evidence."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "rng = random.Random(seed) if seed is not None else random"
+        },
+        {
+          "section": "source_visible",
+          "quote": "random.seed(seed)"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(new_task_func(['Hello world! This is a test.', 'Python is fun and powerful.'], 123) == ['Hlleo wlrod! This is a tset.', 'Photyn is fun and pfwuoerl.'])"
+        }
+      ],
+      "reason": "Target uses one local RNG for the whole list and does not reset seed per text, while the source/reference path repeatedly calls the single-text function with random.seed(seed); hidden exact outputs therefore diverge. This is target-side execution, not proof memory caused failure."
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(text, seed=None):"
+        },
+        {
+          "section": "target_submission",
+          "quote": "def new_task_func(texts, seed=None):"
+        }
+      ],
+      "reason": "Source represents the task as a single-text function with per-call seed scope, while the target flattens it to a list-level function/RNG scope, changing the seed-state representation. This is a candidate mismatch, not proof of memory use."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should output a list of scrambled texts, one for each input text."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "return [task_func(text, seed) for text in texts]"
+        }
+      ],
+      "reason": "Target prompt only specifies list output and an optional seed, while hidden expected outputs follow source-style per-text reseeding; exact seeded sequence is not stated in the prompt, so contract ambiguity is a candidate, not proved unfair."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "A correct and relevant source solution exists, but it was not injected into this target; source availability alone does not imply retrieval or use."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "No memory was injected (injected_count 0, memory disabled), so the failure is independent of any D1 memory use.",
+    "The hidden expected outputs may assume per-text reseeding from the source function; if the target prompt did not require that exact sequence, this is a contract ambiguity rather than pure execution error.",
+    "Visible target checks only validate invariants and determinism, so they cannot establish hidden exact-output correctness.",
+    "Without counterfactual source injection, it is unknown whether showing source task_func would have changed the implementation."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the intended target context supplied task_func; the target prompt alone does not define it.",
+    "Whether all hidden tests or only the shown assertion failed.",
+    "Whether any unselected memory was available; packet does not include the full library.",
+    "Whether per-text seed reset is required by the target contract or only by the reference solution."
+  ],
+  "minimal_intervention": {
+    "change": "Make new_task_func delegate to the source single-text function per item (or reseed global random before each text) so each text is scrambled with the same seed state.",
+    "fixed": "Same source/target prompts, no memory injection, same seed values and hidden evaluator.",
+    "falsifier": "A run where the current list-level RNG implementation matches the hidden expected seeded outputs, or evidence that hidden expected used list-level RNG state, would refute TASK_EXECUTION."
+  },
+  "causal_claim": false
+}

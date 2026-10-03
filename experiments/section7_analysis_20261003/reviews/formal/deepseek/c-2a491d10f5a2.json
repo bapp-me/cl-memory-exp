@@ -1,0 +1,144 @@
+{
+  "case_id": "c-2a491d10f5a2",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Encodes a dict of list as a Base64 string. The dict is first converted to a Pandas DataFrame."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        }
+      ],
+      "reason": "Source task passed its own tests, but it covers a single dict-to-DataFrame/CSV setting and does not prove all source statements or target variants."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "Workflow: Serialize Data to Encoded/String Format"
+        },
+        {
+          "section": "source_visible",
+          "quote": "csv = data.to_csv(index=False)"
+        }
+      ],
+      "reason": "The source-derived serialization workflow preserves the relevant DataFrame-to-CSV-to-Base64 rule without contradiction."
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "pd.DataFrame(...).to_csv(index=False)"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "csv = df.to_csv(index=False)"
+        }
+      ],
+      "reason": "The target's expected encoding matches the source workflow's DataFrame/CSV/Base64 procedure; the main added condition is wrapping datasets in a list."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "payload = json.dumps(dataset).encode('utf-8')"
+        },
+        {
+          "section": "source_visible",
+          "quote": "csv = data.to_csv(index=False)"
+        }
+      ],
+      "reason": "The submitted target solution visibly uses JSON serialization rather than the source-visible DataFrame/CSV serialization rule."
+    }
+  },
+  "labels": [
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "## Workflow: Serialize Data to Encoded/String Format"
+        },
+        {
+          "section": "injection/0",
+          "quote": "## Workflow Seeded Random Data Generation"
+        }
+      ],
+      "reason": "A source-derived serialization workflow matching the hidden CSV/Base64 expectation appears in the auxiliary library, but the injected texts shown include unrelated workflows and no serialization workflow. This supports a candidate retrieval/selection gap, not proof that this workflow was stored, injected, or would have fixed the answer."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "payload = json.dumps(dataset).encode('utf-8')"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(process_datasets([{'name': ['Alice', 'Bob']"
+        }
+      ],
+      "reason": "The directly visible submitted implementation serializes dict datasets as JSON and fails the offline assertion, which is a target-execution error regardless of memory."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "csv = data.to_csv(index=False)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "payload = json.dumps(dataset).encode('utf-8')"
+        }
+      ],
+      "reason": "The source-visible CSV/Base64 pattern has no visible counterpart in the target submission, consistent with failed transfer of the relevant rule. This does not prove the memory was injected or that it would cause success."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "as described in the raw problem"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "Then convert the data franme to CSV format and encoded to bytes"
+        }
+      ],
+      "reason": "The visible target prompt omits the raw problem's expected CSV/DataFrame encoding while the hidden test enforces it, making a contract-ambiguity candidate possible; the raw problem text is not in evidence."
+    }
+  ],
+  "primary_hypothesis": "RETRIEVAL",
+  "competing_explanations": [
+    "TASK_EXECUTION: the agent directly chose json.dumps rather than DataFrame-to-CSV encoding.",
+    "EVAL_CONTRACT: the visible target prompt may not expose the raw problem's required CSV format.",
+    "USE_TRANSFER: even if a relevant workflow was injected, the target execution shows no visible adaptation of it.",
+    "No counterfactual is available, so it is unknown whether injecting the serialization workflow would have changed the final answer."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the source-derived serialization workflow was actually in the target memory store but not retrieved, versus absent/not written.",
+    "Whether the target agent could see the raw problem text specifying DataFrame/CSV encoding.",
+    "Whether any injected memory influenced the JSON choice; no counterfactual or ablation is present.",
+    "The hidden test evidence is only one assertion and does not expose full scoring details."
+  ],
+  "minimal_intervention": {
+    "change": "Ensure the source-derived Serialize Data to Encoded/String Format workflow, especially DataFrame-to-CSV-to-Base64, is injected into the target context.",
+    "fixed": "Keep the same target prompt, list-of-datasets input, model, tool protocol, and budget.",
+    "falsifier": "If the serialization workflow is injected and the agent still uses JSON/does not convert dicts to DataFrame CSV, or if the raw problem already specified CSV and failure persists, the retrieval-injection hypothesis is weakened."
+  },
+  "causal_claim": false
+}

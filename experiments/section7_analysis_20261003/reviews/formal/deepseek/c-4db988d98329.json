@@ -1,0 +1,140 @@
+{
+  "case_id": "c-4db988d98329",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        },
+        {
+          "section": "source_visible",
+          "quote": "leaps = LEAP_SECONDS[LEAP_SECONDS > start.year]"
+        }
+      ],
+      "reason": "Leap-second source task passed its offline tests, but its per-date leap-year boundary uses `> start.year`, and no source memory operation/fact was admitted for reuse."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        }
+      ],
+      "reason": "No target-relevant leap-second content is present in the injected memories; visible source memory operations are empty."
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        }
+      ],
+      "reason": "Injected summaries concern DataFrame plotting/matplotlib, while the target requires datetime/dateutil leap-second arithmetic."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "leap_moments = [datetime(int(y) + 1, 1, 1, 0, 0, 0) for y in LEAP_SECONDS]"
+        }
+      ],
+      "reason": "The target code uses datetime/dateutil logic and shows no visible adoption of the injected bar-chart/pandas content."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "== sum([task_func('1972-01-01'), task_func('2000-01-01'), task_func('2020-01-01')]))"
+        },
+        {
+          "section": "target_submission",
+          "quote": "total += elapsed + leaps"
+        }
+      ],
+      "reason": "The submitted aggregate implementation fails the hidden equality check; it directly accumulates float elapsed seconds instead of delegating each date to task_func and summing per-date integer results. This is direct execution evidence, not proof about memory influence."
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        },
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "\"facts\": []"
+        }
+      ],
+      "reason": "No source-authored memory operation or fact from the leap-second source is visible, so the target could not receive that experience through this memory path. This does not prove the unseen library contained no other stored entries."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "target_visible",
+          "quote": "d = parse(s) if isinstance(s, str) else s"
+        }
+      ],
+      "reason": "Injected memories describe unrelated bar-chart/pandas work; visible target code contains no related adaptation. This is only a behavioral proxy and does not prove the memories had no hidden effect."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "def total_elapsed_seconds(date_list):"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "total_seconds += task_func(date_str)"
+        }
+      ],
+      "reason": "The target prompt exposes only an aggregate function, while the hidden reference/test requires summing task_func per date. This could be an unstated delegation/int-truncation contract, but the reference solution is not an absolute task specification."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "The hidden equality may impose an unstated per-date task_func delegation and integer truncation contract, making this partly a contract mismatch rather than pure implementation error.",
+    "The injected memories are unrelated to date arithmetic, so target failure is not plausibly explained by their content; no counterfactual intervention is available.",
+    "No source leap-second memory was visibly admitted, so absent transfer may reflect no written opportunity rather than retrieval failure.",
+    "Post-target update operations occur after the target episode and cannot explain prior target behavior."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether any relevant leap-second memory existed in the unshown complete memory library.",
+    "Whether the target agent had access to a callable task_func during the target episode.",
+    "Whether the hidden test suite expects float aggregation, integer per-date truncation, or exact task_func delegation.",
+    "Whether the injected unrelated memories affected hidden reasoning despite no visible adoption."
+  ],
+  "minimal_intervention": {
+    "change": "Implement total_elapsed_seconds as `return sum(task_func(d) for d in date_list)`, matching the hidden per-date delegation contract.",
+    "fixed": "Keep the same target prompt, imports, injected memory set, source history, and budget.",
+    "falsifier": "If this delegation variant still fails the same hidden assertion, the delegation/contract hypothesis is weakened."
+  },
+  "causal_claim": false
+}

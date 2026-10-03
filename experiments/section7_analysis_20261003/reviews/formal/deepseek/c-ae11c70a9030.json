@@ -1,0 +1,142 @@
+{
+  "case_id": "c-ae11c70a9030",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=15:True:5"
+        },
+        {
+          "section": "source_visible",
+          "quote": "item_cols = ['item1', 'item2', 'item3', 'item4', 'item5']"
+        }
+      ],
+      "reason": "源题 5 个测试全过、correct=true，但其解法把列名写死为 item1–item5，只在源题的列布局下成立，属有条件的通过。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "item_cols = ['item1', 'item2', 'item3', 'item4', 'item5']"
+        },
+        {
+          "section": "source_visible",
+          "quote": "frequency = Counter(df['combination'])"
+        }
+      ],
+      "reason": "注入的源 episode 复现了源题文本与源 agent 实际写出的代码，与 source_visible 一致；这里只说明内容保真，不代表该内容对目标适用。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "df1 = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "calculate the overall frequency of combinations of elements across all DataFrames"
+        }
+      ],
+      "reason": "'行组合计数'思路对目标仍可用，但目标的 *dfs 契约未限定列名而隐藏测试用 A/B、X/Y，源经验的列名绑定部分不适用。"
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "item_cols = ['item1', 'item2', 'item3', 'item4', 'item5']"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "KeyError: 'item1'"
+        }
+      ],
+      "reason": "可见提交沿用了源代码的写死列名，隐藏用例下取列即报错；这是行为代理，不能据此断言记忆导致了该选择。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df):"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"distance\": 12,"
+        }
+      ],
+      "reason": "存在合法且同族的源经验（源可评分且 correct=true，距离 12），并已被注入目标上下文；这只能说明来源机会与可用性，不说明其内容适用于目标。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "item_cols = ['item1', 'item2', 'item3', 'item4', 'item5']"
+        },
+        {
+          "section": "target_submission",
+          "quote": "item_cols = ['item1', 'item2', 'item3', 'item4', 'item5']"
+        }
+      ],
+      "reason": "源经验是一种绑定固定列名的表示，目标提交逐字沿用同一绑定；仅见字符串/代码重合，属可见代理，不能证明这是记忆造成的失败。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "df['combination'] = list(zip(*[df[col] for col in item_cols]))"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def overall_combination_frequency(*dfs):"
+        }
+      ],
+      "reason": "可见地把单 df 源模式扩展为 *dfs 循环，整体结构被适度改编，但保留了不适用于目标契约的列名假设，属误用候选而非已证负迁移。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The function works correctly across multiple DataFrames, single DataFrames, no DataFrames, and empty DataFrames."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "KeyError: 'item1'"
+        }
+      ],
+      "reason": "直接记录：目标自测用的样例帧都带 item1–item5 列，因此自测通过；离线评测用其他列名，构造组合列时取列即崩溃。"
+    }
+  ],
+  "primary_hypothesis": "REPRESENTATION",
+  "competing_explanations": [
+    "无对照干预，无法排除 agent 不经记忆也会写死 item1–item5；记忆致因不可证。",
+    "目标提示未规定列结构而隐藏测试用 A/B、X/Y，可能存在提示-测试规格不完备的独立原因，与记忆无关。",
+    "另外两个注入 episode（injection/0 随机字符串、injection/2 词长统计）与目标无关，其存在不构成干扰证据。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "注入的源 episode 是否即被模型采纳的检索候选、以何种优先级呈现，证据不足。",
+    "若没有该源经验，目标 agent 是否会写出与 reference 一致的列无关实现，无法判断。",
+    "源题结束后的存储/更新细节与目标结束后的更新情况不可见，不能用于解释本题行为。"
+  ],
+  "minimal_intervention": {
+    "change": "把写死的 item_cols 改为列无关的逐行组元（如按 df.columns/行值构造 tuple），与 reference 的通用做法一致。",
+    "fixed": "保持同一源题历史、同一注入集合、同一隐藏测试与预算不变。",
+    "falsifier": "若隐藏测试的帧本就使用 item1–item5 列而写死版本可以通过，则列名绑定假设被反驳。"
+  },
+  "causal_claim": false
+}

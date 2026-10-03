@@ -42,7 +42,7 @@ def validate(obj,packet):
     if obj.get('case_id')!=packet['case_id']:errors.append('wrong case_id')
     if obj.get('causal_claim') is not False: errors.append('causal_claim must be false')
     text={s['id']:s['text'] for s in packet['evidence']}
-    claims=list(obj.get('labels',[]))+list(obj.get('semantic',{}).values())
+    claims=list(obj.get('labels') or [])+list((obj.get('semantic') or {}).values())
     for claim in claims:
         if not isinstance(claim,dict):errors.append('claim not object');continue
         if 'tag' in claim and claim['tag'] not in TAGS: errors.append('invalid tag')
@@ -53,7 +53,7 @@ def validate(obj,packet):
             if e.get('section') not in text or not e.get('quote') or e['quote'] not in text.get(e['section'],''):
                 errors.append('unmatched quote '+str(e.get('section'))+': '+str(e.get('quote'))[:80])
     for field,choices in ENUMS.items():
-        if obj.get('semantic',{}).get(field,{}).get('value') not in choices:errors.append('invalid '+field)
+        if (obj.get('semantic',{}).get(field) or {}).get('value') not in choices:errors.append('invalid '+field)
     if obj.get('primary_hypothesis') not in TAGS|{'unknown'}:errors.append('invalid primary')
     if len(obj.get('labels',[]))>4:errors.append('too many labels')
     if not obj.get('competing_explanations'):errors.append('no competing explanation')
@@ -107,7 +107,7 @@ def call(provider,case,key,phase):
 
 
 def main():
-    ap=argparse.ArgumentParser();ap.add_argument('--phase',choices=['pilot','pilot2','pilot2_glm_high','formal'],required=True)
+    ap=argparse.ArgumentParser();ap.add_argument('--phase',choices=['pilot','pilot2','pilot2_glm_high','formal','formal_balance_retry'],required=True)
     ap.add_argument('--provider',choices=['deepseek','glm','both'],required=True);ap.add_argument('--workers',type=int,default=4)
     args=ap.parse_args();assert 1<=args.workers<=12
     manifest=read(ROOT/'records/manifest.json'); cases=manifest['cases']
@@ -118,6 +118,10 @@ def main():
         # Reuse selected pilot reviews; no second reviews of the same packet.
         cases=[c for c in cases if not c['pilot']]
         cases.sort(key=lambda c:(c['case_id'] not in manifest['priority_16_ids'],c['case_id']))
+        if args.phase=='formal_balance_retry':
+            failed={p.parent.name for p in (ROOT/'api/formal/deepseek').glob('*/terminal.json') if read(p).get('http_status')==402}
+            cases=[c for c in cases if c['case_id'] in failed]
+            assert len(cases)==14
     providers=list(MODELS) if args.provider=='both' else [args.provider]
     keys={p:secret(p) for p in providers}
     if args.phase=='pilot2_glm_high':
@@ -125,6 +129,12 @@ def main():
         first=call('glm',cases[0],keys['glm'],args.phase)
         print(json.dumps({k:first.get(k) for k in ['provider','case_id','status','seconds','usage','error']},ensure_ascii=False),flush=True)
         if first['status'] not in ['valid','needs_audit']:raise RuntimeError('GLM high preflight did not produce parseable JSON; remaining five not started')
+        cases=cases[1:]
+    if args.phase=='formal_balance_retry':
+        assert providers==['deepseek']
+        first=call('deepseek',cases[0],keys['deepseek'],args.phase)
+        print(json.dumps({k:first.get(k) for k in ['provider','case_id','status','seconds','usage','error']},ensure_ascii=False),flush=True)
+        if first['status'] not in ['valid','needs_audit']:raise RuntimeError('Balance recovery preflight not completed; remaining requests not started')
         cases=cases[1:]
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
         futures=[pool.submit(call,p,c,keys[p],args.phase) for p in providers for c in cases]

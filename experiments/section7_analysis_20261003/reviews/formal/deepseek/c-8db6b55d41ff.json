@@ -1,0 +1,101 @@
+{
+  "case_id": "c-8db6b55d41ff",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=23:True:6"
+        }
+      ],
+      "reason": "Source episode passed (6 tests, EVALUATOR_RESULT True), so legitimate source experience exists; but its verified content (single-plot RNG call shape, list-of-tuples return) does not cover the target's nested grid return."
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "No traceable source-derived memory content maps onto the target's necessary return-structure contract; the source-linked ids (sai-00030/sai-00031) are not presented, so fidelity cannot be judged."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "remember plt.scatter does NOT create a Line2D"
+        },
+        {
+          "section": "injection/20",
+          "quote": "Do not blindly use np.random.default_rng(seed)"
+        }
+      ],
+      "reason": "Only matplotlib/numpy-adjacent injections (sai-00076, err-00004) touch the target's mechanics; the bulk (Counter/permutation/OLS/ddof) is unrelated, and none addresses the nested-list contract."
+    },
+    "visible_use": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "The submission's flat return and generic Agg/np.random scaffolding show no adaptation uniquely attributable to a specific memory; private reasoning was removed."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AssertionError: Each scatter plot should have 5 points"
+        },
+        {
+          "section": "target_submission",
+          "quote": "    return figures, points_list"
+        }
+      ],
+      "reason": "The submitted function returns a flat list of per-plot point lists; the graded test walks a nested grid and finds len==2, so the return structure—not the plotting—fails. It does not show memory involvement."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "and a list of lists containing the points for each scatter plot"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "for row in points_grid for points in row"
+        }
+      ],
+      "reason": "The prompt's 'a list of lists' under-specifies nesting depth, while the reference/test require a list of rows of point-lists; a flat reading is defensible, so this is a candidate contract ambiguity, not proof of test error."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "When verifying legend/line labels, remember plt.scatter does NOT create a Line2D"
+        }
+      ],
+      "reason": "The one adjacent injection concerns scatter legend labels via ax.collections, which the target never checks; no transfer of that content is observable and its absence proves nothing about harm."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "Contract ambiguity: the flat reading of 'a list of lists' is plausible, so the failure may partly reflect under-specified task wording rather than an execution slip.",
+    "No counterfactual on memory: injected content is largely irrelevant to the nested-return requirement, so memory neither explains nor can be blamed for the failure.",
+    "The agent's self-written battery passed because it encoded the same flat interpretation (circular verification), giving false confidence rather than catching the mismatch."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Which source-derived memory content (if any) was injected at target time; source-linked ids sai-00030/sai-00031 are not presented.",
+    "Whether the task author intended a flat or nested points structure; only the reference/test resolve it.",
+    "Whether any injected memory influenced the agent's choices at all, since private reasoning is removed."
+  ],
+  "minimal_intervention": {
+    "change": "Return a nested grid: outer list per row, inner list per plot, each entry the list of [x,y] points (matching the reference's points_grid).",
+    "fixed": "Same prompt, same injected memory set, same sandbox/build budget.",
+    "falsifier": "If the hidden test also accepted a flat list of per-plot point-lists, or a rerun returning points_grid still failed, the TASK_EXECUTION/EVAL_CONTRACT reading would be wrong."
+  },
+  "causal_claim": false
+}

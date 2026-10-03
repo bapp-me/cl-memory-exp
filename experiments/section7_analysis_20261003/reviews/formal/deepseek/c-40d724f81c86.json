@@ -1,0 +1,120 @@
+{
+  "case_id": "c-40d724f81c86",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(text, seed=None):"
+        }
+      ],
+      "reason": "源题单文本版在离线评测中 10 项测试全过（correct=true），是合法且可复用的经验；但契约只覆盖单个 text，目标是 list 输入/输出的批量版本，需要额外包装与逐条种子语义。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "与目标相关的 scrambling 源 episode 未被注入（packing 阶段按字节预算淘汰），无法核对注入内容对目标必要信息是否保真；注入的 4 条是无关任务。"
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "return [task_func(text, seed) for text in texts]"
+        }
+      ],
+      "reason": "参考解本身就是把源单文本函数逐条套用，说明源的逐条重置种子语义正对目标所需；目标额外新增的只是 list 外层与逐条应用这一条件。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "def combined_heatmap(list_of_dfs):"
+        },
+        {
+          "section": "target_visible",
+          "quote": "def new_task_func(texts, seed=None):"
+        }
+      ],
+      "reason": "可见注入的四条记忆都是 heatmap/pairplot/DTM/采样分析等无关任务，目标可见轨迹与提交中也无任何引用；相关源未送达，故看不到对相关记忆的复用或误用（行为代理，非因果）。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "new_task_func(['Hello world! This is a test.', 'Python is fun and powerful.'], 123)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "    if seed is not None:\n        random.seed(seed)"
+        }
+      ],
+      "reason": "提交函数在批量处理前只 seed 一次，而隐藏断言要求两条文本都按同一 seed 从头打乱，第二条文本随机状态不同导致整表断言失败；这只表明本题执行/契约理解出错，不能证明记忆造成失败。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_episode_byte_budget\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "源 episode 的 provenance 出现在 observable candidates 中，但 0–58 号候选因最旧完整回合字节预算被淘汰，最终只注入 59–62 号四条无关 episode；这是打包淘汰而非检索失败，也不能据此说源内容已丢失或无害。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should output a list of scrambled texts, one for each input text."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "return [task_func(text, seed) for text in texts]"
+        }
+      ],
+      "reason": "题面只给出 (texts, seed=None) 与“输出列表”，未说明“每个文本用同一 seed 独立重置随机状态”；隐藏测试与参考解隐含了逐条重播种，属题意/测试可能不一致的候选，不重打分。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "题面对批量调用时种子的重置语义欠明确，单次 seed 的读法在字面上并不被排除（EVAL_CONTRACT）。",
+    "与目标匹配的源记忆在打包阶段被淘汰，本题基本等于是无相关记忆的从零作答，失败可能与记忆系统无关。",
+    "仅一次目标失败断言，缺少反事实与隐藏用例全貌，无法判断若注入源解是否一定通过。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "目标隐藏测试对“逐文本重播种”的完整期望范围（是否所有用例都如此）不可见。",
+    "未提供源 episode 在检索候选中的 history_index 映射，只能由 provenance 未注入推断其被淘汰。",
+    "不掌握未选中的完整记忆库，无法断言相关经验是否存在但未被召回。",
+    "agent 的私有推理被移除，无法确认其是否在任何环节接触过 scrambling 相关经验。"
+  ],
+  "minimal_intervention": {
+    "change": "改为逐条重置随机状态，例如 return [task_func(t, seed) for t in texts]（或每处理一个文本前重新 random.seed(seed)）。",
+    "fixed": "保持相同题面、相同源历史与相同的打包字节预算及注入集合。",
+    "falsifier": "若单次 seed 的实现在隐藏测试下也通过，或逐条重播种仍失败，则种子语义这一失败主因被反驳。"
+  },
+  "causal_claim": false
+}

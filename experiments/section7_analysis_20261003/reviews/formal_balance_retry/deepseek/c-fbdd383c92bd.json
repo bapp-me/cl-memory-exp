@@ -1,0 +1,142 @@
+{
+  "case_id": "c-fbdd383c92bd",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Generate a random string of a given length using ASCII letters and calculate the frequency of each character."
+        }
+      ],
+      "reason": "源题单字符串任务_func 通过 5 项测试（20 检查），可作合法经验；但其范围仅单字符串且依赖 string.ascii_letters，目标要求跨多长度合并，适用面有限。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "mechanical",
+          "quote": "raw_source_episode_retained_in_method_state"
+        }
+      ],
+      "reason": "注入的两条记忆内容是 pandas/matplotlib 柱状图任务，与目标相关的必要条件（string.ascii_letters 字母表、按长度生成再合并）在注入内容中完全不存在；未呈现的库不能推断，故只断言注入面缺失。"
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        }
+      ],
+      "reason": "被选中并注入的两条记忆描述 DataFrame 值计数画图，与随机字符串字符频次任务无重叠条件。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "import collections\\nimport string\\nimport random"
+        },
+        {
+          "section": "target_submission",
+          "quote": "return dict(counter)"
+        }
+      ],
+      "reason": "目标只执行 random/Counter 代码与 SUBMIT，未出现任何 pandas/matplotlib 痕迹；注入内容在可见轨迹中没有被复用，也不能据此判断是否存在潜在干扰。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "''.join(random.choice(string.ascii_lowercase) for _ in range(length))"
+        },
+        {
+          "section": "source_visible",
+          "quote": "s = ''.join(random.choice(string.ascii_letters) for _ in range(length))"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(combined_frequency([10, 20], 0) == {'y': 2, 'W': 3, 'A': 2, 'c': 2, 'q': 2, 'G': 3, 'F': 2, 'z': 2, 'Y': 2, 't': 2,"
+        }
+      ],
+      "reason": "提交使用小写字母表且只播种一次，隐藏断言期望含大写字母（W/A/G/F/Y/E/L）的 ascii_letters 结果；失败可直接由执行代码解释，不能归因于记忆。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should accept a list of lengths and a seed for random generation."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "for length in lengths:\n        combined_counter.update(task_func(length, seed))"
+        }
+      ],
+      "reason": "目标提示未说明字符集为 ASCII letters，也未说明参考解按每个 length 重新以同一 seed 调用 task_func；隐藏测试的期望语义来自题面之外，属候选契约不一致，仅标注不重打分。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": [\n    \"046fecd0-bb97-4487-aea7-9105b37efe5a\","
+        }
+      ],
+      "reason": "检索为字符频次任务返回并注入了两条语义无关的记忆，候选质量与目标不匹配；但这只说明候选内容不相关，不证明其造成了干扰。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": [],"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": [],"
+        }
+      ],
+      "reason": "源题结束时未见针对该经验的操作记录，目标侧也无源 provenance，指向源经验未被写入为该机制记忆；但空操作也可能反映另一种持久化方式，不能据此推断全网库中不存在。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "隐藏测试要求的参考语义（每长度重播种、ascii_letters）未在目标提示中给出，失败可能部分是契约/规格缺口而非纯执行缺陷。",
+    "注入两条 pandas/matplotlib 记忆虽不相关，但可见轨迹未显示其被读取或影响，故无法排除或确立干扰。",
+    "未呈现完整记忆库，无法判断源字符串经验是否曾存在但未被检索到。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "源题 episode 是否曾以任何形式写入持久库（完整库未提供）。",
+    "隐藏测试是否唯一权威，其期望的按长度重播种语义是否与出题意图一致。",
+    "token 预算与打包是否发生淘汰（token_count 为 null，dropped 为空但不可全信）。"
+  ],
+  "minimal_intervention": {
+    "change": "在目标提示中补回字符集约束 string.ascii_letters 并给出一个多长度带期望输出的示例（明确每段生成与合并语义）。",
+    "fixed": "相同的记忆策略、同样的检索候选与注入内容、同样的 lengths/seed 测试与预算。",
+    "falsifier": "若补齐 ascii_letters 与多长度示例后提交仍输出小写字母或仍与断言不符，则执行缺陷假说被削弱、契约/规格假说增强。"
+  },
+  "causal_claim": false
+}

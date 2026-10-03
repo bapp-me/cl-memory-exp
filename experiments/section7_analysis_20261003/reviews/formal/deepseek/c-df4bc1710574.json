@@ -1,0 +1,159 @@
+{
+  "case_id": "c-df4bc1710574",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Find the occurrences of each two-letter combination in the sanitized word,"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=14:True:7"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        }
+      ],
+      "reason": "Source task is correct and scorable and same family, but it is single-word and left no retained update; target adds list aggregation and case normalization."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        },
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "\"facts\": []"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": []"
+        }
+      ],
+      "reason": "No target-relevant source memory content is shown as retained or injected; the injected candidates are off-domain."
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "find the occurrences of each two-letter combination across all words"
+        }
+      ],
+      "reason": "Injected memory describes pandas/bar-chart work, while target is string pair counting; source content is not the injected candidate."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "cleaned = re.sub(r'[^a-zA-Z]', '', word).lower()"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        }
+      ],
+      "reason": "Submitted code uses regex/defaultdict string counting only and shows no pandas, matplotlib, or bar-chart trace; this is behavioral proxy, not proof of internal non-use."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "for i in range(len(cleaned) - 1):\n            counts[cleaned[i:i+2]] += 1"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "EVALUATOR_RESULT=3:True:0"
+        }
+      ],
+      "reason": "Direct code implements the stated target and offline evaluation is correct, so success is explainable by task execution; it does not prove no internal memory influence."
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"candidate_scope\": \"Native Qdrant top-5 returned set; complete persisted point pool separately snapshotted\""
+        },
+        {
+          "section": "injection/0",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "\"score\": 0.17892824949477615"
+        }
+      ],
+      "reason": "The retrieval surface returned and injected two low-scoring off-domain memories; this shows retrieval content mismatch, not that it caused failure or interference."
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        },
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "\"facts\": []"
+        }
+      ],
+      "reason": "The legal source episode produced no admitted memory operations or facts in the packet, so target had no source-derived memory; unselected library contents remain unknown."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Find the occurrences of each two-letter combination in the sanitized word,"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "find the occurrences of each two-letter combination across all words"
+        }
+      ],
+      "reason": "A correct same-family source existed, giving a valid transfer opportunity; target changes scope to a word list and uses case normalization, and use is not visible."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "Memory could still have influenced internal generation without any visible trace, since there is no counterfactual.",
+    "The offline target evaluator ran 0 unittest tests and only 3 checks, so hidden correctness for lowercasing/case merging remains untested.",
+    "Source-like content may exist in unselected memory stores or outside the presented retrieval candidates."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the hidden target contract expects lowercasing or case-sensitive pair counting; provided target tests do not cover uppercase.",
+    "Whether the source experience was written elsewhere or retained outside this packet; source update operations are empty but the full library is not presented.",
+    "Whether the two off-domain injected memories affected internal reasoning despite no visible trace.",
+    "Whether source-target pairing and provenance are complete, since source_provenance_at_target reports no memory_ids."
+  ],
+  "minimal_intervention": {
+    "change": "Swap the two off-domain injected memories for the source-style pair-counting solution in one controlled run; otherwise none for the observed success.",
+    "fixed": "Same target prompt, model, tools, scoring mask, and memory budget.",
+    "falsifier": "If behavior or score changes materially between off-domain and source-style injections, memory content is causally relevant; if unchanged, there is no visible memory effect."
+  },
+  "causal_claim": false
+}

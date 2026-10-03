@@ -1,0 +1,134 @@
+{
+  "case_id": "c-d33e214f82ab",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(s1, s2, n_clusters=3):"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "Source episode passed its own scorable tests and supplies a correct single-pair K-Means/plot pattern, but its scope is narrower than the target's multi-pair overlay and return contract."
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        }
+      ],
+      "reason": "No memory content was injected into the target visible run, so fidelity to a target-relevant memory item cannot be assessed."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Perform K-Means clustering on data points from two pandas Series and visualize the clusters."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Given multiple pairs of pandas Series, perform K-Means clustering on each pair and visualize the clusters."
+        }
+      ],
+      "reason": "Source logic covers per-pair K-Means and scatter/legend basics, but target adds combined overlay, cross-pair distinct color+marker, and pair-cluster legend mapping."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        }
+      ],
+      "reason": "No source provenance was injected or retrieved in the visible target run; shared KMeans/matplotlib idioms are not a memory-use proxy."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "KeyError: ('Pair 1', 0)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "color = color_map[(pair_name, int(label))]"
+        }
+      ],
+      "reason": "Submitted helper indexes color_map by (pair_name,label) even though results contains an int-keyed color_map, causing a runtime KeyError before hidden tests/checks execute; this is direct visible execution, not proof of memory effect."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "def combined_visualization(series_pairs, n_clusters=3):"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "ax = combined_visualization(series_pairs)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "return fig_combined, results"
+        }
+      ],
+      "reason": "Hidden reference tests call the function expecting an Axes return, while the target prompt omits return specification and the submission returns (fig, results); candidate contract ambiguity, but it was not reached because the KeyError aborted evaluation."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "No source provenance was injected into the target run and memory policy is disabled; this limits assessment to D0 execution rather than D1 retrieval/transfer, but absence from this packet does not prove the full memory library lacked content."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "Hidden test contract may also be mismatched (Axes return expected vs tuple returned), so the KeyError may not be the only blocker.",
+    "No source memory was injected/retained (injected_count 0, memory_policy disabled), so memory retrieval/transfer cannot explain this run.",
+    "Fontconfig error appears in stderr but the process reached the code and crashed with KeyError, so it is not the primary failure.",
+    "The full unselected memory library is not included, so absence of retrieved source cannot prove no relevant memory existed."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "Whether the submission would pass hidden checks after fixing the KeyError; tests_run and checks_executed are 0.",
+    "Whether hidden grader requires Axes return, as reference tests suggest, or would accept a tuple; target prompt does not specify.",
+    "No memory was injected, so retrieval/write/transfer/retention cannot be evaluated in this target run.",
+    "Source provenance was not retained, so no counterfactual memory effect can be measured.",
+    "Full unselected memory library is not included, so absence from this packet is not proof of absence."
+  ],
+  "minimal_intervention": {
+    "change": "Fix _individual_plot to index the int-keyed color_map correctly (or build results['color_map'] with (pair_name,label) keys), leaving clustering/data/environment unchanged.",
+    "fixed": "Same source history, target prompt, data, environment, and budget.",
+    "falsifier": "If the same setup with only that fix still fails hidden checks, then the KeyError is not the sole blocker (e.g., return-contract mismatch)."
+  },
+  "causal_claim": false
+}

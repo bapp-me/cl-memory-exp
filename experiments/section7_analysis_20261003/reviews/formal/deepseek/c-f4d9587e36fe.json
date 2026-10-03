@@ -1,0 +1,142 @@
+{
+  "case_id": "c-f4d9587e36fe",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"checks_executed\": 19,"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Generate a sample from a normal distribution with a given mean and a standard deviation and plot the histogram"
+        }
+      ],
+      "reason": "源题通过 19 项检查/5 个测试，且在正态分布绘图、seed 复现、标题格式上与目标同域；但源题只做单样本，未覆盖 num_samples、每样本统计列表与整体汇总统计。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "print(round(mean, 3))"
+        },
+        {
+          "section": "target_visible",
+          "quote": "print(round(means[0],3), round(ref.mean(),3))"
+        }
+      ],
+      "reason": "源例示值 -0.045/0.987 与目标自检输出的 -0.045 一致，seed→normal、直方图 density、PDF 叠加、标题格式等与目标有关的内容在可见提交中保持；但注入的记忆卡片原文不在证据包内，故只能就必要内容判定。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "def analyze_process(mu=0, sigma=1, sample_size=1000, num_samples=5, seed=0):"
+        },
+        {
+          "section": "injection/0",
+          "quote": "def task_func(mu=0, sigma=1, sample_size=1000, seed=0):"
+        }
+      ],
+      "reason": "同域绘图与随机种子规范可直接沿用，但目标新增 num_samples 循环、每样本 mean/std 列表与跨样本整体统计，源经验只覆盖其中一部分。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "ax.hist(sample, bins=30, density=True, alpha=0.6, color='skyblue', edgecolor='black')"
+        },
+        {
+          "section": "target_visible",
+          "quote": "ax.hist(sample, bins=30, density=True, alpha=0.5, edgecolor='black')"
+        }
+      ],
+      "reason": "可见提交在 seed 复现、hist(density=True)、stats.norm.pdf 叠加与标题格式上与源轨迹一致，并扩展到多样本；这只是行为代理，无反事实不能证明复用或因果。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"submit_calls\": 1,"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true,"
+        }
+      ],
+      "reason": "目标仅 1 次 PYTHON 自检后提交，离线评测 5 项检查全过；这只能说明本题执行成功，不能说明记忆被使用。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "ax.set_title('Normal Distribution with $\\\\mu = %0.2f, \\\\sigma = %0.2f$' % (mu, sigma))"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": true,"
+        }
+      ],
+      "reason": "源题与目标同域且来源被注入，构成可用机会；机会不证明内容保真、被检索或被采用，源也不含 num_samples 与整体统计。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "print(round(means[0],3), round(ref.mean(),3))"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "- float: The empirical mean of the sample."
+        }
+      ],
+      "reason": "目标按源题的 seed 复现、直方图密度化与 PDF 叠加约定编写，并自检源示例值 -0.045；但这是标准写法，也可能与记忆无关，不能作为因果或有效复用证据。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "calculate the overall empirical mean and standard deviation across all samples"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "overall_std = np.mean(all_stds)"
+        }
+      ],
+      "reason": "参考解把 overall_std 记为各样本 std 的均值，与题面“跨所有样本的整体标准差”读法不同；隐藏检查只验类型与长度，属契约歧义候选，未影响本题通过。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "目标可由题面默认值与常见 numpy/matplotlib 习惯直接写出，无需任何源经验，因此可见一致不等于记忆驱动。",
+    "源题只覆盖单样本，num_samples 循环与整体统计属目标新增，可能来自模型自身推理而非记忆。",
+    "注入还含 injection/1、injection/2 两个无关任务，其存在不证明干扰，也无法据此判断检索是否命中源。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "注入的记忆卡片原文与检索候选列表不在证据内，无法确认哪些语句被实际呈现。",
+    "无对照运行，无法判断不使用该源经验时目标是否仍成功或是否仍出现相同约定。",
+    "参考解 overall_std 的语义与题面孰为准，现有测试无法判定。"
+  ],
+  "minimal_intervention": {
+    "change": "在与本题完全相同条件下移除源 episode 注入（保留其余两个干扰注入与预算），比较提交是否仍采用源特有的标题格式、seed 自检与同域绘图约定。",
+    "fixed": "目标题面、默认参数、seed=0、隐藏检查、工具与 token 预算、注入位置保持一致。",
+    "falsifier": "若去除源注入后仍出现同样的源特有约定与自检值，则可见一致的 USE_TRANSFER 候选被反驳。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,142 @@
+{
+  "case_id": "c-279952f04e27",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=20:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Determine the outlier indices in a 1D numpy array based on the Z score."
+        }
+      ],
+      "reason": "源题是同一技术家族（norm.fit + z 分数离群点）的合法可评分任务且离线全过；但源未留下任何记忆内容，因此作为可复用经验其价值受限。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": [],"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "没有任何源自源题的 z 分数/norm.fit 必要内容被写入或注入；被注入的两条记忆来自无关的 pandas/柱状图任务，故目标相关记忆内容为缺失。"
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "identify the outliers in each group based on the Z score"
+        }
+      ],
+      "reason": "注入内容描述 DataFrame 与 matplotlib 制图，目标要求对 1D numpy 数组做 Z 分数离群点检测，领域与操作均不匹配。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "mean, std = norm.fit(arr)"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "可见提交只含 numpy/scipy 的 norm.fit 逻辑，无 pandas/matplotlib 痕迹；这仅是行为代理，不能证明注入记忆对推理没有影响。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"candidate_scope\": \"Native Qdrant top-5 returned set; complete persisted point pool separately snapshotted\""
+        },
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        }
+      ],
+      "reason": "检索面返回并全部注入两条候选（无丢弃），但其内容与目标任务域不符，属检索相关性问题；不证明候选池中不存在其他内容。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": [],"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        }
+      ],
+      "reason": "源题结束时无任何写入操作、原始情节也未保留，说明没有 D0 记录可供后续使用；这不等于曾写入但未被检索到。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "target_submission",
+          "quote": "mean, std = norm.fit(arr)"
+        }
+      ],
+      "reason": "提交代码中看不到对注入内容的任何改写或迁移，只采用题面自然催生的 norm.fit 写法；成功不能反推有效复用，也不能反推负迁移。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "EVALUATOR_RESULT=1:True:0"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "Ran 0 tests in 0.000s"
+        }
+      ],
+      "reason": "目标判分报告 0 个参考测试执行、仅 1 项检查即标 correct，成功信号口径受限；参考解比对暗示代码很可能是对的，故仅为契约候选而非否定。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "目标题面本身已给出 Z 分数、阈值与 std==0 分支，agent 可能完全靠自身先验独立写出 norm.fit 版本，与记忆无关。",
+    "未被呈现的持久化库中可能本来就不存在与本题相关的记忆，因此‘未复用’可能源于无机会而非检索失败。",
+    "被注入的两条记忆可能在未展示的前置消息（message_index<2）中对推理有影响，只是最终代码没有可见痕迹。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "源题是否在别处产生过其他形式记忆（memory_ids 为空、完整库未呈现）。",
+    "最终 norm.fit 选择来自模型先验还是任何未可见的注入内容，无法从可见记录区分。",
+    "目标判分仅执行 1 项检查（0 个参考测试），参考测试是否必然通过未在本包中验证。"
+  ],
+  "minimal_intervention": {
+    "change": "把源题同族经验（norm.fit 拟合 + std==0 分支）作为 D0 记录准入并让检索面向同域任务，替换掉 pandas/柱状图候选",
+    "fixed": "目标题面、threshold 语义、记忆预算、评测脚本与源题历史保持不变",
+    "falsifier": "若移除这两条注入记忆后提交与结果完全相同，则‘注入记忆影响结果’的候选被反驳"
+  },
+  "causal_claim": false
+}

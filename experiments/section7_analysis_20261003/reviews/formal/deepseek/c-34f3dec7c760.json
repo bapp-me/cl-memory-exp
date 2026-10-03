@@ -1,0 +1,123 @@
+{
+  "case_id": "c-34f3dec7c760",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=23:True:6"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "Ran 6 tests in 0.077s"
+        }
+      ],
+      "reason": "源题在 6 项测试上通过、scorable 为真，但源函数只覆盖单张散点图，其经验对网格任务是有限的。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        }
+      ],
+      "reason": "方法状态未保留源 episode，且无注入记录，无法判断被保留或呈现的源内容是否保真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Generates a simple scatter plot with 'n' points."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "The grid should have 'rows' number of rows and 'cols' number of columns"
+        }
+      ],
+      "reason": "源经验覆盖种子化随机点与散点图绘制，但目标新增了网格行列结构与按行嵌套返回的要求。"
+    },
+    "visible_use": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "没有任何记忆被注入或呈现，因而不存在可评价的记忆复用行为。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "points.append(list(zip(x.tolist(), y.tolist())))"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AssertionError: Each scatter plot should have 5 points"
+        }
+      ],
+      "reason": "提交把 points 组织为一层扁平列表，隐藏测试按行嵌套遍历后每条长度不为 5，导致断言失败；这只能说明可见产物的结构不符，不能说明记忆是否参与。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "a list of lists containing the points for each scatter plot"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "points_row.append(points)"
+        }
+      ],
+      "reason": "题面只说'list of lists'包含各散点图的点，参考解却要求按行嵌套的 points_grid，存在题意与测试严格度不一致的候选；但本包只显示第一条断言，不能确定全部契约。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "rng = np.random.default_rng(seed=i)"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "目标代码在种子化随机与散点绘制风格上与源题相似，但注入计数为 0、无注入元数据，代码相似只是可见代理，不能证明发生了记忆迁移或复用。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "目标返回一层列表可能被题面'list of lists containing the points for each scatter plot'允许，失败根因可能是测试要求比题面更严（EVAL_CONTRACT 候选）。",
+    "本题 memory_policy 为 disabled、注入计数为 0，任何关于记忆造成成功或失败的解释都缺乏反事实支持。",
+    "离线评测在第一条断言即中断（tests_run 0），后续隐藏检查是否还有其他不满足项未知。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试的全部检查项与断言顺序（评测在首条断言处终止）。",
+    "是否存在未在本包中呈现的记忆写入或检索候选。",
+    "题面中'list of lists'的预期嵌套层级（按散点图还是按行）。"
+  ],
+  "minimal_intervention": {
+    "change": "将 points 构造为按行嵌套的 list of lists（外层 rows，内层 cols 的点列表），figures 顺序保持不变。",
+    "fixed": "保持相同的目标题面、相同函数签名与相同的无记忆环境（memory_policy disabled、injected_count 0）。",
+    "falsifier": "若改成按行嵌套后仍在同一断言或后续断言上失败，则结构组织的假设不成立，指向其他契约项。"
+  },
+  "causal_claim": false
+}

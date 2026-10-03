@@ -1,0 +1,128 @@
+{
+  "case_id": "c-59d7ad73a999",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true,\n  \"scorable\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(test_scores, student):"
+        }
+      ],
+      "reason": "源 episode 通过 5 项测试/18 项检查，是合法成功源；但其函数签名与返回语义（单学生、pandas ddof=1）与目标题面（list of dicts、返回 dict）不同，因此只能算带限度的源。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/3",
+          "quote": "Compute the required statistics using `np.mean`, `np.median`, `np.std`, `statistics.mean`"
+        },
+        {
+          "section": "source_visible",
+          "quote": "return np.array([sub['Score'].mean(), sub['Score'].std()]), df"
+        }
+      ],
+      "reason": "蒸馏记忆把 np.std 与 pandas std 并列为选项，未保留源题实际使用的 pandas ddof=1 语义；且该库是跨 42 个 episode 的累计 REPLACE，逐源保真度不可核。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "If a check fails, `raise ValueError` (or `TypeError` for wrong-type cases) with a descriptive message naming the offending parameter."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "result1 = calculate_stats_for_students({'Student': [1, 2, 1, 1], 'Score': [10, 1, 1, 1]})"
+        }
+      ],
+      "reason": "统计汇总与校验工作流对目标只是部分适用：目标实际评分入口传的是 dict-of-lists，而注入经验泛化出的类型守卫会把它判为非法输入。"
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "If a check fails, `raise ValueError` (or `TypeError` for wrong-type cases) with a descriptive message naming the offending parameter."
+        },
+        {
+          "section": "target_submission",
+          "quote": "raise TypeError(\"test_results must be a list of dictionaries\")"
+        }
+      ],
+      "reason": "提交代码的类型守卫与注入的输入校验工作流形态一致，并在评分时正好拦截了隐藏测试输入；但同一守卫也能直接从题面文字“list of dictionaries”推出，故只是行为代理，不是因果证据。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "create a function that calculates the average test score and the standard deviation for each student"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "result1 = calculate_stats_for_students({'Student': [1, 2, 1, 1], 'Score': [10, 1, 1, 1]})"
+        }
+      ],
+      "reason": "可见题面要求 list-of-dicts(student_id/score)，隐藏测试却传 dict-of-lists(Student/Score) 且 reference_solution 依赖未定义的 task_func；这支持题面与评分契约不一致的候选，但不能证明哪个契约是“本意”。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "TypeError: test_results must be a list of dictionaries"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": false"
+        }
+      ],
+      "reason": "离线评分在第一个用例即因类型守卫中断，tests_run=0、correct=false；这只说明该实现按隐藏测试的输入形状不可用，不说明方法或记忆整体无效。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Check the precondition(s) relevant to the task"
+        },
+        {
+          "section": "target_submission",
+          "quote": "if not isinstance(test_results, (list, tuple)):"
+        }
+      ],
+      "reason": "目标可见实现与注入的“先校验再计算”工作流高度同形，支持语义复用候选；但缺反事实，且守卫与题面文字自洽，不能证明记忆导致失败。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "隐藏评分脚本可能直接复用源题测试文件（reference_solution 调用未定义的 task_func），输入形状冲突可能只是离线 harness 产物，而非题面本意。",
+    "类型守卫与可见题面“list of dictionaries”一致，无法排除无记忆时也会写出同样的守卫。",
+    "没有关闭记忆的对照运行，成功/失败都不能归因于记忆内容。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏正确性不可得，无法判定按题面解释的实现在“本意”契约下是否算对。",
+    "记忆是否真的改变了实现（无 memory-off 对照）不可知。",
+    "源库为 42 个 episode 的累计 REPLACE，逐源内容保真度与单条记忆的原始语义无法核验。",
+    "std 的 ddof 语义（pandas ddof=1 vs np.std ddof=0）与单分数学生返回 NaN 的期望未在可见题面说明。"
+  ],
+  "minimal_intervention": {
+    "change": "让 calculate_stats_for_students 按隐藏测试入口接受 {'Student': [...], 'Score': [...]} 字典输入（并用 pandas 的 ddof=1 语义），而不是按题面文字强制 list-of-dicts 并抛 TypeError。",
+    "fixed": "相同的注入记忆内容与 8 条注入预算、相同的题面文本、相同提交协议与评分 mask。",
+    "falsifier": "若接受字典输入后仍在隐藏测试上失败，或记忆关闭的对照运行得到同样结果，则该候选被削弱。"
+  },
+  "causal_claim": false
+}

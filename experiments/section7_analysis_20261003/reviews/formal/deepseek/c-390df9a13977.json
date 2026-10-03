@@ -1,0 +1,112 @@
+{
+  "case_id": "c-390df9a13977",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true,"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"checks_executed\": 14,"
+        }
+      ],
+      "reason": "源题单 DataFrame 版本被离线评测判为正确且可评分；但其契约只覆盖单个 DataFrame，比目标的多 DataFrame 契约窄。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "pd.api.types.is_numeric_dtype(df[col])"
+        },
+        {
+          "section": "target_visible",
+          "quote": "pd.api.types.is_numeric_dtype(df[col])"
+        }
+      ],
+      "reason": "与目标相关的必要内容（空值/空表抛 ValueError、非数值抛 TypeError、cov+pairplot 返回二元组）在目标中保持同一语义，未被改写或丢失。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "a list of DataFrames, each potentially containing numeric data"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Generates a pair plot from a numeric DataFrame and calculates its covariance matrix."
+        }
+      ],
+      "reason": "源的单表校验与 cov/pairplot 逻辑适用于目标，但目标新增了列表非空检查与 pd.concat 合并语义，源经验不能直接覆盖这一新条件。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "not all(pd.api.types.is_numeric_dtype(df[col]) for col in df.columns)"
+        },
+        {
+          "section": "source_visible",
+          "quote": "not all(pd.api.types.is_numeric_dtype(df[col]) for col in df.columns)"
+        }
+      ],
+      "reason": "目标把源的校验惯用法嵌入 for df in df_list 循环并接上 concat/cov/pairplot，属行为层面的适配代理；不构成因果证明。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "if df is None or df.empty:"
+        },
+        {
+          "section": "target_visible",
+          "quote": "combined = pd.concat(df_list, ignore_index=True)"
+        }
+      ],
+      "reason": "源的空表校验写法与目标的每表校验写法一致，目标再新增列表空检查与 concat 以适配新契约，支持沿用了源经验并做了必要扩展；仅凭代码重合与成功不能证明是记忆导致成功。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Generates a pair plot from a numeric DataFrame and calculates its covariance matrix."
+        }
+      ],
+      "reason": "存在可评分为正确的同族源经验且其 provenance 被注入，构成合法机会；provenance 覆盖不等于内容保真，也不等于被目标使用。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "源与目标同属一个生成式任务族，相似结构可能来自题目模板/常规校验惯例，而非记忆复用",
+    "没有反事实（无 ablate 注入的对照），成功也可能在无该源经验时发生",
+    "注入的三条记忆中有两条是组合频率类无关任务（injection/1、injection/2），当前证据无法判定它们对打包或注意力的影响"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "离线目标评测显示 tests_run 为 0 而 checks_executed 为 4，无法从现有证据确认隐藏测试如何计分",
+    "不能确定目标上下文中实际呈现的是哪一条源内容（D0 直接记录 vs D1 语义候选的边界未被可见证据区分）",
+    "两条无关注入是否影响候选排序或预算，证据不足"
+  ],
+  "minimal_intervention": {
+    "change": "在保持目标提示、工具与预算不变的前提下移除源经验/其 provenance 注入，做同题对照",
+    "fixed": "同一 target_prompt、同一 PYTHON/SUBMIT 工具集、同一注入预算与内存策略",
+    "falsifier": "若在无该源经验注入时，目标仍以相同的 TypeError/ValueError 校验写法与 concat+cov+pairplot 结构提交并通过，则 USE_TRANSFER 候选被削弱"
+  },
+  "causal_claim": false
+}

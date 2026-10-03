@@ -1,0 +1,131 @@
+{
+  "case_id": "c-0e8595fa9006",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=19:True:5"
+        }
+      ],
+      "reason": "源题可评分且通过（5 个测试 OK），其单文档 DTM 经验合法可用；但该源只覆盖单文档，不含本题新增的多文档拼接条件。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "return pd.DataFrame(dtm.toarray(), columns=vectorizer.get_feature_names_out())"
+        }
+      ],
+      "reason": "与目标相关且有合法来源支持的内容（分句、过滤空句、CountVectorizer、feature_names 作列）与源实现一致；这不证明其它注入邻居记忆也保真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "and then all these matrices should be concatenated horizontally to form a single combined matrix"
+        }
+      ],
+      "reason": "源经验只给出 per-document 矩阵构造；本题新增多文档独立向量化、拼接轴、行对齐/补零等条件，源内容不覆盖。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "matrices.append(pd.DataFrame(dtm.toarray(), columns=vectorizer.get_feature_names_out()))"
+        }
+      ],
+      "reason": "提交代码与逐文档分句、过滤、per-doc CountVectorizer、DataFrame 列名的记忆/规格模式一致，属可见行为代理；失败点（拼接轴）不来自记忆内容。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "concatenated horizontally to form a single combined matrix"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(result.shape == (4, 11))"
+        }
+      ],
+      "reason": "题面写“水平拼接”，但期望形状 (4,11)（两文档共 4 句、列并集 11）只能由 axis=0 垂直拼接得到，题面“每行对应一个句子”也指向垂直。仅标为候选的题意/测试不一致，不裁定哪一读法绝对正确。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "combined = pd.concat(matrices, axis=1).fillna(0).astype(int)"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "result.shape == (4, 11)"
+        }
+      ],
+      "reason": "axis=1 使测试输入得到 2 行×19 列而非 4 行×11 列，评测首个断言即失败；这是确定性的执行不匹配，不能据此推断记忆有害。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"memory_id\": \"sai-00036\","
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_block_byte_budget\""
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"source_index\": 17,"
+        }
+      ],
+      "reason": "与本题最相关的合法源记忆 sai-00036 已进入检索候选，却在注入前按字节预算淘汰（source_provenance_injected=false）。属选取后打包可见性问题而非检索失败，也不能证明它被注入就会改变轴选择。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Each document should be processed individually to create its own document-term matrix"
+        },
+        {
+          "section": "target_submission",
+          "quote": "matrices.append(pd.DataFrame(dtm.toarray(), columns=vectorizer.get_feature_names_out()))"
+        }
+      ],
+      "reason": "可见代码把单文档 DTM 的语义候选模式迁移到逐文档处理，是语义迁移代理；新增的拼接轴/行对齐无对应记忆，且源记忆未注入，无法判定复用是否影响成败。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "失败可能只是解题者择错读法：题面“每行对应原文档的一个句子”本可指向垂直拼接，未必存在真正矛盾。",
+    "最相关的源记忆 sai-00036 未注入，无反事实可证注入它（或其它记忆）会改变 axis 选择，记忆作用不可观测。",
+    "评测在首个断言即中止（tests_run=0），其余隐藏断言是否也失败不可知。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "题面 'horizontally' 是笔误还是本意，现有证据无法裁定。",
+    "除形状 (4,11) 外是否还有其它隐藏断言及其结果。",
+    "注入的邻居记忆（如 sai-00112/sai-00122）是否影响了空守卫与“记录解释风险”等行为，无私有推理可核。",
+    "sai-00036 若未被预算淘汰是否改变拼接轴选择，无反事实。"
+  ],
+  "minimal_intervention": {
+    "change": "将“水平拼接”与“每行对应一个句子”的冲突按评测读法解决为垂直拼接（axis=0，行=全部句子），使两文档得到 (4,11)。",
+    "fixed": "保持相同文档输入、相同 pandas/sklearn 版本、相同记忆注入集合与预算。",
+    "falsifier": "若改为 axis=0 后仍不满足 (4,11)，或有测试证实水平（axis=1）读法，则题意/测试不一致假设被推翻。"
+  },
+  "causal_claim": false
+}

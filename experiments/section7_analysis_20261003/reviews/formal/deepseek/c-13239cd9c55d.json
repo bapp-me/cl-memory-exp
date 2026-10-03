@@ -1,0 +1,155 @@
+{
+  "case_id": "c-13239cd9c55d",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_visible",
+          "quote": "random.choice(LEVELS) for _ in range(count)"
+        }
+      ],
+      "reason": "Source task passed its 5 tests and visibly implements per-department random level lists; however it handles only one dict, while the target contract concerns aggregating a list of dicts."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "level_data = collections.OrderedDict("
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": true"
+        }
+      ],
+      "reason": "The retained source episode shows the source submission matching its own contract, with no visible corruption of the relevant task_func behavior."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(department_data):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def new_solution(department_data_list):"
+        }
+      ],
+      "reason": "The source generator applies to one department dict, while the target adds outer list aggregation and a different expected output shape, so only part transfers."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "cuts = sorted(random.sample(range(total_count + 2), 2))"
+        },
+        {
+          "section": "source_visible",
+          "quote": "random.choice(LEVELS) for _ in range(count)"
+        }
+      ],
+      "reason": "The submitted algorithm uses integer cut points to return count dictionaries, not the source per-employee level-list construction; no visible adaptation of the source logic appears."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of department codes and their respective employee counts"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(json.loads(new_solution([{'EMP$$': 3, 'MAN$$': 2}, {'DEV$$': 4, 'HR$$': 1}]))['EMP$$'])"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "department_result = json.loads(task_func(department_data))"
+        }
+      ],
+      "reason": "The prompt/stub does not state list-of-dicts input or list-valued output, while hidden tests and reference require aggregating task_func outputs; this supports a contract ambiguity, not a memory-caused failure."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "for dept_code, total_count in department_data_list:"
+        },
+        {
+          "section": "target_visible",
+          "quote": "data = [('EMP$$', 100), ('MAN$$', 10), ('DEV$$', 25), ('HR$$', 0)]"
+        },
+        {
+          "section": "target_submission",
+          "quote": "json_object = json.dumps(distribution)"
+        }
+      ],
+      "reason": "The agent's own tests cover only tuple-pair input and count-dict output, so the submitted code crashes on the hidden list-of-dicts input before its assertions."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "level_data = collections.OrderedDict("
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"scorable\": true"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "A correct, relevant source task_func existed and was retained, but source provenance was not injected into the target; without intervention it cannot be proven that this would have fixed the failure."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_episode_byte_budget\""
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"selected_before_packing\": ["
+        }
+      ],
+      "reason": "Candidates were listed before packing, then older complete episodes were dropped for byte budget; this points to packing/visibility rather than retrieval scoring failure."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "TASK_EXECUTION alone: the visible implementation only tested tuple-pair input and count-dict output.",
+    "OPPORTUNITY_SOURCE or PACKING_VISIBILITY: the correct source task_func was retained but not injected, and no counterfactual shows it would have fixed the target.",
+    "The target prompt may intentionally require inferring a different contract, so the hidden-test mismatch may be the main artifact."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "No controlled intervention or counterfactual is available.",
+    "The actual memory record text for the source is not directly shown; only the source episode and provenance metadata are available.",
+    "The exact mapping of the source episode to dropped retrieval indices is not specified.",
+    "The target prompt and hidden tests may be intentionally inconsistent, so the intended contract cannot be fully recovered from this packet."
+  ],
+  "minimal_intervention": {
+    "change": "Clarify the target contract in the prompt/stub: state that department_data_list is a list of department dicts, require per-employee level lists, and make the needed task_func availability explicit.",
+    "fixed": "Same source history, same target hidden tests, same packing/byte budget.",
+    "falsifier": "If the same memory and budget succeed after only contract clarification, EVAL_CONTRACT is strengthened; if the source is injected but the target still fails, the source-opportunity explanation weakens."
+  },
+  "causal_claim": false
+}

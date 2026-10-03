@@ -1,0 +1,140 @@
+{
+  "case_id": "c-a575581e0366",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=19:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(mu=0, sigma=1, sample_size=1000, seed=0):"
+        }
+      ],
+      "reason": "源题离线通过且可评分，说明存在合法可用的源经验；但源实现只处理单个样本并返回 ax, mean, std，目标要求多样本与总体统计，源经验只能部分覆盖，需自行扩展。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "analyze each DataFrame's specified column to find the values that are larger than the average"
+        }
+      ],
+      "reason": "可见注入的四个片段均是 DataFrame 列统计/热图/文档-词矩阵任务，未携带与目标相关的正态分布抽样与直方图+PDF 内容；此判断仅限可见注入集合，不外推整个记忆库。"
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "standardize the numeric columns in each DataFrame"
+        },
+        {
+          "section": "injection/3",
+          "quote": "Each document should be processed individually to create its own document-term matrix"
+        }
+      ],
+      "reason": "注入内容面向 DataFrame/scikit-learn/DTM 分析，与目标的 N(mu, sigma) 抽样与样本统计无语义重合，只共享通用“画图并返回 Axes/数值”的框架，不构成可迁移的领域经验。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "rng = np.random.default_rng(seed)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "combined = np.concatenate(all_samples)"
+        }
+      ],
+      "reason": "目标代码只使用常规 numpy/matplotlib 结构与自身推导的 all_samples 累加方式，看不到注入片段中的 pandas/heatmap/DTM 痕迹；无可见重合只是行为代理，不能证明内部未受任何影响。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_episode_byte_budget"
+        },
+        {
+          "section": "retrieval",
+          "quote": "selected_before_packing"
+        }
+      ],
+      "reason": "62 个候选全部进入 selected_before_packing，58 个仅因 oldest_complete_episode_byte_budget 被丢弃，最终注入的是 history 58-61 这四个最新完整 episode，说明可见窗口由字节预算+新近度决定；这不能证明被丢项与目标相关，也不能证明注入造成了行为变化。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "generate a histogram plot for each DataFrame"
+        },
+        {
+          "section": "injection/1",
+          "quote": "combined heatmap of the correlation matrices for all DataFrames"
+        }
+      ],
+      "reason": "实际注入的四个 episode 都是 DataFrame 分析类任务，与目标的工艺正态分布抽样问题无领域重合，检索侧候选与目标语义不匹配；但 observable score 全为 null，排序质量无从核验，不能据此断言相关源被存下却没检索到。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "combined = np.concatenate(all_samples)"
+        },
+        {
+          "section": "injection/0",
+          "quote": "histogram plot for each DataFrame"
+        }
+      ],
+      "reason": "目标自行以 default_rng、ddof=1 和列表累加重写实现，未出现注入片段中任何具体模式；成功不能归因于记忆复用，同样也不构成负迁移证据。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "ValueError: need at least one array to concatenate"
+        },
+        {
+          "section": "target_visible",
+          "quote": "all_samples.append(sample)"
+        }
+      ],
+      "reason": "首次运行报错来自模型自己写的 range(0) 空拼接，第四次消息里改为在循环中累加 all_samples 后即修复并通过，属于目标自身的执行层波动，与记忆无关。"
+    }
+  ],
+  "primary_hypothesis": "PACKING_VISIBILITY",
+  "competing_explanations": [
+    "检索分数全为 null，注入可能是纯新近度/字节预算结果，也可能存在未记录的相似度排序，两者无法区分。",
+    "无对照条件：目标通过可由模型自身能力解释，注入是否带来边际收益或轻微干扰不可判定。",
+    "未提供未选中的记忆库，无法判断是否存在与目标同族的源 episode 未被检索；也未给出源 episode 被注入与否的直接内容级证据。",
+    "参考解把整体标准差定义为各样本 std 的均值（overall_std = np.mean(all_stds)），与目标的合并数据 std 概念不同，而可见测试只查长度与类型，属契约歧义候选。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法知道注入文本对模型内部推理的真实影响（无 counterfactual）。",
+    "retrieval 的 score 全为空，候选排序依据不可见。",
+    "未包含未选中的完整记忆库，不能推断记忆库层面是否缺失相关经验。",
+    "目标离线评测判定 correct=true 且 5 项检查通过，但检查只覆盖长度/类型，不校验整体 std 的数值语义。"
+  ],
+  "minimal_intervention": {
+    "change": "在相同字节预算下改为按与目标的语义相关性保留候选（例如必须纳入同族单样本正态直方图+PDF 的源 episode），替换当前按新近度保留最新四个 episode 的方式。",
+    "fixed": "保持相同的历史、记忆库、注入字节预算、工具与解码环境，以及相同的目标任务与随机种子。",
+    "falsifier": "若注入同族源片段后目标代码结构/实现选择出现可复现变化，或与本次完全一致，则分别削弱或支持“注入内容无可见作用、可见窗口由打包新近度决定”的候选。"
+  },
+  "causal_claim": false
+}

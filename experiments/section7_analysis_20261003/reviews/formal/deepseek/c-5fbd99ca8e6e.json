@@ -1,0 +1,119 @@
+{
+  "case_id": "c-5fbd99ca8e6e",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Generate a category distribution within a specified range and return as a DataFrame."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "合法且已验证通过的源经验，属同一任务族；但其契约是单数据集两列，目标改为多数据集三列并新增 'Dataset' 列与每数据集全类别行。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "源题获得的 sai-* 策略条目未出现在 injected_ids（注入集全为 err-*/misc-*），无法追踪注入内容与源经验的对应关系，故不能判断与目标相关的必要内容是否保真。"
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Do not build a counting result only from OBSERVED values when the spec references a predefined universe of keys"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "CATEGORIES = ['A', 'B', 'C', 'D', 'E']"
+        }
+      ],
+      "reason": "err-00100 的“预定义全集 vs 稀疏观察”教训与目标要求每个数据集覆盖 CATEGORIES 全集直接相关，可迁移；但源题自身的两列单数据集约定只部分适用。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "assert list(sub['Category']) == CATEGORIES"
+        },
+        {
+          "section": "injection/0",
+          "quote": "set(counter.keys()) == set(ANIMALS)"
+        }
+      ],
+      "reason": "代码按 CATEGORIES 全集逐类别生成，且验证断言使用“每数据集类别集合等于全集”这一判别式，与注入教训行为一致；这是行为代理，不能证明检索到并被采用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Do not build a counting result only from OBSERVED values when the spec references a predefined universe of keys"
+        },
+        {
+          "section": "target_visible",
+          "quote": "assert list(sub['Category']) == CATEGORIES"
+        }
+      ],
+      "reason": "注入的全集教训与最终实现及验证断言方向一致，支持“指导被采用”的候选；但目标契约本身即要求五个类别各一行，无反事实时不能证明记忆造成成功。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "target_visible",
+          "quote": "All checks pass."
+        }
+      ],
+      "reason": "直接记录显示提交被执行且判为正确（8 项检查），这是结果本身的证据，不说明记忆是否有效复用。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 43"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"injected_utf8_bytes\": 47246"
+        }
+      ],
+      "reason": "约 44KB、43 条注入是实际上下文开销；仅描述开销，本题成功不能据此断言无收益或性价比差。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "目标只是标准的 DataFrame 逐类别生成模式，agent 可能无需任何记忆即可写出全集实现，观察到的行为可由任务契约本身解释。",
+    "err-00100 等的 helpful 标注是事后统计，不是反事实证据，源题派生条目又未被注入，记忆作用无法确认。",
+    "验证断言可能只是 agent 自发的常规边界检查，而非引用 err-00100 的判别式。"
+  ],
+  "confidence": "low",
+  "uncertainties": [
+    "agent 是否真正读取/采用了 err-00100，还是仅凭任务契约实现。",
+    "隐藏测试与源题隐藏测试的重叠度及是否会因类别/列序差异而失败。",
+    "注入记忆与其原始来源的内容保真度（原始来源未提供）。",
+    "源题两列单数据集约定对目标是否有部分适用或误导风险。"
+  ],
+  "minimal_intervention": {
+    "change": "保持目标、沙箱与预算不变，仅移除 err-00100（及 err-00102 等全集相关条目）再跑一次相同任务，观察是否仍构造每数据集全集并保留类别全集断言。",
+    "fixed": "相同的 target_prompt、相同 CATEGORIES、相同 PYTHON/SUBMIT 工具与字节预算。",
+    "falsifier": "若移除相关记忆后仍产出同样的全集实现与全集断言，则 USE_TRANSFER 候选不受支持；若实现退化为稀疏/缺类别行，则支持该候选。"
+  },
+  "causal_claim": false
+}

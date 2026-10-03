@@ -1,0 +1,135 @@
+{
+  "case_id": "c-41f0614f276c",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Calculates the sum of elements in each row of the array."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=20:True:5"
+        }
+      ],
+      "reason": "A correct, scorable prior episode exists, but it solves a single-array row-sum task rather than the target's list-of-arrays subplot task."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "ax.hist(normalized_data, bins=30, density=True, color='green', alpha=0.6)"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Uses 30 bins for the histogram."
+        }
+      ],
+      "reason": "The source episode's visible code matches its own requested plotting details, so the retained source content is faithful for what it records."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of 2D numpy arrays"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Takes in a 2D numpy array as input."
+        }
+      ],
+      "reason": "The histogram/PDF styling overlaps, but the source lacks the target's list handling, per-array subplots, and target normalization scope."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "def plot_histograms(arrays: list) -> plt.Figure:"
+        }
+      ],
+      "reason": "The visible target execution writes its own function and never calls the source task_func or quotes an injected memory; private reasoning is unavailable."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(arr: np.ndarray) -> (plt.Axes, np.ndarray):"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=20:True:5"
+        }
+      ],
+      "reason": "A legitimate, successful source episode provides a related plotting pattern, but its single-array row-sum scope only creates a partial opportunity and does not prove injection or reuse."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_episode_byte_budget\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "All candidates were selected before packing, but oldest complete episodes were dropped for byte budget and only six unrelated candidates were injected; this is a packing/visibility outcome, not evidence of retrieval failure."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "def plot_histograms(arrays: list) -> plt.Figure:"
+        }
+      ],
+      "reason": "Visible execution implements the target directly and does not visibly adapt or call the source function, so transfer is not demonstrated."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Each histogram should be plotted in a separate subplot within a single figure."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"checks_executed\": 2"
+        }
+      ],
+      "reason": "The target prompt has rich plotting semantics, but the offline evaluation ran only two generic checks, so success does not validate the intended row-sum/subplot contract or any memory influence."
+    }
+  ],
+  "primary_hypothesis": "PACKING_VISIBILITY",
+  "competing_explanations": [
+    "The source episode may have been present in target context outside the observable injection list, or private reasoning may have used memory not shown in target_visible.",
+    "The weak offline checks mean success cannot verify whether hidden normalization semantics matched the reference's row-sum behavior.",
+    "The six injected unrelated episodes may have had no effect, or their effect may be invisible in the retained visible transcript."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the retained source episode was actually available to the target despite source_provenance_injected being false.",
+    "Whether target hidden correctness expects the reference's per-array row-sum normalization rather than flattened z-score normalization.",
+    "Whether any injected memory influenced private reasoning that was removed from the evidence.",
+    "What the complete unselected memory library contained."
+  ],
+  "minimal_intervention": {
+    "change": "Inject the retained source episode/provenance, or a target-specific extension of it, before packing instead of only the six unrelated candidates.",
+    "fixed": "Same target prompt, solver, memory budget, and packing policy.",
+    "falsifier": "If the source episode was already injected/visible in the target context, or if injecting it leaves visible target execution unchanged, the packing/visibility hypothesis is weakened."
+  },
+  "causal_claim": false
+}

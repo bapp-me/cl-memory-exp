@@ -1,0 +1,134 @@
+{
+  "case_id": "c-763f252d4b58",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "retaining only alphanumeric characters. Then hashes the cleaned string with SHA256."
+        },
+        {
+          "section": "source_visible",
+          "quote": "print(hashlib.sha256(clean.encode()).hexdigest() == 'af30263c4d44d67917a4f0727191a4149e1ab615b772b2aeda859068178b146c')"
+        }
+      ],
+      "reason": "源题通过且做法被可见验证；但它只覆盖单字符串→单哈希，不含列表聚合与返回顺序契约，故不能作为本题完整依据。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "可见注入项是跨任务的通用 workflow 摘要（如 Counter 计数、输入校验、示例验证），没有呈现源题清洗+SHA256 的关键配方文本，因此无法判断保留内容的保真度。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Additionally, find the most common hash among them and return it along with the list of hashes."
+        },
+        {
+          "section": "source_prompt",
+          "quote": "input_str (str): The input string to be cleaned and hashed."
+        }
+      ],
+      "reason": "清洗+哈希子步骤直接适用；新增了列表遍历、众数哈希选择与返回顺序要求，这部分源题没有对应内容。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "clean = re.sub(r'[^a-zA-Z0-9]', '', s)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "cleaned = re.sub(r'[^A-Za-z0-9]', '', s)"
+        }
+      ],
+      "reason": "目标沿用了同类正则清洗与 SHA256 流程（字符类写法为等价变体），属行为代理；失败点（元组顺序）并非该模式所决定，不能据此断定记忆有效或有害。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "most_common_hash = Counter(hashes).most_common(1)[0][0] if hashes else None\n    return most_common_hash, hashes"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "new_solution(['Hello, World!', 'Python3', '123 Main St.'])[0] == ['872e4e50ce9990d8b041330c47c9ddd11bec6b503ae9386a99da8584e9bb12c4'"
+        }
+      ],
+      "reason": "提交把众数哈希放在元组第 0 位、哈希列表放第 1 位，而断言要求第 0 位是哈希列表，触发 AssertionError；只证明该次返回顺序不符测试，不证明记忆导致。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Additionally, find the most common hash among them and return it along with the list of hashes."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "return hashes, most_common_hash"
+        }
+      ],
+      "reason": "题面措辞“return it along with the list of hashes”对顺序有歧义（可读成众数在前），而 reference/test 固定为列表在前；属题意与测试可能不一致的候选，不是已证冲突。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Removes all special characters, punctuation marks, and spaces from the input string using a regular expression,"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true,\n    \"source_scorable\": true"
+        }
+      ],
+      "reason": "存在合法且已通过的源经验，子任务（清洗+SHA256）与目标重合，机会窗口成立；来源覆盖只说明可获取，不说明其内容完整或足以解决本题。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "clean = re.sub(r'[^a-zA-Z0-9]', '', s)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "cleaned = re.sub(r'[^A-Za-z0-9]', '', s)"
+        }
+      ],
+      "reason": "目标复用了源题同类的清洗/哈希策略，说明存在可见的策略迁移代理；但该片段与 reference 做法一致，与本次失败无因果关联，且无法排除题面自身已给出该信息。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "题面顺序措辞歧义：agent 可能按“return it along with the list of hashes”理解为众数哈希在前，因此归因也可能是契约表达不清（EVAL_CONTRACT）而非单纯执行失误。",
+    "目标 prompt 已内嵌 import re/hashlib/Counter 与任务描述，正则与 Counter 用法无需依赖记忆即可写出，观察到的“迁移”可能只是同源表述重合。",
+    "注入的 8 条通用 workflow 与本题执行细节（元组顺序）无对应内容，因此没有任何可见证据表明记忆决定了该失败。"
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "隐藏测试是否只接受 (hashes, most_common) 一种顺序，以及是否存在接受另一种顺序的评测分支。",
+    "目标阶段实际保留的源记忆文本内容；provenance 只给出 ID 覆盖，未给出内容。",
+    "额外加入的 isinstance/TypeError 校验是否会影响未见测试用例（本包内无证据）。",
+    "注入的 6512 字节通用记忆是否对结果有任何实际作用，无对照实验无法判断。"
+  ],
+  "minimal_intervention": {
+    "change": "将提交末尾改为 `return hashes, most_common_hash`，使第 0 位为哈希列表、第 1 位为众数哈希。",
+    "fixed": "保持相同的题面、注入记忆集合、检索结果与提交次数不变，仅改返回顺序。",
+    "falsifier": "若在同样输入下断言 new_solution([...])[0] 仍不等于给定哈希列表（即隐藏用例接受的不是列表在前），则顺序假设被反驳。"
+  },
+  "causal_claim": false
+}

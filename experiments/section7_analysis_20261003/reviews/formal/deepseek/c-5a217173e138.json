@@ -1,0 +1,128 @@
+{
+  "case_id": "c-5a217173e138",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=20:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Generate a random string of a given length using ASCII letters and calculate the frequency of each character."
+        }
+      ],
+      "reason": "源 episode 通过隐藏评估，是合法且正确的源经验；但它只覆盖单串频率，不证明能直接满足目标的多长度合并接口。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "random_string = ''.join(random.choice(string.ascii_letters) for _ in range(length))"
+        },
+        {
+          "section": "source_visible",
+          "quote": "return dict(frequency)"
+        }
+      ],
+      "reason": "源可见提交与源契约一致，使用 ascii_letters、Counter 并返回 dict；这里评价的是源内容本身，不是它自动适用于目标。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should accept a list of lengths and a seed for random generation."
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Generate a random string of a given length using ASCII letters and calculate the frequency of each character."
+        }
+      ],
+      "reason": "源的单串生成+计数逻辑可复用于每个子串，但目标新增 list lengths 与组合频次；源没有覆盖组合接口和逐长度调用方式。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "target_visible",
+          "quote": "generates a random lowercase string for each length"
+        }
+      ],
+      "reason": "相关源未被注入，目标可见代码改用 lowercase，且六个注入 episode 与本题无可见对应；不能证明记忆参与了推理或造成失败。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "random.choice(string.ascii_lowercase)"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": false"
+        }
+      ],
+      "reason": "可见提交只用小写字母且一次 seed；隐藏断言期望含大写字母的结果，直接实现/执行与目标测试不一致。不能由此证明记忆造成失败。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "generating multiple random strings of varying lengths and calculating the combined frequency of each character across all generated strings"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "combined_counter.update(task_func(length, seed))"
+        }
+      ],
+      "reason": "目标题面未说明 ascii_letters，也未给出隐藏测试使用的 task_func 契约；参考解依赖逐长度调用该 helper。这是题面与测试可能不一致的候选，不重打分。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_episode_byte_budget\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "源 provenance 在 observable candidates 中但未注入，旧 episode 因字节预算被裁掉，只注入 6 个最新且无关的 episode。这属于选中后的打包淘汰，不是 retrieval 未召回到候选；也不证明若注入必成功。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "EVAL_CONTRACT：可见题面缺少 ASCII 字母集与 task_func helper 说明，隐藏测试期望可能超出题面。",
+    "PACKING_VISIBILITY：相关源 episode 在候选但未注入，目标只能凭题面实现；若注入源是否改变行为无对照。",
+    "无记忆复用：提交看起来只依据 target_prompt 直接实现，注入的六个不相关任务未显现影响。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "源 episode 在候选中的确切 history_index/rank 及是否落在 dropped 列表内，无法从包内逐条确认。",
+    "目标 agent 的私有推理未提供，无法确定是否看到或考虑了任何注入记忆。",
+    "没有反事实，无法判断若注入源 ascii_letters/task_func 信息是否会使目标通过。",
+    "隐藏测试要求的 ascii_letters 和逐长度调用 task_func 是否本应可从题面推出，存在争议。"
+  ],
+  "minimal_intervention": {
+    "change": "修正目标实现：使用 string.ascii_letters 生成字符，并按每个 length 调用/复现 task_func(length, seed) 的重复 seed 行为。",
+    "fixed": "保持同一 target_prompt、同一 imports、同一 PYTHON/SUBMIT 环境和同一隐藏测试。",
+    "falsifier": "若这样修改后仍失败，则主要问题不是可见实现选择，而应转向契约/测试或环境解释。"
+  },
+  "causal_claim": false
+}

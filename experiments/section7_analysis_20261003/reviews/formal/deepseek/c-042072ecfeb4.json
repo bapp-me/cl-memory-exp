@@ -1,0 +1,109 @@
+{
+  "case_id": "c-042072ecfeb4",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=19:True:5"
+        },
+        {
+          "section": "source_visible",
+          "quote": "\"submitted\":true"
+        }
+      ],
+      "reason": "源题离线评分为 correct/scorable 且可见提交成功，可作为合法源经验；但源契约（单样本、返回三元组）与目标契约不同，故只能算带限度的通过，不证明其内容对目标仍充分。"
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "injected_count 为 0 且 memory_policy 为 disabled，本题没有任何记忆内容被写入可见上下文，故无可评估的保真对象。"
+    },
+    "target_applicability": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "没有注入任何记忆内容，不存在可判定适用性的记忆；目标自身的 num_samples/overall 统计要求由模型独立实现。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "目标上下文与工具调用中没有任何被注入的经验文本，行为无法归因于记忆复用；这只能说明可见层面无复用，不能说明记忆本身无效。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_text_utf8_bytes\": 0"
+        }
+      ],
+      "reason": "没有任何记忆字节进入目标上下文，属于打包/可见性层面的空缺；它不能证明系统未持有该经验，也不能证明持有但检索失败。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"distance\": 62"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true"
+        }
+      ],
+      "reason": "存在一个正确的配对源题，说明复用机会本身存在但未被实现；这只说明机会覆盖，不说明源内容对目标仍然适用或保真。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "the list of empirical means and standard deviations for each sample, and the overall empirical mean and standard deviation"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "The empirical standard deviation of the sample."
+        }
+      ],
+      "reason": "目标契约新增了多样本与总体统计的返回要求，与源题单样本三元组返回不同；这提示即使源经验完整被复用也不足以直接满足目标契约，属于契约范围变化而非记忆缺陷。"
+    }
+  ],
+  "primary_hypothesis": "PACKING_VISIBILITY",
+  "competing_explanations": [
+    "成功可能完全来自模型自身的 D0 能力，记忆是否被写入、是否存在均不可见，因此无注入不构成对结果的原因解释。",
+    "目标新增 num_samples 与总体均值/标准差要求，即便存在源经验也需重写实现，故本成功不能反推记忆无用或有用。",
+    "离线评测显示 correct=true 但隐藏正确性反馈不可用，参考解亦非超越题意的绝对真值，评测口径可能仍有未观察到的约束。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法确定记忆库中是否存在该源题的写入记录或其它未展示的经验。",
+    "无受控干预，无法回答注入该源经验是否会改变目标行为。",
+    "目标结束后的 source_update/target_update 内容未提供，不能用于解释本次行为。"
+  ],
+  "minimal_intervention": {
+    "change": "若要做因果检验，唯一关键改动是开启记忆注入并把配对源经验显式放入目标上下文（本次成功无需改动）",
+    "fixed": "保持相同的题面、模型、采样种子、工具与预算",
+    "falsifier": "若注入后目标输出、正确性或回归结果与无注入条件完全一致，则“该源经验会改变目标行为”的候选被反驳"
+  },
+  "causal_claim": false
+}

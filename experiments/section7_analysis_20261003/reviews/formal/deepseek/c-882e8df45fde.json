@@ -1,0 +1,143 @@
+{
+  "case_id": "c-882e8df45fde",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"tests_run\": 5,\n  \"checks_executed\": 27,\n  \"correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "The title of the histogram is \"Histogram of Dice Rolls\"."
+        }
+      ],
+      "reason": "Source was correct and scorable, but it is a single-set dice task with different title/labels; the target adds combined sets and changed plot text."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Seed the random number generator for reproducibility, using either `random.seed(<seed>)` for the `random` module"
+        },
+        {
+          "section": "source_visible",
+          "quote": "random.seed(seed)"
+        }
+      ],
+      "reason": "The relevant injected seeded-random workflow matches the source's verified implementation; no contradiction appears for the target-relevant pieces."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "return the combined frequency array and a histogram of the combined results"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(rolls, seed=None):"
+        }
+      ],
+      "reason": "Generic seeded RNG and plotting workflows transfer, but the target changes to multiple sets and different title/axis labels, and only a subset of injected workflows is relevant."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "ax.bar(NUMBERS, combined_freq)"
+        },
+        {
+          "section": "injection/4",
+          "quote": "Plot the data on the Axes with `ax.hist(<data>, bins=<n_bins>, density=<bool>, color=<color>, alpha=<opacity>)` or `ax.bar(<labels>, <counts>)`"
+        }
+      ],
+      "reason": "Visible target code uses seeded random generation and bar plotting with required labels, matching relevant injected workflows; this is a behavioral proxy, not causal proof."
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Seed the random number generator for reproducibility, using either `random.seed(<seed>)` for the `random` module"
+        },
+        {
+          "section": "target_visible",
+          "quote": "random.seed(seed)"
+        }
+      ],
+      "reason": "Target visibly follows the seeded RNG workflow and passes, but no counterfactual shows the memory was necessary or sufficient."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(rolls, seed=None):"
+        },
+        {
+          "section": "source_visible",
+          "quote": "Both `random.choice` and `random.randint` variants reproduce the expected frequencies."
+        }
+      ],
+      "reason": "A legitimate, verified source task in the same dice domain exists; it does not cover the target's combined-sets contract or changed labels."
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"observable_candidates\": ["
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 8"
+        }
+      ],
+      "reason": "Eight observable candidate memories were selected and injected with no dropped list shown; this only establishes injection opportunity, not content fidelity or use."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "\"returncode\":0"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "The target executed a PYTHON call and submitted successfully, and offline checks accepted the result; no execution failure explains the outcome."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The prompt itself fully specifies the function, and the source task is a near-duplicate, so the target may succeed from ordinary coding skill without memory influence.",
+    "Visible code patterns such as random.seed and ax.bar are generic and could be produced from prior knowledge rather than the injected workflow library.",
+    "The offline evaluator ran only 3 checks and reports 0 unittest tests, so exact combined-seed behavior may not be tested; success does not isolate a memory-specific effect."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "No private reasoning is available, so it is unknown whether the target model read or relied on any injected memory.",
+    "The complete unselected memory library and pre-update workflow contents are not presented; provenance coverage is not content fidelity.",
+    "There is no counterfactual run without the injected memories, so causal claims about memory effects cannot be made.",
+    "target_update_operations is empty after the target and cannot explain the target behavior."
+  ],
+  "minimal_intervention": {
+    "change": "Remove or replace the relevant seeded-random and histogram/bar-plot workflow memories from the injected set while keeping the same target prompt, tools, and budget.",
+    "fixed": "Same target task, hidden evaluator, environment, seed values, and memory budget/history.",
+    "falsifier": "If the target still passes with identical visible adaptation after removing those memories, the USE_TRANSFER candidate is weakened; failure or divergent code would support it."
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,129 @@
+{
+  "case_id": "c-8102202d359c",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(goals, penalties, rng_seed=None):"
+        },
+        {
+          "section": "source_visible",
+          "quote": "The first variant — `randint(0, goals)` and `randint(0, penalties)` per team, with penalty cost = penalties × 1000 — reproduces the example exactly."
+        }
+      ],
+      "reason": "The source episode is legitimate and evaluated correct, but its API and semantics are per-team maxima rather than the target's num_matches aggregation."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Simulates football match results with random goals and penalties for multiple teams,"
+        },
+        {
+          "section": "source_visible",
+          "quote": "The first variant — `randint(0, goals)` and `randint(0, penalties)` per team, with penalty cost = penalties × 1000 — reproduces the example exactly."
+        }
+      ],
+      "reason": "The injected source text mirrors the source prompt and source trajectory; no visible corruption or contradiction is present."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "def simulate_league(num_matches, rng_seed=None):"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(goals, penalties, rng_seed=None):"
+        }
+      ],
+      "reason": "Constants, DataFrame columns, and linear-regression setup transfer, but the target changes the function contract and requires aggregating over num_matches."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "for _ in range(num_matches):\n        total_goals += randint(0, 5)\n        total_penalties += randint(0, 3)"
+        },
+        {
+          "section": "source_visible",
+          "quote": "for team in TEAMS:\n        num_goals = randint(0, goals)\n        num_penalties = randint(0, penalties)"
+        }
+      ],
+      "reason": "Target code mirrors the source's per-team records loop and fit block while adapting generation to per-match totals; this is a behavioral proxy, not causal proof."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "from random import randint, seed\nimport pandas as pd\nfrom sklearn.linear_model import LinearRegression"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "A legitimate source episode with matching imports and constants existed and passed source scoring. It does not prove the target agent used it or that the source contract applies directly."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "for _ in range(num_matches):\n        total_goals += randint(0, 5)\n        total_penalties += randint(0, 3)"
+        },
+        {
+          "section": "source_visible",
+          "quote": "for team in TEAMS:\n        num_goals = randint(0, goals)\n        num_penalties = randint(0, penalties)"
+        }
+      ],
+      "reason": "The submitted target keeps the source's per-team records/DataFrame/fit structure but adds a num_matches loop, a visible adaptation candidate. It cannot show memory caused success, nor that all source statements remain correct for the target."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "assert df.shape == (5, 3), 'DataFrame should have 5 rows and 3 columns.'"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "The target scoring checks structural properties such as DataFrame/model type, shape, and columns. This explains why the structural submission passes even though its value aggregation differs from the reference; it does not establish hidden numerical equivalence."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The target prompt itself supplies constants, required columns, function signature, and libraries, so the same implementation may be producible without memory.",
+    "The source and target contracts differ: source uses per-team goals/penalties maxima, while target asks for accumulation over num_matches.",
+    "No retrieval log or counterfactual is provided, so injection of the source episode does not prove the solver saw or used it.",
+    "Unrelated injected items were present, but there is no evidence they were considered or altered behavior."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the source episode was actually retrieved into the target context, versus merely recorded as injected memory.",
+    "Whether the source-structured target code would still appear if the source episode were ablated.",
+    "Whether hidden target tests check numerical simulation semantics, since the visible evaluator reports checks_executed without tests_run.",
+    "The complete unselected memory library and retrieval candidates are not available."
+  ],
+  "minimal_intervention": {
+    "change": "Ablate only the source episode from the injected memory while keeping the target prompt, other injected items, tool budget, and RNG seeds fixed.",
+    "fixed": "Same target prompt, same tool access and budget, same RNG seeds, same evaluation and other memory items.",
+    "falsifier": "If the same source-structured loop/records/fit block and correctness appear without source injection, the visible-use candidate is not supported; if failure appears only without source, utility remains only a candidate."
+  },
+  "causal_claim": false
+}

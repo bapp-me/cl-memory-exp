@@ -1,0 +1,114 @@
+{
+  "case_id": "c-e830abff84ff",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "本包只给出两条注入记忆与 target 轨迹，没有任何源题轨迹/源经验配对，无法判定源经验是否合法可靠。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "无源内容可比对，无法核实注入工作流对源经验的保真度；仅可见注入文本本身。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Before committing to an action, verify which actions are legal in the current state to avoid invalid moves."
+        },
+        {
+          "section": "target_visible",
+          "quote": "No purple door is currently visible. Let me look around — turning may reveal it."
+        }
+      ],
+      "reason": "工作流的“先查合法动作再 go to 目标”适用于本导航任务，但其“(e.g., `go to <object>`)”预设目标已出现在合法动作列表中；本题动作列表只有蓝/绿门，紫门需先转身探索，故只是部分适用。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"check available actions\""
+        },
+        {
+          "section": "injection/0",
+          "quote": "**Goal:** Move the agent to a specified object (e.g., a door) in the room by first confirming valid navigation options, then executing the navigation action toward the target."
+        },
+        {
+          "section": "target_visible",
+          "quote": "go to purple closed door 1"
+        }
+      ],
+      "reason": "首个动作确实是注入工作流要求的 check available actions，最后按 “go to <目标对象>” 形式发出 “go to purple closed door 1”；两次左转是对“目标不可见”的合理补充，而非照搬工作流。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"check available actions\""
+        },
+        {
+          "section": "injection/0",
+          "quote": "**Goal:** Move the agent to a specified object (e.g., a door) in the room by first confirming valid navigation options, then executing the navigation action toward the target."
+        },
+        {
+          "section": "target_visible",
+          "quote": "go to purple closed door 1"
+        }
+      ],
+      "reason": "可见动作序列与注入工作流的“先确认导航选项、再执行 go to 目标”结构一致，属行为代理；不能证明是记忆导致成功，也不能证明该记忆带来收益。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "No purple door is currently visible. Let me look around — turning may reveal it."
+        }
+      ],
+      "reason": "紫门初始不可见，两次 turn left 属于任务本身的直接探索行为，注入工作流并未规定此步骤；说明成功依赖 D0 探索而非仅靠记忆。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"actions\": 4"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"working_tool_calls\": 4"
+        }
+      ],
+      "reason": "评测记录行动数为 4，其中首个 check available actions 与注入工作流第 1 步对应，构成一次额外工具调用；仅说明可见开销，本题成功且无对照，不能据此断言该记忆无收益或性价比差。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "没有无记忆对照，'先查可用动作'可能只是该模型对 BabyAI 的固有习惯，而非注入记忆所致。",
+    "本题最优路径约 3 步，注入记忆并不必要，成功可能完全来自 D0 探索与环境；记忆可能是冗余而非有效复用。",
+    "缺少源题轨迹，无法判断注入工作流是否忠实于任何真实源经验，也无法排除它是合成/泛化文本。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无源题轨迹与源结果，source_quality/memory_fidelity 无法确证。",
+    "无法判断若去掉注入文本，动作序列与行动数是否改变（无干预）。",
+    "token 计数为 null / unavailable，实际上下文开销无法精确计量。",
+    "target_update_operations 发生在目标结束之后，不能用于解释本题行为。"
+  ],
+  "minimal_intervention": {
+    "change": "移除注入的 'check available actions' 前置步骤（或做无记忆对照运行），观察行动数与动作序列是否变化。",
+    "fixed": "保持同一 BabyAI 任务种子/房间布局、同一模型与预算、同一工具接口。",
+    "falsifier": "若移除该记忆后 agent 仍先调用 check available actions 并取得同样成功，则 USE_TRANSFER 候选被削弱。"
+  },
+  "causal_claim": false
+}

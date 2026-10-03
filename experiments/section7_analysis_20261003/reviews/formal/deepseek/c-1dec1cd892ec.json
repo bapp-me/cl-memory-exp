@@ -1,0 +1,142 @@
+{
+  "case_id": "c-1dec1cd892ec",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Removes all special characters, punctuation marks, and spaces from the input string using a regular expression,"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=18:True:9"
+        }
+      ],
+      "reason": "源任务是同族 clean+SHA256 题且离线判定正确，属合法来源，但只覆盖单字符串，目标新增列表/众数要求。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/19",
+          "quote": "additionally retains underscores and Unicode word characters, so a spec input like 'a_b' or 'café' cleans differently than the literal [^A-Za-z0-9] reading"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "Do not substitute regex shorthand for an explicit 'alphanumeric only' character class"
+        }
+      ],
+      "reason": "注入的 err-00072 内容与源题学到的字符类教训一致，未发现被篡改或丢弃必要内容。"
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "retaining only alphanumeric characters"
+        },
+        {
+          "section": "injection/19",
+          "quote": "Do not substitute regex shorthand for an explicit 'alphanumeric only' character class"
+        }
+      ],
+      "reason": "目标核心清洗规则与记忆所述场景一致；仅返回结构部分（列表、最频哈希）是新增条件。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "cleaned = re.sub(r'[^A-Za-z0-9]', '', s)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "Check 3 failed — that's an error in my oracle, not the implementation"
+        }
+      ],
+      "reason": "提交使用显式否定字符类，且把 'café' 探针失败正确归因并改为 'caf'，与记忆的判别点一致；这只是行为代理，不能证明因果。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Removes all special characters, punctuation marks, and spaces from the input string using a regular expression,"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "remove all special characters, punctuation marks, and spaces from each string, retaining only alphanumeric characters"
+        }
+      ],
+      "reason": "source_index 35 的源题与目标同属 clean+hash 家族，提供了合法先例；仅证明存在可用来源，不证明其内容被正确复用。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/19",
+          "quote": "additionally retains underscores and Unicode word characters, so a spec input like 'a_b' or 'café' cleans differently than the literal [^A-Za-z0-9] reading"
+        },
+        {
+          "section": "target_submission",
+          "quote": "cleaned = re.sub(r'[^A-Za-z0-9]', '', s)"
+        }
+      ],
+      "reason": "相关记忆已注入且目标可见地采用字面字符类；无对照条件，不能断言成功由该记忆造成。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Check 3 failed — that's an error in my oracle, not the implementation"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "目标沙箱先因自造探针失败，被正确判定为 oracle 问题后重跑通过并提交，离线判正确；这是可见执行轨迹，不代表记忆机制。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"memory_id\": \"sai-00071\""
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_block_byte_budget\""
+        }
+      ],
+      "reason": "源经验中同批的 sai-00071 在装配阶段因字节预算被淘汰，而 err-00072 保留；属打包取舍，不能据此判定检索失败或遗忘。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "显式 [^A-Za-z0-9] 是本题最自然的字面读法，模型可能未读记忆也这样写，可见一致性不构成因果。",
+    "目标新增的列表+Counter 众数逻辑未被源经验覆盖，成功可能主要来自模型自身能力而非记忆迁移。",
+    "仅 err-00072 被注入而 sai-00071 被丢弃，无法区分是哪条记忆（或二者皆无）在起作用。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法确认模型是否实际阅读并采纳注入的 err-00072。",
+    "隐藏测试对 'alphanumeric' 是否应采用 str.isalnum 式 Unicode 语义不可知。",
+    "被淘汰的 sai-00071 是否会影响行为不可由现有证据判断。"
+  ],
+  "minimal_intervention": {
+    "change": "在相同任务与预算下移除 err-00072（并保持其余注入不变），观察是否仍采用显式否定字符类并正确处理 'café' 探针。",
+    "fixed": "保持相同目标、相同的 50 条注入集、相同沙箱与提交协议。",
+    "falsifier": "若移除后行为与校验结果完全不变，则本 case 的 USE_TRANSFER 候选被削弱。"
+  },
+  "causal_claim": false
+}

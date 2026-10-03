@@ -1,0 +1,123 @@
+{
+  "case_id": "c-4285bf012466",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=35:True:5"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true"
+        }
+      ],
+      "reason": "源单字典任务离线判为 correct 且可评分，是合法经验；但源只定义单字典语义，未覆盖目标的多组聚合要求。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "The random counts match exactly with `random.seed(seed)` followed by `random.randint(1, max_count)` for each animal in `ANIMALS` order."
+        }
+      ],
+      "reason": "注入的源内容与源可见轨迹一致地保留了 seed→逐动物 randint 以及仅保留 ANIMALS 内动物这两个与目标相关的关键点。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "reverse each dictionary and count the occurrences of each predefined animal name across all groups"
+        }
+      ],
+      "reason": "反向映射部分直接适用；‘跨所有组统计’是目标新增条件，源经验未定义多字典聚合语义。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Check that with seed 77, counts match the previously verified per-animal randint sequence"
+        }
+      ],
+      "reason": "目标中显式复用了源验证过的 seed→逐动物 randint 模式并自测通过，是行为代理而非因果证据。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": true"
+        }
+      ],
+      "reason": "存在通过且保真度较高的源配对并被注入，构成可复用机会；这本身不证明内容被使用或带来收益。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Test mirroring the earlier verified example semantics"
+        }
+      ],
+      "reason": "目标轨迹显式引用‘先前验证过的语义’并复用源模式，支持迁移候选；无反事实，不能断定记忆造成成功。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "total_animal_counts.update(animal_counts)"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"tests_run\": 0"
+        }
+      ],
+      "reason": "参考解按每个字典累加随机计数，提交解只给每个动物一个计数，却仍判 correct；说明实际检查可能未验证聚合语义，属题意/测试不一致候选，不重打分。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"submitted\": true"
+        },
+        {
+          "section": "target_visible",
+          "quote": "{\\n        \"type\": \"text\",\\n        \"text\": \"{\\\"returncode\\\":0,\\\"stdout\\\""
+        }
+      ],
+      "reason": "PYTHON 执行返回 returncode 0 且 SUBMIT 成功，任务执行链完整、无基础设施错误。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "正确性可能来自模型自身对随机数序列的试探，而非记忆内容贡献",
+    "通过可能源于检查偏松（未校验计数聚合），与是否复用记忆无关",
+    "注入包中另有两段不相关任务（部门 JSON、随机字符串），其存在不证明干扰也不证明无用"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法区分记忆是被检索使用还是仅被动注入到上下文",
+    "隐藏检查是否验证计数聚合值未知",
+    "缺少去除记忆的反事实，无法判定因果贡献",
+    "源状态是否完整保留不可由现有哈希判断"
+  ],
+  "minimal_intervention": {
+    "change": "将注入的源经验替换为覆盖‘多字典聚合计数’的同类示例，或直接移除该源经验",
+    "fixed": "保持相同目标题面、随机 seed 与预算",
+    "falsifier": "若移除源经验后目标仍以相同方式通过且行为无变化，则记忆贡献的假设被削弱"
+  },
+  "causal_claim": false
+}

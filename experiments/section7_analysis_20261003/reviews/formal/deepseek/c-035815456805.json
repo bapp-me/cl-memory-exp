@@ -1,0 +1,143 @@
+{
+  "case_id": "c-035815456805",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=11:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(goals, penalties, rng_seed=None):"
+        }
+      ],
+      "reason": "源 episode 通过其自身评分（11 checks/5 tests OK），是合法可评分经验；但源契约是按单队上限参数化生成一行，与目标的多场次累计契约不同，故只算有保留的通过。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "源 episode 未保留在方法状态、也没有任何注入，目标上下文中不存在可比对的记忆内容，保真度无从评估。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "def simulate_league(num_matches, rng_seed=None):"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(goals, penalties, rng_seed=None):"
+        }
+      ],
+      "reason": "两者共享足球/罚款成本/LinearRegression 主题与列名，但目标新增了 num_matches 场次循环与两两对阵累计，源的单队单行结构只部分适用。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        },
+        {
+          "section": "target_submission",
+          "quote": "home_team, away_team = sample(TEAMS, 2)"
+        }
+      ],
+      "reason": "无任何注入记录，且目标提交包含源方案没有的每场两两球队累计逻辑，看不到记忆被复用的行为痕迹；无注入时不应主张复用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "simulate_league(10, rng_seed=42)"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "EVALUATOR_RESULT=8:True:0"
+        }
+      ],
+      "reason": "目标 agent 自行写码、运行并提交后隐藏检查通过，成功可由直接执行解释；这不证明任何记忆复用或因果影响。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=11:True:5"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        }
+      ],
+      "reason": "确实存在一个通过评分的同主题源经验，但它未被保留/形成可注入的 D1 候选，因此无法检验其迁移价值；来源存在不等于内容保真或适用。"
+    },
+    {
+      "tag": "INFRA_PROTOCOL",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "记忆策略关闭且注入计数为零，本题不存在可观察的写入/注入路径；这是环境条件，不能当作 agent 行为或记忆机制失败的证据。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "assert df.shape == (5, 3)"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"tests_run\": 0, \"checks_executed\": 8"
+        }
+      ],
+      "reason": "可见参考断言只覆盖返回类型、形状与列名，隐藏检查粒度未知，且参考实现与目标签名（simulate_league vs task_func）不一致；这是判分覆盖面候选问题，不能据此断言模拟语义或记忆机制正确。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "目标方案与源方案共享的部分结构（records 字典、seed 守卫、列名）也可能来自共享题面/模板，而非记忆复用；无注入证据时无法区分。",
+    "本 packet 不含未选择的完整记忆库，D1 候选是否曾存在或被检索不可判断。",
+    "记忆系统在本题关闭（memory_policy disabled、injected_count 0），任何记忆相关解释在此条件下都不可检验。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "源 episode 未被保留/注入，无法知道若注入是否改变目标行为。",
+    "隐藏检查具体验证哪些语义（是否真的两两对阵、罚款成本换算）未知。",
+    "源的任务契约与该目标契约差异是否会导致负迁移，无任何反事实证据。",
+    "目标提交中对 num_matches=0 的行为未被隐藏检查覆盖（可见运行只显示 edge 情况未提交）。"
+  ],
+  "minimal_intervention": {
+    "change": "在完全相同的题面、随机种子与提交协议下，向目标上下文注入该通过评分的源 episode（或由其提炼的 D1 候选），与本题无注入运行对照。",
+    "fixed": "相同 target_prompt、相同 Python/sklearn 工具链、相同 rng_seed 与预算、相同评分 mask。",
+    "falsifier": "若注入与未注入两次提交/行为完全一致，则记忆影响假设不成立；若提交出现源特有模式（如按每队上限参数化、单队单行结构），则提示可见复用。"
+  },
+  "causal_claim": false
+}

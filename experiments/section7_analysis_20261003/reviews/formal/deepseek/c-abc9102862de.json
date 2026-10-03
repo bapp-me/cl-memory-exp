@@ -1,0 +1,143 @@
+{
+  "case_id": "c-abc9102862de",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_visible",
+          "quote": "rnd = random.Random(seed)"
+        }
+      ],
+      "reason": "Source task passed its 10 hidden tests, but its per-call local RNG and single-text interface only partly match the list-level target."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "The only injected memories are pandas/matplotlib facts; no relevant scramble-source content or provenance was injected, so relevant memory is absent rather than partial."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(text, seed=None):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "The function should output a list of scrambled texts, one for each input text."
+        }
+      ],
+      "reason": "Core scramble logic is on-topic, but source is single-text and per-call while target requires list mapping and per-element seed behavior; applicability is partial."
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "rnd = random.Random(seed)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "random.seed(seed)"
+        }
+      ],
+      "reason": "Target visibly mirrors source's middle-shuffle/first-last algorithm but changes to one global seed for the whole list; visible misapplication candidate, not causal proof because source was not injected."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(new_task_func(['Hello world! This is a test.', 'Python is fun and powerful.'], 123)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "random.seed(seed)"
+        }
+      ],
+      "reason": "Hidden assertion failed on a two-text list, and submitted code seeds once for the whole list, so later texts reuse advanced RNG state; direct execution mismatch, not memory causality."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should output a list of scrambled texts, one for each input text."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "return [task_func(text, seed) for text in texts]"
+        }
+      ],
+      "reason": "Prompt does not say seed is reset per text, while reference wraps task_func per element; hidden test assumes per-text reseeding, so contract ambiguity is a candidate."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "rnd = random.Random(seed)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "def new_task_func(texts, seed=None):"
+        }
+      ],
+      "reason": "Visible target code keeps source's core scramble algorithm but changes RNG scope for a list signature; this is an adaptation/misapplication candidate, not proof memory was used."
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        }
+      ],
+      "reason": "Source-end update recorded no memory operations and raw source episode was not retained, so relevant source experience was not available for target injection; absence is not a retrieval miss."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "EVAL_CONTRACT: hidden test may require per-text reseeding that the prompt does not state.",
+    "WRITE_ADMISSION: source scramble experience was not retained or injected, so target lacked relevant guidance.",
+    "The model may have independently produced the algorithm; irrelevant pandas/matplotlib injections could be noise, but no interference is proven."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether any source-derived memory existed unselected in the full memory library; packet does not include the complete library.",
+    "Whether per-text seed reset is part of the intended task contract or only an artifact of the reference wrapper.",
+    "Whether irrelevant injected memories affected target behavior; no counterfactual is available.",
+    "Whether regex-boundary differences independently contributed; evaluation output does not show the submitted second-text output."
+  ],
+  "minimal_intervention": {
+    "change": "Clarify or implement that seed is applied independently per input text, e.g. wrap task_func per element.",
+    "fixed": "Same source task, target prompt, hidden tests, injected memory set, and random seed.",
+    "falsifier": "If the same failure occurs with no memory injection and no source content, or if per-text reseeding still fails the hidden tests, the contract/transfer candidate is weakened."
+  },
+  "causal_claim": false
+}

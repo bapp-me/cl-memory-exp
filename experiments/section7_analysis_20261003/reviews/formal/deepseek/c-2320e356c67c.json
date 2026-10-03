@@ -1,0 +1,146 @@
+{
+  "case_id": "c-2320e356c67c",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df):"
+        }
+      ],
+      "reason": "源题通过其测试，但契约只针对单个 DataFrame 的标准化与相关热图，未包含目标的多 DataFrame 合并要求。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_retained\": false"
+        }
+      ],
+      "reason": "没有保留或注入可核对的记忆内容，因此不存在可评价保真度的目标相关记忆。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Standardize numeric columns in a DataFrame and return the heatmap of the correlation matrix."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of DataFrames"
+        }
+      ],
+      "reason": "源经验可复用于单 DataFrame 的缺失均值填充、标准化和相关计算，但目标新增了列表输入及跨 DataFrame 合并相关矩阵的契约。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        }
+      ],
+      "reason": "目标轨迹中没有注入记忆内容；即使代码与源题有相似步骤，也只能视为共享任务元素，不能证明复用源记忆。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "return a combined heatmap of the correlation matrices for all DataFrames"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(combined_corr.shape == (2, 4))"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "combined_corr = pd.concat([combined_corr, corr_matrix], axis=1)"
+        }
+      ],
+      "reason": "隐藏测试期望水平拼接后的相关矩阵形状 (2,4)，而题面只写“combined heatmap”；这是题面/测试可能不一致的候选，不能据此断言测试错误。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "combined = combined / len(corr_mats)"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": false"
+        }
+      ],
+      "reason": "可见提交把各相关矩阵平均成 2x2 返回，与离线断言期望的形状不符；这是直接执行/契约理解差异，不是记忆因果证据。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of DataFrames"
+        }
+      ],
+      "reason": "源任务与目标共享标准化和相关热图步骤，但源只处理单表，目标新增列表合并条件，因此旧经验最多部分适用。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        }
+      ],
+      "reason": "没有源经验被保留或注入，故不能把本题失败归因于检索到的记忆；缺少写入也不能证明存在已存但未检索的内容。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "目标自身的实现选择（平均相关矩阵）是造成形状不符的直接原因，未必源于记忆或题面歧义。",
+    "没有注入记忆，源题经验不能解释目标行为；相似代码可能来自共享任务要求。",
+    "源题只覆盖单 DataFrame，目标新增的合并方式未被源经验覆盖。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试的完整断言未知，仅见首个形状断言。",
+    "无法确认更明确的合并契约是否会改变目标代码。",
+    "没有检索候选或记忆注入日志，无法评估原始目标是否见过源题内容。"
+  ],
+  "minimal_intervention": {
+    "change": "明确要求返回按列拼接的各 DataFrame 相关矩阵（pd.concat(..., axis=1)），或把提交实现改为水平拼接而非平均。",
+    "fixed": "保持相同的历史、环境、预算，且不新增记忆注入。",
+    "falsifier": "若明确要求水平拼接后，目标仍返回平均后的 2x2 矩阵或继续触发同一形状断言，则题面歧义作为主因被削弱。"
+  },
+  "causal_claim": false
+}

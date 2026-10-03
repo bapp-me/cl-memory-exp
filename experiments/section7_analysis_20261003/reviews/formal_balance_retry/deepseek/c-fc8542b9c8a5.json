@@ -1,0 +1,131 @@
+{
+  "case_id": "c-fc8542b9c8a5",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=19:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(mu=0, sigma=1, sample_size=1000, seed=0):"
+        }
+      ],
+      "reason": "源题被独立评分为正确（19 项检查、5 个测试通过），其更新产出了与本题同域的 RNG/std 经验；但源题是单样本版本，覆盖面窄于目标。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/8",
+          "quote": "Remember np.std defaults to ddof=0 (population standard deviation)."
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "Tasks whose expected values match np.std's default require ddof=0"
+        }
+      ],
+      "reason": "注入的 err-00005/err-00004/misc-00006 与源题 ADD 内容逐字一致，属与目标相关的合法源经验。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "generate multiple samples from the distribution, calculate the empirical mean and standard deviation for each sample"
+        }
+      ],
+      "reason": "RNG API 与 ddof 议题延续适用，但目标新增多样本列表、跨样本合并统计和逐样本拟合等条件，且提示未给任何钉死数值。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "different seed -> different results"
+        },
+        {
+          "section": "injection/10",
+          "quote": "Never invoke the function-under-test more than once in a verification script when the output depends on a seeded RNG"
+        }
+      ],
+      "reason": "可见验证脚本显式写出 'single call per seed, err-00034' 并做跨种子分歧检查，与注入条目方向一致；仅是行为代理，不能证明因果增益。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "single call per seed, err-00034"
+        },
+        {
+          "section": "injection/10",
+          "quote": "Never invoke the function-under-test more than once in a verification script when the output depends on a seeded RNG"
+        }
+      ],
+      "reason": "目标脚本直接引用 err-00034 命名并采用单次调用+复用、跨种子分歧的验证形态，符合注入条目；但无对照，不能证明成功由该记忆造成。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "Remember np.std defaults to ddof=0 (population standard deviation)."
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(mu=0, sigma=1, sample_size=1000, seed=0):"
+        }
+      ],
+      "reason": "源题在同统计域内合法产出了 legacy RNG 与 ddof=0 经验，构成可用机会；机会不等于被采用或产生效果。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_block_byte_budget"
+        }
+      ],
+      "reason": "128 个检索候选中大量条目因字节预算被丢弃、实际注入 50 条，说明进入上下文的集合是打包截断结果；某记忆未出现不能推断为检索失败或不存在。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "injected_count\": 50"
+        }
+      ],
+      "reason": "本次注入了 50 条记忆、约 43.7KB，构成本题上下文开销；仅描述开销，不能据此断言这些记忆无收益或性价比差。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "单次调用复用与跨种子分歧属通用良好实践，可能在无记忆条件下同样出现，缺少反事实。",
+    "脚本中的手工 oracle 重新 np.random.seed(0) 并复算同一生成序列与 ddof 选择，按 err-00111 属循环验证，无法校验 RNG API/ddof 选择。",
+    "目标未提供钉死数值，err-00004 的核心判别用途在本任务无法被真正行使。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无受控干预，无法确定记忆是否改变了任何一个决策。",
+    "隐藏评分只做数量/类型检查（5 项检查通过），无法判断逐样本拟合 PDF 与理论 PDF 哪一种符合出题意图。",
+    "target_update 中 sai-00117 被标 harmful，但可见轨迹中没有其被使用或造成影响的证据。",
+    "目标提示无数值钉死，ddof 选择的分歧是否被评测方检验不可知。"
+  ],
+  "minimal_intervention": {
+    "change": "none（本题已成功）；若要检验迁移候选，仅在相同运行中移除 err-00034 一条记忆",
+    "fixed": "保持相同目标提示、种子、沙箱与其余 49 条注入记忆不变",
+    "falsifier": "在移除 err-00034 的等价运行中仍出现同样的单次调用复用与跨种子分歧验证，则削弱 USE_TRANSFER 候选"
+  },
+  "causal_claim": false
+}

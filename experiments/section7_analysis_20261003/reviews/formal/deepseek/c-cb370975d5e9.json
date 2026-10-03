@@ -1,0 +1,93 @@
+{
+  "case_id": "c-cb370975d5e9",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "This packet contains no paired source task or source experience; only target prompt/visible trace and mechanical stats are present, so source quality cannot be judged."
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "No memory content is provided to check for fidelity, and injection metadata is empty; there is no memory statement whose fidelity could be assessed."
+    },
+    "target_applicability": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0,"
+        }
+      ],
+      "reason": "Nothing was injected and the memory policy is disabled, so there is no memory item that could be applicable or not to this goal."
+    },
+    "visible_use": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        }
+      ],
+      "reason": "With zero injected memory there is no memory to visibly use, adapt, or misapply; the trace shows only task-driven exploration."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "No purple door is visible yet, so I'll explore through one of the doors."
+        },
+        {
+          "section": "target_visible",
+          "quote": "I found a purple door. Let me go to it."
+        },
+        {
+          "section": "target_visible",
+          "quote": "The task is completed."
+        }
+      ],
+      "reason": "Direct action trace shows the agent exploring through the blue door, rotating until the purple door was observed, then going to it, and the environment reporting completion; this explains success without invoking memory. It cannot show whether any memory was retrieved or would have helped."
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"working_tool_calls\": 10,"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"totalTokens\": 7060"
+        },
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"turn right\""
+        }
+      ],
+      "reason": "Mechanical counts record 10 ACTION calls and 7060 total tokens, with visible back-and-forth turns, i.e. exploration overhead on the task path. This only describes visible cost; it does not show any memory cost or that memory has no benefit in general."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "Latent model priors or luck in choosing the blue door could explain reaching the purple door as much as deliberate exploration.",
+    "Retrieval/injection accounting could be incomplete in the packet (unselected memory library not shown), so absence of memory use is only what this packet records."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "Whether any source task or memory library entry existed outside this packet.",
+    "Why the agent chose the blue door first rather than another route.",
+    "Whether submitted:true plus no submit calls reflects a contract quirk of the ACTION tool."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same BabyAI layout, same ACTION tool set, memory policy left disabled.",
+    "falsifier": "Any injected memory text, non-empty injection_metadata, or a paired source task with matching content would refute the claim that this target is a memory-free D0-only success."
+  },
+  "causal_claim": false
+}

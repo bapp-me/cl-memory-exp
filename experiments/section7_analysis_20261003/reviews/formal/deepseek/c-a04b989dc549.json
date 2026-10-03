@@ -1,0 +1,136 @@
+{
+  "case_id": "c-a04b989dc549",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "target_update_operations",
+          "quote": "\"stream.task-006.attempt-1\""
+        }
+      ],
+      "reason": "Only a source event id is present, with no paired source transcript or memory text to judge quality."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": []"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "No memory text was injected into the target, so no fidelity relation can be assessed."
+    },
+    "target_applicability": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"observable_candidates\": []"
+        }
+      ],
+      "reason": "No candidate memory was available in the retrieval snapshot, so no memory was applicable to this target."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"check available actions\""
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": []"
+        }
+      ],
+      "reason": "The trace contains only ACTION calls and environment observations; no memory text is injected or visibly cited."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"toggle and go through red closed door 1\""
+        },
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"go through purple open door 1\""
+        },
+        {
+          "section": "target_visible",
+          "quote": "\"submitted\":true"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": false"
+        }
+      ],
+      "reason": "The agent navigated through doors and submitted after going through a purple open door, while evaluation marks correct=false/progress=0.5. This supports a visible target execution failure, not a memory claim."
+    },
+    {
+      "tag": "INFRA_PROTOCOL",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"toggle\""
+        },
+        {
+          "section": "target_visible",
+          "quote": "\"observation\":\"The action is not recognized. Please check valid actions.\""
+        },
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"toggle and go through red closed door 1\""
+        }
+      ],
+      "reason": "The ACTION tool rejected primitive 'toggle' until the agent used a composite action string. This is protocol friction in the direct record, and the agent recovered, so it is not established as the outcome cause."
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"observable_candidates\": []"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"selected_before_packing\": []"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": []"
+        }
+      ],
+      "reason": "The direct retrieval record shows zero observable, selected, or injected memory candidates. This rules out visible memory influence in this trace, but not prove the store is empty or explain retrieval quality."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "No memory candidates were injected, so memory-quality, retrieval, and transfer explanations are unidentifiable from this trace.",
+    "The failure could reflect ambiguity in the goal 'open a door behind you' or in which door the environment expects, since the agent opened or entered other doors before submitting.",
+    "The post-task update hash changed with empty operations, which cannot explain prior target behavior."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether a source experience existed and what it contained; only an event id is present.",
+    "Whether the memory store had relevant entries not returned by this target retrieval snapshot.",
+    "Which specific door satisfies 'open a door behind you' under the evaluator's hidden scoring rule.",
+    "What changed between before_hash and after_hash with operations=[] is not visible."
+  ],
+  "minimal_intervention": {
+    "change": "Replace the final door choice/submission with an explicit turn to face the door behind the start orientation and use the accepted composite toggle-and-go action for that door.",
+    "fixed": "Same target prompt, same ACTION interface, no memory injection, same step budget and scoring mask.",
+    "falsifier": "A rerun with that corrected behind-door action still yields correct=false, or a memory-injected run changes the outcome without any visible memory use."
+  },
+  "causal_claim": false
+}

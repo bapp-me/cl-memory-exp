@@ -1,0 +1,139 @@
+{
+  "case_id": "c-341e2ac7410a",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "df (pandas.DataFrame): A pandas DataFrame with only numeric columns."
+        }
+      ],
+      "reason": "源题通过自身 6 个测试，并提供成对图、协方差和非数值 TypeError 的直接经验；但源题只处理单个 DataFrame，范围小于目标的多 DataFrame 组合任务。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "TypeError: If the DataFrame contains non-numeric data types."
+        }
+      ],
+      "reason": "源记忆中的异常契约与源可见执行一致，未见源内容被篡改或矛盾；这不证明该内容被注入目标或可单独修复目标。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "df (pandas.DataFrame): A pandas DataFrame with only numeric columns."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "list of DataFrames"
+        }
+      ],
+      "reason": "源题与目标共享成对图、协方差和非数值异常语义，但目标新增列表输入、空列表检查和组合多表逻辑，源经验只部分适用。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "TypeError: If the DataFrame contains non-numeric data types."
+        },
+        {
+          "section": "target_submission",
+          "quote": "contains non-numeric data."
+        }
+      ],
+      "reason": "目标最终代码对非数值数据抛 ValueError，与源记忆的 TypeError 约定相反；四个注入片段也未见进入目标实现，故没有可见的源记忆复用痕迹。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_in_observable_retrieval_candidates\": true"
+        }
+      ],
+      "reason": "存在一个通过源题测试的合法源经验，且其来源覆盖仍出现在可观察检索候选中；但来源覆盖不等于内容已注入或被正确复用。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_episode_byte_budget\""
+        },
+        {
+          "section": "injection/0",
+          "quote": "Given a list of 2D numpy arrays, perform Principal Component Analysis (PCA)"
+        }
+      ],
+      "reason": "检索候选中较早完整片段因字节预算被淘汰，最终注入的是若干与目标不直接相关的片段；这属于打包可见性，不能证明淘汰源记忆就能避免失败。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ValueError: DataFrame at index 0 contains non-numeric data."
+        },
+        {
+          "section": "target_submission",
+          "quote": "raise ValueError("
+        }
+      ],
+      "reason": "目标最终实现对非数值 DataFrame 主动抛 ValueError，离线评测在同一测试输入上因该异常中止；直接可见执行/契约不符已足以解释 scorable_failure。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "If any DataFrame is empty or contains non-numeric data, raise the appropriate exception."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "except TypeError:"
+        }
+      ],
+      "reason": "题面只说适当异常，未明确非数值应抛 TypeError；离线参考测试却用 except TypeError 检查非数值，契约区分可能造成目标选择 ValueError 后不匹配。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "EVAL_CONTRACT：题面未写明 TypeError，隐藏测试的异常类型要求可能本身是主要失败边界。",
+    "PACKING_VISIBILITY：相关源经验在打包阶段被字节预算淘汰，目标未注入该经验；但无干预证据不能证明注入后会成功。",
+    "目标还可能因共同列选择/NaN 处理与参考 concat 语义不同而失败，但离线评测在异常处提前中止，无法检验后续差异。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法确证目标 agent 是否实际看到过源记忆内容。",
+    "无法判断若正确注入源经验，目标是否会改用 TypeError。",
+    "无法判断四个无关注入片段是否对目标的 ValueError 选择产生了任何影响。",
+    "无法判断除异常类型外，目标的 common-column 策略是否还会导致隐藏测试失败。"
+  ],
+  "minimal_intervention": {
+    "change": "将非数值 DataFrame 的校验异常从 ValueError 改为 TypeError，并保留空输入/空 DataFrame 的 ValueError。",
+    "fixed": "保持相同目标题面、相同四个无关注入片段和相同打包/预算历史。",
+    "falsifier": "若改用 TypeError 后仍在隐藏测试失败，或隐藏测试实际接受 ValueError，则 TASK_EXECUTION/EVAL_CONTRACT 候选被削弱。"
+  },
+  "causal_claim": false
+}

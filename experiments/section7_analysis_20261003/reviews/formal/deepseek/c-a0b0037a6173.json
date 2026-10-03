@@ -1,0 +1,128 @@
+{
+  "case_id": "c-a0b0037a6173",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "FAILED (errors=1)"
+        },
+        {
+          "section": "source_visible",
+          "quote": "raise TypeError(\"The input data must be a pandas DataFrame.\")"
+        }
+      ],
+      "reason": "源题 episode 自身离线评测报错未通过（source_correct=false），只能算部分合法经验，不能当作可靠可照搬的规则。"
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"disabled\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "本题记忆层未启用、注入为空，没有可评估保真度的被交付记忆内容。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "- The function will raise an error if the input data is not pandas DataFrame"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "If any dataset is not a pandas DataFrame, the function should raise an appropriate exception."
+        }
+      ],
+      "reason": "源与目标同属 pandas 加随机列+非 DataFrame 报错领域，但目标新增列表批处理、每数据集唯一列名与异常类型预期，只有部分条件重叠。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        }
+      ],
+      "reason": "没有可见的检索/注入痕迹，目标代码中不存在可归因于记忆复用的行为证据（源与目标同为 TypeError 只是巧合代理）。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "TypeError: Item at index 1 is not a pandas DataFrame (got dict)."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "except ValueError:"
+        }
+      ],
+      "reason": "提交实现抛 TypeError，而隐藏测试只捕获 ValueError，导致 scorable failure；这只说明提交行为与测试期望不符，不证明记忆造成任何结果。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "the function should raise an appropriate exception"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "except ValueError:"
+        }
+      ],
+      "reason": "题面只要求“appropriate exception”而未指定类型，隐藏测试却硬绑 ValueError，存在题面/测试不一致候选；这是契约层面的候选，不是重打分结论。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "源 episode 未被写入方法状态、来源也未注入，因此本题没有可被检索或淘汰的记忆条目；这不等于未呈现的库中不存在其他条目。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "异常类型选择被测试契约的歧义放大（EVAL_CONTRACT），失败可能主要来自题面欠约束而非代码逻辑缺陷。",
+    "目标代码的 TypeError 与源 episode 的选择相同，但注入为空，不能据此推断记忆迁移或负迁移。",
+    "隐藏测试的其余断言未执行（tests_run 0），可能还有未暴露的其他不满足点。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏完整测试与评分 mask 的具体判定细节。",
+    "若源经验被准入并注入，是否会改变异常类型选择（无反事实，无法判断）。",
+    "未选择/未呈现的记忆库中是否存在其他条目，本包不能推断。",
+    "源题 ValueError 期望与目标题 ValueError 期望是否同源，证据不足。"
+  ],
+  "minimal_intervention": {
+    "change": "将非 DataFrame 元素处抛出的 TypeError 改为 ValueError，以匹配隐藏测试的捕获类型。",
+    "fixed": "保持相同源题历史、相同隐藏测试、注入为空（memory_policy disabled）的环境与预算。",
+    "falsifier": "若隐藏测试同样接受 TypeError 或提交在保持 TypeError 时仍判定通过，则 TASK_EXECUTION/EVAL_CONTRACT 候选被反驳。"
+  },
+  "causal_claim": false
+}

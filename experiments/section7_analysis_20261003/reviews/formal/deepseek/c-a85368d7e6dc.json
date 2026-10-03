@@ -1,0 +1,130 @@
+{
+  "case_id": "c-a85368d7e6dc",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=14:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(hex_key=None):"
+        }
+      ],
+      "reason": "The same-family source passed 5/5 tests (correct, scorable) but only converts a single random hex value, so it covers a single-value version of the target's list requirement."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "generate a bar plot visualizing the frequency of each menu item"
+        },
+        {
+          "section": "mechanical",
+          "quote": "source_provenance_injected"
+        }
+      ],
+      "reason": "The five injected episodes are unrelated tasks and the source provenance was not injected, so no target-relevant, legitimately-sourced content is present in memory."
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/3",
+          "quote": "perform K-Means clustering on each set separately"
+        },
+        {
+          "section": "injection/4",
+          "quote": "compute the Euclidean distance for each pair"
+        }
+      ],
+      "reason": "Injected items concern restaurant menus, OLS regression, dictionary statistics, K-Means and Euclidean distance, none of which applies to hex-string float conversion and rounding."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "the constant KEYS decode as big-endian 32-bit IEEE 754 floats"
+        },
+        {
+          "section": "target_submission",
+          "quote": "value = struct.unpack('>f', raw_bytes)[0]"
+        }
+      ],
+      "reason": "The agent's code and reasoning follow the prompt's own struct/KEYS domain, with no trace of any injected task; this is a behavior proxy, not a causal claim."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "float_value = struct.unpack('>f', bytes.fromhex(hex_key))[0]"
+        }
+      ],
+      "reason": "A legitimate, passing same-family source exists (hex string -> '>f' unpack -> round); it shows an available opportunity, not that the target reused it."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_episode_byte_budget"
+        }
+      ],
+      "reason": "After selection, older episodes (which would include the relevant source) were evicted by byte budget while only recent unrelated episodes were injected; this explains injection composition but not the target outcome."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "the constant KEYS decode as big-endian 32-bit IEEE 754 floats"
+        },
+        {
+          "section": "injection/1",
+          "quote": "perform a multiple linear regression"
+        }
+      ],
+      "reason": "No injected content appears in the agent's solution, so there is no visible transfer; success cannot be attributed to memory and, equally, no harm is shown."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "Ran 0 tests in 0.000s"
+        }
+      ],
+      "reason": "The offline evaluator reports 0 unittest tests run yet correct=true with 1 check, so correctness evidence is narrow; flagged as a candidate only, not proof of a wrong solution."
+    }
+  ],
+  "primary_hypothesis": "PACKING_VISIBILITY",
+  "competing_explanations": [
+    "The target is solvable from the prompt alone (it already imports struct and defines KEYS), so correctness does not require any memory.",
+    "Retrieval scores are all null, so it is unclear whether unrelated episodes were chosen by recency rather than relevance.",
+    "No visible reuse does not show the injected memory was harmful, nor that the relevant source would have changed the outcome."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "No counterfactual run without memory or with the source injected.",
+    "Retrieval candidate scores are null and the history_index-to-task mapping is only partial.",
+    "The full unselected memory library is not provided, so absence of other relevant entries cannot be inferred."
+  ],
+  "minimal_intervention": {
+    "change": "Retain/inject the same-family source episode (relevance-aware packing or a larger byte budget) instead of pure oldest-episode eviction.",
+    "fixed": "Same target prompt, same source history, same tools and injection budget.",
+    "falsifier": "If injecting the source episode leaves the agent's visible behavior and outcome unchanged, packing had no observable effect on this target."
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,127 @@
+{
+  "case_id": "c-3a49e4a3cf0c",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=14:True:5"
+        },
+        {
+          "section": "source_update_operations",
+          "quote": "the standard interpretation is struct.unpack('>f', bytes.fromhex(hex_key))[0] — big-endian"
+        }
+      ],
+      "reason": "The source episode was solved and scorable, so it is a legitimate experience, but its recorded guidance states the struct.unpack reading as an unconditional standard, which the later correction qualifies."
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "the standard interpretation is struct.unpack('>f', bytes.fromhex(hex_key))[0] — big-endian"
+        },
+        {
+          "section": "target_update_operations",
+          "quote": "defaults to the NUMERIC base-16 reading"
+        }
+      ],
+      "reason": "The stored hex→float guidance mirrors what the source actually did, yet it over-generalizes it as the default interpretation and is later superseded; no source content is shown for the 45 injected err/misc bullets."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Generate a random float number from a list of hexadecimal strings and then round the float number to 2 decimal places."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "Given a list of hexadecimal strings, generate a list of rounded float numbers by converting each hexadecimal string to a float and rounding it to 2 decimal places."
+        }
+      ],
+      "reason": "The IEEE-754 interpretation itself transfers, but the source's random.choice single-value framing and docstring-example disambiguation do not match the target's list-output, example-free spec."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "struct.unpack('>f', bytes.fromhex(h))[0], int(h,16)"
+        },
+        {
+          "section": "injection/0",
+          "quote": "construct a synthetic input where the competing interpretations diverge"
+        }
+      ],
+      "reason": "The target printed both competing interpretations on the same inputs and ran an equality-assert battery with edge probes, consistent with the injected falsification guidance; this is a behavior proxy only."
+    }
+  },
+  "labels": [
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"memory_id\": \"sai-00032\","
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_block_byte_budget\""
+        }
+      ],
+      "reason": "The source-derived hex→float bullet (mapped via source_provenance_at_target) was an observable candidate (rank 28) and selected before packing, but the dropped list records it evicted for byte budget, so it never entered the target context; this is budget eviction, not a retrieval miss, and shows nothing about harm."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "struct.unpack('>f', bytes.fromhex(h))[0], int(h,16)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "assert generate_rounded_floats([]) == []"
+        }
+      ],
+      "reason": "The visible battery (discriminating interpretation print, empty-input probe, equality asserts) is consistent with the injected verification methodology; it cannot prove the memories caused this behavior, nor show negative transfer."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "converting each hexadecimal string to a float and rounding it to 2 decimal places"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "return [task_func(hex_key) for hex_key in hex_keys]"
+        }
+      ],
+      "reason": "The prose does not state numeric vs IEEE-754 semantics; only the pre-provided 'import struct' header and the reference's struct.unpack('!f', ...) pin the reading, so the contract is under-specified though resolvable — flagged as a candidate, not a demonstrated mismatch."
+    }
+  ],
+  "primary_hypothesis": "PACKING_VISIBILITY",
+  "competing_explanations": [
+    "The task is solvable from the header's 'import struct' plus the prose alone, so the evicted sai-00032 may have been unnecessary and the eviction may be harmless (no counterfactual or controlled intervention).",
+    "The target's sandbox battery may reflect the agent's default verification habits rather than adaptation of the injected err-* bullets."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "No counterfactual: cannot show the injected err/misc memories changed behavior, nor that retaining sai-00032 would have changed the submission.",
+    "The id→text mapping for sai-00032 is inferred from source_provenance_at_target plus the source's four ADD operations; the pairing is not shown directly.",
+    "Offline target evaluation reports tests_run 0 / checks_executed 1, so hidden correctness is taken from the evaluator verdict only.",
+    "Cannot separate the effect of the header 'import struct' from any memory influence on the chosen interpretation."
+  ],
+  "minimal_intervention": {
+    "change": "Keep the retrieved source-derived bullet sai-00032 (hex→float struct.unpack big-endian) from being evicted at packing, leaving everything else identical.",
+    "fixed": "Same target prompt, same source episode (source_index 16), same retrieval candidate list and ranks, same 45 injected err/misc bullets.",
+    "falsifier": "If the target produces the identical submission/outcome with sai-00032 present, the packing-eviction explanation is not load-bearing."
+  },
+  "causal_claim": false
+}

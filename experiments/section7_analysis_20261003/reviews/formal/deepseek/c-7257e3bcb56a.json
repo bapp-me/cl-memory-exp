@@ -1,0 +1,139 @@
+{
+  "case_id": "c-7257e3bcb56a",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(length, count, seed=0):"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=14:True:5"
+        }
+      ],
+      "reason": "Source episode passed its own tests and supplies legitimate generation/Counter experience, but it only handles one length/count pair, not parallel lists or most/least."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "random.choices(letters, k=length)"
+        }
+      ],
+      "reason": "The reused generation line matches the source episode's verified pattern; no distortion of that part is visible. It does not cover target per-pair reset or least-frequency tie handling."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(length, count, seed=0):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def new_task_func(lengths, counts, seed=0):"
+        }
+      ],
+      "reason": "Same letter set and frequency counting, but target changes the signature to parallel lists, adds most/least, and the hidden reference composes source task_func per pair."
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The generation logic is consistent with the verified pattern from earlier"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AssertionError"
+        }
+      ],
+      "reason": "The agent visibly reuses the source single-seed/choices pattern in a multi-pair target, and the hidden assertion fails. This is a behavioral proxy, not proof that memory caused the failure."
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The generation logic is consistent with the verified pattern from earlier"
+        },
+        {
+          "section": "source_visible",
+          "quote": "random.choices(letters, k=length)"
+        }
+      ],
+      "reason": "Supports visible reuse of the source generation pattern; it cannot prove causality, harm, or that the prompt/reference alone would not have produced the same code."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "each with a specified length, determine the total frequency of each letter across all strings"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "total_counter.update(task_func(length, count, seed))"
+        }
+      ],
+      "reason": "The target prompt does not state per-pair seed reset or least-frequency tie-breaking, while the hidden reference encodes both. Candidate contract ambiguity, not proof of memory error."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AssertionError"
+        },
+        {
+          "section": "target_submission",
+          "quote": "least_frequent = min(frequency, key=frequency.get) if frequency else None"
+        }
+      ],
+      "reason": "The submitted code fails the hidden assertion; single-seed generation and min-based least selection are concrete execution choices. Failure alone does not identify memory as cause."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(length, count, seed=0):"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true"
+        }
+      ],
+      "reason": "A legitimate source episode exists, scored correct, and source provenance was injected. This only establishes source opportunity, not target applicability, retrieval, or success."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "EVAL_CONTRACT ambiguity: the prompt does not specify per-pair seeding or least-frequency tie-breaking, so the failure may be under-specification rather than memory misapplication.",
+    "TASK_EXECUTION bug: the target's own least-frequency tie handling uses min, which differs from the reference most_common()[-1] even apart from seed ordering.",
+    "No counterfactual: without the source memory, the agent might still have written a similar single-seed generator from the prompt alone."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "No controlled intervention or counterfactual; cannot prove memory caused the failure or that memory removal would fix it.",
+    "Hidden correctness shows only the first assertion; whether later tests would fail for the same or different reasons is unknown.",
+    "Unselected complete memory library is not included; absence of other memory items cannot be inferred.",
+    "Exact intended generation order and least-frequency tie rule are not stated in the target prompt."
+  ],
+  "minimal_intervention": {
+    "change": "Match the reference composition by calling task_func per (length,count) pair and derive least via most_common()[-1], rather than using one global seed and min.",
+    "fixed": "Same target prompt, source memory/injection order, token/tool budget, and hidden tests.",
+    "falsifier": "If the same single-seed implementation passes the hidden assertions, or if per-pair task_func composition still fails identically, the memory-misapplication/contract candidate is weakened."
+  },
+  "causal_claim": false
+}

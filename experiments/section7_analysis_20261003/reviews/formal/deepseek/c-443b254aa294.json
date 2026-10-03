@@ -1,0 +1,119 @@
+{
+  "case_id": "c-443b254aa294",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=15:True:5"
+        }
+      ],
+      "reason": "配对源题离线跑通 5 个测试、15 个检查，属合法通过源；但源通过不等于其任何结论都适用于新题。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "注入文本描述的是 value-counts 柱状图，而配对源是 K-Means 聚类，且无来源回溯链接，无法判断记忆对其自身来源是否保真。"
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "注入内容不含本题所需的返回 Axes、叠加图例、颜色/标记区分等任何关键信息，仅泛泛提到 pandas/matplotlib。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "labels = kmeans.fit_predict(data)"
+        }
+      ],
+      "reason": "提交实现的是 K-Means 叠加散点，未出现柱状图/value_counts 等注入记忆特征；这是行为代理，不证明记忆未产生影响。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "AttributeError: 'Figure' object has no attribute 'collections'"
+        }
+      ],
+      "reason": "提交返回 Figure，而隐藏测试在返回值上取 .collections，首个断言即崩；只说明可见执行失败，不解释选择该返回类型的原因。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "def combined_visualization(series_pairs, n_clusters=3):"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "return ax"
+        }
+      ],
+      "reason": "题面只给函数签名，未规定返回值须为 Axes，而测试要求返回值暴露 .collections；属题意/测试可能不一致的候选，非定论。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "Native Qdrant top-5 returned set"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "检索候选被全部注入且内容与本题任务族不符；不相关内容存在本身不构成干扰证据。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "kmeans = KMeans(n_clusters=n_clusters, n_init=10, random_state=42)"
+        }
+      ],
+      "reason": "提交只出现任务本身要求的 K-Means/pandas/matplotlib 用法，未见注入记忆的可见采纳；无痕迹不等于无影响。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "TASK_EXECUTION：target 在 docstring 自述返回 Figure，若测试预期 Axes 属实现选择错误而非契约缺口。",
+    "两条注入记忆（价值计数柱状图）与本题无关，无法解释返回值选择，也不应据此断言记忆有害或造成失败。",
+    "source writer 输出 facts 为空、source_update_operations 无操作，无法确认注入内容是否来自配对源。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "题面是否还含被截断的返回约定不可知（target_prompt truncated=false，仅见签名）。",
+    "注入记忆是否源自本 case 配对源（task-024）无法确认。",
+    "模型是否在推理层参考了记忆（无可见痕迹）无法确定。",
+    "target_update_operations 为空属目标后状态，不能作为本题失败原因。"
+  ],
+  "minimal_intervention": {
+    "change": "让 combined_visualization 返回 Axes 对象（如 return combined_ax）而非 Figure。",
+    "fixed": "保持同一任务题面、同一隐藏测试、同一注入记忆与预算。",
+    "falsifier": "若返回 Axes 后隐藏测试仍失败，或测试实际接受 Figure，则 EVAL_CONTRACT 候选被反驳。"
+  },
+  "causal_claim": false
+}

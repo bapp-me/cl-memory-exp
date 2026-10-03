@@ -1,0 +1,131 @@
+{
+  "case_id": "c-519fe9e047be",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(arr):"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        }
+      ],
+      "reason": "Source episode solves the narrower single-array PCA-on-row-sums task and is correct/scorable, but its Axes return and title do not cover the target's list/subplot/figure contract."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "pca = PCA(n_components=1)"
+        },
+        {
+          "section": "source_visible",
+          "quote": "ax.bar(range(1, 2), pca.explained_variance_ratio_)"
+        }
+      ],
+      "reason": "The injected source episode preserves the same row-sum PCA and bar-plot implementation seen in the source trajectory; evidence shows content alignment, not that target used it."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "def new_solution(arrays):"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(arr):"
+        }
+      ],
+      "reason": "Core row-sum PCA logic is shared, but target adds a list of arrays, one subplot per array, per-index titles, and a Figure return."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "fig, axes = plt.subplots(1, n)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "row_sums = np.sum(arr, axis=1).reshape(-1, 1)"
+        }
+      ],
+      "reason": "Visible target code adapts the source's single-array PCA/bar pattern into a multi-subplot Figure; this is a behavior proxy, not proof of retrieval or causal benefit."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(arr):"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": true"
+        }
+      ],
+      "reason": "A correct source episode for the same base PCA-on-row-sums task exists and its provenance is retained/injected, but this does not prove selection or target-fit."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "row_sums = np.sum(arr, axis=1).reshape(-1, 1)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "fig, axes = plt.subplots(1, n)"
+        }
+      ],
+      "reason": "Target visibly reuses the source-like row-sum PCA/bar pattern while adapting it to multiple arrays and a Figure return; no counterfactual so cannot prove memory caused success."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "ValueError: Number of columns must be a positive integer, not 0"
+        },
+        {
+          "section": "target_visible",
+          "quote": "empty ok: <class 'matplotlib.figure.Figure'>"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "EVALUATOR_RESULT=2:True:0"
+        }
+      ],
+      "reason": "Local target execution tested empty and multi-array cases, fixed the empty-list crash, and was scored correct; this is execution evidence, not retrieval evidence."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The target prompt and standard sklearn/matplotlib usage alone may fully explain the submitted code; no counterfactual removal was run.",
+    "The packet does not expose target-time memory messages, so actual retrieval/attention to the source episode is unobserved.",
+    "Two of three injected items are unrelated KMeans and scatter-grid tasks, but their presence does not show interference because the target still succeeds."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the source PCA episode was actually retrieved/injected into the target context, versus merely present in the method state.",
+    "How hidden target checks beyond the two checks scored title/format details.",
+    "Whether removing the source episode would change the target solution."
+  ],
+  "minimal_intervention": {
+    "change": "Remove or replace the source PCA row-sum episode from pre-target memory while keeping the target prompt, distractor injections, tools, and budget unchanged.",
+    "fixed": "Same target task, same distractor memories, same tool availability, same model and token/tool budget.",
+    "falsifier": "If the target still produces the same correct subplot/figure implementation without the source episode, the USE_TRANSFER candidate is not supported."
+  },
+  "causal_claim": false
+}

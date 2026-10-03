@@ -1,0 +1,139 @@
+{
+  "case_id": "c-4a8ebc18c878",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=18:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Generate a category distribution within a specified range and return as a DataFrame."
+        }
+      ],
+      "reason": "源题正确且可评分，但只覆盖单组类别分布，目标新增多数据集组合和 Dataset 列，故通过但有限。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "return pd.DataFrame({'Category': CATEGORIES, 'Count': counts})"
+        }
+      ],
+      "reason": "源解答对共享的类别计数逻辑与源题规格一致，未出现与目标相关必要内容的矛盾；额外 Dataset 列属于目标新增条件。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "with an additional column indicating the dataset name"
+        },
+        {
+          "section": "source_visible",
+          "quote": "return pd.DataFrame({'Category': CATEGORIES, 'Count': counts})"
+        }
+      ],
+      "reason": "源经验覆盖随机类别计数，但不覆盖多数据集合并和 Dataset 列，只对目标共享部分适用。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The function works correctly: random counts per category within each dataset's range"
+        },
+        {
+          "section": "injection/0",
+          "quote": "plot a histogram of the normalized data from each array"
+        }
+      ],
+      "reason": "目标轨迹是直接按目标规格实现并提交，未见引用或改编源经验；注入内容是直方图等无关任务，不能推出可见复用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The function works correctly: random counts per category within each dataset's range"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "EVALUATOR_RESULT=8:True:0"
+        }
+      ],
+      "reason": "目标 agent 可见地编写、测试并提交实现，离线评估报告 correct；这不证明记忆促成成功。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_episode_byte_budget\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 4"
+        }
+      ],
+      "reason": "检索候选很多但仅注入 4 条，最旧完整片段因字节预算被丢弃，说明源内容可能未进入目标上下文；这不是检索失败。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_in_observable_retrieval_candidates\": true"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "相关源题正确且来源进入了可观察检索候选，但未注入目标；存在机会未被实际实现，不能推断若注入会提升或损害。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"injected_utf8_bytes\": 41556"
+        },
+        {
+          "section": "injection/1",
+          "quote": "generate a JSON object that represents the distribution of employee levels across multiple departments"
+        }
+      ],
+      "reason": "目标上下文中注入了较大的无关片段，存在可观察字节开销；目标仍成功，不能据此断言无收益或性价比差。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "PACKING_VISIBILITY：相关源经验可能曾在检索候选中但被最旧字节预算淘汰，无法用本题反事实判断若注入会否改变结果。",
+    "OPPORTUNITY_SOURCE：目标提示本身已给出 CATEGORIES 和函数骨架，源经验对完成本题可能冗余，成功不能归因于记忆。",
+    "COST_UTILITY：注入无关片段带来可测开销，但没有证据说明它们造成干扰或负迁移。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "源记忆具体位于丢弃候选还是注入集合中，没有映射到 history_index。",
+    "注入的无关记忆是否对目标代码有不可见影响，无法从可见轨迹判断。",
+    "隐藏测试内容不可见；仅依据离线评估摘要接受 correct=true。",
+    "无受控无记忆条件，因此不能证明记忆对成功或失败有任何因果作用。"
+  ],
+  "minimal_intervention": {
+    "change": "在保持同一目标提示、检索查询与预算下，改为注入保留下来的相关源经验而非无关旧片段，以测试机会影响。",
+    "fixed": "相同目标、相同工具、相同 packing 预算与评估条件。",
+    "falsifier": "若注入相关源后目标行为/输出与未注入完全无差别，则源经验对本题成功非必要；若移除无关注入导致失败，则记忆干扰或任务执行解释受挑战。"
+  },
+  "causal_claim": false
+}

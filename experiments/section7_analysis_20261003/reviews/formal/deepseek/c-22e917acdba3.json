@@ -1,0 +1,126 @@
+{
+  "case_id": "c-22e917acdba3",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=23:False:5"
+        },
+        {
+          "section": "source_visible",
+          "quote": "itertools.permutations(string.ascii_lowercase, 2)"
+        }
+      ],
+      "reason": "A paired source exists and is scorable, but its submission failed because it generated permutations instead of all two-letter products; source experience is therefore limited/partial."
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "permutations exclude double-letter pairs"
+        },
+        {
+          "section": "injection/2",
+          "quote": "values as their counts across all words"
+        }
+      ],
+      "reason": "Available source-like content has useful Counter/string pieces but its combination set omits double-letter pairs, and the semantic candidates aggregate counts across words rather than target's per-word frequency list."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(word: str) -> dict:"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "value is a list of frequencies of this combination across all words"
+        }
+      ],
+      "reason": "The source operates on one word and returns scalar counts, while the target needs a list of per-word frequencies over a list of words, so only part of the source experience applies."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "itertools.product(string.ascii_lowercase, repeat=2)"
+        },
+        {
+          "section": "target_visible",
+          "quote": "sanitized = ''.join(ch for ch in word.lower() if ch.isalpha())"
+        }
+      ],
+      "reason": "The visible solution keeps a Counter/itertools/string style but corrects the source's combinations and sanitizes words, matching the target contract; this is behavioral adaptation, not proof of memory causation."
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "itertools.permutations(string.ascii_lowercase, 2)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "itertools.product(string.ascii_lowercase, repeat=2)"
+        }
+      ],
+      "reason": "Target visibly reuses a similar Counter/itertools/string pattern while changing the failed permutation approach and per-word output; supports a transfer candidate but cannot prove the memory caused success."
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "permutations exclude double-letter pairs"
+        },
+        {
+          "section": "target_submission",
+          "quote": "itertools.product(string.ascii_lowercase, repeat=2)"
+        }
+      ],
+      "reason": "Source representation omitted double-letter keys such as 'aa' and 'zz'; target uses product to represent all 676 combinations, correcting a key contract mismatch. Still only visible adaptation."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": false"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=23:False:5"
+        }
+      ],
+      "reason": "A paired source episode exists and is scorable, but it failed; thus the source opportunity is limited and cannot be assumed to provide reliable positive transfer."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "Target success may be independent problem solving from the target prompt; no counterfactual shows the injected candidates were necessary.",
+    "The correct product-based solution may come from the target prompt's wording or base model capability, while source memories are redundant or unused."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the agent actually read or used the injected semantic candidates; only injected_count is known.",
+    "Whether any retrieval trace existed; source_provenance_in_observable_retrieval_candidates is null and target_visible starts after possible injections.",
+    "Whether hidden target tests beyond the offline 3 checks cover edge cases such as non-alphabetic sanitization."
+  ],
+  "minimal_intervention": {
+    "change": "Withhold or replace the injected semantic candidates in a counterfactual replay with the same target prompt.",
+    "fixed": "Same target prompt, hidden tests, tools, memory budget, and environment.",
+    "falsifier": "If the target still produces the same correct product-based per-word solution without the candidates, the visible-transfer hypothesis is weakened."
+  },
+  "causal_claim": false
+}

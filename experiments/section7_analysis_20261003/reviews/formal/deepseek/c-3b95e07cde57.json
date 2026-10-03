@@ -1,0 +1,153 @@
+{
+  "case_id": "c-3b95e07cde57",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Generate a sample from a normal distribution with a given mean and a standard deviation and plot the histogram"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "generate multiple samples from the distribution, calculate the empirical mean and standard deviation for each sample"
+        }
+      ],
+      "reason": "Source task is scored correct and shares normal-sampling/statistics/plotting domain, but it covers one sample while target adds multiple samples and overall statistics."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Seed the random number generator for reproducibility, using either `random.seed(<seed>)` for the `random` module or `np.random.seed(<seed>)` for NumPy"
+        },
+        {
+          "section": "injection/4",
+          "quote": "Plot the data on the Axes with `ax.hist(<data>, bins=<n_bins>, density=<bool>, color=<color>, alpha=<opacity>)` or `ax.bar(<labels>, <counts>)`"
+        }
+      ],
+      "reason": "The injected workflow fragments for seeding, descriptive statistics, and histogram/PDF plotting match target operations without contradicting target requirements; missing multi-sample specifics are coverage limits, not false content."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "Reproducibly generate a random sample from a specified distribution and compute summary statistics matching a known reference output."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "generate multiple samples from the distribution, calculate the empirical mean and standard deviation for each sample"
+        }
+      ],
+      "reason": "Generic workflow components apply, but the source-derived workflow is single-sample and does not directly specify the target's multiple samples and concatenated overall statistics."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "samples = [np.random.normal(mu, sigma, sample_size) for _ in range(num_samples)]"
+        },
+        {
+          "section": "target_visible",
+          "quote": "ax.hist(s, bins=30, density=True, alpha=0.5)"
+        },
+        {
+          "section": "injection/7",
+          "quote": "Confirm correctness of an implementation against the task's stated examples before submitting."
+        }
+      ],
+      "reason": "Visible target code uses seeded normal sampling, per-sample mean/std, histogram/PDF, and self-verification before SUBMIT, aligning with injected workflow patterns; this is behavior alignment only."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Generate a sample from a normal distribution with a given mean and a standard deviation and plot the histogram"
+        },
+        {
+          "section": "source_auxiliary_visible",
+          "quote": "Reproducibly generate a random sample from a specified distribution and compute summary statistics matching a known reference output."
+        }
+      ],
+      "reason": "A successful same-domain source provides a legitimate candidate experience, but it is single-sample and target adds multiple samples/overall statistics; source availability does not prove target reuse."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "samples = [np.random.normal(mu, sigma, sample_size) for _ in range(num_samples)]"
+        },
+        {
+          "section": "target_visible",
+          "quote": "The function works as expected. Submitting the final implementation."
+        },
+        {
+          "section": "injection/0",
+          "quote": "Seed the random number generator for reproducibility, using either `random.seed(<seed>)` for the `random` module or `np.random.seed(<seed>)` for NumPy"
+        }
+      ],
+      "reason": "Target artifacts visibly follow seeded-sampling and verification workflow patterns, but without counterfactual or ablation evidence this cannot show memory caused success."
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": ["
+        },
+        {
+          "section": "injection/1",
+          "quote": "## Workflow Input Validation Guard"
+        }
+      ],
+      "reason": "All eight candidates were selected and injected with no drops, including relevant and irrelevant workflows; presence alone does not prove interference or effective use."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "overall_mean = np.mean(all_means)"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert len(analyze_process()[1]) == 5, 'Number of samples should be 5'"
+        }
+      ],
+      "reason": "Hidden checks assert lengths/types while reference averages per-sample statistics and target concatenates observations; this is a candidate contract ambiguity, not a rescoring claim."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "Target would likely pass without memory because it is a standard NumPy/SciPy/matplotlib composition and hidden checks mostly assert lengths/types.",
+    "The success may reflect base model capability and self-verification rather than D1 memory reuse; no counterfactual is available.",
+    "The reference/tests differ on overall-statistic semantics, so the pass may be lenient with respect to task wording.",
+    "Irrelevant injected workflows could have had no effect; there is no evidence of interference."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Cannot tell whether the agent actually consulted relevant injected workflows rather than generating the implementation independently.",
+    "Cannot infer memory causal effect, negative transfer, redundancy, or real forgetting without counterfactual or ablation data.",
+    "Target hidden test values are not visible, and the target reference/test semantics around overall statistics are ambiguous.",
+    "No target memory-state before/after content is provided; target_update_operations is empty.",
+    "The unselected complete memory library is not included, so absence of other relevant memories cannot be inferred."
+  ],
+  "minimal_intervention": {
+    "change": "None for the target outcome; to test memory influence, run an otherwise identical no-memory or ablated-memory control on the same task.",
+    "fixed": "Same target prompt, model, tools, environment, random seed, and hidden scoring mask.",
+    "falsifier": "If the no-memory control also produces the same submission/checks, or memory ablation changes relevant workflow code without affecting correctness, the USE_TRANSFER candidate is weakened."
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,124 @@
+{
+  "case_id": "c-e95d5123b7eb",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "AssertionError: 268198208.0 != 36806.08"
+        },
+        {
+          "section": "source_visible",
+          "quote": "hex_key = random.choice(KEYS)"
+        }
+      ],
+      "reason": "源 episode 可评分但失败：提交的解固定随机取一个 KEYS，未按 hex_key 参数取值，单测断言不符。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_retained\": false"
+        }
+      ],
+      "reason": "两条注入记忆与源 episode 无来源关联证据，且未展示其原始内容，无法核对其保真度。"
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "注入内容讲 DataFrame/柱状图，与本题的十六进制到 float 解码无关；但无关内容存在本身不证明干扰。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "value = struct.unpack('>f', bytes.fromhex(hex_str))[0]"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "提交代码只含 struct 大端解码与 round，看不到 pandas/绘图记忆的行为痕迹；这只是可见代理，不能证明记忆零贡献。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": [],"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        }
+      ],
+      "reason": "源题结束时无任何写入操作、原始 episode 未保留，因而没有源派生的经验可供复用；这不等于存在但未被检索到，也不能推出源失败必然带来负迁移。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"candidate_scope\": \"Native Qdrant top-5 returned set; complete persisted point pool separately snapshotted\""
+        },
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        }
+      ],
+      "reason": "检索面确实运行并注入了两个 D1 候选（无丢弃），可见注入内容与 hex 解码主题不匹配；因未展示未选中的完整库，不能断言检索漏掉了更相关项。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "value = struct.unpack('>f', bytes.fromhex(hex_str))[0]"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        }
+      ],
+      "reason": "目标代码与注入的 DataFrame/绘图经验无重叠，为无可见复用（也非误用）的行为代理；无反事实实验，不能证明记忆造成成功或无效果。"
+    }
+  ],
+  "primary_hypothesis": "unknown",
+  "competing_explanations": [
+    "注入的两条 D1 记忆与目标主题无关，目标能成功可由任务本身就绪的 struct 大端解码常识解释。",
+    "源失败的经验未写入（operations 为空），因此不存在可被误用的错误源记忆，失败原因与本题无关。",
+    "不能排除 D1 记忆以极低成本方式影响了模型措辞或格式偏好，但可见证据只覆盖代码行为。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "两条注入记忆的原始来源与内容无法核验（source_provenance_retained=false），其与源题 16 的关系不明。",
+    "未选中的完整记忆库未展示，无法判断是否存在被漏检的更相关经验。",
+    "注入字节数在不同 section 不一致（retrieval 中 injected_utf8_bytes=342，mechanical 中 injected_text_utf8_bytes=148），无 token 计量。",
+    "offline_target_evaluation 显示 tests_run=0 而 checks_executed=1，评测口径细节不明。"
+  ],
+  "minimal_intervention": {
+    "change": "改为注入一条与目标契约直接相关的经验（例如大端 '>f' 单精度解码、并按传入 hex_key 取值而非随机选键）。",
+    "fixed": "保持相同的目标提示、同一种子历史、相同检索与打包预算。",
+    "falsifier": "若注入目标相关记忆后可见代码/行为发生可辨变化，或移除现有两条注入记忆改变了结果，则『无关注入未被使用』的候选被削弱。"
+  },
+  "causal_claim": false
+}

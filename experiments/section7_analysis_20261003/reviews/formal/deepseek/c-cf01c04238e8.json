@@ -1,0 +1,123 @@
+{
+  "case_id": "c-cf01c04238e8",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=45:True:5"
+        }
+      ],
+      "reason": "源题 45 项检查全过，但只是单数据集 x_list/y_list 的 KMeans 包装，接口比目标窄。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "与目标同域的 K-Means 源是否真正进入目标上下文无法确认；实际注入的是 4 条无关任务。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(x_list, y_list, n_clusters=2, random_state=0):"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "task_func(data['x'], data['y'], n_clusters, random_state)"
+        }
+      ],
+      "reason": "同库同算法可部分借鉴，但目标要求 data_sets 每项为 dict 且需聚合多集合结果，接口与语义均不同。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "calculate the total number of seconds elapsed from each date until the current time"
+        },
+        {
+          "section": "target_visible",
+          "quote": "pts = np.asarray(data, dtype=float)"
+        }
+      ],
+      "reason": "注入记忆是日期/菜单/回归/字典统计等无关任务，目标代码只见任务自身的 K-Means 逻辑，无这些记忆的结构痕迹；此仅为行为代理。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "TypeError: float() argument must be a string or a real number, not 'dict'"
+        }
+      ],
+      "reason": "提交代码在隐藏测试的 dict 输入上直接抛 TypeError，tests_run=0，导致可评分失败；不能由此推断记忆造成。"
+    },
+    {
+      "tag": "REPRESENTATION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "pts = np.asarray(data, dtype=float)"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "task_func(data['x'], data['y']"
+        }
+      ],
+      "reason": "agent 把每个数据集合表示为 (x,y) 数值数组，而契约按含 'x'/'y' 键的 dict 处理；属输入表示选择错误。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Given a dataset containing multiple sets of (x, y) coordinates, perform K-Means clustering on each set separately"
+        }
+      ],
+      "reason": "题面只说“多个 (x,y) 坐标集合”，未指明 dict 结构，隐藏测试却按 dict 取值，属可能的题意/测试不一致（仅候选，不重打分）。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_episode_byte_budget\""
+        }
+      ],
+      "reason": "相关 K-Means 源出现在检索候选中却未注入，注入的是 4 条无关任务、旧条目因字节预算被淘汰；属打包可见性而非检索失败。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "EVAL_CONTRACT：题面未规定 dict 输入而测试按 dict 处理，失败可能归于契约模糊而非记忆或能力。",
+    "相关 K-Means 源未被注入，若注入本可提示 dict 格式；但无对照干预，不能断言记忆缺失导致失败。",
+    "REPRESENTATION：若认为误判数据结构才是根因，则主因应归为输入表示错误。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "K-Means 源片段是否实际出现在目标上下文中（source_provenance_injected=false 只是代理）。",
+    "agent 选择数组解释时的内部理由（私有推理已移除）。",
+    "retrieval 中所有 score 为 null，无法核对排序依据。",
+    "被淘汰的 81 条中是否另有更相关的经验。",
+    "题面是否隐含 dict 约定，无法由现有证据裁定。"
+  ],
+  "minimal_intervention": {
+    "change": "在目标题面明确 data_sets 每项为含 'x'、'y' 键的 dict（或给出一个输入示例）",
+    "fixed": "保持相同源历史、相同 4 条注入记忆与相同字节预算",
+    "falsifier": "若明确 dict 格式后同一实现仍失败，或未加说明时 agent 仍正确使用 dict，则“输入结构解释错误”假说被反驳。"
+  },
+  "causal_claim": false
+}

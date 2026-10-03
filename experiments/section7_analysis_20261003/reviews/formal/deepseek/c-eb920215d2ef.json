@@ -1,0 +1,151 @@
+{
+  "case_id": "c-eb920215d2ef",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "AssertionError: False is not true"
+        },
+        {
+          "section": "source_visible",
+          "quote": "df = pd.DataFrame([a, b], index=['A', 'B'])"
+        }
+      ],
+      "reason": "源题可评分但未通过，失败点正是 DataFrame 轴标签解释（把 'A'/'B' 放成行索引而非列名），所以这是一条失败先例，不是可直接采信的正确答案。"
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/5",
+          "quote": "Build the frame via `pd.DataFrame(<data>, columns=<col_names>)` (or `index=<labels>` for row-indexed frames)"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "with indices 'A' and 'B'"
+        }
+      ],
+      "reason": "注入摘要保留了“命名列/命名索引”的一般写法，但对本题关键的行索引 vs 列名 'A'/'B' 不做区分，和源题自身的模糊表述同构，故只算部分保真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "If a check fails, `raise ValueError` (or `TypeError` for wrong-type cases) with a descriptive message naming the offending parameter."
+        },
+        {
+          "section": "injection/5",
+          "quote": "Convert raw lists/dicts/arrays into a pandas DataFrame with specified column names or indices"
+        }
+      ],
+      "reason": "校验/验证类工作流与本题吻合并被用上；而 DataFrame 构造工作流在轴标签上与本题隐藏契约不一致，需要目标自带消歧信息，故整体只是部分适用。"
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "df = pd.DataFrame([list(a), list(b)], index=['A', 'B'])"
+        },
+        {
+          "section": "injection/5",
+          "quote": "or `index=<labels>` for row-indexed frames"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Only after all guards pass, proceed with the core computation."
+        }
+      ],
+      "reason": "目标可见地采用了注入摘要允许的 index= 行标签写法，结果与隐藏测试要求的列 'A'/'B' 冲突；同时输入校验、示例验证循环也可见地被套用。这是行为代理，无反事实，不能据此断言记忆导致失败。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "REPRESENTATION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/5",
+          "quote": "Build the frame via `pd.DataFrame(<data>, columns=<col_names>)` (or `index=<labels>` for row-indexed frames)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "df = pd.DataFrame([list(a), list(b)], index=['A', 'B'])"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "DataFrame shape mismatch"
+        }
+      ],
+      "reason": "注入摘要把列名与行索引并列为可选项，未消歧 'A'/'B' 应落在哪一轴，而目标恰好选中了隐藏测试不接受的那一侧，错误位置与表征歧义位置重合。只能说明表征不够细，不能证明该歧义被读取并驱动了选择。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/7",
+          "quote": "exploratory PYTHON call(s) → full-function PYTHON verification → SUBMIT."
+        },
+        {
+          "section": "target_submission",
+          "quote": "list_of_pairs must be a list of pairs of lists"
+        }
+      ],
+      "reason": "目标确实按“探索性 PYTHON 调用 → 完整函数验证 → SUBMIT”的形态执行，并写了类型/空值守卫，形态与注入工作流一致。但成功/失败都不能归因于记忆，且验证较浅未暴露 shape 问题。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "create a Pandas DataFrame for each pair with indices 'A' and 'B'"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "df = pd.DataFrame({'A': a, 'B': b})"
+        }
+      ],
+      "reason": "题面用 “indices” 表述，而隐藏测试与参考解要求列 A/B，存在题面—评测张力，按字面读题即可犯同一错误。仅为候选不一致，且参考解不是超越题意的绝对真值。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "df = pd.DataFrame([a, b], index=['A', 'B'])"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "KeyError: 'A'"
+        }
+      ],
+      "reason": "源题与目标同域且犯完全相同的轴标签错误，是可用的对照先例；但源 episode 仅保留在方法状态中、未以原文注入（injected_ids 只含 8 条摘要），故不能证明它影响了本题。"
+    }
+  ],
+  "primary_hypothesis": "REPRESENTATION",
+  "competing_explanations": [
+    "EVAL_CONTRACT：题面 'indices' 与隐藏测试要求列 'A'/'B' 的张力，仅按字面读题即可产生同一错误，无需记忆参与。",
+    "源题 episode 未注入，目标可能独立形成同样的 pandas 行/列误解，与记忆无关。",
+    "TASK_EXECUTION：自验证过浅（只 print dfs[0] 与标题）未检查 shape/列名，属执行层面检查不足。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法确认目标是否真正读取/使用了某条注入摘要。",
+    "原始源 episode 未注入（raw_source_episode_retained_in_method_state 只是状态），其影响不可证。",
+    "token_count 为 null，开销无法量化；完整记忆库未给出，不能推断缺失内容。",
+    "隐藏正确性不可得，只能依离线评测判定失败。"
+  ],
+  "minimal_intervention": {
+    "change": "在目标题契约中把 DataFrame 要求明确写成列名为 'A'/'B'（或在注入摘要中显式消歧行索引/列名二选一）。",
+    "fixed": "相同源历史、相同 8 条注入记忆、相同预算与工具环境。",
+    "falsifier": "若题面已明确写出列 'A'/'B' 后目标仍产出 index=['A','B'] 的 (2,3) 帧，则表征歧义不是关键，需转向源经验习惯或其他解释。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,151 @@
+{
+  "case_id": "c-c7743ae1a3c0",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=30:True:5"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Generate a random poker hand consisting of five cards, and count the frequency of each card rank."
+        }
+      ],
+      "reason": "源题被离线评测判为 correct/scorable，是合法通过的源经验；但它只覆盖单手牌生成与Counter计数，覆盖面有限。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/2",
+          "quote": "strip characters (`<card>[:-1]`), or take values from rows/columns."
+        },
+        {
+          "section": "source_visible",
+          "quote": "rank_count = Counter(card[:-1] for card in hand)"
+        }
+      ],
+      "reason": "与目标相关的计数工作流（对牌面字符串切片后计数）与源题最终提交的写法一致，未见明显失真；源题其余细节的保真度无法由本包核验。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Generate a random poker hand consisting of five cards, and count the frequency of each card rank."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "determine the winner based on the highest frequency of a single rank in their hand"
+        }
+      ],
+      "reason": "牌面随机生成与Counter频次部分适用；多玩家发牌、赢家判定与并列/次高比较是目标新增条件，记忆中没有对应经验。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "rank_counts = Counter(card[:-1] for card in hand)"
+        },
+        {
+          "section": "injection/2",
+          "quote": "strip characters (`<card>[:-1]`), or take values from rows/columns."
+        }
+      ],
+      "reason": "提交代码的Counter切片写法与注入工作流吻合，并把手牌来源改为洗牌发牌（适应目标的多玩家需求），属可见行为代理，不是因果证据。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/2",
+          "quote": "strip characters (`<card>[:-1]`), or take values from rows/columns."
+        },
+        {
+          "section": "target_submission",
+          "quote": "rank_counts = Counter(card[:-1] for card in hand)"
+        },
+        {
+          "section": "injection/7",
+          "quote": "Fix any mismatch and repeat the verification, then finalize the function with the full docstring and issue SUBMIT."
+        }
+      ],
+      "reason": "记忆中的频次计数工作流与“验证后再提交”循环在目标里可见地复现；只能支持可见复用候选，不能证明记忆造成成功（本题仅1次PYTHON+1次SUBMIT，也可能是常规做法）。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Generate a random poker hand consisting of five cards, and count the frequency of each card rank."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "The function should return a list of tuples, where each tuple contains the player's hand and a Counter dictionary of card ranks"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"distance\": 63,"
+        }
+      ],
+      "reason": "源题只生成单手牌并计数，完全没有4人发牌、单点牌力、最高牌面并列处理的记录，可迁移机会只覆盖目标的一部分。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should return a list of tuples, where each tuple contains the player's hand and a Counter dictionary of card ranks"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert poker_game()[1] != \"It's a tie game\", \"The game should not result in a tie.\""
+        }
+      ],
+      "reason": "题面把返回值描述为tuple列表，隐藏测试只做结构断言，且参考解以字符串消息表示赢家而提交以索引/'Tie'表示，winner取值契约存在模糊；按规则仅标候选，不据此判失败。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/4",
+          "quote": "**Goal:** Produce a matplotlib histogram/bar chart and return the Axes (and optionally Figure) object."
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 8,"
+        }
+      ],
+      "reason": "注入8条工作流、约6.5-7.3KB，其中绘图/统计/建模等与本题无关，开销可见；本题成功不能断言无收益或性价比差。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "目标代码可能主要来自题面已给出的常量/导入与模型自身对扑克牌与Counter的一般知识，而非记忆复用。",
+    "源题与目标都涉及“随机取牌+Counter”，写法重合可能只是 idiom 的自然选择。",
+    "无对照条件，无法排除注入内容整体无关而成功仅由目标自身执行完成。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "memory_id 与 injection/0..7 内容的对应关系未给出，无法逐条确认哪条内容被注入到本题。",
+    "没有反事实运行，无法评估若移除Counter工作流是否仍成功。",
+    "记忆库前后内容未呈现（full_unselected_state_presented=false），provenance 覆盖不等于内容保真。",
+    "目标契约中 winner 的允许取值（索引、玩家串、'Tie'）无法由现有证据确定。"
+  ],
+  "minimal_intervention": {
+    "change": "只注入与手牌随机生成/Counter频次计数直接相关的工作流，去掉绘图、统计、DataFrame、模型拟合等与本题无关条目",
+    "fixed": "保持相同目标题面、相同源题历史、相同注入预算与同一评测流程",
+    "falsifier": "若去除Counter相关记忆后目标仍以相同方式实现频次统计并成功，则说明可见复用只是通用写法，不能支持记忆依赖"
+  },
+  "causal_claim": false
+}

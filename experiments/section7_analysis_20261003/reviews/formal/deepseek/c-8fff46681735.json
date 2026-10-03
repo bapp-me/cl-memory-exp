@@ -1,0 +1,143 @@
+{
+  "case_id": "c-8fff46681735",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "DataFrame containing 'group', 'date' (in datetime format), and 'value' columns."
+        }
+      ],
+      "reason": "Source passed its own hidden evaluation, but its single-DataFrame/group-column contract differs from the target multi-dataset aggregation contract."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        }
+      ],
+      "reason": "No source memory or provenance was injected into the target, so there is no relevant memory content to assess for fidelity."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def aggregate_predictions(datasets):"
+        }
+      ],
+      "reason": "The source shares date-to-ordinal linear regression and validation ideas, but the target adds multi-dataset aggregation, a different return tuple, and a different plot contract."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        },
+        {
+          "section": "injection_metadata",
+          "quote": "[]"
+        }
+      ],
+      "reason": "No memory was injected, so the visible target code cannot be attributed to memory use; similar code patterns may be generic or pretrained knowledge."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The final plot should show the overall trend of the aggregated predictions."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "Plot title should be 'Aggregated Predictions vs Date'."
+        }
+      ],
+      "reason": "The target prompt describes the plot trend but does not state the exact title required by the hidden assertion, indicating a possible unstated contract requirement; this does not prove the test is invalid."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "ax.set_title('Aggregated Predictions')"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "Plot title should be 'Aggregated Predictions vs Date'."
+        }
+      ],
+      "reason": "The submitted implementation sets a title that does not match the hidden title assertion, directly explaining the observed failure; it does not establish memory involvement."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "def task_func(df):"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "def aggregate_predictions(datasets):"
+        }
+      ],
+      "reason": "A related source task exists for single-DataFrame linear regression, but it was not injected and only partially overlaps the target; it cannot be treated as an applied source experience."
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "The packet shows the source episode was not retained or injected, so the target failure cannot be attributed to retrieval of a stored source episode."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "TASK_EXECUTION: the submission's exact plot title differs from the hidden assertion, a direct implementation miss if the title was truly required.",
+    "Other hidden assertions beyond the shown title assertion may also fail; the offline evaluation output does not show all checks.",
+    "No memory was injected, so memory retrieval/transfer cannot explain this target failure in the provided evidence."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the exact plot title was omitted from the prompt or simply not shown in target_prompt.",
+    "Whether fixing only the title would make the target pass all hidden checks.",
+    "Whether any un-injected memory library content existed; the packet reports memory_policy disabled and no injection.",
+    "Target post-task update and source update contents are not provided."
+  ],
+  "minimal_intervention": {
+    "change": "Set the plot title to 'Aggregated Predictions vs Date' or make that exact title explicit in the target contract.",
+    "fixed": "Same hidden evaluator, target prompt, source history, and zero-injection memory condition.",
+    "falsifier": "If changing only the title still fails on other assertions, or if the evaluator accepts other titles, the EVAL_CONTRACT/TASK_EXECUTION candidate is weakened."
+  },
+  "causal_claim": false
+}

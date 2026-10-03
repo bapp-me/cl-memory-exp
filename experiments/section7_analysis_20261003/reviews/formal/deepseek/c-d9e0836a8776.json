@@ -1,0 +1,122 @@
+{
+  "case_id": "c-d9e0836a8776",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "AssertionError: defaultdict(<class 'int'>, {'ab': 1, 'bc': 1, 'cd': 1}) != {'Ab': 1, 'bC': 1, 'Cd': 1}"
+        }
+      ],
+      "reason": "源 episode 与目标同族（同一 two-letter 计数任务），但源离线评测 correct=false、7 个测试 2 个因大小写归一化失败；源存在不等于其做法正确。"
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "本目标实际注入的 6 条 episode 全部与二元组计数无关，没有与目标相关且有合法来源支持的必要内容可供评估保真度。"
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "perform linear regression on each dataset to predict 'value' based on 'date'"
+        }
+      ],
+      "reason": "注入内容是线性回归、SHA256、扑克、随机列、z-score、足球联赛等无关任务，无法支持本目标的字符串清理与相邻二元组统计。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "cleaned = re.sub(r'[^a-zA-Z]', '', str(word)).lower()"
+        }
+      ],
+      "reason": "可见轨迹只有 1 次 PYTHON 与 1 次 SUBMIT，提交代码中不含任何注入 episode 的要素；与未被注入的同族源解法相似只是可见代理。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "target_visible",
+          "quote": "All tests pass: adjacent letter pairs are counted per word"
+        }
+      ],
+      "reason": "目标自写解法经离线评测判为正确、状态 completed，说明本题可由直接生成完成；这不证明记忆被有效复用。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"reason\": \"oldest_complete_episode_byte_budget\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "选中后按字节预算淘汰最旧 66 条、只注入最后 6 条无关 episode，同族源虽在候选覆盖中却未注入；这属于打包/可见性层，不能读成检索失败。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Find the occurrences of each two-letter combination in the sanitized word,"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_correct\": false,"
+        }
+      ],
+      "reason": "库中存在同族的干净源经验（sanitize + 相邻二元组），构成合法来源机会；但该源自身评测失败且未进入注入集合，机会未在上下文中兑现。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "!= {'Ab': 1, 'bC': 1, 'Cd': 1}"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"checks_executed\": 3"
+        }
+      ],
+      "reason": "两题都只声明‘仅考虑字母’，但源折叠测试期望保留大小写，目标仅 3 项检查即判正确，说明大小写契约不一致；只作候选标注，不重打分。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "注入的 6 条无关 episode 可能仅增加上下文开销/噪声，但无证据显示其改变了解题路径。",
+    "目标解法与未被注入的同族源解法高度相似（sanitize + lower + 相邻对），更可能来自模型先验或题目自然写法，而非记忆复用。",
+    "若把同族源 episode 真正注入，结果是否改变无法由本包判断（无对照）。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏 target 测试内容未知，大小写归一化是否被检验无法确认。",
+    "未提供未选中的完整记忆库，不能断言库中不存在其他同族经验。",
+    "检索候选 score 全为 null、token 计数不可用，无法评估排序质量与注入代价的取舍。",
+    "无对照注入实验，不能判断记忆是否影响本目标行为。"
+  ],
+  "minimal_intervention": {
+    "change": "仅把注入集合从最近 6 条无关 episode 换为同族的 two-letter 源 episode，其余不变",
+    "fixed": "相同目标 prompt、相同历史库与字节预算、相同工具与提交协议",
+    "falsifier": "若替换后目标仍以相同方案通过且无行为差异，则说明本题成功与记忆注入无关"
+  },
+  "causal_claim": false
+}

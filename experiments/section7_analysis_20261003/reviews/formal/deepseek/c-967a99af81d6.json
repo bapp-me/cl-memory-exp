@@ -1,0 +1,149 @@
+{
+  "case_id": "c-967a99af81d6",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "target_update_operations",
+          "quote": "\"stream.task-000.attempt-1\""
+        }
+      ],
+      "reason": "仅有一个源事件 id，未提供源题转写或源内容，无法判定合法源经验及其质量。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": []"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "本次运行没有注入任何记忆内容，因此没有可评估保真度的记忆项。"
+    },
+    "target_applicability": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": []"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "没有候选或注入记忆，谈不上目标适用性；空检索不能推出全库无相关记忆。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "\"action\": \"go to yellow closed door 1\""
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": []"
+        }
+      ],
+      "reason": "可见动作是直接环境动作，没有可见的记忆文本、候选动作或适配痕迹。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The task is completed."
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"progress\": 1.0"
+        }
+      ],
+      "reason": "两步环境动作直接完成目标任务；支持可见执行成功，但不能证明记忆因果贡献。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"observable_candidates\": []"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"injected_ids\": []"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 0"
+        }
+      ],
+      "reason": "D1 检索候选与注入均为空；不能据此推断持久化记忆库中不存在相关经验。"
+    },
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_update_operations",
+          "quote": "\"operations\": []"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"memory_policy\": \"enabled\""
+        }
+      ],
+      "reason": "目标后写入操作为空，说明没有内容写入被准入；目标后更新也不能解释此前行为。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"scorable\": true"
+        }
+      ],
+      "reason": "离线评估合同判为可评分且正确；未见题意与测试不一致的明确信号。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "成功可能来自 BabyAI 简单任务与直接动作策略，当前没有无记忆反事实。",
+    "空检索也可能是候选范围或日志限制，不能等同于持久化记忆库为空。",
+    "target_update_operations 的 operations 为空但 before/after hash 不同，可能存在非内容元数据变化。",
+    "memory_policy 为 enabled 而注入为 0，可能是无匹配记忆，也可能是注入未记录。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "源题转写与结果缺失，source_quality 无法核实。",
+    "未提供完整持久化记忆库，不能从本包推断不存在相关记忆。",
+    "检索日志是否完整未知；candidate_scope 显示为 Native Qdrant top-5 返回集。",
+    "before_hash 与 after_hash 不同但 operations 为空，含义不明。",
+    "没有受控干预，不能证明记忆造成成功、负迁移或遗忘。"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "保持相同 BabyAI 关卡、提示、memory_policy enabled 与无注入条件。",
+    "falsifier": "若受控注入目标相关记忆后动作路径或结果改变，或出现检索记忆被使用的可见证据，则削弱无可见使用/直接执行解释。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,136 @@
+{
+  "case_id": "c-0e52e88ac482",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "The task is completed."
+        },
+        {
+          "section": "injection/1",
+          "quote": "The task is completed."
+        }
+      ],
+      "reason": "Injected sources show completed BabyAI door tasks, but they are only D1-visible examples without controlled pairing or provenance detail."
+    },
+    "memory_fidelity": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "injection/2",
+          "quote": "Now I'll open the grey door."
+        },
+        {
+          "section": "target_visible",
+          "quote": "Now I'll open the red door."
+        }
+      ],
+      "reason": "The source preserves a go-to then toggle door-opening routine, but it lacks a behind-direction example relevant to the target."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "Goal: open a door behind you"
+        },
+        {
+          "section": "injection/2",
+          "quote": "I'll go to the grey door, which is on the right side, and open it."
+        }
+      ],
+      "reason": "The source is a directional door-opening task, but right-side differs from behind and the target requires extra turning/representation."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "I'll check what actions are available first"
+        },
+        {
+          "section": "injection/0",
+          "quote": "check available actions"
+        },
+        {
+          "section": "target_visible",
+          "quote": "go to red closed door 1"
+        },
+        {
+          "section": "injection/2",
+          "quote": "go to grey closed door 1"
+        }
+      ],
+      "reason": "The target action sequence mirrors source check-actions and go-to/toggle patterns, but this is a behavioral proxy and not causal proof."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The task is completed."
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "Direct execution record shows terminal success; this is status evidence, not memory-effect evidence."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/2",
+          "quote": "I'll go to the grey door, which is on the right side, and open it."
+        },
+        {
+          "section": "target_visible",
+          "quote": "The red door was behind me originally; let me turn right once to face the red door."
+        }
+      ],
+      "reason": "Visible behavior adapts a source-style door-opening routine to the behind-door goal; without a no-memory control, transfer cannot be proven."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "The task is completed."
+        },
+        {
+          "section": "injection/1",
+          "quote": "The task is completed."
+        }
+      ],
+      "reason": "Injected sources contain completed door tasks, providing potential reusable experience; their presence does not prove retrieval or utility."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The target is simple enough to solve by generic exploration and the standard go-to/toggle action vocabulary, with no memory needed.",
+    "The injected episodes may be context padding rather than selected/attended memory; injection presence alone does not show retrieval.",
+    "The source task 'open a door on your right' differs from 'open a door behind you', so similarity may reflect task-general policy rather than semantic transfer."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether any injected source was actually retrieved or attended at inference.",
+    "What the same target would do without the three injections.",
+    "Whether source episodes came from the same distribution as the target or were curated.",
+    "The hidden method identity and exact scoring mask details."
+  ],
+  "minimal_intervention": {
+    "change": "Run the same target with the three memory injections removed or replaced by unrelated BabyAI trajectories, keeping the target prompt and budget fixed.",
+    "fixed": "Same target prompt, solver, environment, tool budget, and scoring mask.",
+    "falsifier": "If the no-memory control still solves with the same turn/go-to/toggle sequence, the visible transfer candidate is unsupported; if removal degrades or changes strategy, it supports memory influence."
+  },
+  "causal_claim": false
+}

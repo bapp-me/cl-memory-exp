@@ -1,0 +1,111 @@
+{
+  "case_id": "c-4285bf012466",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"stdout\": \"EVALUATOR_RESULT=35:True:5\\n",
+          "reason": "源题离线评估 correct=true 且 5 个测试通过。"
+        }
+      ],
+      "reason": "源题通过评估，但源 agent 自身提交的解不含 max_count<1 校验，通过不等于其全部陈述正确。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The behavior mirrors the previously verified pattern (per-animal `random.randint(1, max_count)` after seeding, reversal keeping only predefined animals)."
+        }
+      ],
+      "reason": "目标代码逐字保留了源解的 seed→randint 与 setdefault 反转过滤逻辑（含 Pangolin 排除语义），与 injection/0 中源 episode 的提交代码一致。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "for animal_dict in list_of_animal_dicts:\n        reversed_dict, animal_counts = task_func(animal_dict, max_count, seed)"
+        }
+      ],
+      "reason": "源只处理单个 dict；目标新增 list 聚合条件。agent 用外层循环复用单 dict 模式，但计数结构（一次生成 vs 参考解每次调用重置 seed 后 update）与参考解语义不同。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "The random counts match exactly with `random.seed(seed)` followed by `random.randint(1, max_count)` for each animal in `ANIMALS` order."
+        }
+      ],
+      "reason": "目标可见代码与源经验的核心模式（按 ANIMALS 顺序 seed 后 randint、仅保留预定义动物）一致并适配到循环结构；这是行为代理，非因果证明。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": true,\n    \"source_provenance_retained\": true,\n    \"source_provenance_injected\": true"
+        }
+      ],
+      "reason": "源 episode（injection/0）与 provenance 被注入且保留，distance=41；来源覆盖存在，但不证明内容保真或被检索使用。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "# Test mirroring the earlier verified example semantics"
+        }
+      ],
+      "reason": "目标代码复现源解的 seed→randint 反转模式并显式提及先前验证的语义，是复用的可见代理；无反事实，不能证明成功由记忆造成。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"tests_run\": 0,\n  \"checks_executed\": 6,\n  \"correct\": true,\n  \"scorable\": true"
+        }
+      ],
+      "reason": "目标提交后离线评估 correct=true、scorable=true；但运行测试数为 0，正确性依据是 6 项结构检查而非语义测试。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "\"stderr\": \"----------------------------------------------------------------------\\nRan 0 tests in 0.000s\\n\\nOK\\n\""
+        }
+      ],
+      "reason": "候选：agent 解的计数语义（seed 一次、整体生成一份随机计数）与参考解（每个 dict 重置 seed 后累加，总数≈组数×单组计数）不同，而目标评估运行 0 个测试，语义等价性未被检验，题意/测试可能不一致，仅标记候选。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "agent 也可能在无记忆情况下独立推导出 seed+randint 模式（源题 docstring 已含足够提示）。",
+    "未选中的完整记忆库不在包内，可能存在其他相关或无关经验影响行为，无法排除。",
+    "0 个测试运行意味着通过可能只反映结构检查宽松，与记忆复用质量无关。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法确定检索是否发生（只有注入与来源覆盖证据，无检索候选可见性数据）。",
+    "隐藏目标测试为何为 0 不可由现有证据回答。",
+    "target 之后的 state 更新不属于本题，不能据此解释行为。"
+  ],
+  "minimal_intervention": {
+    "change": "在相同历史与预算下，将注入经验替换为与随机计数/字典反转无关的等量经验，观察目标是否仍出现相同的 seed→randint 复用模式。",
+    "fixed": "保持相同的源 episode 历史、注入距离（41）、工具预算与目标 prompt 不变。",
+    "falsifier": "若替换经验后目标仍产出结构相同的解，则 USE_TRANSFER 候选被削弱。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,132 @@
+{
+  "case_id": "c-7146e3efb4a3",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"tests_run\": 6,\n  \"checks_executed\": 39,\n  \"correct\": true"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "Each sub-list should have exactly 5 elements, where the first 4 elements are"
+        }
+      ],
+      "reason": "Source episode passed its own 6 tests, but its contract (fixed 5 columns, returns a DataFrame/results tuple) is narrower than the target's multi-dataset dict contract."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false"
+        },
+        {
+          "section": "source_provenance_at_target",
+          "quote": "\"memory_ids\": []"
+        }
+      ],
+      "reason": "No target-relevant source content was retained or injected; the only injected snippets describe an unrelated bar-chart/value-count task."
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        }
+      ],
+      "reason": "Injected content concerns matplotlib bar charts, not statsmodels OLS regression over multiple datasets; the paired source is at most partially related but was not injected."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "name = f\"dataset_{idx + 1}\""
+        },
+        {
+          "section": "target_visible",
+          "quote": "print(statsmodels.__version__, pandas.__version__)"
+        }
+      ],
+      "reason": "Visible actions only probe library versions, write the function, and submit; no reference to 'value' column or matplotlib appears, so injected memory shows no behavioral trace."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_evaluation",
+          "quote": "assert _eval_record_bool(isinstance(report['Dataset 1']['DataFrame'], pd.DataFrame))"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "KeyError: 'Dataset 1'"
+        },
+        {
+          "section": "target_submission",
+          "quote": "name = f\"dataset_{idx + 1}\""
+        }
+      ],
+      "reason": "The recorded failure is a key-name mismatch: hidden test expects 'Dataset 1' while submission emits 'dataset_1'. This only shows the contract mismatch; it does not show any memory effect."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"raw_source_episode_retained_in_method_state\": false,\n    \"source_provenance_retained\": false,\n    \"source_provenance_injected\": false"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "\"correct\": true,\n  \"scorable\": true"
+        }
+      ],
+      "reason": "A same-family source episode existed and passed, but its content/provenance was neither retained nor injected, so no source-derived experience was available at the target. It cannot be concluded that such experience would have fixed the key naming."
+    },
+    {
+      "tag": "SCOPE_INTERFERENCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "retrieval",
+          "quote": "\"score\": 0.23357109887205282"
+        }
+      ],
+      "reason": "The injected memories come from a different task scope (bar chart of value counts); their presence is out of scope, but there is no visible application, so interference is only a candidate, not demonstrated."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "The exact output key names ('Dataset 1' vs 'dataset_1') are not stated in the target prompt, so the failure may reflect an underspecified task/test contract rather than any memory effect.",
+    "The two injected off-topic memories could have consumed context/packing budget without visible behavioral trace, but no evidence shows they were used.",
+    "Because the source episode was not retained or injected, its potential influence (positive or negative) on the key naming cannot be assessed."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether hidden tests would accept lowercase 'dataset_N' keys; only the offline evaluation record shows the 'Dataset 1' expectation.",
+    "Token count for injected content is unavailable (token_count null, method unavailable).",
+    "Whether the retained/selected source content beyond the two injected snippets existed or would have been applicable.",
+    "Whether the recorded source pass implies anything transferable for the multi-dataset summary contract."
+  ],
+  "minimal_intervention": {
+    "change": "Emit report keys exactly as 'Dataset {i+1}' with the expected sub-keys (DataFrame, Regression Results, R-squared) instead of 'dataset_{i+1}'.",
+    "fixed": "Same source history, retrieved/injected memory set, environment (pandas 2.0.3, statsmodels 0.14.0) and budget.",
+    "falsifier": "If rerunning with 'Dataset {i+1}' keys still fails the same assertion, the EVAL_CONTRACT naming hypothesis is refuted."
+  },
+  "causal_claim": false
+}
