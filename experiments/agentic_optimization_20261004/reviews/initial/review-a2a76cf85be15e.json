@@ -1,0 +1,151 @@
+{
+  "case_id": "review-a2a76cf85be15e",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        }
+      ],
+      "reason": "s044 passed its offline evaluation (5 tests); a passing source does not validate all its historical statements."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 73,
+          "quote": "Computes word lengths via `.str.len()`"
+        }
+      ],
+      "reason": "The s044 episode text visible to the solver matches the corresponding source original's task and solution content."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 83,
+          "quote": "The memory shows a similar sibling task (s044): convert to DataFrame, compute word lengths, use `value_counts`"
+        }
+      ],
+      "reason": "s044 counts word lengths after a letter filter; the target adds grouping by Category over Content, so only the style/subroutine transfers."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 83,
+          "quote": "I'll follow the same style for this grouped variant."
+        }
+      ],
+      "reason": "Solver explicitly stated adaptation of the s044 pattern to the grouped variant; this is a behavioral proxy, not a causal proof that memory caused success."
+    }
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 128,
+          "quote": "head -c 4000 /memory/episodes/s044.md; echo ===; head -c 2000 /memory/raw/s044."
+        }
+      ],
+      "reason": "Two keyword greps followed by a single bounded read of the matched source; only 3 memory calls total. The greps did return all 48 source ids, so the match set was broad before selection."
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 7,
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "Task succeeded on the first submitted implementation with no observed errors."
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 128,
+          "quote": "head -c 4000 /memory/episodes/s044.md"
+        }
+      ],
+      "reason": "Reading was bounded (byte-limited head) and targeted at one source; no repeated or empty searches observed (empty_search_calls: 0)."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 83,
+          "quote": "The memory shows a similar sibling task (s044)"
+        }
+      ],
+      "reason": "A legal, related source existed in the frozen archive and was opened; presence and opening do not prove the memory caused success."
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 6,
+          "quote": "grep -ril \"word length\" /memory | head; grep -ril \"process_documents\" /memory | head"
+        }
+      ],
+      "reason": "Keyword search surfaced s044 and the solver read it; however all 48 source ids were in the match set, so precision of retrieval cannot be confirmed."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 83,
+          "quote": "I'll follow the same style for this grouped variant."
+        }
+      ],
+      "reason": "Visible code follows the s044 style (DataFrame, length counts, plain-int dict) adapted to grouping; no counterfactual, so no causal claim."
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 41,
+          "quote": "\"non_content_response_fraction\": 0.4941242305540011"
+        }
+      ],
+      "reason": "Roughly half of dynamic memory response bytes were non-content metadata; this describes overhead only and cannot assert poor cost-benefit for this task."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The task is simple enough that the fixed model may have solved it without memory; success alone cannot attribute benefit to the s044 episode.",
+    "The greps matched all 48 sources, so selection of s044 may depend on head-truncated output ordering rather than precise retrieval."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "Whether the s044 episode contents actually reached the model versus only appearing in shell output is not fully established (attribution note: opened files are not proof contents reached stdout).",
+    "No relevance gold or counterfactual (e.g., no-memory run) exists to confirm true recall or memory-caused benefit."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same frozen 48-source archive, same read-only shell access, same startup index and budget.",
+    "falsifier": "A no-memory ablation of the same target achieving identical first-try success would weaken the USE_TRANSFER candidate."
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,165 @@
+{
+  "case_id": "review-d3e2437eecdcc1",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=13:True:5"
+        }
+      ],
+      "reason": "The corresponding source (s009, consecutive-distance task) passed its own evaluation, but its task returned a list of consecutive distances, not a round-trip total, so its coverage is partial for this target."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 0"
+        },
+        {
+          "section": "exposure_summary",
+          "line": 6,
+          "quote": "\"source_opened\": false"
+        }
+      ],
+      "reason": "No dynamic memory call was made and the corresponding source was never opened, so no source content reached the solver beyond the startup index line."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "line": 4,
+          "quote": "[s009](episodes/s009.md): Calculate the Euclidean distances between consecutive points in a provided"
+        },
+        {
+          "section": "corresponding_source_original",
+          "line": 2,
+          "quote": "Example: (2) == (2, 2)"
+        }
+      ],
+      "reason": "The indexed source overlaps with the target's distance computation and its original task covered one-number points, but the target adds the round-trip requirement the source did not have."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 40,
+          "quote": "\"no_active_memory_call\": true"
+        }
+      ],
+      "reason": "The trace shows only self-written code and tests; no memory content appears in the visible reasoning or code."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "TypeError: object of type 'int' has no len()"
+        },
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "assert total_travel_distance([(2,), (5,)]) == 6.0"
+        }
+      ],
+      "reason": "The submitted code crashes on a bare-int point in the hidden eval; the solver's own visible tests only exercised one-element tuples like (2,), never a bare int. This supports the failure boundary but does not prove memory would have prevented it."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "handle cases where a tuple contains just one number"
+        },
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "total_travel_distance([(1, 2), 4, (-1.2, 4)])"
+        }
+      ],
+      "reason": "The prompt speaks only of a tuple with one number, while the hidden test passes a bare int 4; a prompt/test mismatch is a candidate explanation, not established since the reference docstring also treats bare numbers as (n, n)."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "line": 4,
+          "quote": "[s009](episodes/s009.md): Calculate the Euclidean distances between consecutive points in a provided"
+        },
+        {
+          "section": "exposure_summary",
+          "line": 6,
+          "quote": "\"source_opened\": false"
+        }
+      ],
+      "reason": "A related source (s009) was listed in the startup index and its original solution handled bare-number points, but it was never opened. This shows missed opportunity at most, not that retrieval would have changed the outcome."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "EVAL_CONTRACT: the hidden test's bare int 4 goes beyond the prompt's 'tuple contains just one number' wording, so part of the failure may be contract ambiguity rather than pure execution error.",
+    "unknown counterfactual: the solver made no memory calls, so whether reading s009 would have surfaced bare-int handling and changed the outcome cannot be determined from this run."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "No recall gold exists, so true relevance of s009 or any other indexed item to this target is unavailable.",
+    "Hidden thinking is absent, so the solver's reason for never querying memory is unknown.",
+    "Whether the reference's bare-int handling is part of the intended contract or an over-extension of the prompt cannot be settled offline."
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "no_search_need_unknown",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 0"
+        }
+      ],
+      "reason": "No memory or search tool was invoked; whether a search was needed is undetermined, and this is not evidence of retrieval failure."
+    },
+    "failure_boundary": {
+      "value": "own_execution_candidate",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "if len(p) == 1:\nTypeError: object of type 'int' has no len()"
+        }
+      ],
+      "reason": "The crash occurs inside the solver's own submitted normalization branch on input type it never tested; information about one-number points was in principle visible in the task framing."
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "exposure_summary",
+          "line": 4,
+          "quote": "\"dynamic_bytes\": 0"
+        }
+      ],
+      "reason": "No dynamic reads, truncations, or repeated payloads occurred; only the fixed startup index was supplied."
+    }
+  },
+  "minimal_intervention": {
+    "change": "Add a pre-implementation memory lookup keyed on the task's core operation (Euclidean distance between coordinate points) so the solver would open s009, whose original solution contains bare-number point normalization.",
+    "fixed": "Same startup index, same frozen 48-history archive, same model, same budget and environment.",
+    "falsifier": "If with access to s009 the solver still fails the same hidden test (or s009's content does not actually include bare-int handling), the opportunity-source candidate is refuted."
+  },
+  "causal_claim": false
+}

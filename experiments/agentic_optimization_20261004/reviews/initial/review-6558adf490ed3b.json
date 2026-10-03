@@ -1,0 +1,152 @@
+{
+  "case_id": "review-6558adf490ed3b",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "\"stdout\": \"EVALUATOR_RESULT=14:True:7\\n\""
+        }
+      ],
+      "reason": "Source s043 passed 7 offline tests, but only for the single-word variant; its statements beyond the submitted code are unverified."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 1110,
+          "quote": "sanitized = ''.join(re.findall(r'[A-Za-z]', word))"
+        }
+      ],
+      "reason": "The retrieved s043:e004 tail contained the exact sanitize-and-slide-pair logic the target needs, matching the offline source original."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 120,
+          "quote": "I'll adapt that for a list of words, processing each word separately so bigrams don't cross word boundaries."
+        }
+      ],
+      "reason": "Source operates on one word (word: str); target adds a list input and cross-word boundary condition requiring solver extension."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 120,
+          "quote": "The archive's closest match (source s043) uses the same imports and sanitizes with `re.findall(r'[A-Za-z]', ...)` then counts sliding pairs."
+        }
+      ],
+      "reason": "Solver explicitly cited s043 and its submitted code reuses the retrieved sanitize/slide-pair pattern extended to a list; this is a behavioral proxy, not proof of causation."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 25,
+          "quote": "\"source_id\":\"s043\",\"kind\":\"task\",\"locator\":\"/task\""
+        }
+      ],
+      "reason": "The targeted search returned s043, whose task docstring near-verbatim matches the target's comb-counting specification, establishing a legal opportunity; it does not alone prove the content was used."
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 6,
+          "quote": "\"query\": \"two-letter combinations occurrences words dictionary counts bigrams\""
+        }
+      ],
+      "reason": "One focused query surfaced the corresponding source as a ranked hit, so retrieval was visible and on-point; retrieval does not by itself establish use."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 127,
+          "quote": "sanitized = ''.join(re.findall(r'[A-Za-z]', word))"
+        }
+      ],
+      "reason": "Submitted code visibly reproduces the retrieved s043 logic adapted to a list, a consistent-adaptation candidate; without a no-memory counterfactual the success cannot be attributed to memory."
+    },
+    {
+      "tag": "INFRA_PROTOCOL",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 53,
+          "quote": "\"error\":\"Unknown event_id; only frozen simple-source events are readable\""
+        }
+      ],
+      "reason": "One MEMORY_READ failed on a non-existent event id and the solver recovered via MEMORY_FOLLOW; this documents a protocol constraint, not a cause of success or failure."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The model may have solved this simple bigram task from parametric knowledge alone; memory access and visible reuse do not prove necessity.",
+    "The single read error and 53% non-content response fraction could indicate overhead, but byte/metadata figures do not establish wasted tokens or harm on a successful run."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "No no-memory counterfactual run exists, so memory's causal contribution is unknown.",
+    "true_recall is unavailable (no relevance gold); whether other useful sources were missed cannot be determined.",
+    "Whether reading the full s043 trajectory (only the tail of e004 plus FOLLOW results were shown) was necessary is unknown."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same frozen archive, same memory tools and read-only access, same model and budget.",
+    "falsifier": "N/A with change=none; a future no-memory ablation failing this target would support the USE_TRANSFER candidate."
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 6,
+          "quote": "two-letter combinations occurrences words dictionary counts bigrams"
+        }
+      ],
+      "reason": "A single targeted query immediately returned the matching source (s043) with no repeat or exploratory queries."
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 3,
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "The run succeeded; the one read error was recovered without affecting the outcome."
+    },
+    "reading_efficiency": {
+      "value": "avoidable_overhead_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 38,
+          "quote": "\"event_id\": \"s043:e006\""
+        }
+      ],
+      "reason": "The first MEMORY_READ guessed event id s043:e006, which was not among returned hits, and errored; a small candidate overhead, not proven wasteful."
+    }
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,95 @@
+
+{
+  "case_id": "review-d693ae745d5f05",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [{"section": "source_evaluation_offline", "line": 3, "quote": "EVALUATOR_RESULT=32:True:10"}],
+      "reason": "对应的单文本源任务已通过全部10个测试，但通过不保证其历史陈述全部正确。"
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "启动记忆为空且无任何记忆调用，无与目标相关的记忆内容可评估。"
+    },
+    "target_applicability": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "没有任何记忆被检索或暴露，不存在适用性问题。"
+    },
+    "visible_use": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "无可见的记忆使用行为可评估。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {"section": "target_evaluation_offline", "line": 4, "quote": "assert _eval_record_bool(new_task_func(['Hello world! This is a test.', 'Python is fun and powerful.'], 123)"},
+        {"section": "target_contract_reference_offline", "line": 2, "quote": "return [task_func(text, seed) for text in texts]"},
+        {"section": "target_prompt", "line": 1, "quote": "# Given a list of texts, each containing multiple sentences, scramble the letters"}
+      ],
+      "reason": "隐藏测试要求与参考解完全一致的确定性字符串，而参考解对每个文本用同一 seed 重新播种（per-text reseed）；题目提示只要求逐词乱序，从未说明播种语义，提示与测试可能不一致。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {"section": "target_visible", "line": 11, "quote": "rng = random.Random(seed)"},
+        {"section": "target_visible", "line": 11, "quote": "assert sorted(ow[1:-1]) == sorted(sw[1:-1])"}
+      ],
+      "reason": "solver 对整个列表只建一个 RNG 实例，且自检只验证字母保持不变等不变量，未验证任何确定性期望输出；这是可见行为代理，无 gold 对照不能证明它就是失败原因。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {"section": "mechanical_metrics", "line": 8, "quote": "\"source_index\": 32,"},
+        {"section": "exposure_summary", "line": 5, "quote": "source_exposed": false}
+      ],
+      "reason": "存在一个已通过评测的单文本乱序源经验（其 task_func 在每次调用时 random.seed(seed)），但 source_exposed=false，机会存在不等于被利用。"
+    }
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "no_search_need_unknown",
+      "evidence": [{"section": "mechanical_metrics", "line": 23, "quote": "\"memory_calls\": 0,"}],
+      "reason": "零次记忆调用，只能说明没有调用，检索需求本身无法判定。"
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {"section": "target_evaluation_offline", "line": 4, "quote": "['Hlleo wlrod! This is a tset.', 'Photyn is fun and pfwuoerl.'"},
+        {"section": "target_contract_reference_offline", "line": 2, "quote": "return [task_func(text, seed) for text in texts]"}
+      ],
+      "reason": "失败点疑似在未明示的 per-text 重播种契约上，而非信息缺失或执行错误；仅是候选，无反事实。"
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [{"section": "mechanical_metrics", "line": 18, "quote": "\"calls\": 2,"}],
+      "reason": "仅 2 次调用、1 次 python 验证加提交，无明显可避免开销。"
+    }
+  },
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "单 RNG 跨文本不复位导致第二个文本起乱序序列偏离参考，这与 per-text reseed 契约候选一致但属同一可见代理，不能区分根因。",
+    "solver 无法在无 gold 情况下验证确定性期望输出，任何自检通过都不能预示该精确匹配测试；信息缺失与契约歧义同时存在，无法归一。",
+    "evaluator 只显示 AssertionError，solver 在隐藏输入上的实际输出未知，具体偏差词位置无法核查。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "solver 提交代码在隐藏测试输入上的实际乱序结果未知。",
+    "per-text reseed 是否是唯一分歧点（vs 其他 RNG 细节）无法由现有证据确认。",
+    "若检索到单文本源经验是否会改变实现，属反事实，不可判定。"
+  ],
+  "minimal_intervention": {
+    "change": "检索策略改动：允许查询与 'word scramble + seed' 相关的冻结源经验（含单文本 task_func 版本），观察 solver 是否据此采用每次调用重新播种的模式。",
+    "fixed": "相同冻结只读源库、相同目标提示与隐藏测试、相同模型与预算。",
+    "falsifier": "若检索到该源经验后 solver 仍使用单一 RNG 一次播种并同样失败，则检索改动候选被反驳。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,155 @@
+{
+  "case_id": "review-8dab574cffe44b",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 7,
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "源 s037 提交通过了 4 项测试，但其单 DataFrame 契约只部分覆盖目标任务。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 83,
+          "quote": "required_columns = {\\\\\\\"group\\\\\\\", \\\\\\\"date\\\\\\\", \\\\\\\"value\\\\\\\"}"
+        }
+      ],
+      "reason": "检索到的 s037 内容与 corresponding_source_original 中的源任务文本一致，未见失真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 83,
+          "quote": "X = df[\\\\\\\"date\\\\\\\"].map(pd.Timestamp.toordinal).values.reshape(-1, 1)"
+        },
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "aggregate these predictions into a single DataFrame and plot the aggregated predictions"
+        }
+      ],
+      "reason": "源是单 df 回归加绘图；目标新增多数据集聚合、返回模型列表等条件，且未指定任何 plot 标题。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 96,
+          "quote": "aggregated = pd.concat(prediction_frames, ignore_index=True)"
+        }
+      ],
+      "reason": "求解器复用了 s037 的验证/ordinal 回归骨架并正确扩展为多数据集聚合；仅为行为代理，非因果结论。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "AssertionError: Plot title should be 'Aggregated Predictions vs Date'."
+        },
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "The final plot should show the overall trend of the aggregated predictions."
+        }
+      ],
+      "reason": "任务描述未要求任何具体标题，隐藏测试却断言精确字面标题；记忆中也不含该字符串，属题意/测试不一致候选。评测在首个断言即中断（tests_run:0），其余部分是否通过未知。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 83,
+          "quote": "if not pd.api.types.is_datetime64_any_dtype(df[\\\\\\\"date\\\\\\\"]):"
+        },
+        {
+          "section": "target_visible",
+          "line": 96,
+          "quote": "model = LinearRegression()"
+        }
+      ],
+      "reason": "提交代码逐段可见地沿用了检索到的 s037 模式（校验顺序、toordinal、绘图结构）并适配多数据集；无反事实，不能证明成功或失败由该复用造成。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 25,
+          "quote": "\"total_matches\":80,\"page\":0,\"next_page\":1"
+        }
+      ],
+      "reason": "搜索返回 80 条匹配但仅打包 5 个截断事件；未打包内容是否含相关信息无法从本题证据判断，不构成干扰或失败原因。"
+    }
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "\"query\": \"aggregate_predictions linear regression date value datasets plot\""
+        }
+      ],
+      "reason": "一次聚焦检索直接命中对应源 s037，随后两次针对命中事件的定点 MEMORY_READ，无重复或漫无目的调用。"
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "Plot title should be 'Aggregated Predictions vs Date'."
+        }
+      ],
+      "reason": "失败边界在隐藏测试的未声明字面标题要求，而非信息缺失或自身执行错误；不过评测提前中断，后续检查未运行。"
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 31,
+          "quote": "\"candidate_count\": 0"
+        }
+      ],
+      "reason": "两次读取均为对已命中事件的续读，无重复读取、空结果或错误，开销与信息获取相称。"
+    }
+  },
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "求解器自拟标题（'Aggregated Linear Regression Predictions vs Date'）与隐藏标题不同，但这只是契约不一致的可见面；即使标题正确，后续隐藏检查（如聚合列名 'predicted_value' vs 'prediction'、是否散点等）也可能失败，因评测在首个断言即中断而无法判断。",
+    "无记忆 baseline 也可能同样失败，因所需标题字符串既不在任务描述也不在记忆中。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试在标题断言处中断，无法确定求解器代码其余部分（聚合列名、散点样式等）是否也会失败。",
+    "无语义召回 gold，无法评定检索命中的真实相关性比例（total_matches=80 的其余内容未曝光）。",
+    "无反事实（无记忆 baseline）运行记录。"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "相同冻结源库、相同启动空索引、相同预算与模型；不改隐藏测试与目标答案",
+    "falsifier": "若让求解器在提交前看到完整的测试断言清单（含标题要求）后仍失败，或在同契约下无记忆 baseline 同样因标题失败，则 EVAL_CONTRACT 候选被削弱；反之若给出标题要求后通过，则支持该候选。"
+  },
+  "causal_claim": false
+}

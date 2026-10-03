@@ -1,0 +1,140 @@
+{
+  "case_id": "review-d97434f293c029",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=13:False:5"
+        }
+      ],
+      "reason": "源 s038 离线评测失败（缺 'const' 项，3/5 用例失败），但其过滤/OLS/None 核心逻辑与目标相关部分本身自洽。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 73,
+          "quote": "subset = df[(df[columns[1]] > height) & (df[columns[2]] < weight)]"
+        }
+      ],
+      "reason": "检索到的 s038 episode 中代码与 corresponding_source_original 逐字一致，目标所需的过滤与 OLS 模式完整到达 stdout（仅 raw  尾部被截断）。"
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 83,
+          "quote": "The memory file s038 gives the exact single-dataset pattern this task extends."
+        }
+      ],
+      "reason": "s038 是本任务的单数据集版本；目标新增条件仅为按 DatasetID 分组并返回 dict，核心过滤/回归逻辑直接适用。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 83,
+          "quote": "I'll adapt it to group by `'DatasetID'` and return a dict."
+        }
+      ],
+      "reason": "提交代码与 s038 模式逐行对应，仅增加 groupby 与 per-dataset None 语义；这是行为代理，无反事实不能证明因果复用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 59,
+          "quote": "cat episodes/s038.md; echo ----; cat raw/s038."
+        }
+      ],
+      "reason": "档案中存在近乎同题的合法源 s038，agent 定位并读取了它；这只是机会存在，不证明内容被完整使用。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 83,
+          "quote": "The memory file s038 gives the exact single-dataset pattern this task extends. I'll adapt it to group by `'DatasetID'` and return a dict."
+        }
+      ],
+      "reason": "可见的过滤/OLS 代码与 s038 高度重合且附带自述适配说明，是一致适配候选；成功不能证明记忆造成成功，无反事实。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_contract_reference_offline",
+          "line": 3,
+          "quote": "assert value is None"
+        }
+      ],
+      "reason": "参考解含 sm.add_constant(X) 且源 s038 因缺 const 判失败，但目标隐藏测试只检查类型与 None，未检 const，题意与测试可能不一致（仅候选）；复用无 const 的代码仍被判 correct。"
+    }
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 18,
+          "quote": "episodes raw 2>/dev/null | head"
+        }
+      ],
+      "reason": "一次针对任务关键词的 grep 加一次单源深读，未在 48 源中盲目遍历。"
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=7:True:0"
+        }
+      ],
+      "reason": "任务成功且过程无错误信号，无失败边界可定位。"
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 59,
+          "quote": "cat episodes/s038.md; echo ----; cat raw/s038."
+        }
+      ],
+      "reason": "grep 的 48 个 source_id 属元数据而非读取内容；实际深读仅一个相关源，一次截断未影响所需 episode 内容。"
+    }
+  },
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "无记忆反事实：模型本身可能凭自身能力写出同样的 groupby-OLS 模式，无法归因于记忆。",
+    "隐藏测试不检查 const 项，成功可能掩盖参考解与题意之间的契约差异，不能证明复用代码完全符合题意。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "raw/s038. 尾部被截断（truncated=true），是否影响判断不可知，但 episode 主体已可见。",
+    "无法从本题判断该记忆在其他更严格测试（如检查 params.index）下是否会负迁移。",
+    "true_recall 无相关性金标，检索命中与实际使用的 token 归因不可得。"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "同一冻结 48 源只读档案、相同启动入口与预算",
+    "falsifier": "无候选改动故无可证伪条件；若做对照实验，可同档案同预算下关闭动态记忆访问比较成功率（属未来实验设计，非本题证据）"
+  },
+  "causal_claim": false
+}

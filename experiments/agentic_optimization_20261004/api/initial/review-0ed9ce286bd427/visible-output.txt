@@ -1,0 +1,98 @@
+
+{
+ "case_id": "review-0ed9ce286bd427",
+ "result_status": "scorable_failure",
+ "semantic": {
+  "source_quality": {
+   "value": "pass_with_limits",
+   "evidence": [{"section": "source_evaluation_offline", "line": 3, "quote": "EVALUATOR_RESULT=18:True:5"}],
+   "reason": "对应源 s041 通过了其全部 5 个测试，因此历史记录是合法来源。通过并不意味着其每个语句都适用于目标。"
+  },
+  "memory_fidelity": {
+   "value": "partial",
+   "evidence": [{"section": "target_visible", "line": 25, "quote": "Calculate the average test score and the standard deviation for a particular student"}],
+   "reason": "s041 的 docstring 和符号（包括 student_scores.mean/std）在截断的摘录中原样出现，但并未暴露完整的实现主体。"
+  },
+  "target_applicability": {
+   "value": "partial",
+   "evidence": [{"section": "target_visible", "line": 25, "quote": "for a particular student from this DataFrame"}],
+   "reason": "s041 针对基于字典输入的单个学生进行计算，而所述的目标契约要求对所有学生进行聚合；它与隐藏测试的基于字典的格式部分重叠。"
+  },
+  "visible_use": {
+   "value": "no_visible_use",
+   "evidence": [{"section": "target_visible", "line": 83, "quote": "No exact match in the archive for this task, so I'll implement a robust version and test it locally."}],
+   "reason": "Solver 检索到了 s041，但明确判定它不匹配，并编写了一个独立的实现；没有将检索到的内容纳入提交。"
+  }
+ },
+ "labels": [
+  {
+   "tag": "EVAL_CONTRACT",
+   "level": "D1",
+   "evidence": [
+    {"section": "target_prompt", "line": 1, "quote": "list of dictionaries containing test results"},
+    {"section": "target_evaluation_offline", "line": 4, "quote": "calculate_stats_for_students({'Student': [1, 2, 1, 1], 'Score': [10, 1, 1, 1]})"}
+   ],
+   "reason": "所述契约称是字典列表，但隐藏测试传递了一个包含 'Student'/'Score' 键的单个字典，与参考解决方案一致。这是一个任务/测试一致性候选问题；在 tests_run 0 时首次调用即失败。"
+  },
+  {
+   "tag": "TASK_EXECUTION",
+   "level": "D0",
+   "evidence": [
+    {"section": "target_evaluation_offline", "line": 4, "quote": "raise ValueError(\"test_results must be a list of dictionaries\")"}
+   ],
+   "reason": "提交的代码在遇到非列表输入时直接引发 ValueError，遵循了所述契约。这记录了直接失败机制，但并不能证明 Prompt 是错误的。"
+  },
+  {
+   "tag": "USE_TRANSFER",
+   "level": "D1",
+   "evidence": [
+    {"section": "target_visible", "line": 25, "quote": "student_scores.mean","student_scores.std"},
+    {"section": "target_contract_reference_offline", "line": 3, "quote": "expected1 = {1: (4.0, 5.196152422706632)"}
+   ],
+   "reason": "检索到的 s041 使用了 pandas .std (ddof=1)，这与隐藏测试中预期的样本标准差值相符，但 Solver 选择了 np.std (ddof=0)。这是语义适应的候选问题；在没有反事实的情况下，无法确定因果关系。"
+  },
+  {
+   "tag": "PACKING_VISIBILITY",
+   "level": "D1",
+   "evidence": [
+    {"section": "target_visible", "line": 25, "quote": "truncated\":true,\"next_start_char\":701"},
+    {"section": "mechanical_metrics", "line": 51, "quote": "\"exact_repeated_source_chars\": 3361"}
+   ],
+   "reason": "在所有三个查询中，s041 事件被反复作为截断的约 700 字符摘录返回，因此 pandas std 主体从未对 Solver 可见。这是打包可见性（packing visibility）的代理指标，而非检索或使用证明。"
+  }
+ ],
+ "primary_hypothesis": "EVAL_CONTRACT",
+ "competing_explanations": [
+  "即使处理了字典输入，提交的结果在测试 1 处仍会失败，因为隐藏测试预期的是 ddof=1 (5.196...)，而 Solver 提交的是 np.std ddof=0；无论哪种方式，首次崩溃都会掩盖这一点。",
+  "Solver 对“无精确匹配”的判断在所述契约下是合理的，因此非复用可能是契约忠实度问题，而非记忆使用失败；在 R=1 且没有反事实的情况下无法区分。"
+ ],
+ "confidence": "medium",
+ "uncertainties": [
+  "所有隐藏测试是否都使用字典输入，或者是否有一些使用了所述的字典列表布局，这尚不明确。",
+  "完整暴露 s041 的未截断主体内容是否会改变 ddof 的选择，甚至改变输入格式的决定，这尚不明确。",
+  "reference_solution 本身是否会通过隐藏的断言套件（包括 NaN 处理）从未被运行过。"
+ ],
+ "agentic_search": {
+  "search_strategy": {
+   "value": "focused",
+   "evidence": [{"section": "target_visible", "line": 11, "quote": "calculate average and standard deviation per student list of dictionaries test results ValueError"}],
+   "reason": "所有三次 MEMORY_SEARCH 调用都使用了与任务关键词和 ValueError 要求紧密绑定的查询；没有不相关的探索。"
+  },
+  "failure_boundary": {
+   "value": "task_contract_candidate",
+   "evidence": [{"section": "target_evaluation_offline", "line": 4, "quote": "ValueError: test_results must be a list of dictionaries"}],
+   "reason": "Solver 的信息在第一次调用时可见，但其实现符合书面 Prompt；在所述契约和测试输入格式之间存在不匹配。"
+  },
+  "reading_efficiency": {
+   "value": "avoidable_overhead_candidate",
+   "evidence": [{"section": "mechanical_metrics", "line": 51, "quote": "\"exact_repeated_source_chars\": 3361"}],
+   "reason": "相同的 s041 截断片段在三个重叠的搜索结果中重复出现（19868 个响应字节，45% 非内容），且没有完整获取事件主体的选项。"
+  }
+ },
+ "minimal_intervention": {
+  "change": "允许获取未截断的事件主体（或在单次查询中对每个源进行去重），以便与检索到的事件一起显示完整的实现，在此例中为 pandas .std 主体。",
+  "fixed": "相同的冻结库、相同的查询记录、相同的预算和模型；隐藏测试和源写入保持不变。",
+  "falsifier": "如果在完整暴露 s041 的情况下，运行仍然在字典输入测试处返回 ValueError，则可见性候选被反驳，并且契约不匹配仍然是主要原因。"
+ },
+ "causal_claim": false
+}

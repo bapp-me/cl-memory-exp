@@ -1,0 +1,163 @@
+{
+  "case_id": "review-dee763852d79ad",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=18:True:5"
+        }
+      ],
+      "reason": "Source s041 passed its own hidden tests, but passing does not validate that its ddof or I/O convention fits the target."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 25,
+          "quote": "Calculate the average test score and the standard deviation for a particular student from this DataFrame."
+        }
+      ],
+      "reason": "The retrieved s041 task/action snippets match corresponding_source_original for the exposed chars, though truncated at 700 chars per event."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 35,
+          "quote": "The archive shows a similar task but this one takes a list of dicts and returns a dict keyed by student ID."
+        }
+      ],
+      "reason": "Source computes stats for one student from a dict-of-lists; target aggregates all students and adds a no-scores ValueError, and the retrieved snippets do not settle the ddof convention."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 35,
+          "quote": "The archive shows a similar task but this one takes a list of dicts and returns a dict keyed by student ID."
+        }
+      ],
+      "reason": "Solver explicitly referenced the retrieved task and adapted keys 'Student'/'Score' and stats logic; this is a behavioral proxy, not proof memory caused the outcome."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "a list of dictionaries containing test results"
+        },
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "result1 = calculate_stats_for_students({'Student': [1, 2, 1, 1], 'Score': [10, 1, 1, 1]})"
+        }
+      ],
+      "reason": "The visible prompt specifies a list of dicts, but the first hidden call passes a dict of lists, contradicting the stated contract; additionally expected1's mean 4.0 does not match that input's mean 3.25, so prompt/test consistency is only a candidate."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 42,
+          "quote": "raise ValueError(\"Each test result must be a dictionary\")"
+        },
+        {
+          "section": "target_visible",
+          "line": 73,
+          "quote": "The standard\\ndeviation is the population standard deviation (numpy default, ddof=0)."
+        }
+      ],
+      "reason": "The submitted code's strict per-record dict validation crashed on the hidden dict-of-lists input before any test ran, and its ddof=0 choice diverges from the hidden expectation of NaN for single-score students (sample std)."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "\"query\": \"calculate average and standard deviation for each student test results list of dictionaries ValueError\""
+        }
+      ],
+      "reason": "One focused query returned s041 (ranked_hit) whose 'Student'/'Score' keys and std logic visibly shaped the solution; but without a no-memory counterexample this cannot prove the memory helped or hurt. The source's pandas .std() (ddof=1) was not carried over, a partial-transfer proxy."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 12,
+          "quote": "\"s041\""
+        }
+      ],
+      "reason": "s041, the corresponding source, was retrieved and exposed, so a closer reuse (e.g., pandas std with ddof=1) was available; retrieval success does not establish the solver read or applied its full content."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "The failure may be the solver's own overly strict input validation (TASK_EXECUTION) rather than a prompt/test inconsistency.",
+    "Even without the crash, the ddof=0 vs sample-std mismatch would likely fail value comparisons, so the crash may not be the only defect.",
+    "No counterexample run exists, so memory's net effect on this failure is unknown."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether expected1's mean 4.0 is a test bug or corresponds to different intended input semantics cannot be resolved from the evidence.",
+    "Whether the solver read the truncated s041 snippets beyond what is quoted is unknown.",
+    "True recall/relevance of the 162 candidate matches has no gold label."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same frozen library, same one-shot memory search budget, same hidden tests and model.",
+    "falsifier": "If a run with identical history still crashes on the dict-of-lists input, the contract-mismatch hypothesis is contradicted in favor of solver-side validation as the binding cause."
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 6,
+          "quote": "calculate average and standard deviation for each student test results list of dictionaries ValueError"
+        }
+      ],
+      "reason": "A single targeted MEMORY_SEARCH surfaced the corresponding source s041 among 162 candidates; no repeated or broad queries were issued."
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "ValueError: Each test result must be a dictionary"
+        }
+      ],
+      "reason": "The hidden harness crashed at the first call because the solver's contract (list of dicts) differs from the test's input form; tests_run 0 shows no execution-stage signal was ever available."
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 46,
+          "quote": "\"duplicate_query_or_command_calls\": 0"
+        }
+      ],
+      "reason": "One memory call, one python validation run, one submit; no repeated queries or truncated/empty responses are recorded."
+    }
+  },
+  "causal_claim": false
+}

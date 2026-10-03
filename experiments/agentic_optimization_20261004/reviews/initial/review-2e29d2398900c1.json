@@ -1,0 +1,134 @@
+{
+  "case_id": "review-2e29d2398900c1",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 4,
+          "quote": "TypeError: The input data must be a pandas DataFrame."
+        }
+      ],
+      "reason": "The source run failed its own evaluation with 1 error; its TypeError also mismatched the ValueError expectation."
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 0"
+        }
+      ],
+      "reason": "No memory content was retrieved, so no fidelity judgment about target-relevant content is possible."
+    },
+    "target_applicability": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "Nothing from memory was accessed, so applicability of stored content to the target was never exercised."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 1,
+          "quote": "[]"
+        }
+      ],
+      "reason": "Empty packing list and zero memory calls; the submitted code shows no retrieved-content proxy."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "TypeError: Dataset at index 1 is not a pandas DataFrame (got dict)."
+        }
+      ],
+      "reason": "Directly recorded: the submitted code raised TypeError where the hidden check expects ValueError, so the exception escaped the test's except clause. This is the solver's own execution defect."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "the function should raise an appropriate exception"
+        }
+      ],
+      "reason": "The prompt only says 'an appropriate exception' while the offline test insists on ValueError specifically; a prompt/test strictness mismatch is a candidate, not proven (reference also uses ValueError)."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 4,
+          "quote": "Ran 6 tests in 0.007s\n\nFAILED (errors=1)"
+        }
+      ],
+      "reason": "A corresponding source existed and shared the same TypeError defect, so its transcript could in principle surface the exception-type trap; but memory was never queried, so retrieval opportunity was unused, and the source never displayed the fix either."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "EVAL_CONTRACT: the prompt permits 'an appropriate exception', so the ValueError-only hidden check may be stricter than the stated contract; even a perfect memory of the source could not supply the fix because the source also failed with TypeError.",
+    "No-memory condition: the solver skipped memory legitimately ('you can also skip memory'), so failure cannot be attributed to retrieval or packing."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "Whether the hidden tests check integer vs float random values (reference uses randint, solver used uniform); visible tests only assert column names and ValueError.",
+    "Whether any stored episode besides the corresponding source discusses the ValueError requirement.",
+    "Why the solver skipped memory entirely (no search-need signal recorded)."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "same frozen archive, same no-memory condition vs a retrieval-enabled arm with identical startup index and budget",
+    "falsifier": "If a retrieval arm that surfaces the source's failed-attempt transcript still submits TypeError, the opportunity-source candidate is refuted; here no access change is supported because the source itself never shows the ValueError fix."
+  },
+  "causal_claim": false,
+  "agentic_search": {
+    "search_strategy": {
+      "value": "no_search_need_unknown",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 0"
+        }
+      ],
+      "reason": "Zero memory calls; the archive allowed skipping, so retrieval need versus retrieval failure is undetermined."
+    },
+    "failure_boundary": {
+      "value": "own_execution_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 38,
+          "quote": "raise TypeError(\n                f\"Dataset at index {i} is not a pandas DataFrame \""
+        }
+      ],
+      "reason": "The failure originates in the solver's own submitted exception class, visible in its code and the evaluation traceback; info was not missing, it was misproduced."
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 16,
+          "quote": "\"totalTokens\": 2892"
+        }
+      ],
+      "reason": "Only two tool calls (PYTHON then SUBMIT) with small token usage and no memory traffic; no avoidable overhead visible."
+    }
+  }
+}

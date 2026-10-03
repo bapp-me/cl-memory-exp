@@ -1,0 +1,153 @@
+{
+  "case_id": "review-db48eec36ad4cc",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=39:True:6"
+        }
+      ],
+      "reason": "源任务s007独立评测通过（6 tests OK），其单数据集回归核心与本目标高度相关；但源只覆盖单数据集，不包含目标的多数据集汇总报告结构。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 51,
+          "quote": "def task_func(\\n    array: list, random_seed: int = 0\\n) -> (pd.DataFrame, sm.regression.linear_model.RegressionResultsWrapper)"
+        }
+      ],
+      "reason": "读取的s007.md含完整原始任务、实现与观测，与corresponding_source_original一致，目标所需的核心回归逻辑在记忆中保真保留。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "You are given multiple 2D lists representing different datasets."
+        }
+      ],
+      "reason": "源的单数据集验证+OLS模式可复用于每个数据集，但目标新增了多数据集循环与summary report结构，源不提供其schema。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 61,
+          "quote": "The memory confirms the s007 pattern (validate 2D list, columns 'A'..'D' + 'Response', add constant, OLS fit)."
+        }
+      ],
+      "reason": "检索后模型明确引用s007模式并将验证/OLS逻辑推广到多数据集；提交代码的单数据集行为与源参考一致。这是行为代理，非因果证明。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "line": 4,
+          "quote": "[s007](episodes/s007.md): Generate a Pandas DataFrame from a 2D list and perform a multiple linear regression."
+        }
+      ],
+      "reason": "启动索引中s007与目标直接相关，存在合法复用机会；机会存在不等于其所有内容正确。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 92,
+          "quote": "the single-dataset regression matches the s007 reference behavior exactly (same coefficients, same validation messages)"
+        }
+      ],
+      "reason": "可见地将s007的验证与OLS逻辑适配到多数据集场景；无反事实，不能证明记忆造成成功或失败。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "assert _eval_record_bool(isinstance(report['Dataset 1']['DataFrame'], pd.DataFrame))\\nKeyError: 'Dataset 1'"
+        }
+      ],
+      "reason": "提交的report使用自拟键（'datasets'/'rsquared_comparison'/'best_dataset'），评测期望'Dataset N'结构；题面未给出确切schema，属题意/测试契约候选不一致，且为直接失败边界。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 42,
+          "quote": "\"non_content_response_fraction\": 0.6947542591003799"
+        }
+      ],
+      "reason": "grep被截断（119匹配中仅返回部分，dropped_items_count=9），且响应约69%为元数据；随后整读120行补足，开销存在但与失败无关。"
+    }
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 6,
+          "quote": "\"pattern\": \"summary_report|statsmodels|OLS|R-squared\","
+        }
+      ],
+      "reason": "一次定向grep锁到s007并紧接整读该文件，两次调用即获得所需内容。"
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "KeyError: 'Dataset 1'"
+        }
+      ],
+      "reason": "回归逻辑本身运行正常，失败发生在评测期望的报告键结构与题面未明确指定的schema之间。"
+    },
+    "reading_efficiency": {
+      "value": "avoidable_overhead_candidate",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 11,
+          "quote": "\"truncated\": true,"
+        }
+      ],
+      "reason": "grep因打包截断丢弃部分匹配且元数据占比高；仅造成少量额外载荷，未影响结果。"
+    }
+  },
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "也可能记入TASK_EXECUTION：模型在题面schema欠规定下自拟了报告键，属自身执行选择而非记忆问题。",
+    "评测键'Dataset 1'与题面文字未显式对应，题意/测试可能存在不一致，无法仅凭本题归责模型。",
+    "记忆内容与复用均与失败边界无关，无证据支持SCOPE_INTERFERENCE或RETRIEVAL。"
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "无语义召回gold与反事实，记忆对最终结果的净贡献不可判定。",
+    "题面'summary report'是否隐含评测的'Dataset N'键结构无法从现有证据确证。",
+    "隐藏thinking不可见，schema选择动机只能由可见文本推断。"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "相同启动索引、s007只读档案、相同预算与工具",
+    "falsifier": "若在相同检索下仅补充明确输出schema说明而结果仍失败，则候选应转向TASK_EXECUTION；检索策略改动无证据必要。"
+  },
+  "causal_claim": false
+}

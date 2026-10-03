@@ -1,0 +1,112 @@
+
+{
+  "case_id": "review-c190669ace0005",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {"section": "source_evaluation_offline", "line": 3, "quote": "EVALUATOR_RESULT=13:False:5"},
+        {"section": "source_evaluation_offline", "line": 4, "quote": "AssertionError: Lists differ: ['Height', 'Weight'] != ['const', 'Height', 'Weight']"}
+      ],
+      "reason": "源 s038 提交未通过自身评测，三次失败均为缺少 add_constant 产生的 const 项。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {"section": "target_visible", "line": 21, "quote": "def task_func(df: pd.DataFrame, height: int, weight: int, columns: list) -> sm.regression.linear_model.RegressionResultsWrapper:"},
+        {"section": "target_visible", "line": 22, "quote": "Test1 type: RegressionResultsWrapper"}
+      ],
+      "reason": "检索返回的 s038 任务文本、代码与观测与 corresponding_source_original 逐字一致；但 solver 称其为 accepted pattern 与源实际失败不符，说明来源覆盖保真不代表历史陈述正确。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {"section": "target_visible", "line": 35, "quote": "I'll follow the same convention, applied per `DatasetID` group."},
+        {"section": "target_contract_reference_offline", "line": 3, "quote": "for key, value in results.items():\n    assert isinstance(value, (sm.regression.linear_model.RegressionResultsWrapper, type(None)))"}
+      ],
+      "reason": "源核心模式（过滤条件、columns[0] 为 y、None 处理）适用，但目标新增按 DatasetID 分组并返回 dict，需 solver 自行适配；且目标测试不检查 const，无 add_constant 的模式恰好满足契约。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {"section": "target_visible", "line": 35, "quote": "The archive shows a closely related single-dataset task (s038) where the accepted pattern was: filter rows where `columns[1] > height` and `columns[2] < weight`"},
+        {"section": "target_visible", "line": 66, "quote": "All behaviors check out: per-dataset filtering, OLS on `columns[0]` vs `columns[1:]`, `None` for no matching rows"}
+      ],
+      "reason": "solver 显式引用 s038 模式并扩展为 groupby 实现，先测试后提交；这是行为代理，无反事实不能证明因果。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {"section": "retrieval_and_packing", "line": 12, "quote": "returned_source_ids": ["s007","s038"]}
+      ],
+      "reason": "检索日志直接记录 s038 被返回给目标，且 s038 是本任务的直接前身（对应 source_index 38）。仅记录机会存在，不证明使用。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {"section": "target_visible", "line": 35, "quote": "I'll follow the same convention, applied per `DatasetID` group. Let me implement and test:"},
+        {"section": "target_visible", "line": 42, "quote": "subset = group[(group[columns[1]] > height) & (group[columns[2]] < weight)]"}
+      ],
+      "reason": "检索后 solver 显式复述 s038 的过滤/OLS/None 模式并逐条落地到提交代码，是可见的语义复用与适配；但仍非因果证明。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {"section": "source_evaluation_offline", "line": 4, "quote": "AssertionError: Lists differ: ['Height', 'Weight'] != ['const', 'Height', 'Weight']"},
+        {"section": "target_contract_reference_offline", "line": 3, "quote": "assert isinstance(value, (sm.regression.linear_model.RegressionResultsWrapper, type(None)))"}
+      ],
+      "reason": "源测试要求 params 含 'const'，而目标测试只断言返回类型与 None，不检查参数名；从源继承的无常数项模式因此通过目标契约。此为离线证据，solver 未见过测试。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "无同题 no-memory 反事实：GLM 5.3 Flash 可能独立写出相同 groupby 实现，记忆仅是加速或确认。",
+    "返回的 s007（另一个 statsmodels 回归任务）也可能贡献了 OLS 写法，来源贡献无法按本题归因。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无语义 recall gold，无法量化检索内容与最终成功的归因。",
+    "s007 命中是否被实际使用未知（solver 文本只提及 s038）。",
+    "记忆内容对目标的适用性部分（无 add_constant）通过目标测试属于契约巧合还是预期行为，无法从证据判定。"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "相同的历史库（含 s038 失败轨迹）、相同目标与预算、同一模型",
+    "falsifier": "无失败需反驳；若做 no-memory 对照且同题失败，则支持 USE_TRANSFER 候选，反之为反驳"
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {"section": "target_visible", "line": 11, "quote": "query\": \"OLS regression per DatasetID height weight columns filtering pandas statsmodels\""},
+        {"section": "mechanical_metrics", "line": 23, "quote": "\"MEMORY_SEARCH\": 1"}
+      ],
+      "reason": "单次检索，查询词直接覆盖任务核心要素，命中相关源 s038。"
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {"section": "target_evaluation_offline", "line": 3, "quote": "EVALUATOR_RESULT=7:True:0"}
+      ],
+      "reason": "目标评测通过，scorable 且 correct=true。"
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {"section": "mechanical_metrics", "line": 46, "quote": "\"duplicate_query_or_command_calls\": 0"},
+        {"section": "mechanical_metrics", "line": 18, "quote": "\"calls\": 3"}
+      ],
+      "reason": "3 次调用（检索、单次自测、提交），无重复查询或截断；非内容响应占比约 51% 属于返回格式，未见可避免开销证据。"
+    }
+  },
+  "causal_claim": false
+}
+
+
+（说明：`retrieval_and_packing` 引用行 12 为该 section 原文第 12 行片段；所有 quote 均取自对应 section.text 原样字符，未使用行号前缀。）

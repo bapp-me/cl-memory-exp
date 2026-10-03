@@ -1,0 +1,162 @@
+{
+  "case_id": "review-1a52933226e747",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=19:True:5"
+        }
+      ],
+      "reason": "Source s000 passed its offline evaluation (5 tests, correct=true), but a passing source does not validate all of its historical statements."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 81,
+          "quote": "Generate a sample from a normal distribution with a given mean and a standard deviation and plot the histogram"
+        }
+      ],
+      "reason": "The opened s000 episode transcript contains the full original task and working solution matching corresponding_source_original, covering the conventions the target needed (seeding, hist+pdf, Axes return)."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "generate multiple samples from the distribution, calculate the empirical mean and standard deviation for each sample"
+        },
+        {
+          "section": "target_visible",
+          "line": 81,
+          "quote": "Returns the Axes object representing the plot and the empirical mean and standard deviation of the sample."
+        }
+      ],
+      "reason": "s000 is a single-sample predecessor; the target adds num_samples loops, per-sample PDFs, and overall mean/std, so only part of the source applies directly."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 91,
+          "quote": "The memory gives me the direct predecessor task (s000) with confirmed conventions: `np.random.seed(seed)`, `np.random.normal`, `stats.norm.pdf`"
+        }
+      ],
+      "reason": "The solver explicitly cited s000's conventions and its submitted code reuses the same seeding/hist/pdf pattern extended to a multi-sample loop; this is a behavioral proxy, not proof memory caused success."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 79,
+          "quote": "cat episodes/s000.md; echo ====; cat episodes/s030.md"
+        }
+      ],
+      "reason": "A directly corresponding predecessor (s000) existed in the read-only archive and was actually opened; its presence is recorded, not a use proof."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 60,
+          "quote": "The most relevant episodes are s000 (normal distribution histogram) and s030 (histogram + PDF). Let me read them."
+        },
+        {
+          "section": "target_visible",
+          "line": 91,
+          "quote": "Now I'll build the multi-sample variant and test it."
+        }
+      ],
+      "reason": "Visible reuse: source conventions were restated and the final code mirrors s000's structure extended to multiple samples. Without a no-memory counterfactual this cannot prove memory caused the success."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 122,
+          "quote": "All checks pass: reproducible seeding, overall statistics match a single flattened draw, and non-default parameters behave correctly."
+        }
+      ],
+      "reason": "One self-test run covered reproducibility, aggregate statistics, and non-default parameters before submission; recorded result_status is success."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 81,
+          "quote": "\"truncated\": true"
+        }
+      ],
+      "reason": "The combined read of s000+s030 was packing-truncated, cutting s030 mid-transcript; the needed s000 content was still visible, so no harm is demonstrated, only limited visibility of the second file."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The fixed model may solve this simple plotting/statistics task from capability alone; no no-memory run exists for this target.",
+    "s030 (histogram + PDF) was also read and could have contributed, but its content was truncated, so its contribution is unknown."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "No counterfactual without memory access, so the causal contribution of s000 to success is unknown.",
+    "Exact content of s030 exposed after truncation is unknown; whether reading it helped is undetermined.",
+    "Hidden-test correspondence beyond the offline checks shown cannot be verified further from this evidence."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same frozen 48-history archive, same MEMORY_SHELL access tool, same startup index, same budget and model.",
+    "falsifier": "Not applicable with change=none; a counterfactual no-memory run succeeding equally would weaken the USE_TRANSFER candidate."
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 23,
+          "quote": "grep -ril \"normal\" episodes/ raw/ | head; grep -ril \"histogram\" episodes/ | head"
+        }
+      ],
+      "reason": "Two targeted greps plus reading only the two top-matching episodes (s000, s030) after scanning the index; no broad or abandoned search behavior."
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 122,
+          "quote": "All checks pass: reproducible seeding, overall statistics match a single flattened draw"
+        }
+      ],
+      "reason": "The run succeeded with self-tests passing and recorded correct=true; no failure boundary to attribute."
+    },
+    "reading_efficiency": {
+      "value": "contextual_confirmation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 91,
+          "quote": "The memory gives me the direct predecessor task (s000) with confirmed conventions"
+        }
+      ],
+      "reason": "Reading s000 confirmed reusable conventions that were restated before implementation; total dynamic memory payload (~45KB) with one truncated read shows no identified avoidable overhead beyond the modest s030 read."
+    }
+  },
+  "causal_claim": false
+}

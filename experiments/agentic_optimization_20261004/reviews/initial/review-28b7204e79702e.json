@@ -1,0 +1,159 @@
+{
+  "case_id": "review-28b7204e79702e",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "\"stdout\": \"EVALUATOR_RESULT=13:True:5\\n\""
+        }
+      ],
+      "reason": "The paired source task passed its offline evaluation, so a legal source experience existed; passing does not validate every statement in the trajectory."
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "No memory content was retrieved or exposed in this run, so fidelity of memory to the target-relevant content cannot be assessed."
+    },
+    "target_applicability": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "The corresponding source task (offline package only) is near-identical modulo the round-trip closure, but nothing was retrieved, so applicability of any stored content was never exercised."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 9,
+          "quote": "\"name\": \"SUBMIT\""
+        },
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 0"
+        }
+      ],
+      "reason": "The target trace contains only a single SUBMIT with no memory tool interaction; there is no behavioral proxy of memory use."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 8,
+          "quote": "\"source_index\": 9"
+        },
+        {
+          "section": "exposure_summary",
+          "line": 5,
+          "quote": "\"source_exposed\": false"
+        }
+      ],
+      "reason": "A legal, scorable source exists for this near-identical target, so a reuse opportunity existed; the source appearing in the offline package does not imply the solver read it, and exposure_summary shows it was not exposed."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 7,
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "target_visible",
+          "line": 22,
+          "quote": "\"isError\": false"
+        }
+      ],
+      "reason": "The agent solved the target directly in one submission with no error signals; success is directly recorded, but the evaluator ran 0 unit tests, so correctness rests on checks_executed rather than hidden tests."
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 34,
+          "quote": "\"no_active_memory_call\": true"
+        },
+        {
+          "section": "target_startup_memory",
+          "line": 1,
+          "quote": "[]"
+        }
+      ],
+      "reason": "No memory calls occurred and the startup index was empty, so no retrieval happened in this run; this does not establish that relevant content is absent from the library or that retrieval would fail if attempted."
+    }
+  ],
+  "primary_hypothesis": "unknown",
+  "competing_explanations": [
+    "Success may come purely from model capability on a simple task; memory influence cannot be asserted or denied because no memory was accessed.",
+    "EVALUATOR_RESULT=5:True:0 with tests_run 0 means 'correct' derives from checks, not executed hidden tests, so task/test alignment cannot be fully verified.",
+    "corresponding_source_original is an offline audit artifact and cannot be treated as evidence of what the solver saw."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether stored memory actually contains the source experience and whether it would be retrievable for this target.",
+    "Whether the submitted implementation would pass the reference test set (e.g., single-point round-trip semantics) — no counterfactual run exists.",
+    "Per-memory token/cache attribution is unavailable (mechanical_metrics: per_memory_tokens unavailable)."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same frozen read-only source library, same empty startup index, same budget and evaluation mask.",
+    "falsifier": "N/A with change=none; a forced-retrieval variant run would be a separate experiment, not this case."
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "no_search_need_unknown",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 0"
+        },
+        {
+          "section": "mechanical_metrics",
+          "line": 18,
+          "quote": "\"calls\": 1"
+        }
+      ],
+      "reason": "No memory/search calls were made and the task was solved in a single submission; whether search was genuinely unnecessary is undetermined, and this is not a retrieval failure."
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 5,
+          "quote": "\"result_status\": \"success\""
+        },
+        {
+          "section": "target_visible",
+          "line": 25,
+          "quote": "\"text\": \"{\\\"submitted\\\":true,\\\"feedback\\\":\\\"Submission recorded. Hidden correctness is not available.\\\"}\""
+        }
+      ],
+      "reason": "The run ended in a recorded success with no error signals; hidden test details are not exposed to the solver."
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 14,
+          "quote": "\"totalTokens\": 1119"
+        }
+      ],
+      "reason": "One call with minimal token usage and no memory payload bytes (dynamic_bytes: 0) leaves no identifiable reading overhead in this run."
+    }
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,212 @@
+{
+  "case_id": "review-d27d72c9e576c0",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=20:True:5"
+        }
+      ],
+      "reason": "源 s023 通过其自身 5 个测试；但该源方案本身采用 random 填充与 array mode，与目标测试期望不一致，故仅限自身任务成立。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 87,
+          "quote": "mode = stats.mode(all_values).mode"
+        },
+        {
+          "section": "target_visible",
+          "line": 110,
+          "quote": "The archive contains the closely analogous task (s023) — its accepted solution seeds `random`, fills empty lists"
+        }
+      ],
+      "reason": "MEMORY_READ 取回的 s023:e004 内容与 corresponding_source_original 的提交代码一致，solver 的转述也准确；记忆内容本身无失真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "each key maps to a list of integers"
+        },
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "== {'mean': 3.5, 'median': 3.5, 'mode': 1}"
+        },
+        {
+          "section": "target_contract_reference_offline",
+          "line": 2,
+          "quote": "overall_values.extend(value)"
+        }
+      ],
+      "reason": "源是 list-of-lists，目标新增 dict 迭代（solver 已适配）；但目标测试期望的 3.5/1 表明空列表实际未被随机填充（参考解 extend 的仍是原空列表），与目标提示文字矛盾，源经验不能直接覆盖该差异。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 117,
+          "quote": "def new_task_func(dict_of_lists, size=5, seed=0):"
+        },
+        {
+          "section": "target_visible",
+          "line": 141,
+          "quote": "adapted from the list-of-lists version to a dict of lists"
+        }
+      ],
+      "reason": "可见行为是把 s023 方案改成 dict 遍历并本地测试后提交，属一致适配；无反事实，不能证明记忆导致结果。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "If a list is empty, fill it with SIZE (default: 5) random integers between 0 and 100"
+        },
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "{'a': [1, 2, 3], 'b': [], 'c': [4, 5, 6]}, size=5, seed=0) == {'mean': 3.5, 'median': 3.5, 'mode': 1}"
+        },
+        {
+          "section": "previous_contract_candidate",
+          "line": 2,
+          "quote": "\"status\": \"explicit_text_tension\""
+        }
+      ],
+      "reason": "测试期望 mean 3.5、mode 标量 1，等价于空列表未填充且 mode 取 [0]，与提示文字'填充随机整数'及源任务返回 array mode 均冲突，属题意/测试不一致候选而非 solver 明显执行错误。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 110,
+          "quote": "its accepted solution seeds `random`, fills empty lists with `random.randint(0, 100)`"
+        },
+        {
+          "section": "target_visible",
+          "line": 148,
+          "quote": "mode = stats.mode(all_values).mode"
+        }
+      ],
+      "reason": "可见复用：提交代码逐行对应 s023 检索内容；但只能说明行为同源，不能证明该复用造成失败（若不检索，按提示文字写出的实现可能同样失败）。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 10,
+          "quote": "\"returned_source_ids\": [\"s023\", \"s045\"]"
+        },
+        {
+          "section": "mechanical_metrics",
+          "line": 52,
+          "quote": "\"corresponding_source_exposed\": true"
+        }
+      ],
+      "reason": "与基准对应源 s023 确实出现在检索结果且被读取，机会存在且被利用；这只是暴露记录，非因果。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_contract_reference_offline",
+          "line": 3,
+          "quote": "'mode': stats.mode(data)[0]"
+        },
+        {
+          "section": "target_visible",
+          "line": 131,
+          "quote": "'mode': array([5])"
+        }
+      ],
+      "reason": "即使数值正确，solver 返回的 mode 是 numpy array 而测试期望标量（源任务测试接受 array 形式），是可见的次要格式差异；单独不构成失败主因。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "mode 以 array 返回与测试期望标量不符（TASK_EXECUTION）本身即可致断言失败，无法在不重跑的情况下与填充问题分离贡献。",
+    "提示要求'对每个列表计算统计量'但只输出总体统计，参考解丢弃了 per-list 结果；任务本身的歧义可能独立于记忆导致任何实现失败。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法确定不使用记忆时 solver 是否会写出同样实现（无反事实）。",
+    "测试期望的 3.5/1 是否即出题意图，还是测试本身写错，仅有 previous_contract_candidate 的 AI 审计候选佐证。",
+    "隐藏 thinking 不可见，solver 对 per-list 统计要求的内部处理 unknown。"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "保持相同冻结记忆库、相同预算与相同环境；本题失败点是题意/测试不一致候选，不是检索或访问策略问题。",
+    "falsifier": "若在相同检索下仅修改测试或按测试语义重写实现即通过，且另一无记忆对照按提示文字同样失败，则支持契约不一致而非检索缺陷。"
+  },
+  "causal_claim": false,
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "\"query\": \"mean median mode dictionary of lists empty fill random integers overall statistics\""
+        },
+        {
+          "section": "target_visible",
+          "line": 72,
+          "quote": "\"query\": \"s023 task_func test result passed failed\""
+        }
+      ],
+      "reason": "三次搜索均围绕任务概念与锁定源验证，含一次 source_id 限定查询，无泛化撒网迹象。"
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "assert _eval_record_bool(new_task_func({'a': [1, 2, 3], 'b': [], 'c': [4, 5, 6]}, size=5, seed=0) == {'mean': 3.5, 'median': 3.5, 'mode': 1})"
+        },
+        {
+          "section": "previous_contract_candidate",
+          "line": 2,
+          "quote": "\"category\": \"empty_list_filling\""
+        }
+      ],
+      "reason": "失败边界在任务契约/评测期望与提示文字的张力处，而非信息缺失或执行崩溃；solver 本地测试返回码 0。"
+    },
+    "reading_efficiency": {
+      "value": "contextual_confirmation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 56,
+          "quote": "Let me read its final submission and outcome."
+        },
+        {
+          "section": "target_visible",
+          "line": 64,
+          "quote": "\"event_id\": \"s023:e004\", \"start_char\": 700"
+        }
+      ],
+      "reason": "一次续读补全截断的提交代码，随后本地验证输出与源示例一致；未见明显可避免开销。"
+    }
+  }
+}

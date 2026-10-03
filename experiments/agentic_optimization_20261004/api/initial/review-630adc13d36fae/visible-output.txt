@@ -1,0 +1,94 @@
+
+{
+  "case_id": "review-630adc13d36fae",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [{"section": "source_evaluation_offline", "line": 3, "quote": "EVALUATOR_RESULT=20:True:5"}],
+      "reason": "对应源 s034 通过全部隐藏测试（correct=true），但其通过只证明该单串版本正确，不保证其所有历史陈述适用于新题。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [{"section": "target_visible", "line": 97, "quote": "random_string = ''.join(random.choice(string.ascii_letters) for _ in range(length))"}],
+      "reason": "检索到的 s034 代码行与 corresponding_source_original 中的实现逐字一致，说明返回内容保真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {"section": "target_startup_memory", "line": 4, "quote": "Generate a random string of a given length using ASCII letters and calculate the frequency of each character."},
+        {"section": "target_prompt", "line": 1, "quote": "The function should accept a list of lengths and a seed for random generation."}
+      ],
+      "reason": "s034 是单字符串频率统计，与目标核心机制重合；但目标新增了多变长列表与跨字符串的种子作用域问题，源经验未覆盖。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [{"section": "target_visible", "line": 90, "quote": "The historical pattern is clear: seed once, generate with `random.choice(string.ascii_letters)`, return `dict(Counter(...))`."}],
+      "reason": "solver 明确引用检索到的 s034 模式并扩展为多长度循环，行为上是一致改编；这只是行为代理，非因果证明。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [{"section": "target_visible", "line": 97, "quote": "s = ''.join(random.choice(string.ascii_letters) for _ in range(length))"}],
+      "reason": "提交代码与检索到的 s034 实现在 ascii_letters、Counter、seed 用法上语义重合，且 solver 明言沿用历史模式；但成功复用与失败原因均不能由重合单独证明。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {"section": "target_contract_reference_offline", "line": 2, "quote": "combined_counter.update(task_func(length, seed))"},
+        {"section": "target_prompt", "line": 1, "quote": "The function should accept a list of lengths and a seed for random generation."},
+        {"section": "previous_contract_candidate", "line": 3, "quote": "\"category\": \"seed_scope\""}
+      ],
+      "reason": "参考解对每个 length 调用内部重新 seed 的 task_func，使各字符串共享同一种子起点（期望输出 'y':2 等重叠佐证）；题面只说接受一个 seed，未规定逐串重播种，属题意/测试可能不一致的候选。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D0",
+      "evidence": [
+        {"section": "mechanical_metrics", "line": 41, "quote": "\"non_content_response_fraction\": 0.8847946924870002"},
+        {"section": "retrieval_and_packing", "line": 10, "quote": "\"truncated\": true,"}
+      ],
+      "reason": "三次 grep 返回中约 88% 字节为非正文元数据，且 s025 查询被截断丢弃 2 条；仅描述开销结构，不能据此断言记忆无收益或性价比差。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "solver 在可见记忆中已看到 task_func 内部 random.seed(seed)（s034 片段），若采用逐串调用该函数的组合方式即可与测试一致；失败也可能是自身改编时选择『seed once』而非信息缺失。",
+    "无反事实对照，无法排除无记忆条件下同样失败或同样成功；检索质量对结果的影响未知。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "题面是否隐含要求逐串重播种（task 意图 vs 测试语义）无法仅凭现有证据裁定。",
+    "隐藏测试完整集合与 solver 提交在其他输入上的行为未给出。",
+    "s025 被截断内容是否会影响决策不可知（其 'abcde' 方案本与测试不符）。"
+  ],
+  "minimal_intervention": {
+    "change": "将检索工具改为对最相近 episode 返回完整最终函数体（如整段读取 s034 的提交代码），而非逐行 grep 片段，使 task_func 逐调用 seed 的组合语义可见。",
+    "fixed": "相同的冻结记忆库、startup 索引、模型、目标题面与隐藏测试、token 预算",
+    "falsifier": "若在完整 s034 上下文下 solver 仍写 seed-once 实现并以同样断言失败，则『检索碎片掩盖组合语义』的解释被反驳。"
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [{"section": "target_visible", "line": 13, "quote": "\"pattern\": \"random|seed|letters\""}],
+      "reason": "solver 从 48 条索引中直接锁定两个最相关 episode（s025、s034），模式词高度针对任务关键词，无漫无目的搜索。"
+    },
+    "failure_boundary": {
+      "value": "info_missing_candidate",
+      "evidence": [
+        {"section": "target_evaluation_offline", "line": 4, "quote": "assert _eval_record_bool(combined_frequency([10, 20], 0) == {'y': 2, 'W': 3,"},
+        {"section": "target_contract_reference_offline", "line": 2, "quote": "combined_counter.update(task_func(length, seed))"}
+      ],
+      "reason": "期望输出含重叠字符计数，说明测试编码了参考解『每串重播种』的组成方式；该语义在题面与检索片段中均未显式给出，失败更可能源于信息缺口而非执行错误。"
+    },
+    "reading_efficiency": {
+      "value": "avoidable_overhead_candidate",
+      "evidence": [{"section": "retrieval_and_packing", "line": 49, "quote": "\"total_matches\": 20"}, {"section": "target_visible", "line": 33, "quote": "\"packing_truncated\":true,\"dropped_items_count\":2}"],
+      "reason": "第二次查询已取得所需 s034 行后，第三次 context=2 查询重复拉取同文件大段内容，且 s025 查询因打包截断丢弃条目；存在可压缩的读取开销，但不等于全部内容都被模型有效利用。"
+    }
+  },
+  "causal_claim": false
+}

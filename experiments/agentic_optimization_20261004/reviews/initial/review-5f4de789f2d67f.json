@@ -1,0 +1,163 @@
+{
+  "case_id": "review-5f4de789f2d67f",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=20:True:5"
+        }
+      ],
+      "reason": "Source s023 passed its own offline evaluation (5 tests OK); pass does not validate every statement in the episode, e.g. the mode-return format."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 8,
+          "quote": "\"truncated\": false"
+        }
+      ],
+      "reason": "The full s023 episode was returned untruncated and its content matches the preserved source trajectory; fidelity of the fill/mode pattern to the source is intact."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 35,
+          "quote": "The new variant uses a **dict** of lists and returns a dict with **overall** statistics."
+        }
+      ],
+      "reason": "Core stats/fill pattern applies, but the target adds dict input and overall-only output, and the evaluator expectation appears to exclude filled values from overall stats."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 35,
+          "quote": "This matches memory s023 closely (mean/median/mode over lists, fill empty with seeded random ints, return `stats.mode(...).mode`)."
+        }
+      ],
+      "reason": "Solver visibly read s023, named the deltas, and adapted structure; this is a behavioral proxy only and cannot prove the memory caused the outcome."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "\"path\": \"episodes/s023.md\""
+        }
+      ],
+      "reason": "Directly recorded: a highly relevant source (list-of-lists mean/median/mode with empty-fill) was retrieved and read before coding. Direct record of retrieval, not proof it was necessary."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 66,
+          "quote": "Works as expected, matching the seeded random fill behavior from the historical pattern."
+        }
+      ],
+      "reason": "Candidate reuse: solver explicitly aligned the fill and mode-return pattern with the historical episode. Without a no-memory counterfactual this cannot establish that memory use caused success or failure."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "{'mean': 3.5, 'median': 3.5, 'mode': 1}"
+        },
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "If a list is empty, fill it with SIZE (default: 5) random integers between 0 and 100."
+        }
+      ],
+      "reason": "Expected mean 3.5 over [1,2,3,4,5,6] implies filled values are excluded from overall stats, in tension with the literal fill instruction; matches the flagged empty_list_filling tension. Candidate only, not asserted as the failure cause."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_contract_reference_offline",
+          "line": 3,
+          "quote": "'mode': stats.mode(data)[0]"
+        },
+        {
+          "section": "target_visible",
+          "line": 56,
+          "quote": "'mode': array([2])"
+        }
+      ],
+      "reason": "Candidate execution-level mismatch: the reference extracts a scalar via stats.mode(data)[0] while this environment's scipy returns arrays, so solver's stats.mode(...).mode yields array([1]) != 1 even on correct values. Which discrepancy (fill inclusion vs mode format) triggered the assert is not determinable."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "The evaluator may expect overall stats over original values only (as in the reference, where per-list fill results are discarded), making the literal task text misleading rather than solver error.",
+    "Mode scalar-vs-array format alone could fail the equality assert regardless of fill handling.",
+    "Without a no-memory counterfactual, whether memory presence helped or hurt cannot be judged."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Exact cause of the AssertionError (fill inclusion vs mode format vs both) is not shown by the single failing assert.",
+    "No recall gold: relevance of s023 is judged from content overlap, not a measured match score.",
+    "Whether the target tests legitimately encode the intended contract or contradict the task text (previous_contract_candidate is an AI audit, not human truth)."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same frozen 48-episode archive, same startup index, same read-only access tooling and budget.",
+    "falsifier": "Retrieval was already targeted and untruncated, so no access-side change is indicated; a rerun failing identically after fixing only the mode scalar format (or only the fill inclusion) would isolate the other factor."
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 6,
+          "quote": "\"path\": \"episodes/s023.md\""
+        }
+      ],
+      "reason": "One direct MEMORY_READ_FILE to the single most relevant episode after scanning the startup index; no wandering queries."
+    },
+    "failure_boundary": {
+      "value": "info_visible_but_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 35,
+          "quote": "The new variant uses a **dict** of lists and returns a dict with **overall** statistics."
+        }
+      ],
+      "reason": "Relevant information (source pattern and task deltas) was visible; the failure lies in semantic adaptation of fill/mode handling, not missing information. Contract/test tension remains a candidate alternative boundary."
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 8,
+          "quote": "\"truncated\": false"
+        }
+      ],
+      "reason": "Single untruncated read (4555 response bytes) directly consumed before implementation; no repeated or wasted reads observed."
+    }
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,153 @@
+{
+  "case_id": "review-11277bd4b571bc",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 6,
+          "quote": "\"reason\": \"pre-registered scorer defect; task retained, excluded from scores\""
+        }
+      ],
+      "reason": "Source evaluation was never run due to a pre-registered scorer defect; no quality signal exists."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "line": 1,
+          "quote": "[]"
+        },
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 0"
+        }
+      ],
+      "reason": "Startup memory was an empty list and no memory calls were made, so no memory content existed to be faithful or unfaithful."
+    },
+    "target_applicability": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "No memory content was supplied or retrieved, so there is nothing whose applicability to the target can be judged."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "exposure_summary",
+          "line": 5,
+          "quote": "\"source_exposed\": false"
+        },
+        {
+          "section": "target_visible",
+          "line": 35,
+          "quote": "\"The function works correctly. Submitting:\""
+        }
+      ],
+      "reason": "No source or memory content was exposed; the solver wrote and self-tested its own implementation from the prompt alone."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "KeyError: 'total_amount_per_category'"
+        },
+        {
+          "section": "target_contract_reference_offline",
+          "line": 3,
+          "quote": "assert ax.get_title() == 'Value Distribution'"
+        }
+      ],
+      "reason": "The hidden test requires exact report keys ('total_amount_per_category') and chart labels ('Value Distribution') that the target prompt never specifies, so the prompt/test contract appears inconsistent. This is a candidate mismatch, not a proven prompt defect."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 25,
+          "quote": "\"{'food': {'total': 150.0, 'average': 75.0}, 'travel': {'total': 200.0, 'average': 200.0}}\""
+        }
+      ],
+      "reason": "The solver's implementation ran correctly on its own self-test and was submitted; the failure only appears against hidden key/label expectations, so execution itself was sound under the visible contract."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "corresponding_source_original",
+          "line": 2,
+          "quote": "This function use \"Value Distribution\" for the plot title."
+        },
+        {
+          "section": "exposure_summary",
+          "line": 5,
+          "quote": "\"source_exposed\": false"
+        }
+      ],
+      "reason": "A corresponding source task specifies exactly the chart title/labels the hidden test asserts, so a retrieved source could have revealed the conventions, but it was never exposed to the solver. This is only an offline opportunity observation, not evidence retrieval failed."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "The solver could theoretically have been expected to infer BigCodeBench conventions without any memory, though the prompt gives no basis for the specific key names.",
+    "No memory content was present, so memory-related explanations (interference, mis retrieval, stale experience) are not applicable in this case."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "Whether a memory access containing the corresponding source would have changed the key naming choice is untestable from this trace.",
+    "True source quality is unknown because the source scorer was defective; no relevance gold exists for recall."
+  ],
+  "minimal_intervention": {
+    "change": "Add a read-only lookup that surfaces sibling tasks from the same benchmark family (e.g., by task-family tag) before coding, so convention-bearing related sources become visible when they exist.",
+    "fixed": "Same frozen archive, same empty startup memory baseline, same tool budget and model.",
+    "falsifier": "If the related source containing 'Value Distribution'/'total_amount_per_category' conventions is surfaced and the solver still submits different keys/labels, the access-opportunity hypothesis is refuted."
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "no_search_need_unknown",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 0"
+        }
+      ],
+      "reason": "No memory or search calls were made, so whether search was needed cannot be determined; absence of calls is not evidence of retrieval failure."
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "assert _eval_record_bool(summary_report['total_amount_per_category'] == {'food': 150, 'travel': 350, 'shopping': 300})"
+        }
+      ],
+      "reason": "Hidden assertions require dictionary keys and plot labels absent from the prompt text, pointing to a contract mismatch rather than missing information or execution error."
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 18,
+          "quote": "\"calls\": 2"
+        }
+      ],
+      "reason": "Two calls total (one Python self-test, one SUBMIT) with no repeated or redundant reads; no avoidable overhead is visible."
+    }
+  },
+  "causal_claim": false
+}

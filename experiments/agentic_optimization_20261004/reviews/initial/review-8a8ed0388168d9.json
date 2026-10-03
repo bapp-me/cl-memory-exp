@@ -1,0 +1,156 @@
+{
+  "case_id": "review-8a8ed0388168d9",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=32:True:10"
+        }
+      ],
+      "reason": "s032 passed 10 hidden tests offline; but it is single-text only and submissions were not verified in-run."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 49,
+          "quote": "Scramble the letters in each word of a given text, keeping the first and last letters of each word intact."
+        }
+      ],
+      "reason": "Full s032 episode retrieved matches corresponding_source_original trajectory and submitted code."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "Given a list of texts, each containing multiple sentences"
+        }
+      ],
+      "reason": "Core word-scramble logic applies, but target adds list-of-texts output and leaves per-text seed semantics unspecified."
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 66,
+          "quote": "if seed is not None:\n        random.seed(seed)"
+        }
+      ],
+      "reason": "Solver visibly adapted s032 but placed seeding once per call at list level, while the source's task_func seeds on every invocation; this changes random-stream semantics for texts after the first. Behavior proxy only, no causal proof."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "assert _eval_record_bool(new_task_func(['Hello world! This is a test.', 'Python is fun and powerful.'], 123)"
+        },
+        {
+          "section": "previous_contract_candidate",
+          "line": 3,
+          "quote": "\"category\": \"per_text_seed\""
+        }
+      ],
+      "reason": "Hidden assert compares a multi-text list, and the offline reference re-seeds per text via task_func per call, while the prompt never states per-text reseeding; first text should match either way, so the divergence hits later texts. Candidate only; tests unseen by solver."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 59,
+          "quote": "The memory history s032 gives the exact single-text version; I'll adapt it to a list of texts."
+        }
+      ],
+      "reason": "Visible reuse and adaptation of s032 to the list interface; without counterfactual we cannot prove memory caused the failure or that a no-memory run would differ."
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 11,
+          "quote": "\"truncated\": true,"
+        },
+        {
+          "section": "mechanical_metrics",
+          "line": 42,
+          "quote": "\"non_content_response_fraction\": 0.7424654072155178,"
+        }
+      ],
+      "reason": "Grep returned a metadata-heavy truncated payload immediately superseded by a full-file read of the same episode; overhead description only, no benefit/cost-benefit claim."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "Solver adaptation error: keeping the source's per-call seeding inside the per-text function would satisfy the hidden tests, so own-execution error cannot be excluded.",
+    "The hidden expected strings may encode a seed convention inconsistent with the prompt's wording; without solver-visible tests this is unresolved.",
+    "A no-memory baseline result is unavailable, so any memory-specific effect is untestable here."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the tests' per-text reseed convention is a genuine task/eval inconsistency or the natural reading of 'seed' for a list input.",
+    "Exact random-stream equivalence between solver and reference for the first text was judged structurally, not executed.",
+    "true_recall unavailable (no relevance gold); no counterfactual no-memory run."
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "\"pattern\": \"scrambl\","
+        },
+        {
+          "section": "target_visible",
+          "line": 13,
+          "quote": "\"glob\": \"episodes/s032.md\","
+        }
+      ],
+      "reason": "One targeted grep plus one full-file read retrieved exactly the matching episode s032; no empty or repeated queries."
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_contract_reference_offline",
+          "line": 2,
+          "quote": "    return [task_func(text, seed) for text in texts]"
+        }
+      ],
+      "reason": "Failure hinges on seed-reset convention across texts that the visible prompt does not specify; execution itself returned cleanly (returncode 0)."
+    },
+    "reading_efficiency": {
+      "value": "avoidable_overhead_candidate",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 11,
+          "quote": "\"truncated\": true,"
+        }
+      ],
+      "reason": "The context-6 grep output was truncated and largely duplicated by the subsequent full MEMORY_READ_FILE; minor, non-causal overhead."
+    }
+  },
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same frozen 48-episode archive, same startup index, same tool budget and history",
+    "falsifier": "No access-tool change is implicated: retrieval returned the correct source; only a per-text reseed convention (contract/test issue) distinguishes pass from fail"
+  },
+  "causal_claim": false
+}

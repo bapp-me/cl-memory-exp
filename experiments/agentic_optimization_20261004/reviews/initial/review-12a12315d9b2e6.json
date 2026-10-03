@@ -1,0 +1,133 @@
+{
+  "case_id": "review-12a12315d9b2e6",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        }
+      ],
+      "reason": "离线证据显示源 s029 通过 5 项测试；但通过不保证源内所有陈述都正确，且源历史标注为 historical_unverified。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 52,
+          "quote": "Performs Principal Component Analysis (PCA) on the sum of rows of a 2D numpy array and plots the explained variance ratio."
+        }
+      ],
+      "reason": "读取到的 s029 episode 内容与对应源任务文本一致，包含完整任务、推导、代码与测试轨迹，未见截断。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 62,
+          "quote": "Now the variant needs subplots per array and a figure return"
+        }
+      ],
+      "reason": "源覆盖单数组返回 Axes 的 PCA 逻辑（sum rows、reshape(-1,1)、n_components=1）可直接复用；目标新增多数组列表、子图布局与 figure 返回，需自行适配。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 62,
+          "quote": "The historical episode s029 confirms the interpretation: sum rows (axis=1), reshape to (-1,1), fit PCA with n_components=1."
+        }
+      ],
+      "reason": "可见轨迹先确认记忆中的 PCA 处理方式，再扩展为子图与 figure 返回并自测通过；这是行为代理，非因果证明。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "rg -il \"explained variance|PCA|principal\" /memory | head; sed -n '1,80p' /memory/MEMORY.md"
+        },
+        {
+          "section": "target_visible",
+          "line": 38,
+          "quote": "command\": \"cat /memory/episodes/s029.md"
+        }
+      ],
+      "reason": "s029 是合法只读源且与目标高度相关，agent 主动检索并读取；这只证明机会存在且被利用，不证明记忆导致成功。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 62,
+          "quote": "sum rows (axis=1), reshape to (-1,1), fit PCA with n_components=1. Now the variant needs subplots per array and a figure return"
+        }
+      ],
+      "reason": "提交代码中 row_sums/reshape/n_components=1 与源经验一致，并适配列表、子图标题与 fig 返回；可见复用一致，但无反事实（无 no-memory 对照）不能下因果结论。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "目标本身与源共享题目文本（PCA on sum of rows），即使不读记忆，模型凭任务描述也可能写出同样方案；成功同样可能来自模型自身能力而非记忆内容。",
+    "target_evaluation_offline 是离线研究者证据，agent 未见过；其显示 correct:true，但本 run 内可见信号只是自测通过与提交成功，无法排除隐藏测试与题意不一致的候选。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无反事实 no-memory 运行，记忆对成功的贡献度未知。",
+    "exact per-memory token/cache 归因不可得，无法确定 s029 episode 全部内容实际进入模型上下文。",
+    "引用/复用与源代码高度重合是可见代理，不能区分读记忆获得还是独立重建。"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "保持相同的 48 条冻结只读历史、相同启动入口与动态 MEMORY_SHELL 访问、相同预算与模型",
+    "falsifier": "若改为 no-memory 对照运行且同样成功，则削弱 USE_TRANSFER 候选；若对照失败而记忆运行成功，则支持候选。"
+  },
+  "causal_claim": false,
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 38,
+          "quote": "cat /memory/episodes/s029.md"
+        }
+      ],
+      "reason": "先用关键词定位，随后只精读与目标直接对应的一个 episode（s029），未展开无关阅读。"
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 83,
+          "quote": "returncode\":0,\"stdout\":\"Multiple arrays OK\\nSingle array OK\\nAll tests passed"
+        }
+      ],
+      "reason": "运行中无错误信号，自测全部通过并成功提交；离线评估也显示 correct:true。"
+    },
+    "reading_efficiency": {
+      "value": "contextual_confirmation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 52,
+          "quote": "# s029: historical simple-task execution"
+        }
+      ],
+      "reason": "读取 s029 完整 episode 属于确认既有方案合理性的有目的阅读；两次记忆调用、无重复查询、无截断，未发现可避免的开销。"
+    }
+  }
+}

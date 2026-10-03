@@ -1,0 +1,136 @@
+{
+  "case_id": "review-4dde76741a32d8",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 4,
+          "quote": "ERROR: test_non_dataframe_input (__main__.TestCases)"
+        }
+      ],
+      "reason": "离线源评估 correct:false，同样的非 DataFrame 异常类型检查报错，但源未被目标看到，仅作机会审计。"
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "target_startup_memory 为空、memory_calls=0、source_exposed=false，无任何记忆内容进入目标上下文。"
+    },
+    "target_applicability": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "exposure_summary 显示 source_exposed=false 且未打开，源与目标的适用性无从在运行中体现。"
+    },
+    "visible_use": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "无记忆暴露即无可见复用；提交代码是独立求解行为。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "TypeError: Dataset at index 1 is not a pandas DataFrame (got dict)."
+        },
+        {
+          "section": "target_visible",
+          "line": 38,
+          "quote": "raise TypeError("
+        }
+      ],
+      "reason": "提交的实现抛出 TypeError，离线评估在第一个检查即崩溃（tests_run=0），这是可见的执行层失败点。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "If any dataset is not a pandas DataFrame, the function should raise an appropriate exception"
+        },
+        {
+          "section": "target_contract_reference_offline",
+          "line": 3,
+          "quote": "except ValueError:"
+        }
+      ],
+      "reason": "题面只要求 'an appropriate exception'，未指定 ValueError，而离线测试硬性要求 ValueError；TypeError 与 ValueError 哪个更合适存在题意/测试张力，仅标候选。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "exposure_summary",
+          "line": 5,
+          "quote": "\"source_exposed\": false,"
+        },
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 0,"
+        }
+      ],
+      "reason": "存在合法对应源但完全未被检索或暴露；不过源评估显示源在同一异常类型检查上也失败，故机会本身即便兑现也未必改善结果。"
+    }
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "no_search_need_unknown",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 0,"
+        }
+      ],
+      "reason": "目标零记忆调用，直接一次性编码并提交；需求是否本应检索无法由证据判定。"
+    },
+    "failure_boundary": {
+      "value": "own_execution_candidate",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "TypeError: Dataset at index 1 is not a pandas DataFrame (got dict)."
+        }
+      ],
+      "reason": "失败发生在求解者自身实现的异常类型选择上；但题面措辞与测试要求之间的契约张力使其不能完全归为纯执行错误。"
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 18,
+          "quote": "\"calls\": 2,"
+        }
+      ],
+      "reason": "仅 1 次 PYTHON + 1 次 SUBMIT，无重复命令、无空搜索、无截断响应。"
+    }
+  },
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "题面 'an appropriate exception' 与隐藏测试强制 ValueError 之间的契约不一致，可能使任何合理实现都判错",
+    "即使检索了对应源，源在同一检查上也失败，记忆复用路径无法证明会改变结果"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无语义召回 gold，无法判断检索到源是否会被采纳",
+    "hidden 测试除 ValueError 外是否还检查 randint vs uniform 等细节不可见（eval 崩溃在第一个检查）"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "相同只读记忆库、相同目标题面与隐藏评估、相同模型与 R=1 预算",
+    "falsifier": "若在相同契约下其他异常类型实现仍失败，则说明失败非执行层而纯粹是契约问题"
+  },
+  "causal_claim": false
+}

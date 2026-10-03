@@ -1,0 +1,208 @@
+{
+  "case_id": "review-b25931e6a8ac91",
+  "result_status": "asset_unscorable",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=25:True:5"
+        },
+        {
+          "section": "source_evaluation_offline",
+          "line": 7,
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "Source s045 passed its hidden evaluation (5 tests), but pass does not validate every historical statement."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 164,
+          "quote": "mode_val = stats.mode(np.array(values)).mode"
+        },
+        {
+          "section": "target_visible",
+          "line": 164,
+          "quote": "return data_dict, stats_dict, ax"
+        }
+      ],
+      "reason": "The retrieved s045:e009 content matches the final submitted source code in corresponding_source_original, including the version-compatible mode call and return signature."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "Given a list of dictionaries, each containing numerical data"
+        },
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "aggregate the statistical properties from all dictionaries into a single dictionary"
+        }
+      ],
+      "reason": "Source is a single-dict variant; target adds list iteration and an aggregation requirement whose exact semantics (per-dict vs cross-dict pooling) the source content does not cover."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 174,
+          "quote": "I'll extend that to the list version, aggregating per-dict stats, and test it in the sandbox"
+        },
+        {
+          "section": "target_visible",
+          "line": 205,
+          "quote": "matches the archived single-dict behavior (stats computed over all values including the added 'a'"
+        }
+      ],
+      "reason": "Behavioral proxy only: solver explicitly reused the archived implementation and adapted it to the list form with a sandbox self-test; no causal claim of memory-caused success is possible since the case is unscorable."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 33,
+          "quote": "\"reason\":\"ranked_hit\",\"seed_event_id\":\"s045:e009\""
+        },
+        {
+          "section": "target_visible",
+          "line": 33,
+          "quote": "def task_func(data_dict):\\n    \\\"\\\"\\\"\\n    Performs the following operations"
+        }
+      ],
+      "reason": "Search returned the near-identical single-dict source s045 with its final implementation, a strong reuse opportunity. Exposure does not prove the content caused any outcome, and the case is unscorable."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 164,
+          "quote": "values = list(data_dict.values())\\n    mean_val = round(float(np.mean(values)), 2)"
+        },
+        {
+          "section": "target_visible",
+          "line": 174,
+          "quote": "The archived single-dict version added 'a' to the dict first and computed stats/normalization over all values including 'a'."
+        }
+      ],
+      "reason": "After reading s045:e009 the submitted code visibly mirrors the archived per-dict logic, including computing stats over values that include the added 'a'. This is visible adaptation, not proof memory caused the result; hidden tests were never run."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_contract_reference_offline",
+          "line": 2,
+          "quote": "aggregated_stats = {\"mean\": round(np.mean([s['mean'] for s in stats_list]), 2)"
+        },
+        {
+          "section": "target_evaluation_offline",
+          "line": 6,
+          "quote": "pre-registered scorer defect; task retained, excluded from scores"
+        }
+      ],
+      "reason": "Candidate mismatch: the offline reference pools stats across dicts, while the submission returns per-index stats; the task text 'aggregate the statistical properties' is ambiguous, so this is only a candidate, and the scorer defect makes it unresolvable."
+    },
+    {
+      "tag": "INFRA_PROTOCOL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 78,
+          "quote": "\"error\":\"Unknown event_id; only frozen simple-source events are readable\""
+        },
+        {
+          "section": "retrieval_and_packing",
+          "line": 38,
+          "quote": "\"error\": \"Unknown event_id; only frozen simple-source events are readable\""
+        }
+      ],
+      "reason": "Two MEMORY_READ calls guessed non-readable event ids (s045:e030, s045:e013) under the frozen-archive read policy; the solver recovered via a page-1 search and offset read of e009. This shows tool-constraint overhead, not a retrieval failure."
+    }
+  ],
+  "primary_hypothesis": "OPPORTUNITY_SOURCE",
+  "competing_explanations": [
+    "The aggregation-semantics divergence (per-index vs pooled) could stem from the ambiguous task text itself, not from memory transfer of single-dict habits.",
+    "Since correct=null and scorable=false, any success or failure of the submitted code is unknowable; no outcome claim can be attached to memory use.",
+    "The two failed reads may reflect normal exploration of event ids rather than a strategy defect; the solver recovered within the same episode."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the submitted aggregation would pass the hidden tests (scorer defect, tests never executed).",
+    "Whether the model would have produced the same solution without the s045 hit (no no-memory counterfactual in this package).",
+    "Exact token/cache cost attributable to individual memory items (per_memory_tokens unavailable)."
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "\"query\": \"MinMaxScaler histogram statistical analysis mean median mode list of dictionaries\""
+        },
+        {
+          "section": "target_visible",
+          "line": 121,
+          "quote": "\"query\": \"return stats plots source s045 final submission\""
+        }
+      ],
+      "reason": "Queries directly target the task's distinctive operations and then narrow to source s045 with a page-offset search; 3 searches plus 1 successful targeted read sufficed."
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 195,
+          "quote": "\"returncode\":0,\"stdout\":\"{0: {'mean': 5.33, 'median': 5.0"
+        },
+        {
+          "section": "target_visible",
+          "line": 226,
+          "quote": "{\"submitted\":true,\"feedback\":\"Submission recorded."
+        }
+      ],
+      "reason": "Self-test passed and submission completed; the case is excluded from scores by a pre-registered scorer defect, so no agent-side failure boundary is evidenced."
+    },
+    "reading_efficiency": {
+      "value": "avoidable_overhead_candidate",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 34,
+          "quote": "\"event_id\": \"s045:e030\""
+        },
+        {
+          "section": "retrieval_and_packing",
+          "line": 38,
+          "quote": "\"error\": \"Unknown event_id; only frozen simple-source events are readable\""
+        }
+      ],
+      "reason": "Two reads guessed unreadable event ids before finding the readable e009 via search; a readable-event listing would likely have avoided both error calls."
+    }
+  },
+  "minimal_intervention": {
+    "change": "Extend MEMORY_SEARCH results with a compact list of readable event ids per returned source, so reads no longer depend on guessing event ids.",
+    "fixed": "Same frozen read-only archive, same source library and budget, same model, no changes to the target task or hidden tests.",
+    "falsifier": "If with readable-id listings the error-read count stays nonzero or the submitted aggregation/behavior changes materially, the overhead candidate is refuted or the access tool was not the binding constraint."
+  },
+  "causal_claim": false
+}

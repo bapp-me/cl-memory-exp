@@ -1,0 +1,151 @@
+{
+  "case_id": "review-d8f824fcfdd36a",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=15:True:6"
+        }
+      ],
+      "reason": "离线评估显示源 s011 correct:true 且 6 测试通过；但通过不代表其所有陈述/代码风格对目标全部适用。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 79,
+          "quote": "def task_func(df, column, value):\\n    if column not in df.columns:\\n        raise ValueError"
+        }
+      ],
+      "reason": "MEMORY_READ_FILE 返回的 task_func 代码与 corresponding_source_original 中 SUBMIT 的实现逐字一致，必要内容未失真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "Given a list of pandas DataFrames, analyze each DataFrame's specified column"
+        }
+      ],
+      "reason": "源只处理单个 DataFrame；目标新增 list 输入、逐 DataFrame 循环和返回 list of tuples，源逻辑仅部分适用。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 89,
+          "quote": "Now I'll write the multi-DataFrame version and test it."
+        }
+      ],
+      "reason": "读取 s011 代码后立即改写为多 DataFrame 循环版本并测试，行为与源内容一致的方向性适配；非因果证明。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "line": 4,
+          "quote": "[s011](episodes/s011.md): Analyze a column of a pandas DataFrame, find the values that are larger than the average"
+        }
+      ],
+      "reason": "启动索引中存在与目标几乎同题的合法源 s011，构成直接复用机会；机会存在不等于其内容被正确使用。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 30,
+          "quote": "\"total_matches\": 29"
+        }
+      ],
+      "reason": "定向 grep 命中 s011 的 29 处并随后读回完整函数，检索成功；命中不等于使用。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 96,
+          "quote": "sorted_data = sorted(data)\\n        idx = bisect.bisect_right(sorted_data, value)\\n        num_greater_value = len(sorted_data) - idx"
+        }
+      ],
+      "reason": "提交代码的核心逻辑与刚读回的 s011 代码逐字重合，仅外层加循环，是可见复用代理；无反事实不能证明记忆造成成功。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 42,
+          "quote": "\"non_content_response_fraction\": 0.799449554573767"
+        }
+      ],
+      "reason": "仅 3 次记忆调用即取回所需代码，开销很小；但元数据占比高不自动等于无用，且无反事实无法断言性价比。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "任务简单，模型可能不依赖记忆也能一次写出正确实现；无 no-memory 反事实无法区分。",
+    "启动索引对 s011 的摘要本身可能已足以引导，而非读回的完整代码。"
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "无反事实：记忆对最终正确性的因果贡献未知。",
+    "隐藏测试细节与每条记忆的 token 级贡献不可得（true_recall unavailable）。"
+  ],
+  "minimal_intervention": {
+    "change": "首次查询改用函数名无关的模式（如 'task_func|ValueError'）替代猜测性的 'def analyze'，检验是否减少空查询。",
+    "fixed": "相同的冻结历史库、启动索引、预算与目标题面。",
+    "falsifier": "若更宽泛的首次查询不减少调用数/字节数且结果不变，则首次空查询仅是偶然开销而非策略问题。"
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 6,
+          "quote": "\"glob\": \"episodes/s011.md\""
+        }
+      ],
+      "reason": "从启动索引定位 s011 后直接对该文件做定向 grep，再精确读取函数所在 30 行，无泛搜。"
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 120,
+          "quote": "All tests pass. Submitting the solution."
+        }
+      ],
+      "reason": "一次 Python 自测通过后即提交，离线评估 correct:true，无可归因失败边界。"
+    },
+    "reading_efficiency": {
+      "value": "contextual_confirmation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 63,
+          "quote": "\"line_count\": 30"
+        }
+      ],
+      "reason": "grep 结果已确认函数位置后仅读 30 行即覆盖完整 task_func，读取量与需求匹配。"
+    }
+  },
+  "causal_claim": false
+}

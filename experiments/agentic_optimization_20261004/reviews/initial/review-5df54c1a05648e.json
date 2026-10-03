@@ -1,0 +1,150 @@
+{
+  "case_id": "review-5df54c1a05648e",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=18:True:5"
+        }
+      ],
+      "reason": "源 s041 通过全部 5 个测试，但提交未验证、历史陈述不保证全真。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 25,
+          "quote": "Convert a dictionary of test results into a pandas DataFrame and"
+        }
+      ],
+      "reason": "s041 文件完整返回（truncated:false），含原始 dict 格式 docstring 与通过的解，内容与源一致。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "line": 4,
+          "quote": "[s041](episodes/s041.md): Convert a dictionary of test results into a pandas DataFrame and"
+        }
+      ],
+      "reason": "s041 与目标核心计算（按学生求均值/标准差、ValueError）高度重合，但目标要求聚合所有学生并返回 dict，接口不同。"
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 38,
+          "quote": "if not isinstance(test_results, (list, tuple)):\n        raise ValueError(\"test_results must be a list of dictionaries\")"
+        }
+      ],
+      "reason": "已读到含 dict 输入格式的 s041，却按 target_prompt 的 'list of dictionaries' 实现并对 dict 输入抛错；是否算误用受提示文本影响，不能证明因果。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "Given a list of dictionaries containing test results"
+        },
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "result1 = calculate_stats_for_students({'Student': [1, 2, 1, 1], 'Score': [10, 1, 1, 1]})"
+        }
+      ],
+      "reason": "任务陈述写 list of dictionaries，而测试传入单一 {'Student','Score'} dict，提示与测试疑似不一致；这是候选而非定论。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 25,
+          "quote": "test_scores (dictionary): The dictionary containing keys 'Student' and 'Score'."
+        },
+        {
+          "section": "target_visible",
+          "line": 38,
+          "quote": "scores key: 'scores' (a list of numbers) (also accepts 'test_scores')"
+        }
+      ],
+      "reason": "正确格式（dict + 'Student'/'Score' 键）在 s041 中完整可见，但提交代码采用另一种接口；可见代理不能证明记忆造成失败。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 22,
+          "quote": "\"python_calls\": 0"
+        }
+      ],
+      "reason": "solver 未做任何本地执行/自检即提交，放弃了暴露 dict 输入不匹配的机会；仅描述行为，非失败原因断言。"
+    }
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 6,
+          "quote": "\"path\": \"episodes/s041.md\""
+        }
+      ],
+      "reason": "从启动索引中精准定位最相关条目 s041，一次读取即得相关经验。"
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "ValueError: test_results must be a list of dictionaries"
+        }
+      ],
+      "reason": "失败发生在输入格式校验层，与提示/测试格式不一致吻合；无 hidden thinking，无法确认 solver 的实际判断。"
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 8,
+          "quote": "\"truncated\": false"
+        }
+      ],
+      "reason": "单次读取未截断、无重复查询或空搜索，开销与信息量相称。"
+    }
+  },
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "solver 独立于记忆自主选择了 list-of-dicts 接口，失败与记忆内容无关",
+    "若测试确实要求 dict 输入而提示误导，则即使完美复用 s041 也会因提示文本而失败，无法归因检索或迁移"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无 solver 内部推理，无法确认其为何在 s041 可见 dict 格式后仍按提示实现",
+    "无反事实（如同题 no-memory baseline）可判断记忆的净效应",
+    "target_prompt 与隐藏测试的不一致是否为数据构造错误无法从本包确证"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "相同的冻结 48 题历史索引、只读访问方式、相同模型与预算",
+    "falsifier": "若提示文本改为与 s041 一致的 dict 输入描述后 solver 通过全部测试，则支持提示/测试契约不一致为失败主因"
+  },
+  "causal_claim": false
+}

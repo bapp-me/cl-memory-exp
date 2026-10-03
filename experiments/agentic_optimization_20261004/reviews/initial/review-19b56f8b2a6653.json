@@ -1,0 +1,175 @@
+{
+  "case_id": "review-19b56f8b2a6653",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=19:True:5"
+        }
+      ],
+      "reason": "源 s000 离线评测通过（5 项检查），但其单样本经验不覆盖目标的多样本新条件。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 112,
+          "quote": "empirical_mean = sample.mean()"
+        },
+        {
+          "section": "target_visible",
+          "line": 25,
+          "quote": "source_id\":\"s000\",\"kind\":\"task\""
+        }
+      ],
+      "reason": "MEMORY_FOLLOW 返回的 s000 轨迹代码与 corresponding_source_original 原文逐字一致，与目标相关的绘图/统计内容完整可见。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 25,
+          "quote": "Generate a sample from a normal distribution"
+        },
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "generate multiple samples from the distribution"
+        }
+      ],
+      "reason": "源经验只处理单样本直方图+PDF；目标新增 num_samples 循环、逐样本列表和总体均值/标准差，源仅部分适用。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 125,
+          "quote": "ax.hist(sample, bins=30, density=True, alpha=0.6,"
+        },
+        {
+          "section": "target_visible",
+          "line": 112,
+          "quote": "ax.hist(sample, bins=30, density=True, alpha=0.6, color='g', edgecolor='black')"
+        },
+        {
+          "section": "target_visible",
+          "line": 125,
+          "quote": "for i in range(num_samples):"
+        }
+      ],
+      "reason": "提交代码与检索到的源代码在 hist/PDF/标题写法上高度重合，并正确扩展了循环与总体统计；这只是行为代理，不构成因果证明。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 125,
+          "quote": "ax.hist(sample, bins=30, density=True, alpha=0.6,"
+        },
+        {
+          "section": "target_visible",
+          "line": 112,
+          "quote": "ax.hist(sample, bins=30, density=True, alpha=0.6, color='g', edgecolor='black')"
+        }
+      ],
+      "reason": "提交解在绘图细节上与刚检索的源代码重合并做了目标所需的扩展，是语义复用候选；但无反事实，不能证明记忆导致成功。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 25,
+          "quote": "source_id\":\"s000\",\"kind\":\"task\""
+        },
+        {
+          "section": "retrieval_and_packing",
+          "line": 11,
+          "quote": "\"s000\","
+        }
+      ],
+      "reason": "与目标同源的 s000 通过 MEMORY_SEARCH 命中并在提交前被读取，机会存在；机会不等于保真使用或因果贡献。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=5:True:0"
+        },
+        {
+          "section": "target_contract_reference_offline",
+          "line": 3,
+          "quote": "assert isinstance(analyze_process()[3], float), 'The overall mean should be a float'"
+        }
+      ],
+      "reason": "评测仅运行 5 个长度/类型检查且 0 个单元测试，未区分 pooled std 与 reference 的 mean-of-stds；success 不验证统计语义。题意与 reference 对 overall_std 的定义可能不一致，仅标候选。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "该任务属常规 numpy/scipy/matplotlib 绘图统计，模型可能仅凭参数化知识即可解出，记忆只可能加速而非必需。",
+    "仅 5 个弱类型/长度检查意味着即使无源经验也可能通过，无法排除无记忆反事实同样成功。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无 semantic recall gold，无法量化检索命中与使用之间的对应",
+    "overall_std 的题意（pooled 还是各样本均值）无法由测试区分，reference 与提交解不一致但都被判对",
+    "无反事实对照，记忆对成功率/耗时的因果贡献未知"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "相同冻结记忆库、相同只读访问工具（MEMORY_SEARCH/MEMORY_FOLLOW）、相同预算与 GLM 5.3 Flash",
+    "falsifier": "不适用（未提出改动）；若要检验 USE_TRANSFER，可对比无记忆运行同一目标，但那超出本题单一改动范围"
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "analyze_process normal distribution samples histogram pdf empirical mean standard deviation Axes"
+        }
+      ],
+      "reason": "单次任务特异性 MEMORY_SEARCH 后仅对命中的 s000 做三次定向 MEMORY_FOLLOW，无宽泛遍历。"
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=5:True:0"
+        }
+      ],
+      "reason": "目标提交一次即通过全部 5 项检查，无需失败边界归因。"
+    },
+    "reading_efficiency": {
+      "value": "avoidable_overhead_candidate",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 40,
+          "quote": "\"relation\": \"action_result\""
+        }
+      ],
+      "reason": "对 s000:e005 的 action_result follow 只返回了先前 sequence follow 已展示过的 SUBMIT 观察内容，属于一次可省的重复读取；规模很小。"
+    }
+  },
+  "causal_claim": false
+}

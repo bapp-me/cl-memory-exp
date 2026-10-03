@@ -1,0 +1,139 @@
+{
+  "case_id": "review-51024dc95b358c",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=32:True:10"
+        }
+      ],
+      "reason": "源任务通过全部 10 个测试，但其接口是单文本输入；目标任务新增了文本列表与聚合输出。"
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "startup 索引为空且无任何记忆调用，没有与目标相关的记忆内容可供保真判断。"
+    },
+    "target_applicability": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "没有记忆内容被检索或使用，适用性无从谈起。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 35,
+          "quote": "\"no_active_memory_call\": true"
+        }
+      ],
+      "reason": "轨迹中 solution 完全由 target prompt 推导，无任何记忆内容可见。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_contract_reference_offline",
+          "line": 2,
+          "quote": "return [task_func(text, seed) for text in texts]"
+        },
+        {
+          "section": "previous_contract_candidate",
+          "line": 3,
+          "quote": "\"category\": \"per_text_seed\""
+        }
+      ],
+      "reason": "参考解对每个文本重新 random.seed(seed)，而 target prompt 未说明 seed 作用范围；solver 只播种一次，第二段文本的洗牌序列随之偏离隐藏期望。这是合同歧义候选，不能由此断言题意确有歧义。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "assert _eval_record_bool(new_task_func(['Hello world! This is a test.', 'Python is fun and powerful.'], 123)"
+        }
+      ],
+      "reason": "隐藏测试对精确洗牌字符串做全等断言，其期望值依赖 prompt 未规定的 per-text 重播种细节，题意/测试可能不一致，仅标候选。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 9,
+          "quote": "\"source_quality_direct\": true"
+        },
+        {
+          "section": "mechanical_metrics",
+          "line": 50,
+          "quote": "\"corresponding_source_exposed\": false"
+        }
+      ],
+      "reason": "存在一个通过且接口高度对应的合法源，但未被暴露也未被检索；这只说明机会存在，不证明检索它会改变结果。"
+    }
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "no_search_need_unknown",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 0"
+        }
+      ],
+      "reason": "无任何检索调用，需求是否成立未定；这不等于检索失败。"
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "['Hlleo wlrod! This is a tset.', 'Photyn is fun and pfwuoerl.']"
+        }
+      ],
+      "reason": "solver 按 prompt 字面实现且自检通过，失败点落在隐藏测试对 seed 作用范围的隐含假设上，属任务合同候选而非可见执行错误。"
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 18,
+          "quote": "\"calls\": 2"
+        }
+      ],
+      "reason": "仅两次工具调用（一次带属性检查的验证、一次提交），无可见冗余开销。"
+    }
+  },
+  "primary_hypothesis": "TASK_CONTRACT",
+  "competing_explanations": [
+    "per-text 重播种也可能只是参考解的实现选择而非题意歧义，需重放验证第二段文本的 RNG 序列差异",
+    "无检索反事实，无法判断若源被暴露结果是否不同",
+    "隐藏测试期望串是否唯一由播种方式解释，未经独立复算确认"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "seed=123 下第一/第二文本的逐词洗牌序列与参考解的差异点未逐项复现",
+    "若源被检索，solver 是否会采用 per-text 重播种结构 unknown",
+    "隐藏 thinking 不可用，solver 对 seed 作用范围的内部判断 unknown"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "相同无记忆历史、相同环境与预算",
+    "falsifier": "若重放显示单次播种实现与隐藏期望的分歧并非源于 per-text 重播种（即失败另有原因），则合同歧义候选被反驳"
+  },
+  "causal_claim": false
+}

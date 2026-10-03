@@ -1,0 +1,91 @@
+
+{
+  "case_id": "review-eac875e95a5f79",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [{"section": "source_evaluation_offline", "line": 3, "quote": "EVALUATOR_RESULT=16:True:5"}],
+      "reason": "源任务 s033 通过全部离线测试；但通过不代表其历史陈述在目标场景全部适用。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [{"section": "target_visible", "line": 33, "quote": "Standardize numeric columns in a DataFrame and return the heatmap of the correlation matrix. Missing values are replaced by the column's average."}],
+      "reason": "检索到的 s033 片段与 corresponding_source_original 的源解一致，与目标相关的单 DF 配方内容保真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [{"section": "target_visible", "line": 105, "quote": "No exact multi-DataFrame precedent in the archive (only the single-DataFrame variant s033)"}],
+      "reason": "记忆覆盖单 DataFrame 流程；目标新增 list_of_dfs 与跨 DF 组合输出条件，需自行扩展。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [{"section": "target_visible", "line": 105, "quote": "the core recipe is clear: numeric selection → fillna with column mean → `StandardScaler` → `corr()` → `sns.heatmap`"}],
+      "reason": "提交代码在检索配方基础上逐 DF 复用并以 keyed concat 组合；这是行为代理，非因果证明。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {"section": "target_evaluation_offline", "line": 4, "quote": "AttributeError: 'Axes' object has no attribute 'shape'. Did you mean: 'sharex'?"},
+        {"section": "target_prompt", "line": 1, "quote": "return a combined heatmap of the correlation matrices for all DataFrames"}
+      ],
+      "reason": "提示要求返回 heatmap（Axes），隐藏测试却对返回值取 .shape（期望 DataFrame）；返回类型契约未在任务面指定，属题意/测试不一致候选。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [{"section": "target_visible", "line": 105, "quote": "only the single-DataFrame variant s033"}],
+      "reason": "合法源 s033 被检索并可见使用；但曝光/命中只是来源覆盖，不证明内容因果带来收益。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [{"section": "target_visible", "line": 105, "quote": "I'll extend it to a combined heatmap via a keyed `pd.concat` of the per-DataFrame correlation matrices"}],
+      "reason": "可见的配方复用与适配；无无记忆反事实，不能证明记忆造成结果差异。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [{"section": "target_visible", "line": 143, "quote": "combined_corr = pd.concat(corr_matrices, keys=labels)"}],
+      "reason": "按提示字面返回 Axes；与隐藏测试期望的 DataFrame 形状不符，属可见执行/契约边界而非检索或记忆缺失。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "即使改为返回 DataFrame，keyed concat（竖向堆叠）与参考解 axis=1 拼接形状不同（(2,4) 断言仍可能失败），即适配细节本身也可能是失败因素。",
+    "评估在第一个断言处崩溃（tests_run: 0），其余检查未执行，无法排除其他不通过项。",
+    "previous_contract_candidate 标记 axes_vs_matrix_return 为 underspecified_candidate，说明契约歧义早已被怀疑，但最终归因仍无 gold。"
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "提示的 'heatmap' 是否应理解为 Axes 还是相关矩阵 DataFrame，无法从任务面确定。",
+    "true_recall 与 per_memory token 归因不可用，无法量化检索质量或成本。",
+    "若返回类型修正后其余测试是否全部通过未知（tests_run=0）。"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "同一冻结只读归档、同一启动记忆（空索引）、同一动态检索预算与查询历史、同一隐藏测试与评分 mask",
+    "falsifier": "若一个返回 keyed-concat DataFrame 的变体仍未通过 (2,4) 断言，或 Axes 返回变体可通过评估，则契约候选被反驳或需修正。"
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [{"section": "retrieval_and_packing", "line": 6, "quote": "combined heatmap correlation matrices list of DataFrames standardize"}],
+      "reason": "三次查询逐步聚焦任务关键词，并以 MEMORY_READ 验证源提交结果；查询间不重复。"
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [{"section": "target_evaluation_offline", "line": 4, "quote": "assert _eval_record_bool(combined_corr.shape == (2, 4))"}],
+      "reason": "失败发生在返回类型与测试期望之间，而非信息缺失或明显执行报错。"
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [{"section": "mechanical_metrics", "line": 50, "quote": "empty_search_calls": 0}],
+      "reason": "无空检索、无错误调用、无重复查询；非内容响应占比约 0.52 属元数据，不等于曝光浪费。"
+    }
+  },
+  "causal_claim": false
+}

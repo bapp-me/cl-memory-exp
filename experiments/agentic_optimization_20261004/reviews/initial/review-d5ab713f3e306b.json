@@ -1,0 +1,164 @@
+{
+  "case_id": "review-d5ab713f3e306b",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=20:True:5"
+        },
+        {
+          "section": "target_startup_memory",
+          "line": 4,
+          "quote": "48 original No Memory histories; submissions are NOT verified solutions."
+        }
+      ],
+      "reason": "Source s030 passed its offline hidden tests, but the index itself flags that submissions were never verified during recording."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 25,
+          "quote": "ax.hist(normalized_data, bins=30, density=True, alpha=0.6, color='green')"
+        },
+        {
+          "section": "retrieval_and_packing",
+          "line": 8,
+          "quote": "\"truncated\": false"
+        }
+      ],
+      "reason": "The read file preserves the source task text, action code, and observation verbatim for the single-array variant, unpacked and untruncated."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 35,
+          "quote": "The memory shows a closely related single-array version of this task. I'll adapt it to a list of arrays with subplots, then verify."
+        },
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "Each histogram should be plotted in a separate subplot within a single figure."
+        }
+      ],
+      "reason": "The memory covers normalization and PDF styling but not the target's new multi-array subplot structure, which had to be added fresh."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 42,
+          "quote": "ax.hist(normalized, bins=30, density=True, alpha=0.6, color='green')"
+        },
+        {
+          "section": "target_visible",
+          "line": 42,
+          "quote": "x = np.linspace(norm.ppf(0.005), norm.ppf(0.995), 100)"
+        }
+      ],
+      "reason": "The submitted code reuses the memory's histogram parameters, zero-std handling, and PDF range, with a new per-array loop and subplot titles. This is a behavioral proxy only; no counterfactual exists."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "line": 4,
+          "quote": "- [s030](episodes/s030.md): Plots a histogram of normalized data from an input 2D numpy array alongside the probability density function (PDF)"
+        }
+      ],
+      "reason": "The startup index directly listed an episode matching the target task, establishing a legal source opportunity. It does not prove the solver would have succeeded without it."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 35,
+          "quote": "The memory shows a closely related single-array version of this task. I'll adapt it to a list of arrays with subplots, then verify."
+        },
+        {
+          "section": "target_visible",
+          "line": 73,
+          "quote": "x = np.linspace(norm.ppf(0.005), norm.ppf(0.995), 100)"
+        }
+      ],
+      "reason": "Candidate semantic reuse: solver read s030 then reproduced its exact parameters while adding the required subplot logic. Cannot prove memory caused success; the task may also be solvable from the model's own knowledge."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The model may know this matplotlib/scipy pattern independently; the memory read may have been confirmatory rather than necessary.",
+    "No counterfactual no-memory run exists for this target, so the contribution of the memory to the success is unobservable.",
+    "Success is judged by the offline evaluator (checks_executed 2); hidden-check coverage of all stated requirements cannot be verified."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "Solver normalized flattened array data, while the offline reference normalizes row sums via task_func; the provided tests only check figure type and subplot count, so this contract ambiguity is a candidate, not a scored failure.",
+    "Source PDF range uses norm.ppf(0.005/0.995) while the offline reference uses 0.01/0.99; whether hidden checks require either is unknown.",
+    "No semantic recall gold exists, so retrieval precision/recall of the single file read cannot be scored."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same frozen 48-episode archive, same startup index, same read-only file access tool, same GLM 5.3 Flash, R=1.",
+    "falsifier": "Not applicable; no intervention proposed since the focused single-file access was directly sufficient for the visible success."
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 6,
+          "quote": "\"path\": \"episodes/s030.md\""
+        },
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 1"
+        }
+      ],
+      "reason": "Exactly one memory call targeted the episode whose index entry matched the target task, with no exploratory reads."
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=2:True:0"
+        }
+      ],
+      "reason": "The target passed the offline evaluator on the first submission."
+    },
+    "reading_efficiency": {
+      "value": "contextual_confirmation",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 8,
+          "quote": "\"truncated\": false"
+        },
+        {
+          "section": "target_visible",
+          "line": 35,
+          "quote": "I'll adapt it to a list of arrays with subplots, then verify."
+        }
+      ],
+      "reason": "One full untruncated read of 196 lines supplied all reusable content; it was immediately converted into a tested implementation with no re-reads or wasted searches."
+    }
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,84 @@
+
+{
+  "case_id": "review-a5de316c612e34",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [{"section": "source_evaluation_offline", "line": 3, "quote": "EVALUATOR_RESULT=27:True:5"}],
+      "reason": "对应源 s003 离线评测通过，但源通过不代表其 Mean 语义描述对目标仍正确。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [{"section": "target_visible", "line": 25, "quote": "The dataframe should also include a column 'Mean' which is the average value of each compo"}],
+      "reason": "检索返回的 s003 内容与对应源原文一致，截断由打包参数声明，未见失真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [{"section": "target_visible", "line": 35, "quote": "My task extends this to multiple matrices"}],
+      "reason": "s003 是单矩阵任务，目标新增多矩阵与按组件求均值条件，仅结构（Component 列、累计方差图）部分适用。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [{"section": "target_visible", "line": 35, "quote": "The archive shows a very similar single-matrix PCA task"}],
+      "reason": "solver 显式识别相似源并改写为多矩阵循环；这是行为代理，不能证明记忆导致结果。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {"section": "target_prompt", "line": 1, "quote": "return a list of dataframes, each containing the PCA transformed data and the mean of each component for the corresponding matrix"},
+        {"section": "target_evaluation_offline", "line": 4, "quote": "AssertionError: Each dataframe should have a Mean column"}
+      ],
+      "reason": "题面要求每矩阵的各组件均值（每组件一个值），而隐藏测试沿用 s003 合同要求 'Mean' 作为列（df.shape[1]==3）；solver 将组件均值实现为行仍语义上符合题面。这是题意/测试不一致的候选，非记忆有害的证据。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [{"section": "target_visible", "line": 35, "quote": "The archive shows a very similar single-matrix PCA task"}],
+      "reason": "可见上 solver 读取命中并逐条改写为多矩阵版本；无反事实，不能断言复用造成失败或成功。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [{"section": "retrieval_and_packing", "line": 10, "quote": "returned_source_ids": ["s003", "s029"]}],
+      "reason": "高度相关的 s003 被合法检索并暴露（corresponding_source_exposed=true），机会存在；这不证明其内容被完整采纳。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [{"section": "target_visible", "line": 11, "quote": "PCA n_components cumulative explained variance plot mean component dataframes matrices"}],
+      "reason": "单次检索，查询词紧贴任务关键词，返回相关源 s003/s029。"
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [{"section": "target_contract_reference_offline", "line": 3, "quote": "assert 'Mean' in df.columns, 'Each dataframe should have a Mean column'"}],
+      "reason": "本地自测通过（returncode 0），失败点是隐藏测试对 Mean 结构的要求与题面措辞存在歧义，属合同层而非执行或检索层。"
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [{"section": "retrieval_and_packing", "line": 8, "quote": "\"truncated\": false"}],
+      "reason": "仅一次检索、5971 字节响应、无截断/空结果/重复调用，未见可避免开销。"
+    }
+  },
+  "competing_explanations": [
+    "solver 自主选择把组件均值写成行而非列，属自身实现选择；s003 记忆中的 'Mean' 列示例可见但未被照搬，无法归因于记忆。",
+    "题面措辞（每矩阵各组件均值）与测试/参考（逐行 Mean 列）可能本身冲突，无法在无澄清下判定哪方是正确语义。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "测试仅运行到第一条断言即失败，绘图断言（len(ax.lines)==3）与参考的每矩阵一条线 vs solver 的单线汇总差异未被检验。",
+    "若 solver 改为 'Mean' 列是否会满足其他断言（shape==3、绘图线数）不可知。",
+    "reference_solution 逐行 Mean 与题面'每组件均值'的矛盾只能标记为候选，无最终裁定。"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "相同的冻结档案、检索预算与历史（s003/s029 内容、一次 MEMORY_SEARCH）",
+    "falsifier": "若在相同检索与历史下，按 s003 的 'Mean' 列结构重写仍失败于其他断言，或隐藏测试变体同时接受 Mean 行实现并通过，则合同歧义候选被削弱。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,153 @@
+{
+  "case_id": "review-23d075017e37fc",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=61:True:5"
+        }
+      ],
+      "reason": "s014 passed its own 5 tests, but its scope was a single department dict, not the target's multi-dict list input."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 25,
+          "quote": "The simple `random.choice(LEVELS)` approach reproduces the example exactly"
+        }
+      ],
+      "reason": "The retrieved s014 episode preserved the source task, actions and submitted implementation matching corresponding_source_original."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "TypeError: 'str' object cannot be interpreted as an integer"
+        }
+      ],
+      "reason": "The core random-choice-per-department logic transfers, but the target adds a new input condition (list of department dicts) absent from the source."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 35,
+          "quote": "The memory shows the closely related task s014 with the exact same constants and a reference implementation using `random.choice(LEVELS)`."
+        }
+      ],
+      "reason": "The agent visibly used the retrieved episode, renamed the function and extended the signature; this is a behavioral proxy, not a causal claim."
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 35,
+          "quote": "My version needs to be named `new_solution` and accept `department_data_list`, which may be a list of (code, count) pairs or a dict"
+        }
+      ],
+      "reason": "Visible adaptation of retrieved s014 code into the submitted new_solution; does not prove the memory caused either reuse benefit or the wrong input-format guess."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "new_solution([{'EMP$$': 3, 'MAN$$': 2}, {'DEV$$': 4, 'HR$$': 1}])"
+        }
+      ],
+      "reason": "Hidden eval passes a list of dicts while the prompt's wording ('a list of department codes and their respective employee counts') is ambiguous; the agent's dict/list-of-pairs reading mismatches. Offline note only; possible prompt/test inconsistency, not changed."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 42,
+          "quote": "out2 = new_solution([('EMP$$', 10), ('MAN$$', 5), ('DEV$$', 8), ('HR$$', 7)])"
+        }
+      ],
+      "reason": "Self-tests covered dict and list-of-pairs but never list-of-dicts, so the unpacking bug ('str' not int) went undetected before submission."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "line": 14,
+          "quote": "[s014](episodes/s014.md): Generate a JSON object from employee data based on given department codes and their employee counts."
+        }
+      ],
+      "reason": "A directly relevant source existed in the startup index and was in fact read; opportunity existed, but transfer effectiveness cannot be causally established."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "The prompt never explicitly specifies the input is a list of dicts, so the agent's alternative reading was defensible; failure may stem from prompt/test ambiguity rather than memory use.",
+    "Without the s014 memory the agent might have written a different signature and passed or failed differently; no counterfactual run exists.",
+    "The agent may have succeeded on logic but failed purely on an untested input branch, independent of any memory effect."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether memory anchoring to the single-dict solution biased the input-format guess is unproven.",
+    "No semantic recall gold or per-memory token attribution; true retrieval relevance is unavailable.",
+    "Whether the reference solution's merging semantics fully match the ambiguous prompt wording is a candidate inconsistency."
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 6,
+          "quote": "\"path\": \"episodes/s014.md\""
+        }
+      ],
+      "reason": "Exactly one memory read, targeting the index entry whose description matches the target task; no broad or repeated searches."
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "TypeError: 'str' object cannot be interpreted as an integer"
+        }
+      ],
+      "reason": "Failure occurs at the input-contract boundary (list of dicts vs assumed formats), not from missing information or retrieval."
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 35,
+          "quote": "The memory shows the closely related task s014 with the exact same constants"
+        }
+      ],
+      "reason": "A single relevant, untruncated read directly fed into the implementation; no avoidable reading overhead is visible."
+    }
+  },
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same startup index, same s014 archive content, same tool budget and model; only an input contract clarification or an extra self-test branch would matter, which are outside the allowed change scope.",
+    "falsifier": "If an agent with identical memory access but explicitly instructed to test list-of-dict inputs still fails, the contract-misread hypothesis is refuted."
+  },
+  "causal_claim": false
+}

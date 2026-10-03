@@ -1,0 +1,172 @@
+{
+  "case_id": "review-2c5cc918497926",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=30:True:5"
+        },
+        {
+          "section": "target_visible",
+          "line": 52,
+          "quote": "Generate a random poker hand consisting of five cards, and count the frequency of each card rank."
+        }
+      ],
+      "reason": "s005 通过源评测且轨迹完整保留了任务、动作与观察，但其内容只覆盖单手发牌与 rank 计数，不覆盖多玩家胜负判定。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 52,
+          "quote": "(['QH', '3S', '2D', 'KS', '6D'], Counter({'Q': 1, '3': 1, '2': 1, 'K': 1, '6': 1}))"
+        }
+      ],
+      "reason": "target_visible 中 s005 摘录的代码与观察输出与 corresponding_source_original 的轨迹值一致，无可见篡改；但这只覆盖已被阅读的部分。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 52,
+          "quote": "Generate a random poker hand consisting of five cards, and count the frequency of each card rank."
+        }
+      ],
+      "reason": "源经验覆盖卡牌格式（'10H'）与 rank 计数逻辑，与目标直接相关；但目标新增 4 名玩家、无重复发牌、按最高频次决胜及平局规则，源未涉及。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 62,
+          "quote": "Memory confirms the card format convention (e.g., \"10H\", rank string of length 1 or 2)."
+        }
+      ],
+      "reason": "solver 阅读后明确引用记忆中的卡牌格式约定，并在提交代码中沿用源里的 rank 解析模式；这是行为代理，非因果证明。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "RETRIEVAL",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "rg -il \"poker\" /memory | head; rg -i \"poker\" /memory/MEMORY.md | head"
+        },
+        {
+          "section": "retrieval_and_packing",
+          "line": 72,
+          "quote": "returned_source_ids"
+        }
+      ],
+      "reason": "一次针对性关键词搜索命中 MEMORY.md 条目并定位 s005，随后定向读取该 episode；检索本身成功，但命中不等于语义相关度证明。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 52,
+          "quote": "rank_count = Counter(card[:-1] if len(card) > 2 else card[0]"
+        },
+        {
+          "section": "corresponding_source_original",
+          "line": 9,
+          "quote": "rank_count = Counter(card[:-1] if len(card) > 2 else card[0] for card in hand)"
+        }
+      ],
+      "reason": "存在语义相关且合法保存的源 s005，solver 实际打开并阅读；但打开与引用只是可见代理，不能证明复用造成成功。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 62,
+          "quote": "Memory confirms the card format convention (e.g., \"10H\", rank string of length 1 or 2)."
+        }
+      ],
+      "reason": "阅读 s005 后，solver 采用了与源一致的 rank 解析与卡牌格式，属一致适配；但无无记忆反事实，不能证明记忆是成功原因——模型也可能独立得出。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 41,
+          "quote": "non_content_response_fraction\": 0.6327284406616348"
+        }
+      ],
+      "reason": "仅 2 次记忆调用、动态负载约 16KB，其中约 63% 为非内容元数据；只能描述开销形态，不能凭本题断言性价比差。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "GLM 5.3 Flash 本身可能无需记忆即可解决该 poker 任务，成功与记忆无关",
+    "s005 的贡献可能仅限卡牌格式这类小细节，核心胜负逻辑由模型独立实现"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无无记忆反事实运行，无法量化记忆对成功的贡献",
+    "shell 打开 s005.md 只见前 80 行，全量内容曝光程度不可知",
+    "hidden 评测仅 4 项检查，契约一致性（如返回 'Tie game' 的精确措辞）未由测试覆盖，reference 与题面措辞存在候选差异"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "相同冻结记忆库（48 条历史）、相同启动索引、相同动态访问工具与预算",
+    "falsifier": "无改动建议；若未来检验迁移贡献，可在同库同预算下运行无记忆对照而非改动访问工具"
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "rg -il \"poker\" /memory | head; rg -i \"poker\" /memory/MEMORY.md | head"
+        }
+      ],
+      "reason": "单次主题关键词搜索加一次定向文件读取即定位到相关源，共 2 次记忆调用。"
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=4:True:0"
+        }
+      ],
+      "reason": "评测通过，4 项检查全部为 True，无失败边界可归属。"
+    },
+    "reading_efficiency": {
+      "value": "contextual_confirmation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 38,
+          "quote": "sed -n 1,80p /memory/episodes/s005.md"
+        },
+        {
+          "section": "target_visible",
+          "line": 62,
+          "quote": "Memory confirms the card format convention"
+        }
+      ],
+      "reason": "仅读取最相关源的有界片段并立即用于确认卡牌格式约定，无可见冗余开销。"
+    }
+  },
+  "causal_claim": false
+}

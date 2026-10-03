@@ -1,0 +1,86 @@
+
+{
+  "case_id": "review-708e2cd755a1b3",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [{"section": "source_evaluation_offline", "line": 3, "quote": "EVALUATOR_RESULT=14:True:6"}],
+      "reason": "对应的 s028 源通过了全部 6 个测试；pass 不代表其所有历史语句均正确。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [{"section": "target_visible", "line": 62, "quote": "The archive shows the canonical single-DataFrame pattern (ValueError for empty, TypeError for non-numeric, return `(cov_df, sns.pairplot(...))`)"}],
+      "reason": "检索结果 s028 的任务/动作内容与 corresponding_source_original 一致；agent 对检索文本的总结与原文相符。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [{"section": "target_visible", "line": 62, "quote": "No direct combined-task history exists, so I'll extend that pattern to a list: validate each DataFrame, concatenate the numeric data"}],
+      "reason": "源只覆盖单个 DataFrame 的校验与绘图；目标新增了列表输入、逐元素校验与 pd.concat 组合，需自行扩展。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [{"section": "target_visible", "line": 100, "quote": "numeric_df = df.select_dtypes(include=np.number)\n        if numeric_df.shape[1] != df.shape[1]:\n            raise TypeError("}],
+      "reason": "提交代码沿用了检索到的 select_dtypes/异常模式，并新增列表循环与 concat；行为代理，不能证明因果。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "RETRIEVAL",
+      "level": "D0",
+      "evidence": [{"section": "target_visible", "line": 20, "quote": "\"tool\": \"MEMORY_SEARCH\"", "line_note": "L0020"}, {"section": "retrieval_and_packing", "line": 11, "quote": "returned_source_ids": ["s028", "s033"]}],
+      "reason": "两次显式 MEMORY_SEARCH 均返回 ranked_hit，且命中包含对应源 s028；命中只是可见暴露，不等于内容被完整采信。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [{"section": "target_visible", "line": 62, "quote": "I'll extend that pattern to a list: validate each DataFrame, concatenate the numeric data, then compute the covariance matrix and pair plot"}],
+      "reason": "agent 明确引用检索模式并扩展到目标的新条件（多 DataFrame）；无反事实，不能断言记忆造成成功。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [{"section": "corresponding_source_original", "line": 2, "quote": "def task_func(df):\n    \"\"\"\n    Generates a pair plot from a numeric DataFrame and calculates its covariance matrix."}],
+      "reason": "存在高度相关的合法源且已通过自评；这仅说明有复用机会，corresponding 文件本身不证明 solver 读过它（但 MEMORY_SEARCH 结果确含 s028）。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [{"section": "mechanical_metrics", "line": 41, "quote": "non_content_response_fraction\": 0.5065809611264157"}],
+      "reason": "约一半动态记忆响应字节为元数据（哈希/符号/link_counts），属于可见开销描述；本题成功，不能断言性价比差。"
+    }
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [{"section": "retrieval_and_packing", "line": 6, "quote": "query\": \"pair plot covariance matrix DataFrame raise exception empty non-numeric"}],
+      "reason": "两次查询分别针对任务关键词与函数签名，candidate_count 有限且未截断。"
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [{"section": "target_evaluation_offline", "line": 3, "quote": "EVALUATOR_RESULT=4:True:0"}],
+      "reason": "任务成功且自测通过，无失败边界可归因。"
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [{"section": "mechanical_metrics", "line": 49, "quote": "empty_search_calls\": 0"}],
+      "reason": "无空搜索、无截断、无重复调用；第二次搜索用于确认无直接组合任务历史，属合理确认。"
+    }
+  },
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "任务本身在 GLM 能力范围内，即使无记忆也可能独立实现 select_dtypes/concat 模式（无无记忆反事实）。",
+    "检索到的 s033/s024/s038 与目标无关，其存在不构成干扰证据；成功可能仅依赖 s028 或仅靠模型常识，无法区分。"
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "无语义召回 gold（true_recall: unavailable），无法量化检索相关性。",
+    "无反事实运行，记忆对成功的贡献不可归因；隐藏测试细节 solver 不可见，仅离线证据。"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "相同冻结源库、相同启动记忆（空）、相同动态检索工具与预算、相同模型与目标题。",
+    "falsifier": "若改为屏蔽记忆搜索后同题仍以相同结构成功，则削弱 USE_TRANSFER 候选。"
+  },
+  "causal_claim": false
+}

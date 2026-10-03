@@ -1,0 +1,156 @@
+{
+  "case_id": "review-f764d12fc31bb7",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 4,
+          "quote": "Ran 5 tests in 0.046s"
+        }
+      ],
+      "reason": "Source passed all 5 hidden tests; pass does not validate every historical statement, only overall correctness."
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "exposure_summary",
+          "line": 4,
+          "quote": "\"dynamic_bytes\": 0"
+        }
+      ],
+      "reason": "No memory content was retrieved or opened, so no memory content relevant to the target was ever in context."
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "corresponding_source_original",
+          "line": 26,
+          "quote": "return df, ax"
+        }
+      ],
+      "reason": "The source's return signature (df, ax) matches what the hidden evaluator unpacks; applicability is structural, not proof of use."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "exposure_summary",
+          "line": 6,
+          "quote": "\"source_opened\": false"
+        }
+      ],
+      "reason": "Solver never opened any source and made no memory calls, so no memory-derived content appears in the submitted code."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "dfs, ax = new_task_func(data_matrices, n_components=2)"
+        },
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "return a list of dataframes, each containing the PCA transformed data"
+        }
+      ],
+      "reason": "The visible prompt asks for a list of dataframes, but the evaluator unpacks a (dfs, ax) tuple, causing ValueError before any test ran. This is a candidate prompt/test contract mismatch, not proof the prompt alone is authoritative."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "corresponding_source_original",
+          "line": 26,
+          "quote": "return df, ax"
+        },
+        {
+          "section": "mechanical_metrics",
+          "line": 51,
+          "quote": "\"corresponding_source_opened\": false"
+        }
+      ],
+      "reason": "A legal, passed source with the evaluator-matching return signature existed in the frozen archive but was never accessed. Opportunity does not establish that retrieval would have changed the outcome (no counterfactual)."
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 0"
+        },
+        {
+          "section": "retrieval_and_packing",
+          "line": 1,
+          "quote": "[]"
+        }
+      ],
+      "reason": "Direct record: zero memory access calls and empty packing list. This only documents absence of search; it cannot show retrieval failed or that memory would have been useful."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "Even without the signature mismatch, other hidden assertions (e.g., 'Mean' column vs the solver's 'mean' row, per-matrix plot lines) might also have failed; tests_run=0 means only the unpacking error is evidenced.",
+    "The hidden test may itself be inconsistent with the one-line prompt (previous_contract_candidate marks 'one_line_vs_each_matrix'), so responsibility between solver contract inference and evaluator specification is undecidable.",
+    "Why the solver skipped memory entirely (permitted by the entry point) is unknown; no counterfactual exists for retrieval changing the result."
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "no_search_need_unknown",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 0"
+        }
+      ],
+      "reason": "No memory calls were made; whether search was needed is undetermined, and skipping is an explicitly allowed option."
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "ValueError: too many values to unpack (expected 2)"
+        }
+      ],
+      "reason": "Failure occurred at the evaluator's expected return signature, before any test ran, pointing to a contract boundary rather than code errors (solver's own run had returncode 0)."
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 18,
+          "quote": "\"calls\": 2"
+        }
+      ],
+      "reason": "Only 2 tool calls (one test run, one submit) with no memory or repeated commands; no avoidable reading overhead is visible."
+    }
+  },
+  "minimal_intervention": {
+    "change": "Add a default pre-coding step that queries the memory index (e.g., keyword search of MEMORY.md for task keywords like 'PCA explained variance') so sources with matching return signatures are surfaced before implementation.",
+    "fixed": "Same frozen 48-history archive, same target task and startup memory, same model and tool budget.",
+    "falsifier": "If the search surfaces the PCA source (or equally relevant entries) and the target still fails the unpacking assertion, or if repeated runs with the search step show no change in outcome, the retrieval-opportunity hypothesis is refuted."
+  },
+  "causal_claim": false,
+  "confidence": "high",
+  "uncertainties": [
+    "Whether retrieving the corresponding source would have led the solver to return (dfs, ax) — no counterfactual.",
+    "Whether other hidden assertions beyond the unpacking would have failed; tests_run=0.",
+    "Whether the one-line prompt or the hidden test defines the authoritative contract."
+  ]
+}

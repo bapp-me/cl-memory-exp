@@ -1,0 +1,167 @@
+{
+  "case_id": "review-d37bf51797119d",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 7,
+          "quote": "\"correct\": true,\"scorable\": true"
+        }
+      ],
+      "reason": "源 s033 在其自身评估中通过（5 tests OK），但通过不代表其全部历史陈述对目标均适用。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 73,
+          "quote": "## Event s033:e004 (action)\\n\\nTool: SUBMIT"
+        }
+      ],
+      "reason": "记忆中 s033 保留了完整任务描述、可运行解与提交记录，与对应源原始轨迹一致，覆盖了目标所需的单 DataFrame 标准化与热图核心。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 83,
+          "quote": "Memory shows the single-DataFrame version (s033) of this task. I'll extend it to a list of DataFrames with a combined heatmap."
+        }
+      ],
+      "reason": "源经验覆盖单 DataFrame 处理；目标新增的多 DataFrame 合并热图及返回契约是源中不存在的新条件。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 90,
+          "quote": "corr_matrices = []\n    for df in list_of_dfs:\n        numeric_df = df.select_dtypes(include=[np.number]).copy()"
+        }
+      ],
+      "reason": "求解器明确读取 s033 后将单 DataFrame 模式扩展为列表循环并合并相关矩阵；这是行为代理，无反事实不能证明记忆导致成功或失败。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 59,
+          "quote": "\"command\": \"head -c 4000 /memory/episodes/s033.md; echo ---; head -c 2000 /memory/raw/s033.\""
+        },
+        {
+          "section": "source_evaluation_offline",
+          "line": 7,
+          "quote": "\"correct\": true,\"scorable\": true"
+        }
+      ],
+      "reason": "对应源 s033（单 DataFrame 相关矩阵热图）合法保存、被检索并读取，机会确实存在且被利用。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 83,
+          "quote": "Memory shows the single-DataFrame version (s033) of this task. I'll extend it to a list of DataFrames with a combined heatmap."
+        }
+      ],
+      "reason": "可见行为显示基于 s033 内容做了一致性改写（保留 select_dtypes/fillna/StandardScaler 流程，扩展为列表合并）；仅是可见代理，不能证明因果复用。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "AttributeError: 'Axes' object has no attribute 'shape'. Did you mean: 'sharex'?"
+        },
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "return a combined heatmap of the correlation matrices for all DataFrames"
+        }
+      ],
+      "reason": "评估在返回值上断言 .shape（需类 DataFrame），而任务文本只要求返回 combined heatmap；此 axes_vs_matrix_return 歧义与既往审计候选一致，属题意/测试可能不一致的候选而非定论。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 117,
+          "quote": "    sns.heatmap(combined, annot=True, cmap=\"viridis\", ax=ax)\n    plt.show()\n\n    return ax"
+        }
+      ],
+      "reason": "提交函数返回 Axes 对象，与参考解返回合并 DataFrame 不同，直接触发评估器 AttributeError；但求解器无法预知隐藏测试，失败也可能是契约歧义所致。"
+    }
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "\"command\": \"grep -ril \\\"heatmap\\\" episodes raw MEMORY.md 2>/dev/null | head\""
+        },
+        {
+          "section": "target_visible",
+          "line": 59,
+          "quote": "head -c 4000 /memory/episodes/s033.md"
+        }
+      ],
+      "reason": "两次定向关键词检索后仅读取最匹配的 s033，检索窄而有针对性并成功定位对应源。"
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "assert _eval_record_bool(combined_corr.shape == (2, 4))"
+        }
+      ],
+      "reason": "评估在返回对象上调用 .shape，与任务文本'返回热图'的读法冲突，失败边界更像返回契约歧义而非信息缺失。"
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 3"
+        }
+      ],
+      "reason": "仅 3 次记忆调用、有界 head 读取、无重复或空查询，开销低且检索直达对应源。"
+    }
+  },
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "返回 Axes 而非合并 DataFrame 属自身执行选择（TASK_EXECUTION），即使契约清晰也可能失败",
+    "参考解按 axis=1 横向 concat 得 (2,4)，求解器纵向 concat 得不同形状，即便返回 DataFrame 也可能形状不符，无法归因单一原因"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无反事实：不知道不用记忆时求解器是否同样返回 Axes",
+    "隐藏测试与任务文本的真实契约意图（返回热图对象 vs 相关矩阵 DataFrame）无法从现有证据裁定",
+    "memory_fidelity 仅基于 s033 可见片段，s033 读取被截断在 4000 字节，未见的尾部内容未知"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "相同的 48 源冻结档案、相同启动索引与动态记忆工具预算",
+    "falsifier": "若在契约消歧后的重跑中求解器仍返回错误类型/形状，则任务契约候选被削弱"
+  },
+  "causal_claim": false
+}

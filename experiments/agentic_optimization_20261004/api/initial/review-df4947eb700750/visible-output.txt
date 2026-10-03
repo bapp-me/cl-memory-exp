@@ -1,0 +1,105 @@
+{
+ "case_id": "review-df4947eb700750",
+ "result_status": "scorable_failure",
+ "semantic": {
+  "source_quality": {
+   "value": "failed_or_partial",
+   "evidence": [
+    {"section": "source_evaluation_offline", "line": 4, "quote": "ERROR: test_non_dataframe_input"}
+   ],
+   "reason": "离线记录显示源题自身提交因同样的非DataFrame异常类型检查未通过（FAILED errors=1），源经验并非已验证正确解。"
+  },
+  "memory_fidelity": {
+   "value": "absent",
+   "evidence": [
+    {"section": "mechanical_metrics", "line": 23, "quote": "\"memory_calls\": 0"}
+   ],
+   "reason": "目标过程中没有任何记忆调用，retrieval_and_packing 为空，无与目标相关的记忆内容到达模型。"
+  },
+  "target_applicability": {
+   "value": "absent",
+   "evidence": [
+    {"section": "exposure_summary", "line": 5, "quote": "\"source_exposed\": false"}
+   ],
+   "reason": "对应源未被暴露也未被打包，仅启动索引存在；其内容（task_func 包装模式）从未可用于本题。"
+  },
+  "visible_use": {
+   "value": "no_visible_use",
+   "evidence": [
+    {"section": "retrieval_and_packing", "line": 1, "quote": "[]"}
+   ],
+   "reason": "无检索、无记忆命中，解法由模型当场合成；不能主张任何记忆复用。"
+  }
+ },
+ "labels": [
+  {
+   "tag": "EVAL_CONTRACT",
+   "level": "D1",
+   "evidence": [
+    {"section": "target_prompt", "line": 1, "quote": "raise an appropriate exception"},
+    {"section": "target_contract_reference_offline", "line": 3, "quote": "Expected ValueError"}
+   ],
+   "reason": "题面只要求'appropriate exception'，隐藏测试却硬性要求 ValueError，而求解器合理选择 TypeError；这是题意/测试可能不一致的候选，非求解器可见信息缺失的确证。"
+  },
+  {
+   "tag": "TASK_EXECUTION",
+   "level": "D0",
+   "evidence": [
+    {"section": "target_visible", "line": 11, "quote": "raise TypeError("},
+    {"section": "target_evaluation_offline", "line": 4, "quote": "TypeError: Dataset at index 1 is not a pandas DataFrame (got dict)"}
+   ],
+   "reason": "直接记录：提交代码抛 TypeError，评测在非DataFrame检查处崩溃，tests_run=0。另使用 np.random.uniform 而参考用 randint，但该差异未被后续测试触及，属未验证风险。"
+  },
+  {
+   "tag": "OPPORTUNITY_SOURCE",
+   "level": "D1",
+   "evidence": [
+    {"section": "corresponding_source_original", "line": 30, "quote": "raise TypeError(\\"The input data must be a pandas DataFrame.\\")"},
+    {"section": "exposure_summary", "line": 5, "quote": "\"source_exposed\": false"}
+   ],
+   "reason": "离线审计显示对应源解犯同类 TypeError 错误且源评测失败，本可提示异常类型风险；但源从未暴露或打开，机会未被利用不等于检索失败。"
+  }
+ ],
+ "primary_hypothesis": "EVAL_CONTRACT",
+ "competing_explanations": [
+  "求解器无从得知测试要求 ValueError，TypeError 在题面语义下合理，失败可能主要是题面/测试契约张力而非执行错误",
+  "即使异常类型改对，uniform（浮点）与参考 randint（整数）的差异也可能在值检查处另行失败，现有评测未运行到该点，无法判断",
+  "记忆侧完全无调用，任何记忆相关解释（干扰、检索失败、负迁移）均无证据支持"
+ ],
+ "confidence": "medium",
+ "uncertainties": [
+  "隐藏测试是否还会因 uniform 浮点值失败，评测在异常检查处已中断，未知",
+  "若求解器检索了对应源经验是否会改变异常类型选择，属反事实，不可知",
+  "启动索引中多条 pandas 相关条目是否本应触发检索，无相关性 gold，无法评定"
+ ],
+ "minimal_intervention": {
+  "change": "none",
+  "fixed": "相同启动索引、相同只读源库、相同预算与评测掩码",
+  "falsifier": "若在同一历史与预算下仅改变访问策略（如强制语义检索）仍抛 TypeError，则排除检索机会假设；本题失败证据指向异常类型约定，无访问工具改动可测试"
+ },
+ "causal_claim": false,
+ "agentic_search": {
+  "search_strategy": {
+   "value": "no_search_need_unknown",
+   "evidence": [
+    {"section": "mechanical_metrics", "line": 23, "quote": "\"memory_calls\": 0"}
+   ],
+   "reason": "零记忆调用，需求本身未定，不能等价为检索失败。"
+  },
+  "failure_boundary": {
+   "value": "task_contract_candidate",
+   "evidence": [
+    {"section": "target_evaluation_offline", "line": 4, "quote": "TypeError: Dataset at index 1 is not a pandas DataFrame (got dict)"},
+    {"section": "target_prompt", "line": 1, "quote": "raise an appropriate exception"}
+   ],
+   "reason": "评测在异常类型约定处崩溃且未运行任何测试；题面措辞与测试要求之间存在候选性不一致。"
+  },
+  "reading_efficiency": {
+   "value": "no_identified_overhead",
+   "evidence": [
+    {"section": "target_visible", "line": 35, "quote": "The function works as expected. Submitting:"}
+   ],
+   "reason": "仅一次本地验证即提交，共2次调用，无可识别的冗余开销。"
+  }
+ }
+}

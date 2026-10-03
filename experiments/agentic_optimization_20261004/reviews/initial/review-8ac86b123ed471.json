@@ -1,0 +1,155 @@
+{
+  "case_id": "review-8ac86b123ed471",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "Solver made zero memory calls (memory_calls: 0, dynamic_bytes: 0), so no source content was used; source score is also null due to a pre-registered scorer defect."
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "No memory content was retrieved or consumed, so fidelity of any memory w.r.t. the target cannot be assessed."
+    },
+    "target_applicability": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "A semantically related bar-chart source exists offline, but it was never exposed or opened (source_opened: false); applicability of stored content was never exercised."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 0"
+        }
+      ],
+      "reason": "No memory access occurred; all solution content was produced from the prompt alone via two PYTHON calls and one SUBMIT."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "KeyError: 'average_amount_per_category'"
+        },
+        {
+          "section": "target_contract_reference_offline",
+          "line": 3,
+          "quote": "assert ax.get_title() == 'Value Distribution'"
+        }
+      ],
+      "reason": "The prompt asks for 'the average amount spent per transaction for each category' and never specifies chart labels, yet the hidden test requires the key 'average_amount_per_category' and labels 'Value Distribution'/'Value'/'Count'. The prompt and test are plausibly inconsistent; this is a candidate contract mismatch."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "report['average_amount_per_transaction'] = grouped.mean().to_dict()"
+        },
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "ax.set_title('Transaction Counts by Category')"
+        }
+      ],
+      "reason": "The submitted code used the key 'average_amount_per_transaction' and title 'Transaction Counts by Category', which do not match the hidden test's expected key and labels. This is the directly recorded visible execution producing the KeyError, though the prompt gave no basis for the expected labels."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "corresponding_source_original",
+          "line": 2,
+          "quote": "This function use \"Value Distribution\" for the plot title."
+        },
+        {
+          "section": "exposure_summary",
+          "line": 6,
+          "quote": "\"source_opened\": false"
+        }
+      ],
+      "reason": "A related stored source (value-count bar chart) contains exactly the labels the hidden test expects, so a retrieval opportunity existed offline. The solver never opened it, so this cannot prove retrieval failure or that reading it would have changed the outcome."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 1,
+          "quote": "[]"
+        },
+        {
+          "section": "exposure_summary",
+          "line": 4,
+          "quote": "\"dynamic_bytes\": 0"
+        }
+      ],
+      "reason": "Nothing was packed or dynamically exposed; only the static startup entry point was supplied. This records absence of packed content, not a retrieval failure, since no search was attempted."
+    }
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "no_search_need_unknown",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 0"
+        }
+      ],
+      "reason": "No memory or search calls were made; whether search was needed is undetermined because the prompt alone seemed self-contained to the solver."
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "KeyError: 'average_amount_per_category'"
+        }
+      ],
+      "reason": "Failure occurred at the contract boundary: the solver's key naming followed the prompt, but the hidden test expected a different key and unstated chart labels. The solver's own code ran correctly on its self-tests."
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 18,
+          "quote": "\"calls\": 3"
+        }
+      ],
+      "reason": "Only three tool calls with no error signals, no duplicate queries, and no truncations; no avoidable overhead is visible."
+    }
+  },
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "The solver could plausibly have passed had it searched the archive, since the related source contains the exact expected title/labels; but with zero memory calls this is untestable here.",
+    "The failure may partly reflect the solver's own execution choices (key naming, extra 'transaction_counts' key, different labels) even under a consistent contract.",
+    "The evaluation may be stricter than the task statement, in which case no memory method could be credited or blamed for this case."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "No semantic recall gold exists, so whether the related source would have been retrieved by a search is unknown.",
+    "Whether the prompt/test key mismatch ('average_amount_per_transaction' vs 'average_amount_per_category') is an intentional contract detail or a benchmark defect cannot be resolved from evidence.",
+    "Source quality is unscored (pre-registered scorer defect), so the historical value of the related source is unverified."
+  ],
+  "minimal_intervention": {
+    "change": "Add a lightweight retrieval nudge prompting a bounded archive search for related plotting tasks before implementing, since the related source contained the exact chart labels the hidden test expects.",
+    "fixed": "Same 48-history frozen archive, same startup entry point, same budget and model; no changes to the target prompt, hidden tests, or source contents.",
+    "falsifier": "If a search-retrieved related source still leads to submission with mismatched keys/labels, or retrieval yields no related content, the opportunity-source hypothesis is refuted."
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,151 @@
+{
+  "case_id": "review-dd9d5de49bb096",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=14:True:7"
+        }
+      ],
+      "reason": "s043 passed 7 tests, but it solves a single-word variant; only partial coverage of the list-input target condition."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 102,
+          "quote": "sanitized = ''.join(re.findall(r'[A-Za-z]', word))"
+        }
+      ],
+      "reason": "Retrieved s043 code matches corresponding_source_original's submitted solution verbatim on the sanitize-and-count core."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 112,
+          "quote": "I'll adapt that proven approach to a list of words, counting pairs within each word (no cross-word pairs)"
+        }
+      ],
+      "reason": "s043 handles one word; the target adds a list input and requires an explicit no-cross-word-boundary extension."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 119,
+          "quote": "for word in words:"
+        }
+      ],
+      "reason": "Submitted code reuses the sanitize/pair-count pattern and adds a word loop; visible proxy only, not a causal claim."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 51,
+          "quote": "\"corresponding_source_exposed\": true"
+        }
+      ],
+      "reason": "A legal near-identical source (s043) existed in the read-only archive; D0 records availability, not that memory caused success."
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "\"query\": \"two-letter combinations occurrences words alphabetic characters count dictionary\""
+        }
+      ],
+      "reason": "Two targeted MEMORY_SEARCH calls returned s043 as a ranked hit; hit status alone does not prove relevance or later use."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 112,
+          "quote": "The archived task s043 is a near-identical single-word version"
+        }
+      ],
+      "reason": "Visible reasoning and the submitted loop-over-words adaptation are consistent with reusing s043, but no counterfactual exists to confirm the memory caused the success."
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 41,
+          "quote": "\"non_content_response_fraction\": 0.5271067801262695"
+        }
+      ],
+      "reason": "Over half of dynamic memory response bytes were non-content metadata and two hits (s008, s044) were off-topic; describes overhead only, cannot assert poor value on a success."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The task is simple enough that the model might have produced the same solution without memory; no no-memory run is available.",
+    "Success may partly reflect the model's own competence; retrieved code and independent solving are not separable from this trace."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "Whether s043 was necessary (vs. merely helpful) for the correct list adaptation cannot be established without a counterfactual.",
+    "Per-memory token/cache attribution is unavailable; true recall has no relevance gold."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "same read-only archive history, same memory tool interface, same target and budget",
+    "falsifier": "If a variant with the same history but reduced metadata overhead still succeeds with fewer bytes, the current packing cost hypothesis would be refuted; if retrieval without s043 still yields a correct solution, transfer necessity would be refuted."
+  },
+  "causal_claim": false,
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 19,
+          "quote": "\"query\": \"letter pairs sliding window words count re.findall alphabetic\""
+        }
+      ],
+      "reason": "Both queries directly encode the target's key semantics (letter pairs, alphabetic filtering, counting) with no broad exploratory calls."
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=3:True:0"
+        }
+      ],
+      "reason": "Offline evaluation reports correct=true on all 3 checks; no failure boundary to localize."
+    },
+    "reading_efficiency": {
+      "value": "contextual_confirmation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 65,
+          "quote": "\"event_id\": \"s043:e000\",\n          \"max_chars\": 400,\n          \"start_char\": 500"
+        }
+      ],
+      "reason": "The two MEMORY_READ calls targeted exactly the truncated tails (examples and full implementation) of the top hit, avoiding full-file or repeated reads."
+    }
+  }
+}

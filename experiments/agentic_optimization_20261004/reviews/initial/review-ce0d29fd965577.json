@@ -1,0 +1,150 @@
+{
+  "case_id": "review-ce0d29fd965577",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=22:True:10"
+        }
+      ],
+      "reason": "源任务 s031 通过全部 10 个隐藏测试，历史解合法；但通过不代表其所有细节（如返回签名）对目标仍最优。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 25,
+          "quote": "return wave, fig, ax"
+        }
+      ],
+      "reason": "检索结果含 sha 校验且逐字包含源轨迹中的三元素返回语句，与 corresponding_source_original 一致。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "return the combined complex wave and a plot"
+        }
+      ],
+      "reason": "单谐波加窗/画图模式可迁移，但目标新增多谐波叠加；prompt 只要求返回波与图，而隐藏测试解包三个值，适用边界模糊。"
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 42,
+          "quote": "wave += amp * window * np.exp(2j * np.pi * freq * time)"
+        }
+      ],
+      "reason": "可见地复用了检索到的加窗复指数模式并适配为多谐波，但丢弃了记忆中可见的三元素返回约定，可能是关键误用点。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 35,
+          "quote": "I found a closely related archived task."
+        },
+        {
+          "section": "target_visible",
+          "line": 42,
+          "quote": "window = get_window('hann', len(time))"
+        }
+      ],
+      "reason": "检索命中后立即写出的代码在加窗、复指数与画图结构上与 s031 源解高度重合；这只是可见代理，无反事实不能证明记忆造成成功或失败。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "ValueError: not enough values to unpack (expected 3, got 2)"
+        },
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "return the combined complex wave and a plot"
+        }
+      ],
+      "reason": "prompt 明示返回波和图两项，隐藏测试却解包三项；题意与测试可能不一致，但记忆中源解返回三元组，故只是候选而非断言。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 25,
+          "quote": "return wave, fig, ax"
+        }
+      ],
+      "reason": "检索到的 s031:e001 恰好包含与隐藏测试匹配的三元素返回语句，是未被采纳的合法机会；未采纳不等于检索失败，也未证明是失败原因。"
+    }
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 6,
+          "quote": "complex wave multiple harmonics Hann window plot real imaginary"
+        }
+      ],
+      "reason": "仅一次 MEMORY_SEARCH，查询直接对准任务关键词并命中 s031 相关事件，无重复或发散查询。"
+    },
+    "failure_boundary": {
+      "value": "info_visible_but_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 25,
+          "quote": "return wave, fig, ax"
+        }
+      ],
+      "reason": "与失败相关的返回签名信息已在检索结果中可见，失败发生在改写阶段选择返回两项，而非信息缺失。"
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 8,
+          "quote": "\"truncated\": false"
+        }
+      ],
+      "reason": "一次检索、无截断、无空结果或错误调用；非内容元数据占比约 43% 但属协议字段，未观察到可避免的重复开销。"
+    }
+  },
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "代理自身的适配选择：明知源解返回 (wave, fig, ax) 仍按 prompt 字面返回两项，属执行/适配问题而非契约问题",
+    "检索元数据与 packing 的影响无法排除，但无截断且关键内容可见，证据不足以下结论"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试的三元组约定是否为该任务族的规范契约，还是题意/测试不一致，无法由现有证据裁定",
+    "若无该记忆命中，代理是否会同样返回两项，无反事实可查",
+    "memory_fidelity 只覆盖检索片段，未验证整个源轨迹的每个事件"
+  ],
+  "minimal_intervention": {
+    "change": "在 MEMORY_SEARCH 命中排序结果中为 top 事件的最终 SUBMIT 代码提供不截断的完整函数签名与 return 语句视图，测试是否减少此类返回签名丢失",
+    "fixed": "同一冻结档案（s031/s027）、同一查询预算与模型、同一目标 prompt",
+    "falsifier": "若完整返回语句可见后代理仍返回两项，或在无记忆对照下同样失败，则候选被削弱"
+  },
+  "causal_claim": false
+}

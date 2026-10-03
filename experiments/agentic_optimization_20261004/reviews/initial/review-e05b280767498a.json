@@ -1,0 +1,198 @@
+{
+  "case_id": "review-e05b280767498a",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 4,
+          "quote": "Ran 5 tests in 0.136s"
+        },
+        {
+          "section": "source_evaluation_offline",
+          "line": 4,
+          "quote": "FAILED (failures=1, errors=4)"
+        }
+      ],
+      "reason": "s018 的历史解在离线评测中 5 个测试全败（KeyError: 'A'），但 solver 不可见该结果；来源合法保存但内容含错误模式。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 52,
+          "quote": "df = pd.DataFrame([a, b], index=[\\\"A\\\", \\\"B\\\"])"
+        }
+      ],
+      "reason": "检索到的 s018 episode 与 corresponding_source_original 轨迹一致，忠实保留了源内容；失败源于源内容本身错误而非记忆失真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 52,
+          "quote": "Calculate the Euclidean distance between two lists, create a Pandas DataFrame from these lists"
+        },
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "Given a list of pairs of lists, compute the Euclidean distance for each pair"
+        }
+      ],
+      "reason": "源覆盖单对计算，目标需循环处理多对并返回三个列表；距离与绘图部分适用，DataFrame 构造方向不适配目标评测。"
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 62,
+          "quote": "The memory shows a closely related single-pair task. I'll adapt it to a list of pairs"
+        },
+        {
+          "section": "target_visible",
+          "line": 69,
+          "quote": "df = pd.DataFrame([a, b], index=[\\\"A\\\", \\\"B\\\"])"
+        }
+      ],
+      "reason": "行为上明确检索并改写了 s018，但原样沿用其行索引 DataFrame，与目标评测期望的列结构冲突；仅是可见代理，非因果结论。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 38,
+          "quote": "cat /memory/episodes/s018.md"
+        },
+        {
+          "section": "target_visible",
+          "line": 69,
+          "quote": "df = pd.DataFrame([a, b], index=[\\\"A\\\", \\\"B\\\"])"
+        }
+      ],
+      "reason": "solver 检索并改写 s018，提交代码与源episode的DataFrame构造逐字重合；证明使用了记忆，但不能证明记忆导致失败（评测期望对 solver 隐藏）。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "create a Pandas DataFrame for each pair with indices 'A' and 'B'"
+        },
+        {
+          "section": "target_contract_reference_offline",
+          "line": 3,
+          "quote": "pd.DataFrame({'A': a, 'B': b})"
+        }
+      ],
+      "reason": "提示词说 indices 'A'/'B'（行索引读法），而隐藏测试期望 {'A','B'} 为列，题面与测试存在方向张力（与 previous_contract_candidate 一致），仅标候选。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "[left]:  (2, 3)"
+        },
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "[right]: (3, 2)"
+        }
+      ],
+      "reason": "直接记录：提交代码本地运行通过但评测断言 DataFrame 形状 (2,3) vs (3,2) 不符；这是可见的失败点，非推理结论。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "grep -ril \\\"euclidean\\\" /memory | head"
+        },
+        {
+          "section": "retrieval_and_packing",
+          "line": 6,
+          "quote": "grep -ril \\\"euclidean\\\" /memory"
+        }
+      ],
+      "reason": "存在与目标高度对应的 s018 且被 solver 主动打开并改写；命中并读取不等于全部内容曝光，也不证明复用造成结果差异。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "EVAL_CONTRACT：即使不参考记忆、按提示词 'indices A and B' 的字面行索引实现也会失败，题面-测试方向张力可能独立于记忆造成失败",
+    "源episode不含隐藏成功标签，solver 无从得知 s018 的模式在原评测中已失败；信息缺失本身足以解释沿用错误模式",
+    "未知：无反事实（同一模型不用记忆的表现），无法判断记忆是净帮助还是净损害"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "solver 若独立实现（如 pd.DataFrame({'A':a,'B':b})）是否会通过，无法由现有证据确定",
+    "打开的 48 个文件列表是工具元数据，实际有多少内容到达模型未知",
+    "提示词 'indices' 是否真指行索引（可能只是措辞含混），无人类裁定"
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "grep -ril \\\"euclidean\\\" /memory | head"
+        },
+        {
+          "section": "target_visible",
+          "line": 38,
+          "quote": "cat /memory/episodes/s018.md"
+        }
+      ],
+      "reason": "一次关键词检索后只精读最相关的单个 episode，共 2 次 memory 调用，无发散读取。"
+    },
+    "failure_boundary": {
+      "value": "info_missing_candidate",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "line": 4,
+          "quote": "No hidden success labels or complex-task histories are stored here."
+        }
+      ],
+      "reason": "隐藏测试期望与源历史成败标签均不可见，solver 本地自测通过后才提交失败；无法排除自身适配错误的贡献。"
+    },
+    "reading_efficiency": {
+      "value": "contextual_confirmation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 52,
+          "quote": "## Event s018:e001 (action)"
+        },
+        {
+          "section": "mechanical_metrics",
+          "line": 46,
+          "quote": "duplicate_query_or_command_calls\": 0"
+        }
+      ],
+      "reason": "精读 s018 提供了直接可改写的完整上下文，无重复查询或截断，未发现可避免开销。"
+    }
+  },
+  "minimal_intervention": {
+    "change": "在改写候选 episode 前增加一次对照检索，如 grep 归档中其他同型任务对 DataFrame 方向的写法（如 \"pd.DataFrame({'A'\"），比较行索引与列两种模式后再实现",
+    "fixed": "同一冻结归档（48条历史）、同一启动索引与动态shell工具、同一预算与模型",
+    "falsifier": "若加入该对照检索后 solver 仍提交行索引 DataFrame 且同样以 (2,3) vs (3,2) 失败，则'可用归档内证据避免错误'的候选被削弱"
+  },
+  "causal_claim": false
+}

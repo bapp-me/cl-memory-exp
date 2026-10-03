@@ -1,0 +1,152 @@
+{
+  "case_id": "review-77cb7b0c953316",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=26:True:9"
+        }
+      ],
+      "reason": "s001 passed its offline evaluation (9 tests OK), but pass does not validate every historical statement; only base task_func relevance is assessed here."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 62,
+          "quote": "The memory has the base task (s001) this variant builds on: sample 10 words with replacement, join with spaces, case-insensitively replace target phrases with underscored versions"
+        }
+      ],
+      "reason": "The s001 episode content matches corresponding_source_original's task and submission, and the solver's restatement matches the reference task_func semantics for the base logic."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "you need to process multiple sets of target_words, n_sentences, and vocabulary"
+        }
+      ],
+      "reason": "The source covers the single-set sentence generation exactly, but the target adds a multi-set wrapper whose input shape and report keying are not covered by s001."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 69,
+          "quote": "words = random.choices(vocabulary, k=10)\n                sentence = ' '.join(words)"
+        }
+      ],
+      "reason": "The submitted code visibly reuses s001's sentence-generation logic inside a new wrapper; this is a behavioral proxy, not proof the memory caused any outcome."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 69,
+          "quote": "key = f\"set_{idx}\""
+        }
+      ],
+      "reason": "The solver enumerated entries and self-assigned keys set_1/set_2, while the evaluator compares report keys to the input data's own keys; this directly explains the key-set assertion failure. It cannot prove no other defect exists."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 62,
+          "quote": "The memory has the base task (s001) this variant builds on"
+        }
+      ],
+      "reason": "Visible consistent adaptation of retrieved s001 base logic into the wrapper. No counterfactual exists, so no causal claim of beneficial or harmful transfer is possible."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "return a dictionary where keys are identifiers for each set of target_words, n_sentences, and vocabulary"
+        }
+      ],
+      "reason": "The prompt never states that data is a dict or that its own keys must be preserved; the reference uses data.items() while the solver's set_N keying also satisfies a plain reading. Candidate contract underspecification, matching previous_contract_candidate's dictionary_input_schema flag."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 71,
+          "quote": "\"returned_source_ids\": [\n      \"s001\"\n    ]"
+        }
+      ],
+      "reason": "A legal, matching source (s001) was indexed and explicitly read before coding. Provenance shows opportunity, not that its content caused the outcome."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "EVAL_CONTRACT: the prompt's key-identifier requirement is ambiguous, so the key mismatch may reflect task wording rather than pure solver error.",
+    "The solver's catch-and-record error handling (returning error strings instead of raising) could also diverge from hidden tests, but the visible failure is the key-set assertion; without the full test suite this cannot be ruled in or out."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "Exact intended key format for report keys (only the offline reference implies preserving data's own keys).",
+    "Whether other hidden checks beyond the key-set assertion would also fail (tests_run: 0 in the offline run).",
+    "Whether the memory read changed behavior versus the model's unaided solution (no no-memory counterfactual for this target)."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same frozen 48-history archive, same startup index, same memory budget and GLM 5.3 Flash; retrieval itself was targeted and successful.",
+    "falsifier": "Not applicable with change=none; a counterfactual no-memory run of this target would be needed to test any memory-effect hypothesis."
+  },
+  "causal_claim": false,
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 38,
+          "quote": "cat /memory/episodes/s001.md; echo ====; cat /memory/raw/s001."
+        }
+      ],
+      "reason": "One keyword search over the index, then a direct read of only the single matching episode s001 and its raw JSON."
+    },
+    "failure_boundary": {
+      "value": "info_visible_but_adaptation",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "keys are identifiers for each set of target_words, n_sentences, and vocabulary"
+        }
+      ],
+      "reason": "The keying requirement was visible in the prompt; the failure arose when adapting the base logic to the multi-set wrapper, not from missing information."
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "rg -il \"underscore|n_sentences|target_words\" /memory | head; echo ---; head -50 /memory/MEMORY.md"
+        }
+      ],
+      "reason": "Reading was bounded (head-limited index listing, one episode read), with only 2 memory calls before coding."
+    }
+  }
+}

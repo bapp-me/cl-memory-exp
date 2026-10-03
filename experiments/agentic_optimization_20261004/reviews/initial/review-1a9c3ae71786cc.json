@@ -1,0 +1,152 @@
+{
+  "case_id": "review-1a9c3ae71786cc",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=23:False:5"
+        }
+      ],
+      "reason": "The corresponding source s042 failed its own hidden evaluation (5 KeyError errors on double-letter keys like 'aa'/'zz'), so the memory precedent was a partial solution, not a verified one."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 49,
+          "quote": "pairs = Counter(zip(word, word[1:]))"
+        }
+      ],
+      "reason": "The s042 episode preserved the source code verbatim (matching corresponding_source_original), so the retrieved precedent content was faithful to the original trajectory."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 92,
+          "quote": "This task extends that to a list of words, with each key's value being the per-word frequency list"
+        }
+      ],
+      "reason": "s042 handles a single word with scalar counts; the target requires per-word frequency lists across a list of words, and the reference key set includes doubles that the s042 precedent's permutations approach omits."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 92,
+          "quote": "The memory precedent (s042) uses `itertools.permutations(string.ascii_lowercase, 2)` for the keys"
+        }
+      ],
+      "reason": "The solver explicitly cited the s042 precedent and adapted its pair-counting scheme to the multi-word list format; this is a visible behavioral proxy, not a causal proof of reuse."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "line": 4,
+          "quote": "[s042](episodes/s042.md): Create a dictionary containing all possible two-letter combinations of the lowercase English alphabets."
+        }
+      ],
+      "reason": "The startup index listed s042 as a near-duplicate opportunity and the solver then grepped s042/s043; this shows the opportunity existed, not that memory caused success."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 123,
+          "quote": "The 650-key behavior matches the s042 precedent (`permutations`, so doubles like 'aa' are excluded)."
+        }
+      ],
+      "reason": "Visible code and commentary show the solver reusing the s042 pair-counting scheme with list adaptation; without a no-memory counterfactual this cannot establish that reuse caused the success, and the transferred key-set choice (650 keys) diverges from the reference's key set."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 5,
+          "quote": "\"tests_run\": 0,"
+        }
+      ],
+      "reason": "Directly recorded: the offline evaluator ran 0 unit tests with only 3 checks, so the success signal is shallow; the solver's 650-key output differs from the reference's doubles-inclusive key set, a candidate task/reference inconsistency (result_status unchanged)."
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 45,
+          "quote": "\"non_content_response_fraction\": 0.9143745583038869"
+        }
+      ],
+      "reason": "About 91% of dynamic memory response bytes were non-content metadata and all three grep calls were truncated; this describes observable overhead without asserting that memory had no benefit."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The task is simple enough that the model might have produced an equivalent solution without memory; no no-memory counterfactual exists in this run.",
+    "The evaluator's shallow checks (0 tests run) mean the recorded success does not confirm the 650-key design would pass stricter hidden tests matching the reference's doubles-inclusive key set."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether hidden tests would require double-letter keys ('aa' etc.) as in the reference solution; the recorded success gives no such evidence.",
+    "Whether the s042 precedent was necessary, harmful, or neutral for the outcome — no counterfactual and no per-memory token attribution.",
+    "Whether content dropped by grep truncation (packing_truncated, dropped_items_count 9/8/9) contained anything the solver would have used differently."
+  ],
+  "minimal_intervention": {
+    "change": "Add a compact full-file/episode read mode (or raise the grep line/context budget) so the relevant s042 code block could be fetched in one call instead of three truncated, metadata-heavy grep responses.",
+    "fixed": "Same startup index, same frozen memory library, same tool environment and budget, same history.",
+    "falsifier": "If a single compact full read of s042 does not reduce memory call count/response bytes or change visible behavior versus the three truncated greps, the avoidable-overhead hypothesis is refuted."
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 9,
+          "quote": "\"pattern\": \"two-letter|combination|frequenc\""
+        }
+      ],
+      "reason": "The solver targeted exactly the two near-duplicate episodes (s042, s043) identified from the startup index with task-specific patterns, then refined with a second code-level pattern."
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 7,
+          "quote": "\"correct\": true,"
+        }
+      ],
+      "reason": "The run succeeded end-to-end: self-tests passed after one transient KeyError, submission recorded, and offline evaluation marked correct."
+    },
+    "reading_efficiency": {
+      "value": "avoidable_overhead_candidate",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 11,
+          "quote": "\"truncated\": true,"
+        }
+      ],
+      "reason": "All three grep responses were truncated and dominated by JSON metadata (non-content fraction ~0.91), and the second s042 grep re-returned overlapping docstring lines already seen; this is an overhead candidate, not proof of wasted tokens."
+    }
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,158 @@
+{
+  "case_id": "review-dfca1513b9d21d",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 4,
+          "quote": "FAIL: test_plotting_mocked (__main__.TestCases)"
+        }
+      ],
+      "reason": "源 s012 离线评估未全部通过（plotting mock 失败），但其核心逻辑（均值过滤、bisect 计数）内容完整可用，属部分合格。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 99,
+          "quote": "count = len(sorted_data) - bisect.bisect_right(sorted_data, value)"
+        }
+      ],
+      "reason": "MEMORY_READ 返回的 s012:e003 全文与 corresponding_source_original 提交代码一致，与目标相关的必要内容保真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "return the total count of values greater than the specified value across all sublists and the combined numpy.ndarray"
+        }
+      ],
+      "reason": "平铺列表逻辑可迁移到子列表变体，但新函数 new_task_func 的返回顺序记忆无法回答，agent 只能依据 prompt（先 count 后 array），而该顺序与隐藏测试不一致。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 109,
+          "quote": "Our task is the sublist variant: compute per-sublist values above each sublist's average"
+        }
+      ],
+      "reason": "agent 明确识别检索结果为平铺版本并正确改写为子列表逻辑且本地测试通过；仅返回顺序依 prompt 而与测试冲突，属一致适配而非误用，但无反事实不能证明记忆导致成败。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "return the total count of values greater than the specified value across all sublists and the combined numpy.ndarray"
+        },
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "np.array_equal(new_task_func([[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]], 6)[0], np.array([4, 5, 9, 10]))"
+        }
+      ],
+      "reason": "prompt 要求先返回 total count，而隐藏测试断言 [0] 为 ndarray（数组在前），且提交结果 `return total_count, combined_array` 依 prompt；首条断言即失败，构成题意/测试不一致的候选。仅标候选，不能证明是记忆问题。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 109,
+          "quote": "I found the closely related flat-list version (s012) in the archive."
+        }
+      ],
+      "reason": "存在从 s012 检索内容到提交代码的可见改写代理；但 R=1 无反事实，不能证明该复用造成失败或成功。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 10,
+          "quote": "\"returned_source_ids\": [\"s011\",\"s012\"]"
+        }
+      ],
+      "reason": "三次 MEMORY_SEARCH 均命中相关源 s012/s011，并针对截断处做了定向 MEMORY_READ；检索成功本身不证明使用或内容适用。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 140,
+          "quote": "All tests pass. Submitting the solution."
+        }
+      ],
+      "reason": "agent 本地自测通过后提交，执行链路无错误信号；失败仅在离线评估中显现，属契约层而非执行错误。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "无法完全排除除返回顺序外还存在其他未执行的检查不匹配（仅首条断言运行）。",
+    "无 no-memory 反事实，不能判断无记忆 baseline 是否同样按 prompt 顺序失败。",
+    "源 s011（DataFrame 版本）的干扰作用无法由现有证据评估。"
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "记忆使用对结果的因果影响不可知（R=1，无反事实）。",
+    "除第一条断言外的隐藏测试结果未提供。",
+    "per-memory token/cache 归因不可用。"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "只读冻结档案、相同的搜索/读取预算与历史、相同目标 prompt 与评估",
+    "falsifier": "若同一解按测试顺序（array, count）修正后仍失败，则契约候选被反驳；若修正后通过，说明检索与执行本身无碍。"
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 63,
+          "quote": "data_list sublists average greater than return tuple total count combined ndarray bisect_right"
+        }
+      ],
+      "reason": "三次查询聚焦任务要素并针对截断处定向读取 s012:e003 后半段，无空查/重复查询（duplicate_query_or_command_calls: 0）。"
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "AssertionError"
+        }
+      ],
+      "reason": "唯一失败证据是评估断言，指向 prompt 与测试的返回顺序契约冲突，而非信息缺失或自身执行错误。"
+    },
+    "reading_efficiency": {
+      "value": "avoidable_overhead_candidate",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 48,
+          "quote": "\"exact_repeated_source_chars\": 5540"
+        }
+      ],
+      "reason": "三次搜索返回高度重叠的 s011/s012 打包内容（重复源字符约 5540，非内容元数据占比约 0.51），可能存在可避免开销；仅为候选，字符不等于 token，命中不等于使用。"
+    }
+  },
+  "causal_claim": false
+}

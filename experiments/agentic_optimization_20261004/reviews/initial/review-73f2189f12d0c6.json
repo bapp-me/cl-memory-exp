@@ -1,0 +1,125 @@
+{
+  "case_id": "review-73f2189f12d0c6",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 7,
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "The corresponding source task scored correct with 10 tests, so a legal passing source existed offline. Passing does not validate every statement in its trajectory."
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "No memory content was exposed or retrieved for this target, so there is no memory content to assess fidelity against the target's needs."
+    },
+    "target_applicability": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "The solver never accessed any stored experience (memory_calls = 0, empty startup memory), so applicability of source content to the target is undetermined and moot for this run."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 0"
+        }
+      ],
+      "reason": "Zero memory calls and zero exposed bytes mean the visible trajectory was produced entirely from the environment and the model's own testing loop; no causal memory-use claim is possible."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "corresponding_source_original",
+          "line": 2,
+          "quote": "Create a list of business days between two dates, excluding weekends and specified country's public holidays"
+        },
+        {
+          "section": "exposure_summary",
+          "line": 5,
+          "quote": "\"source_exposed\": false"
+        }
+      ],
+      "reason": "A semantically close source (same holidays/pandas business-day problem, multi-year holiday lookup) was legally saved offline and could have helped, but exposure_summary shows it was not exposed, so this is only a candidate opportunity, not evidence of reuse. The target solver independently solved via holidays.country_holidays and per-day filtering."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 66,
+          "quote": "One of my test expectations was wrong (July 4 falls in that week). Let me fix the tests"
+        },
+        {
+          "section": "target_evaluation_offline",
+          "line": 7,
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "Success is directly recorded and the trajectory shows self-verification, including catching its own test-expectation miscount on the UK week. This describes visible execution only, not the cause of success."
+    }
+  ],
+  "primary_hypothesis": "unknown",
+  "competing_explanations": [
+    "Success could reflect the model's prior familiarity with the pandas/holidays stack rather than any memory effect; with zero memory access, no memory-side mechanism can be distinguished.",
+    "The semantically similar source might have helped had it been retrieved (opportunity forgone), or might have been unnecessary; without retrieval there is no counterfactual either way."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "Whether the solver ever needed memory cannot be determined because no search calls were made (no_search_need_unknown, not a retrieval failure).",
+    "Exact hidden-test semantics beyond the 4 offline checks are not visible; hidden correctness is only recorded as correct=true."
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "no_search_need_unknown",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 0"
+        }
+      ],
+      "reason": "No memory or search calls were made; demand for memory was never exercised, so this is not evidence of retrieval failure, only of an unexercised path."
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 7,
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "The target was scored correct and the only mid-run error (a wrong self-test assertion) was corrected by the solver itself."
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 18,
+          "quote": "\"calls\": 7"
+        }
+      ],
+      "reason": "Seven tool calls with no memory payloads, no truncated or empty responses, and no repeated queries show no avoidable reading overhead in this run."
+    }
+  },
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same frozen read-only source archive, same empty startup index, same environment and budget; no source writes or test changes.",
+    "falsifier": "Not applicable since no access change is proposed; if a variant forcing retrieval of the similar source produced measurable benefit or misapplication, that would inform future access-strategy hypotheses."
+  },
+  "causal_claim": false
+}

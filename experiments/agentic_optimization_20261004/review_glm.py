@@ -97,8 +97,13 @@ def validate(obj, packet):
     return errors
 
 
-def call(case, key, phase):
+def call(case, key, phase, rate_limit_retry=False):
     folder = ROOT / "api" / phase / case["case_id"]
+    original_folder = folder
+    if rate_limit_retry:
+        previous = read(original_folder / "terminal.json")
+        assert previous["status"] == "http_error" and previous["http_status"] == 429
+        folder = folder / "transport-retry-1"
     if (folder / "terminal.json").exists():
         return read(folder / "terminal.json")
     if folder.exists() and any(folder.iterdir()):
@@ -110,13 +115,15 @@ def call(case, key, phase):
     body = dict(model="glm-5.3-flash", messages=[dict(role="system", content=system), dict(role="user", content=render(packet))],
                 temperature=1, max_tokens=24000, thinking=dict(type="enabled"), reasoning_effort="high",
                 response_format=dict(type="json_object"), stream=False)
+    if rate_limit_retry:
+        assert body == read(original_folder / "request.json"), "Retry must preserve the exact analysis request"
     raw = json.dumps(body, ensure_ascii=False).encode()
     assert len(raw) <= 400000
     save(folder / "request.json", body)
     state = dict(case_id=case["case_id"], provider="glm", requested_model=body["model"], role="offline_reviewer",
         phase=phase, packet_sha256=case["packet_sha256"], prompt_sha256=sha(ROOT / "review_prompt.txt"),
         raw_request_sha256=hashlib.sha256(raw).hexdigest(), request_bytes=len(raw),
-        started_at_utc=datetime.now(timezone.utc).isoformat(), retry=False, http_attempts=1,
+        started_at_utc=datetime.now(timezone.utc).isoformat(), retry=rate_limit_retry, http_attempts=1,
         usage=None, money=None, status="started")
     save(folder / "started.json", state)
     started = time.perf_counter()
@@ -153,7 +160,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("phase", choices=["initial", "r1", "r2", "r3"])
     parser.add_argument("--first", action="store_true")
+    parser.add_argument("--workers", type=int, default=24)
+    parser.add_argument("--retry-rate-limited", action="store_true")
     args = parser.parse_args()
+    assert 1 <= args.workers <= 48
     manifest = read(ROOT / "records" / f"review-manifest-{args.phase}.json")
     assert sha(ROOT / "review_prompt.txt") == read(ROOT / "records/protocol.json")["review_prompt_sha256"]
     if args.phase != "initial":
@@ -165,17 +175,23 @@ def main():
     if not args.first:
         first = read(ROOT / "api" / args.phase / cases[0]["case_id"] / "terminal.json")
         assert first["status"] in ("valid", "needs_audit") and first["usage"] is not None
-    jobs = iter(c for c in cases if not (ROOT / "api" / args.phase / c["case_id"] / "terminal.json").exists())
+    if args.retry_rate_limited:
+        cases = [c for c in cases if (ROOT / "api" / args.phase / c["case_id"] / "terminal.json").exists()
+                 and read(ROOT / "api" / args.phase / c["case_id"] / "terminal.json").get("http_status") == 429]
+    def terminal_path(case):
+        folder = ROOT / "api" / args.phase / case["case_id"]
+        return (folder / "transport-retry-1" if args.retry_rate_limited else folder) / "terminal.json"
+    jobs = iter(c for c in cases if not terminal_path(c).exists())
     done_rows, active, errors = [], {}, []
-    with ThreadPoolExecutor(max_workers=48) as pool:
+    with ThreadPoolExecutor(max_workers=args.workers) as pool:
         def dispatch():
             try:
                 case = next(jobs)
             except StopIteration:
                 return False
-            active[pool.submit(call, case, key, args.phase)] = case["case_id"]
+            active[pool.submit(call, case, key, args.phase, args.retry_rate_limited)] = case["case_id"]
             return True
-        for _ in range(1 if args.first else 48):
+        for _ in range(1 if args.first else args.workers):
             dispatch()
         while active:
             finished, _ = wait(active, return_when=FIRST_COMPLETED)
@@ -187,9 +203,10 @@ def main():
                 if result["status"] == "http_error" or result.get("usage") is None:
                     errors.append(dict(case_id=cid, status=result["status"]))
             if not errors:
-                while len(active) < 48 and dispatch():
+                while len(active) < args.workers and dispatch():
                     pass
-            save(ROOT / "records" / f"review-progress-{args.phase}.json", dict(new_completed=len(done_rows), stopped_dispatch=bool(errors), errors=errors))
+            suffix = "-retry" if args.retry_rate_limited else ""
+            save(ROOT / "records" / f"review-progress-{args.phase}{suffix}.json", dict(new_completed=len(done_rows), stopped_dispatch=bool(errors), errors=errors))
     if errors:
         raise SystemExit(2)
 

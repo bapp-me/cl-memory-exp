@@ -1,0 +1,90 @@
+
+{
+  "case_id": "review-76390b3c683129",
+  "result_status": "asset_unscorable",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [{"section": "source_evaluation_offline", "line": 3, "quote": "EVALUATOR_RESULT=19:True:6"}],
+      "reason": "s019 passed all 6 hidden tests, but a passing source does not validate every statement inside the episode."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [{"section": "target_visible", "line": 25, "quote": "\"truncated\":false}]",
+      "reason": "Full s019 episode (172 lines, task docstring, action, submit) was delivered untruncated via MEMORY_READ_FILE."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [{"section": "target_prompt", "line": 1, "quote": "dividing the original set into three equal parts. Additionally, overlay the Voronoi diagrams"}],
+      "reason": "The base Voronoi plotting/validation pattern from s019 applies, but the three-way split, per-subset diagrams, and overlay are target-specific additions absent from the source."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [{"section": "target_visible", "line": 35, "quote": "The memory file s019 gives the base Voronoi plotting pattern. Now I'll implement the variant"}],
+      "reason": "The solver explicitly attributed the base pattern to s019 and visibly adapted it (array_split, per-subset plots, overlay, new validation); this is a behavioral proxy, not proof of causal benefit."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [{"section": "target_visible", "line": 11, "quote": "\"path\": \"episodes/s019.md\""}],
+      "reason": "Direct read of a legal, immutable source episode matching the target's base Voronoi subtask; corresponding_source_original confirms the pairing offline, not that the solver saw it beyond this read."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [{"section": "target_visible", "line": 35, "quote": "The memory file s019 gives the base Voronoi plotting pattern."}],
+      "reason": "Visible reuse of s019's imports, validation style, and plotting pattern with adaptation to the variant; no counterfactual (no-memory run of the same target) exists, so memory causing the outcome is not provable."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {"section": "target_visible", "line": 66, "quote": "Voronoi needs ≥3 points per subset, so I'll require ≥9 points total."},
+        {"section": "target_contract_reference_offline", "line": 3, "quote": "points = np.array([[0, 0], [1, 1], [2, 2]])"}
+      ],
+      "reason": "Candidate mismatch only: the solver's ≥9-point requirement and (vors, fig, axes) return signature may conflict with the offline tests' 3-point case and (vor, ax) reference; since the asset is unscorable this cannot be confirmed as a failure."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [{"section": "target_visible", "line": 87, "quote": "{\"returncode\":0,\"stdout\":\"3 <class 'scipy.spatial.qhull.Voronoi'> 4 <class 'matplotlib.figure.Figure'>"}],
+      "reason": "The solver's own edge-case probe and full implementation ran with returncode 0 and no error signals; execution hygiene is visible but hidden-test correctness is unavailable."
+    }
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [{"section": "target_visible", "line": 11, "quote": "\"path\": \"episodes/s019.md\""}],
+      "reason": "Exactly one memory read, directly targeting the single relevant episode identified from the startup index, before any coding attempt."
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [{"section": "target_visible", "line": 118, "quote": "{\"submitted\":true,\"feedback\":\"Submission recorded. Hidden correctness is not available.\"}"}],
+      "reason": "The trajectory shows no execution failure; the asset_unscorable status stems from a pre-registered scorer defect, not solver behavior."
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [{"section": "retrieval_and_packing", "line": 8, "quote": "\"truncated\": false"}],
+      "reason": "One focused read returned the needed pattern in a single untruncated payload; no redundant reads, repeats, or empty searches occurred."
+    }
+  },
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The Voronoi plotting pattern is standard library usage the model could produce without memory; visible attribution to s019 does not establish the memory was necessary.",
+    "Whether the ≥9-point restriction would fail the hidden 3-point test is undeterminable because the asset was excluded from scoring (pre-registered scorer defect)."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Hidden-test correctness of the submission is unavailable (correct: null, scorable: false).",
+    "Whether the ≥9-point validation would conflict with the offline 3-point test case cannot be resolved within this task's contract.",
+    "No counterfactual no-memory run exists for this target, so any memory benefit is unmeasurable."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same frozen s019 archive, same startup index, same read-only access tool, same budget and model.",
+    "falsifier": "Not applicable: no single retrieval-strategy change is indicated by a clean, focused trajectory; only a rescorable evaluator would let any contract mismatch surface."
+  },
+  "causal_claim": false
+}

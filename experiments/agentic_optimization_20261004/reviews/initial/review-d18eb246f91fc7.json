@@ -1,0 +1,193 @@
+{
+  "case_id": "review-d18eb246f91fc7",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=14:True:5"
+        },
+        {
+          "section": "source_evaluation_offline",
+          "line": 7,
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "源 s025 离线评测通过（5 tests OK），但其内容仅覆盖单 (length,count) 对，不保证所有历史陈述正确。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 104,
+          "quote": "Counter({'a': 3, 'd': 3, 'c': 2, 'e': 1, 'b': 1})"
+        },
+        {
+          "section": "corresponding_source_original",
+          "line": 17,
+          "quote": "Counter({'a': 3, 'd': 3, 'c': 2, 'e': 1, 'b': 1})"
+        }
+      ],
+      "reason": "MEMORY_READ 取回的 s025:e004 提交代码与源原始轨迹的 SUBMIT 代码内容一致（含相同示例输出）。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 114,
+          "quote": "Our task is the plural/generalized version — lists of lengths and counts — plus most/least frequent letters."
+        }
+      ],
+      "reason": "源代码解决单 (length,count) 对的 Counter 生成，目标新增 lengths/counts 列表、most/least 字母，且隐藏测试隐含逐对重播种语义，源中无此信息。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 145,
+          "quote": "reproduces the exact reference output from the archived task (`Counter({'a': 3, 'd': 3, 'c': 2, 'e': 1, 'b': 1})` for length 5, count 2, seed 1)"
+        }
+      ],
+      "reason": "求解者明确识别源与目标的差异并改写为列表版本，生成方案与源一致；这是行为代理，非因果证明。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "\"query\": \"random strings letters frequency most frequent least frequent new_task_func\""
+        },
+        {
+          "section": "retrieval_and_packing",
+          "line": 11,
+          "quote": "\"returned_source_ids\": [\n        \"s025\",\n        \"s034\"\n      ]"
+        }
+      ],
+      "reason": "两次 MEMORY_SEARCH 均命中与目标直接对应的源 s025，且 corresponding_source_exposed=true；这只证明合法源存在并被返回，不证明内容全部被采纳。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 114,
+          "quote": "The archive shows a closely related task (s025): generate `count` random strings of a given `length` from 'abcde' with a seed, returning a `Counter`"
+        },
+        {
+          "section": "target_visible",
+          "line": 145,
+          "quote": "reproduces the exact reference output from the archived task"
+        }
+      ],
+      "reason": "提交代码的生成结构与 s025 读取到的代码重合且求解者自述复用；但无反事实，无法证明记忆造成最终失败或成功。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "assert _eval_record_bool(new_task_func([3, 4], [2, 3], 0) == (Counter({'c': 9, 'e': 3, 'd': 3, 'b': 3}), 'c', 'b'))"
+        },
+        {
+          "section": "previous_contract_candidate",
+          "line": 3,
+          "quote": "\"category\": \"seed_and_extrema\""
+        }
+      ],
+      "reason": "隐藏测试隐含对每个 (length,count) 对以相同 seed 重新播种（参考解逐对调用 task_func），而目标 prompt 未说明播种粒度；求解者的单次播种读取是合理解读，标记题意/测试一致性候选而非确定错误。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 50,
+          "quote": "\"accumulated_dynamic_memory_payload_bytes\": 55246"
+        },
+        {
+          "section": "mechanical_metrics",
+          "line": 47,
+          "quote": "\"non_content_response_fraction\": 0.46608767576509513"
+        }
+      ],
+      "reason": "动态记忆载荷约 55KB，其中约 47% 为非正文元数据；仅描述开销，不能凭本题断言性价比差或无收益。"
+    }
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "\"query\": \"random strings letters frequency most frequent least frequent new_task_func\""
+        },
+        {
+          "section": "retrieval_and_packing",
+          "line": 11,
+          "quote": "\"returned_source_ids\": [\n        \"s025\",\n        \"s034\"\n      ]"
+        }
+      ],
+      "reason": "两次查询都围绕目标关键词并直接命中对应源 s025，无空转或明显过宽检索。"
+    },
+    "failure_boundary": {
+      "value": "info_missing_candidate",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "Given a list of random strings generated from a fixed set of letters ('a', 'b', 'c', 'd', 'e'), each with a specified length, determine the total frequency of each letter across all strings."
+        },
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "assert _eval_record_bool(new_task_func([3, 4], [2, 3], 0) == (Counter({'c': 9, 'e': 3, 'd': 3, 'b': 3}), 'c', 'b'))"
+        }
+      ],
+      "reason": "prompt 既未明确要求函数自行生成字符串，也未说明逐对重播种语义；所需信息在 prompt 与检索到的源中均缺失，失败边界更像信息缺失而非检索或执行错误。"
+    },
+    "reading_efficiency": {
+      "value": "avoidable_overhead_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 75,
+          "quote": "\"error\":\"start_char outside event\""
+        }
+      ],
+      "reason": "一次 MEMORY_READ 因 start_char=600 超出 s025:e005 事件范围而报错，随后改读 s025:e004 才成功，属少量可避免的读取开销；仅为候选，不代表整体低效。"
+    }
+  },
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "失败可能源于求解者自身的播种策略选择（单次 seed vs 逐对 seed），即便契约更明确也可能犯同样错误。",
+    "源 s025 的单对模式可能锚定了求解者的实现，导致未考虑逐对重播种；但无无记忆反事实，无法归因于记忆。",
+    "检索返回中含不相关源（s044），但无证据表明其造成干扰。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "目标任务对 seed 粒度的官方意图（整函数一次播种 vs 逐对重播种）无法从现有证据确证。",
+    "若无记忆访问，求解者是否会做出不同的播种选择，无反事实可查。",
+    "记忆工具结果中非正文元数据对求解行为的实际影响不可量化（per_memory_tokens unavailable）。"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "相同冻结历史档案（含 s025/s034/s044）、相同空启动索引、相同预算与模型",
+    "falsifier": "若在相同历史/预算下（不改 prompt、不改测试）多次运行中求解者采用逐对重播种并通过，则契约候选被削弱、指向执行偶然性；反之若始终以单次播种失败，则契约歧义候选增强。"
+  },
+  "causal_claim": false
+}

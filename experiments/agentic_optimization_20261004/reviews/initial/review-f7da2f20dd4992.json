@@ -1,0 +1,172 @@
+{
+  "case_id": "review-f7da2f20dd4992",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=20:True:5"
+        }
+      ],
+      "reason": "源 s047 离线评测通过（5 tests OK），但通过不代表其历史陈述全部正确。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 83,
+          "quote": "The memory contains the exact per-group logic (s047). I'll adapt it to handle a list of groups and return a dictionary keyed by group index."
+        }
+      ],
+      "reason": "s047.md 全文被 cat 返回，包含与目标单组部分一致的 task_func 代码与示例；与 corresponding_source_original 逐字一致。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 47,
+          "quote": "Determine the outlier indices in a 1D numpy array based on the Z score."
+        },
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "return a dictionary where the keys are the indices of the groups"
+        }
+      ],
+      "reason": "源覆盖单组的拟合/Z-score/std=0 逻辑；目标新增多组列表输入与按组索引的 dict 返回，需自行扩展。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 90,
+          "quote": "def new_solution(dataset: list, threshold: float = 2.0) -> dict:\\n    result = {}\\n    for idx, data in enumerate(dataset):"
+        }
+      ],
+      "reason": "提交代码在记忆中单组实现外包一层循环并返回 dict，且自测通过；行为代理一致，但不构成因果证明。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 47,
+          "quote": "Determine the outlier indices in a 1D numpy array based on the Z score."
+        },
+        {
+          "section": "corresponding_source_original",
+          "line": 2,
+          "quote": "Determine the outlier indices in a 1D numpy array based on the Z score."
+        }
+      ],
+      "reason": "索引中 s047 描述与目标单组逻辑几乎一致，是合法源机会；配对是离线审计，不证明 solver 预知。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "grep -ril \"z score\\|zscore\\|outlier\" /memory/MEMORY.md /memory/episodes | head"
+        },
+        {
+          "section": "target_visible",
+          "line": 59,
+          "quote": "cat /memory/episodes/s047.md"
+        }
+      ],
+      "reason": "直接记录显示先定向 grep（命中 MEMORY.md 与 s047.md），再精准打开该集；未发现检索失败。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 114,
+          "quote": "All checks pass, matching the known examples from the single-group version. Submitting."
+        },
+        {
+          "section": "target_visible",
+          "line": 104,
+          "quote": "{0: ([6], 17.285714285714285, 1142.7755102040817)}"
+        }
+      ],
+      "reason": "可见证据支持把记忆中单组解适配为多组 dict 版本并自测；无反事实，不能证明成功由记忆造成。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 3"
+        }
+      ],
+      "reason": "3 次记忆调用、1 次 python、42.5 秒完成，开销描述性记录；仅单题，不断言整体性价比。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "模型可能无需记忆也能直接写出该常见 Z-score 实现（成功非记忆因果所致，无反事实）",
+    "评估器仅跑 1 项 check（tests_run: 0），成功边界较窄，可能存在其他通过路径"
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "true_recall 不可用（无相关性 gold），无法量化检索质量",
+    "grep 的 returned_source_ids 列出全部 48 个文件而正文只显示 2 个命中，暴露元数据与实际匹配的关系无法精确核对",
+    "隐藏测试未运行（tests_run: 0），仅 1 项 check，contract 与测试覆盖的一致性无法进一步验证"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "相同的 48 条冻结历史、只读 shell 访问工具、目标题面与提交预算保持不变",
+    "falsifier": "若未来去掉 s047 后该题仍以同样步数与代码结构成功，则记忆复用候选被削弱"
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "grep -ril \"z score\\|zscore\\|outlier\" /memory/MEMORY.md /memory/episodes | head"
+        }
+      ],
+      "reason": "查询词直接对应任务关键词，随后按索引精准打开唯一相关集，无泛读。"
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=1:True:0"
+        }
+      ],
+      "reason": "任务一次提交即判真，无失败边界可定位。"
+    },
+    "reading_efficiency": {
+      "value": "contextual_confirmation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 59,
+          "quote": "cat /memory/episodes/s047.md"
+        }
+      ],
+      "reason": "先读索引确认 s047 相关，再整体读取该单集并直接适配，未发现可避免的冗余读取。"
+    }
+  },
+  "causal_claim": false
+}

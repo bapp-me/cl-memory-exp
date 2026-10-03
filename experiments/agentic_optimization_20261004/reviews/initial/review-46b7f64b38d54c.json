@@ -1,0 +1,142 @@
+{
+  "case_id": "review-46b7f64b38d54c",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=23:True:6"
+        }
+      ],
+      "reason": "Source solved its simpler single-plot task (correct:true), but it never required a nested grid return, so its relevance to the grid structure is limited."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "exposure_summary",
+          "line": 5,
+          "quote": "\"source_exposed\": false"
+        }
+      ],
+      "reason": "No memory content reached the solver; nothing was available to preserve or distort."
+    },
+    "target_applicability": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "line": 1,
+          "quote": "[]"
+        }
+      ],
+      "reason": "Startup memory was empty and no dynamic memory access occurred, so no source content could apply to the target."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 0"
+        }
+      ],
+      "reason": "No memory tool was called; the solution was written from the prompt alone, so no memory reuse is visible."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "AssertionError: Each scatter plot should have 5 points"
+        },
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "a list of lists containing the points for each scatter plot"
+        },
+        {
+          "section": "target_contract_reference_offline",
+          "line": 2,
+          "quote": "points_row = []"
+        }
+      ],
+      "reason": "Prompt's 'list of lists' is ambiguous; evaluator expects a row-nested grid (points_grid) while the agent returned a flat list of per-plot point lists, which fails the nested iteration. Consistent with the recorded nested_return_shape underspecification candidate; not proof the prompt is wrong."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 50,
+          "quote": "\"corresponding_source_exposed\": false"
+        },
+        {
+          "section": "mechanical_metrics",
+          "line": 8,
+          "quote": "\"source_index\": 15"
+        }
+      ],
+      "reason": "A passing related source exists in the archive, but it was never exposed or opened, so the offline opportunity was unrealized. This only documents missed opportunity, not that using it would have changed the nested-shape outcome."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "The agent may have simply misread an adequately specific prompt rather than the prompt being underspecified.",
+    "The correct=false is fixed by the mask; we cannot verify how the agent would score under a differently worded prompt."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether any archived memory actually contains grid-return guidance (no search was made, library contents unknown).",
+    "Whether retrieving the source task (single-plot, flat point list) would have helped or hurt the nested-grid shape."
+  ],
+  "minimal_intervention": {
+    "change": "Add a pre-submit retrieval prompt that encourages querying the memory archive for related plotting/grid tasks and their recorded return-shape notes before implementing.",
+    "fixed": "Same frozen read-only memory archive, same startup index, same model, same budget and tool set.",
+    "falsifier": "If the agent retrieves related sources and still submits the flat list-of-point-lists shape, the access-strategy hypothesis is refuted."
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "no_search_need_unknown",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 0"
+        }
+      ],
+      "reason": "No search calls were made; whether search was needed cannot be determined from this trace alone."
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "AssertionError: Each scatter plot should have 5 points"
+        }
+      ],
+      "reason": "The failure is the flat-vs-nested return structure, a contract interpretation issue, not an execution error in the visible run."
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 18,
+          "quote": "\"calls\": 2"
+        }
+      ],
+      "reason": "The trace is minimal (one test run, one submit) with no redundant reads or repeated calls observed."
+    }
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,145 @@
+{
+  "case_id": "review-6e456832661711",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=39:True:6"
+        }
+      ],
+      "reason": "对应源 s007 离线评测通过，说明历史经验合法且质量可用；通过不保证其所有陈述对目标仍适用。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 96,
+          "quote": "Each sub-list should have exactly 5 elements, where the first 4 elements are\\n                                   treated as independent variables ('A', 'B', 'C', 'D')"
+        }
+      ],
+      "reason": "检索到的 s007 任务与对应源一致，agent 读取了截断续片并在提交中复用了校验与列结构，内容保真无矛盾迹象。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 83,
+          "quote": "- df (pd.DataFrame): DataFrame with columns 'A', 'B', 'C', 'D', 'Response'.\\n    - results (statsmodels.RegressionResults)"
+        }
+      ],
+      "reason": "源经验覆盖单数据集回归（返回 tuple），适用于目标每个数据集的回归部分；但目标新增的多数据集汇总报告 dict 结构不在源经验内。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 133,
+          "quote": "The archive shows a closely related single-dataset task (s007): validate a 2D list"
+        }
+      ],
+      "reason": "agent 明确引用 s007 并将单数据集模式推广为逐数据集回归；这是行为代理，非因果证明。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "KeyError: 'Dataset 1'"
+        },
+        {
+          "section": "target_contract_reference_offline",
+          "line": 3,
+          "quote": "assert isinstance(report['Dataset 1']['DataFrame'], pd.DataFrame)"
+        }
+      ],
+      "reason": "隐藏测试强制 'Dataset 1'/'DataFrame' 等键名，而 target_prompt 只说 'return a summary report with the details'，未指定命名；题意与测试可能不一致，仅标候选。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 133,
+          "quote": "I'll generalize that pattern to process multiple datasets and build a summary report"
+        }
+      ],
+      "reason": "s007 的回归逻辑被可见地迁移成功，失败发生在源经验未覆盖的新报告 schema 部分；无反事实，不能断言记忆造成失败或成功。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 164,
+          "quote": "The implementation works correctly, including validation paths."
+        }
+      ],
+      "reason": "自测只针对自拟的键名结构，验证无法暴露 schema 不匹配；属自身执行/确认边界，非检索失败。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "query\": \"summary_report multiple linear regression statsmodels R-squared comparison datasets\""
+        }
+      ],
+      "reason": "三次检索查询均紧扣目标任务关键词，并补充 MEMORY_READ 读取截断续片，未做无关发散。"
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "KeyError: 'Dataset 1'"
+        }
+      ],
+      "reason": "失败点是输出 schema 键名与隐藏测试不一致；prompt 未给出键名，故边界在契约规定而非信息缺失或可见 Adaptation 错误。"
+    },
+    "reading_efficiency": {
+      "value": "contextual_confirmation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 60,
+          "quote": "\"event_id\": \"s007:e000\",\n          \"start_char\": 700"
+        }
+      ],
+      "reason": "对排名首位的 s007 追加读取续片以确认完整任务与实现，读取量与需要相称，未观察到明显浪费。"
+    }
+  },
+  "competing_explanations": [
+    "题意/测试可能不一致：prompt 未规定键名，任何合理实现都可能命中 'Dataset 1' 断言失败，失败未必归因于 agent 或记忆。",
+    "即使换一种检索策略也无证据表明库内存在报告 schema 的先例，检索改进不必然改变结果。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无语义召回 gold，无法量化检索命中率与相关度。",
+    "prompt 与隐藏测试对键名的约定是否存在规范出处，现有证据无法判定。",
+    "若无记忆（反事实）agent 是否会写出相同/不同 schema，无法从本题判断。"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "保持相同只读历史库、相同目标 prompt 与隐藏测试、相同预算与模型；失败边界在契约而非访问工具。",
+    "falsifier": "若在 prompt 明确给出输出键名后同一轨迹仍因 schema 失败，或库内存在 schema 先例而检索未命中，则候选需修正。"
+  },
+  "causal_claim": false
+}

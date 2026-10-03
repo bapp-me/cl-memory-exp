@@ -1,0 +1,139 @@
+{
+  "case_id": "review-51be171fe4f640",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=13:False:5"
+        }
+      ],
+      "reason": "源 s038 在离线评测中失败 3/5，缺 add_constant；solver 看不到此结果，但沿用其模式属于沿用带缺陷的历史解。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 79,
+          "quote": "model = sm.OLS(y, X).fit()\\\\n    return model"
+        }
+      ],
+      "reason": "MEMORY_READ 返回的 s038:e005 代码与 corresponding_source_original 中提交代码一致，未发现失真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 89,
+          "quote": "The archive's near-identical task (s038) fits `sm.OLS(y, X)` without adding a constant term"
+        }
+      ],
+      "reason": "核心过滤/OLS 模式适用，但目标新增按 DatasetID 分组返回 dict 的条件；且目标 reference 使用 add_constant，与沿用的无常数模式不一致（目标测试未检查参数名）。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 89,
+          "quote": "I'll follow that pattern, extended per-DatasetID. Now implement and test:"
+        }
+      ],
+      "reason": "可见轨迹显示读取源实现后按其模式扩展为分组版本；这只是行为代理，无反事实不能证明记忆导致成功。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 56,
+          "quote": "The archive shows a closely related single-dataset version of this task (source s038)."
+        }
+      ],
+      "reason": "与目标几乎同题的 s038 被检索并读取，机会存在且被利用；这只证明来源覆盖，不证明因果贡献。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 89,
+          "quote": "I'll follow that pattern, extended per-DatasetID."
+        }
+      ],
+      "reason": "可见代码结构与源实现重合并显式声明沿用；但无无记忆对照，不能证明记忆造成成功，且沿用的无常数模式在源评测中本属缺陷。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_contract_reference_offline",
+          "line": 3,
+          "quote": "assert isinstance(value, (sm.regression.linear_model.RegressionResultsWrapper, type(None)))"
+        }
+      ],
+      "reason": "目标测试只检查类型与 None 行为，不检查常数项，故沿用源缺陷模式仍判对；成功不等于语义完全符合 reference 的 add_constant 路径，属候选性契约差异。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "无记忆 baseline 也可能独立写出相同结构（任务本身直接给出过滤/回归规格），记忆只是加速而非必要",
+    "目标测试宽松（只查类型与 None），即使不检索记忆、任何合理实现都可能通过，无法区分记忆的贡献"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无语义召回 gold 与反事实，无法量化记忆对成功或 token 开销的净影响",
+    "per-memory token/cache 归因不可得，无法评估 36320 字节动态负载的实际成本"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "相同只读历史库、相同目标测试与预算、相同模型",
+    "falsifier": "不适用（未提出改动）；若未来加入检查 params 索引含 'const' 的测试，沿用 s038 模式的版本将被反驳为负迁移候选"
+  },
+  "causal_claim": false,
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "\"query\": \"OLS regression per DatasetID height weight columns filter\""
+        }
+      ],
+      "reason": "两次查询均针对任务关键词，随后精确定位 s038:e005 读取缺失段，未发散。"
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=7:True:0"
+        }
+      ],
+      "reason": "目标判为正确，无失败边界可定位。"
+    },
+    "reading_efficiency": {
+      "value": "contextual_confirmation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 56,
+          "quote": "Let me read the final submitted implementation to check the details (constant term, handling)."
+        }
+      ],
+      "reason": "读取仅补齐首次截断片段的剩余部分以确认常数项处理，属于有目的的确认而非冗余开销。"
+    }
+  }
+}

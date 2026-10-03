@@ -1,0 +1,139 @@
+{
+  "case_id": "review-318601f5af5f5b",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 106,
+          "quote": "The implementation works correctly. Submitting the final solution."
+        }
+      ],
+      "reason": "s007 passed offline (correct=true) and its transcript shows a working single-dataset regression implementation; source quality is legal and direct."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 106,
+          "quote": "model = sm.OLS(y, X)\n    results = model.fit()\n    return df, results"
+        }
+      ],
+      "reason": "Retrieved s007 content matches the source trajectory's submitted implementation, so the necessary pattern content was preserved."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 143,
+          "quote": "No multi-dataset variant exists in memory, so I'll build it from the single-dataset pattern (s007) and test it."
+        }
+      ],
+      "reason": "s007 covers the per-dataset regression core but the target adds multi-dataset iteration and an unspecified report schema; the schema portion had no source support."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 181,
+          "quote": "for i, array in enumerate(arrays, start=1)"
+        }
+      ],
+      "reason": "The submission visibly extends the s007 single-dataset function into a per-dataset loop; this is a behavioral proxy, not proof memory caused the outcome."
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 143,
+          "quote": "I'll build it from the single-dataset pattern (s007) and test it."
+        }
+      ],
+      "reason": "Solver retrieved s007 and its submitted code visibly reuses the retrieved pattern; without a no-memory counterparty this cannot be shown to be causal or necessary."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 181,
+          "quote": "'R_Squared_Comparison' -> dict mapping 'Dataset_1', 'Dataset_2', ... to"
+        }
+      ],
+      "reason": "Solver invented report keys ('DataFrames', 'Regression_Results', 'R_Squared_Comparison') that the hidden tests do not use; the regression logic itself ran correctly in its own test."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "KeyError: 'Dataset 1'"
+        }
+      ],
+      "reason": "Prompt only says to 'return a summary report with the details of each regression analysis' without naming keys, while tests expect 'Dataset N'/'DataFrame'/'R-squared'; a task/test underspecification candidate, not evidence of retrieval failure."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "The prompt never specified report key names, so the failure may stem from an underspecified contract rather than any memory or execution defect.",
+    "Memory access itself succeeded (s007 retrieved and adapted); failure cannot be attributed to retrieval, packing, or interference since no contradictory evidence exists."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether a different memory item could have revealed the expected schema (none found, and no relevance gold exists).",
+    "Whether the solver would have chosen the same keys without memory; no counterfactual run is available."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same frozen 48-source archive, same startup index, same tool budget and read-only shell access",
+    "falsifier": "Not applicable to access: with the identical history, only changing the prompt to name expected report keys would test the schema-underspecification hypothesis, which is outside permitted interventions"
+  },
+  "causal_claim": false,
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 6,
+          "quote": "rg -il \"summary_report|statsmodels|R-squared\" /memory/episodes /memory/MEMORY.md"
+        }
+      ],
+      "reason": "Queries used task-specific terms, then narrowed to s007/s038 and read targeted line ranges; no stop-early or overbroad drift after the initial match-all."
+    },
+    "failure_boundary": {
+      "value": "info_missing_candidate",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "return a summary report with the details of each regression analysis"
+        }
+      ],
+      "reason": "The required dict keys were absent from both the prompt and the memory corpus, so the solver had no visible information to derive the tested schema; alternative boundary causes (retrieval, own adaptation of regression logic) are not supported."
+    },
+    "reading_efficiency": {
+      "value": "contextual_confirmation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 65,
+          "quote": "grep -n \"statsmodels\\|R-squared\\|rsquared\\|OLS\" /memory/episodes/s007.md /memory/episodes/s038.md | head -20; echo ---; head -50 /memory/episodes/s007.md"
+        }
+      ],
+      "reason": "Reads were bounded (head -50, sed 50,130) and served to confirm the retrieved pattern before reuse; no identified avoidable overhead."
+    }
+  }
+}

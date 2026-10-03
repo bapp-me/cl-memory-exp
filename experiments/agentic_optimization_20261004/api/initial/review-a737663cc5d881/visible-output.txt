@@ -1,0 +1,94 @@
+
+{
+  "case_id": "review-a737663cc5d881",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [{"section": "source_evaluation_offline", "line": 3, "quote": "EVALUATOR_RESULT=16:True:5"}],
+      "reason": "s033 passed its own hidden tests, but it is the single-DataFrame variant and covers none of the multi-DataFrame combination logic."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [{"section": "target_visible", "line": 33, "quote": "Standardize numeric columns in a DataFrame and return the heatmap of the correlation matrix. Missing values are replaced by the column's average."}],
+      "reason": "Retrieved s033 snippets match the corresponding source task text and code; no contradiction with target-relevant content is visible."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [{"section": "target_visible", "line": 83, "quote": "No exact match in the archive for this multi-DataFrame variant (only the single-DataFrame version, s033). I'll implement it directly and test it."}],
+      "reason": "s033 covers per-DataFrame fillna/standardize/corr/heatmap but not combining multiple correlation matrices nor the expected return object."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [{"section": "target_visible", "line": 90, "quote": "numeric_df = numeric_df.fillna(numeric_df.mean())"}],
+      "reason": "Solver reused the s033 pattern (select_dtypes, fillna with mean, StandardScaler) and explicitly adapted it to the list input; this is a behavioral proxy, not a causal claim."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {"section": "target_evaluation_offline", "line": 4, "quote": "AttributeError: 'Axes' object has no attribute 'shape'. Did you mean: 'sharex'?"},
+        {"section": "target_contract_reference_offline", "line": 3, "quote": "assert combined_corr.shape == (2, 4)"},
+        {"section": "target_prompt", "line": 1, "quote": "return a combined heatmap of the correlation matrices for all DataFrames"}
+      ],
+      "reason": "The prompt says 'return a combined heatmap' while the hidden check expects a DataFrame of shape (2,4) (axis=1 concat); the solver returned an Axes, so the failure is at the return-object contract. Candidate only: reference is not absolute truth, but the evaluator error is direct."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {"section": "target_visible", "line": 148, "quote": "combined_corr = pd.concat(aligned).groupby(level=0).mean()"},
+        {"section": "target_visible", "line": 148, "quote": "return ax"}
+      ],
+      "reason": "Directly recorded: solver implemented union-aligned averaging and returned ax; its own tests only checked cell counts and a same-column case, never the multi-DF shape contract. This is what was executed, not proof the memory caused it."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [{"section": "retrieval_and_packing", "line": 12, "quote": "returned_source_ids": ["s018","s033","s036"]}],
+      "reason": "The relevant source s033 was returned by all three searches and surfaced in tool results; opportunity existed, though the archive contained no multi-DataFrame variant to cover the combination semantics."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [{"section": "target_visible", "line": 90, "quote": "scaler = StandardScaler()"}],
+      "reason": "Standardization/fillna/heatmap code visibly mirrors the retrieved s033 content, adapted to the list input; without a counterfactual this cannot prove memory caused either the reuse or the failure."
+    }
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [{"section": "target_visible", "line": 59, "quote": "list_of_dfs combined heatmap return combined heatmap of correlation matrices for all DataFrames"}],
+      "reason": "Three queries closely paraphrase the task concepts and each surfaced the single-DF source; no empty or duplicated searches occurred."
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [{"section": "target_evaluation_offline", "line": 4, "quote": "assert _eval_record_bool(combined_corr.shape == (2, 4))"}],
+      "reason": "The failing assertion is about the returned object's type/shape, information not present in the prompt or in the archive; the boundary looks like contract underspecification rather than missing retrieval or broken code."
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [{"section": "mechanical_metrics", "line": 53, "quote": "\"truncated_response_calls\": 0"}],
+      "reason": "Three searches returned compact result pages with no truncation or empty calls; the ~52% non-content fraction is descriptive and not shown to have displaced useful content."
+    }
+  },
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "Even with an Axes-vs-DataFrame fix, the averaging-on-union semantics differ from the hidden concat-along-axis expectation (shape (2,4)), so combination semantics alone could fail the test.",
+    "The failure may be plain model error on an underspecified 'combined heatmap' phrase independent of any memory content; the archive had no multi-DataFrame example to transfer from."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "Whether the prompt's 'return a combined heatmap' should mean returning the DataFrame, the Axes, or both is not decidable from the prompt alone (previous audit flags axes_vs_matrix_return as underspecified).",
+    "No counterfactual (no-memory) run for this target exists, so any memory effect on the outcome is unknown.",
+    "true_recall is unavailable; whether a better query could have surfaced more applicable multi-DF content cannot be answered."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same frozen read-only archive, same empty startup memory block, same search budget and model.",
+    "falsifier": "If, under identical conditions, the solver still produces an averaging union-merge or returns an Axes despite the archive clearly documenting these tasks' DataFrame return convention, the contract-ambiguity reading weakens; a run returning a (2,4) DataFrame that then passes would confirm it."
+  },
+  "causal_claim": false
+}

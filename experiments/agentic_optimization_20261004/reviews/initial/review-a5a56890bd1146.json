@@ -1,0 +1,190 @@
+{
+  "case_id": "review-a5a56890bd1146",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 4,
+          "quote": "KeyError: 'zz'"
+        },
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=23:False:5"
+        }
+      ],
+      "reason": "Corresponding source (index 42) failed 5/5 hidden tests; its permutations-only key set omitted doubles like 'aa'/'zz' which the target's aggregated task requires."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "line": 1,
+          "quote": "[]"
+        },
+        {
+          "section": "exposure_summary",
+          "line": 4,
+          "quote": "\"dynamic_bytes\": 0"
+        }
+      ],
+      "reason": "No memory index or dynamic content was supplied to the target, so no source-derived content reached the target at all."
+    },
+    "target_applicability": {
+      "value": "not_applicable",
+      "evidence": [],
+      "reason": "No memory content was delivered or used; applicability of unseen source text to the target cannot be exercised or assessed in this run."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 0"
+        },
+        {
+          "section": "mechanical_metrics",
+          "line": 34,
+          "quote": "\"no_active_memory_call\": true"
+        }
+      ],
+      "reason": "The visible trace contains only one SUBMIT with no memory access; success came from a single directly generated solution."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 8,
+          "quote": "\"source_index\": 42"
+        },
+        {
+          "section": "corresponding_source_original",
+          "line": 2,
+          "quote": "two-letter combinations of the lowercase English alphabets"
+        }
+      ],
+      "reason": "A closely related legal source existed offline (near-identical two-letter frequency task), a retrieval opportunity; but it was never exposed, so this is only a candidate, not evidence of use or interference."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "Ran 0 tests in 0.000s"
+        },
+        {
+          "section": "target_evaluation_offline",
+          "line": 7,
+          "quote": "\"correct\": true"
+        }
+      ],
+      "reason": "Offline evaluator reports 0 unittests run yet correct=true via 3 checks; result_status is fixed as success, but the check-vs-test discrepancy is noted as a candidate contract inconsistency, not re-scored."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "for first, second in itertools.product(string.ascii_lowercase, repeat=2)"
+        },
+        {
+          "section": "mechanical_metrics",
+          "line": 18,
+          "quote": "\"calls\": 1"
+        }
+      ],
+      "reason": "The target produced a complete 676-key solution (product includes doubles) in one SUBMIT with zero errors; visible execution is self-contained and consistent with the prompt."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 1,
+          "quote": "[]"
+        },
+        {
+          "section": "exposure_summary",
+          "line": 5,
+          "quote": "\"source_exposed\": false"
+        }
+      ],
+      "reason": "Nothing was packed into startup or dynamic memory, so no packing-level selection or budget issue can arise; absence of packing is not evidence of retrieval failure since no search was attempted."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "Success is attributable to the model's direct solution ability; with zero memory exposure there is no memory-based explanation to test.",
+    "The correct=true verdict rests on 3 checks with 0 unittests run, so the exact correctness basis of the success cannot be independently verified from this evidence."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "Which 3 hidden checks ran and whether they would distinguish word.count (non-overlapping) from overlapping consecutive-pair counting, e.g. on 'aaa'.",
+    "Whether the failed source's content, if retrieved, would have helped (aggregation structure) or hurt (missing doubles keys) — no counterfactual available."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same frozen read-only source archive, same empty startup memory index, same budget and model; only a retrieval trigger condition could differ in a counterfactual variant, but no evidence motivates one here.",
+    "falsifier": "If a variant with identical history but forced memory access to source 42 produced wrong double-key handling (permutations-only keys), that would show the source content was misleading for this target."
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "no_search_need_unknown",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 0"
+        }
+      ],
+      "reason": "No memory or search calls were made; whether search was unnecessary or simply not attempted cannot be distinguished from this run alone."
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 7,
+          "quote": "\"correct\": true"
+        },
+        {
+          "section": "target_visible",
+          "line": 21,
+          "quote": "\"isError\": false"
+        }
+      ],
+      "reason": "The target succeeded on the first submission with no error signals, so no failure boundary exists in this case."
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 18,
+          "quote": "\"calls\": 1"
+        },
+        {
+          "section": "exposure_summary",
+          "line": 4,
+          "quote": "\"dynamic_bytes\": 0"
+        }
+      ],
+      "reason": "One tool call with zero memory payload; there is no reading or overhead to evaluate."
+    }
+  },
+  "causal_claim": false
+}

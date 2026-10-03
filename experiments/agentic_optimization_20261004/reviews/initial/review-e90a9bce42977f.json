@@ -1,0 +1,174 @@
+{
+  "case_id": "review-e90a9bce42977f",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=26:False:6"
+        },
+        {
+          "section": "source_evaluation_offline",
+          "line": 4,
+          "quote": "ERROR: test_non_dataframe_input"
+        }
+      ],
+      "reason": "The corresponding source run failed its hidden test (1 error of 6) on non-DataFrame input, matching mechanical_metrics source_quality_direct:false."
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "line": 1,
+          "quote": "[]"
+        },
+        {
+          "section": "exposure_summary",
+          "line": 5,
+          "quote": "\"dynamic_bytes\": 0"
+        }
+      ],
+      "reason": "No startup index entries and no dynamic memory results were supplied; nothing target-relevant was in context."
+    },
+    "target_applicability": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 0"
+        },
+        {
+          "section": "retrieval_and_packing",
+          "line": 1,
+          "quote": "[]"
+        }
+      ],
+      "reason": "No memory tool calls and empty retrieval/packing record, so no memory content was available to apply."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 35,
+          "quote": "\"no_active_memory_call\": true"
+        }
+      ],
+      "reason": "The solution was produced via one PYTHON test and SUBMIT with no memory content in evidence; memory reuse cannot be observed."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "the function should raise an appropriate exception"
+        },
+        {
+          "section": "target_contract_reference_offline",
+          "line": 3,
+          "quote": "except ValueError:\n    assert True"
+        },
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "TypeError: Dataset at index 1 is not a pandas DataFrame (got dict)"
+        }
+      ],
+      "reason": "The prompt only demands 'an appropriate exception' while the hidden test requires ValueError specifically; the solver's TypeError crashed the evaluator (tests_run: 0). Candidate prompt/test inconsistency, offline only."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 4,
+          "quote": "raise TypeError(\"The input data must be a pandas DataFrame.\")"
+        },
+        {
+          "section": "mechanical_metrics",
+          "line": 50,
+          "quote": "\"corresponding_source_exposed\": false"
+        }
+      ],
+      "reason": "A legal source existed whose same TypeError choice failed the analogous hidden check, but it was never exposed or retrieved, so this is only an unused offline opportunity, not evidence of retrieval failure."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 35,
+          "quote": "All tests pass — unique column naming (including collision handling), correct random ranges"
+        },
+        {
+          "section": "target_evaluation_offline",
+          "line": 6,
+          "quote": "\"tests_run\": 0"
+        }
+      ],
+      "reason": "The solver's self-tests all passed and the implementation is otherwise sound; the failure comes from the exception-type contract, not a coding bug in the visible logic."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "The prompt's 'appropriate exception' wording makes TypeError defensible, so the mismatch may be a benchmark wording/test inconsistency rather than solver error",
+    "No memory was in context at all, so no memory-based explanation (interference, misretrieval) is possible on this run"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether a ValueError-raising source experience exists anywhere in the library is unknown; the shown source itself failed and never learned the fix",
+    "Whether the grader would accept TypeError if the prompt were read as permitting it cannot be decided offline without rescoring"
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "no_search_need_unknown",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 0"
+        }
+      ],
+      "reason": "No memory calls were made and startup index was empty; need for search cannot be established either way."
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "TypeError: Dataset at index 1 is not a pandas DataFrame (got dict)"
+        }
+      ],
+      "reason": "Failure occurs at the exception-type requirement, with the solver's own tests passing; boundary is the contract, not execution."
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 26,
+          "quote": "\"PYTHON\": 1,\n      \"SUBMIT\": 1"
+        }
+      ],
+      "reason": "Only two tool calls with no repeated or wasted access visible."
+    }
+  },
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "same frozen source library, empty startup memory context, R=1, same model and budget",
+    "falsifier": "N/A with change=none; a run where the hidden evaluator accepted 'an appropriate exception' generically would refute the contract-mismatch reading"
+  },
+  "causal_claim": false
+}

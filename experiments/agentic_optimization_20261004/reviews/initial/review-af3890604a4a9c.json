@@ -1,0 +1,152 @@
+{
+  "case_id": "review-af3890604a4a9c",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=20:True:5"
+        }
+      ],
+      "reason": "源 s047 离线评估 5 测试通过；通过不代表其历史陈述全部正确。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 54,
+          "quote": "mean, std = norm.fit(data)\\n    if std == 0:\\n        return [], mean, std ** 2"
+        }
+      ],
+      "reason": "读取的 s047:e004 内容与 corresponding_source_original 的提交代码逐字一致，含目标所需的 std==0 分支与返回均值/方差。"
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 67,
+          "quote": "for i, group in enumerate(dataset):\\n        data = np.asarray(group)\\n        mean, std = norm.fit(data)"
+        }
+      ],
+      "reason": "源的单数组 z-score 算法直接适用于每组；目标新增的仅是组循环与 dict 包装，未改变核心语义。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 91,
+          "quote": "All tests pass, including the archived reference example (`[1,2,3,4,5,6,100]` → outliers `[6]`, mean `17.2857…`, variance `1142.7755…`)"
+        }
+      ],
+      "reason": "读取记忆后立即写出复用该算法并扩展为 dict 的实现，并用源档案示例自测；这是行为代理，非因果证明。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 25,
+          "quote": "\"event_id\":\"s047:e000\",\"source_id\":\"s047\",\"kind\":\"task\""
+        }
+      ],
+      "reason": "合法保存的源 s047 与目标任务几乎相同，搜索即命中；机会存在是直接记录，但包内出现 corresponding_source_original 不证明 solver 读过它。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "\"query\": \"z-score outliers numpy groups mean variance normal distribution\""
+        }
+      ],
+      "reason": "单次聚焦查询即返回 s047 为 ranked_hit；检索发生是事实，命中不等于后续内容被有效使用。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 40,
+          "quote": "\"event_id\": \"s047:e004\",\n          \"max_chars\": 2000,\n          \"start_char\": 700"
+        }
+      ],
+      "reason": "MEMORY_READ 取回源实现后，提交代码复用 norm.fit、std==0 分支与 z_scores 计算，且断言与档案示例数值一致；无反事实，不能证明记忆造成了成功。"
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 15,
+          "quote": "\"candidate_count\": 92,\n    \"total_matches\": 92"
+        }
+      ],
+      "reason": "搜索共 92 命中但首页仅打包 5 条截断片段；选中/淘汰是打包可见性问题，不是检索失败。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "任务本身简单，GLM 5.3 Flash 无记忆也可能独立写出 norm.fit z-score 解，成功不能归因于记忆",
+    "s000、s030 等不相关命中也可能提供 numpy/scipy 用法提示，来源无法归一"
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "无无记忆反事实，无法量化记忆贡献",
+    "无 semantic recall gold，true_recall 不可用",
+    "首页未打包的 87 条命中内容是否会影响判断不可知"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "相同只读历史库、相同启动空索引、相同预算与打包页大小",
+    "falsifier": "若同库同预算下无记忆基线以相近成本稳定解出同分布任务，则 USE_TRANSFER 候选被削弱"
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "\"query\": \"z-score outliers numpy groups mean variance normal distribution\""
+        }
+      ],
+      "reason": "单次查询直接覆盖任务核心概念，首选命中即为目标源。"
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 7,
+          "quote": "\"correct\": true,\n  \"scorable\": true"
+        }
+      ],
+      "reason": "一次 Python 自测全过并成功提交，无失败边界。"
+    },
+    "reading_efficiency": {
+      "value": "contextual_confirmation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 39,
+          "quote": "\"max_chars\": 2000,\n          \"start_char\": 700"
+        }
+      ],
+      "reason": "仅续读首页被截断的 s047:e004 剩余部分（700–1753 字符）即拿到完整实现，无多余读取。"
+    }
+  },
+  "causal_claim": false
+}

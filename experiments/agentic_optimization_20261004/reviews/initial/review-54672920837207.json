@@ -1,0 +1,167 @@
+{
+  "case_id": "review-54672920837207",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=26:True:9"
+        }
+      ],
+      "reason": "Source passed all 9 tests, but it only covers task_func; the target adds a multi-set report wrapper the source never exercised."
+    },
+    "memory_fidelity": {
+      "value": "not_applicable",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "line": 1,
+          "quote": "[]"
+        }
+      ],
+      "reason": "No memory content was supplied or retrieved, so fidelity of memory relative to the target cannot be assessed."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "corresponding_source_original",
+          "line": 9,
+          "quote": "pattern = re.compile(re.escape(tw), re.IGNORECASE)"
+        }
+      ],
+      "reason": "The source's sentence-generation logic (case-insensitive underscore, sampling with replacement) matches the hidden reference behavior, but it does not cover report key naming for multiple input sets."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 34,
+          "quote": "\"no_active_memory_call\": true,"
+        }
+      ],
+      "reason": "The solver made zero memory calls and submitted code written without any retrieved source visible; no memory use behavior exists to score."
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "key = 'set_{}'.format(idx)"
+        },
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "AssertionError: The generated report does not match the expected output."
+        }
+      ],
+      "reason": "The submitted code assigns positional keys ('set_0', ...) instead of preserving the input dict's identifiers, and the evaluator's first assertion on report keys failed. This is directly visible own-execution behavior, not a memory effect."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_contract_reference_offline",
+          "line": 3,
+          "quote": "processed sentences as a list of all lowercase strings"
+        },
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "keys are identifiers for each set of target_words"
+        }
+      ],
+      "reason": "The prompt never states that sentences must be lowercased or sampled with replacement, and 'identifiers' is ambiguous between input keys and positional ids; the hidden test enforces reference-specific behavior. Candidate contract/eval mismatch only."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "exposure_summary",
+          "line": 5,
+          "quote": "\"source_exposed\": false,"
+        },
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=26:True:9"
+        }
+      ],
+      "reason": "A legally stored, passing source for the same base task existed and its logic matches the hidden reference, but it was never exposed or queried. This is an opportunity observation; it does not prove retrieval would have changed the outcome."
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 19,
+          "quote": "\"calls\": 1,"
+        }
+      ],
+      "reason": "The run was a single submission with no search calls, so per-task overhead was minimal. This describes cost only; no claim about benefit or cost-effectiveness of the memory system is supported."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "EVAL_CONTRACT candidate: the prompt arguably permits positional keys ('set_0') and omits lowercasing/with-replacement sampling, so the failure may partly reflect prompt-test inconsistency rather than solver error.",
+    "A memory-based fix cannot be credited or blamed: no memory was accessed, and no counterfactual shows whether retrieving the source would have prevented the key mismatch or case-handling gap."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Which specific mismatch (keys vs lowercase vs sampling scheme vs error-string returns) the hidden checker would flag after key alignment, since tests_run is 0.",
+    "Whether any stored memory entry actually contains the multi-set report pattern; no recall gold exists.",
+    "Whether the solver considered searching memory at all; no hidden thinking is available."
+  ],
+  "minimal_intervention": {
+    "change": "Require one semantic memory query against the stored source archive before SUBMIT (e.g., a retrieval step keyed on task keywords), then compare; only the access step is added.",
+    "fixed": "Same frozen source archive, same target prompt and hidden evaluator, same single-attempt budget and model.",
+    "falsifier": "If the run still queries nothing, or retrieves the source and still submits positional keys / non-lowercased sentences and fails, the opportunity-source candidate is refuted."
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "no_search_need_unknown",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 0,"
+        }
+      ],
+      "reason": "Zero memory calls were made; the need for search is undetermined, not proven unnecessary or failed."
+    },
+    "failure_boundary": {
+      "value": "own_execution_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "key = 'set_{}'.format(idx)"
+        }
+      ],
+      "reason": "The failing assertion targets the submitted code's own key scheme, visible before submission; adaptation of the source pattern to the wrapper was the boundary."
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 19,
+          "quote": "\"calls\": 1,"
+        }
+      ],
+      "reason": "A single call with no search, file opens, or repeated payloads; no avoidable reading overhead is observable."
+    }
+  },
+  "causal_claim": false
+}

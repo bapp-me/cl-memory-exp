@@ -1,0 +1,140 @@
+{
+  "case_id": "review-8cb28d6420b495",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=15:True:6"
+        }
+      ],
+      "reason": "对应源 s011 离线评测通过，但通过不保证其所有历史陈述保真。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 74,
+          "quote": "return greater_avg, num_greater_value, ax"
+        }
+      ],
+      "reason": "MEMORY_READ 返回的 s011:e003 内容与源轨迹提交代码一致，未发现与目标相关的矛盾内容。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 32,
+          "quote": "def task_func(df, column, value)"
+        }
+      ],
+      "reason": "记忆覆盖单 DataFrame 的核心逻辑，但目标是 dfs/columns 列表版，列表迭代与长度校验为新增条件，需自行适配。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 84,
+          "quote": "I found a very similar historical task (single DataFrame version). Now let me adapt it for a list of DataFrames"
+        }
+      ],
+      "reason": "提交代码与读取的记忆代码高度重合并显式说明适配；行为代理，非因果证明。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 33,
+          "quote": "reason\":\"ranked_hit\",\"seed_event_id\":\"s011:e000\""
+        }
+      ],
+      "reason": "合法源 s011 被检索返回且后续被读取；仅证明机会存在，不证明被采纳。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 91,
+          "quote": "results.append((greater_avg, num_greater_value, ax))"
+        }
+      ],
+      "reason": "提交代码与记忆内容近乎逐字重合并含显式适配陈述，是有效复用的可见代理；无反事实，不能证明记忆导致成功。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 45,
+          "quote": "accumulated_dynamic_memory_payload_bytes\": 44728"
+        }
+      ],
+      "reason": "3 次记忆调用带来约 44.7KB 动态负载；仅描述开销，本题成功，不能断言性价比差。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "无记忆时模型可能凭自身能力直接写出该常规 pandas/matplotlib 解",
+    "最终代码由 solver 自行测试迭代产生，逐字重合可能部分来自对相同题面的独立收敛"
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "无反事实（同模型无记忆运行）故复用收益不可量化",
+    "true_recall 无相关性 gold，检索命中之外是否还有更优源未知",
+    "隐藏测试未运行（tests_run=0），correctness 来自 6 项 checks"
+  ],
+  "minimal_intervention": {
+    "change": "将两次高度重叠的 MEMORY_SEARCH 合并为一次更精确的查询（或先单查再定点 READ），检验是否在不损失召回的情况下降低重复负载",
+    "fixed": "相同历史库、相同环境与预算、相同模型",
+    "falsifier": "合并查询后仍能召回 s011 且成本下降则候选成立；若召回质量下降则说明双查询必要"
+  },
+  "causal_claim": false,
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 37,
+          "quote": "\"event_id\": \"s011:e003\","
+        }
+      ],
+      "reason": "两次针对性查询后定点读取唯一事件，无空查无重复调用。"
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=6:True:0"
+        }
+      ],
+      "reason": "一次通过离线评测，无可见失败边界。"
+    },
+    "reading_efficiency": {
+      "value": "avoidable_overhead_candidate",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 48,
+          "quote": "\"exact_repeated_source_chars\": 1134"
+        }
+      ],
+      "reason": "两次搜索返回大量重叠的 s011 条目（含重复内容字节），存在可压缩空间；但元数据开销不自动等于无用。"
+    }
+  }
+}

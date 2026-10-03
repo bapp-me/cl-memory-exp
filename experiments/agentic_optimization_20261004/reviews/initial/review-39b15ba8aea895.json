@@ -1,0 +1,201 @@
+{
+  "case_id": "review-39b15ba8aea895",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 33,
+          "quote": "All test cases pass. Submitting the solution."
+        },
+        {
+          "section": "source_evaluation_offline",
+          "line": 6,
+          "quote": "pre-registered scorer defect; task retained, excluded from scores"
+        }
+      ],
+      "reason": "s021 trajectory shows self-tests passing, but offline verification is unavailable due to a scorer defect, so quality is limited to self-reported evidence."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "corresponding_source_original",
+          "line": 30,
+          "quote": "ax.set_title(\"Value Distribution\")"
+        },
+        {
+          "section": "target_visible",
+          "line": 33,
+          "quote": "This function use \\\"Value Distribution\\\" for the plot title"
+        }
+      ],
+      "reason": "The stored s021 episode preserves the executed code including the exact plot labels present in the original source trajectory."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 33,
+          "quote": "Draw a bar chart of the counts of each unique value in the 'value' column"
+        },
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "The report should include the total amount spent in each category"
+        }
+      ],
+      "reason": "s021's value-count bar chart pattern is relevant to the count-chart half, but the target adds grouping of totals/averages from a list of dicts, which no read source covers."
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 56,
+          "quote": "The historical examples give good patterns for the bar chart (value_counts with str labels, title/labels)"
+        },
+        {
+          "section": "target_visible",
+          "line": 94,
+          "quote": "ax.set_title('Transaction Count Distribution')"
+        }
+      ],
+      "reason": "The solver acknowledged the memory's title/label patterns yet submitted different ones, while the offline tests expect the memory's exact labels; this is a visible-behavior proxy, not a causal claim."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "KeyError: 'total_amount_per_category'"
+        },
+        {
+          "section": "target_contract_reference_offline",
+          "line": 3,
+          "quote": "assert ax.get_title() == 'Value Distribution'"
+        },
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "the total amount spent in each category"
+        }
+      ],
+      "reason": "The prompt never specifies dict key names or plot labels, but the hidden tests assert exact strings ('total_amount_per_category', 'Value Distribution'); prompt/tests may be inconsistent, flagged as candidate only."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 56,
+          "quote": "title/labels"
+        },
+        {
+          "section": "target_visible",
+          "line": 94,
+          "quote": "ax.set_title('Transaction Count Distribution')"
+        },
+        {
+          "section": "target_contract_reference_offline",
+          "line": 3,
+          "quote": "assert ax.get_xlabel() == 'Value'"
+        }
+      ],
+      "reason": "Retrieved memory contained label patterns matching hidden-test expectations, but the solver visibly replaced them; this supports transfer failure as a candidate, not proof memory caused the outcome."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 6,
+          "quote": "episodes/s021.md"
+        },
+        {
+          "section": "target_visible",
+          "line": 33,
+          "quote": "This function use \\\"Value Distribution\\\" for the plot title"
+        }
+      ],
+      "reason": "The corresponding source s021 was successfully read in full and its content overlaps the hidden-test expectations; opportunity existed but no causal use can be established."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "Even with s021's labels, the solver could not derive the exact key name 'total_amount_per_category' from the prompt, so failure may be contract underspecification rather than memory misuse.",
+    "The solver may have independently chosen different labels without memory influencing the decision; no counterfactual run exists.",
+    "Offline evaluation and reference are researcher-only; the true task-intent/test consistency cannot be fully adjudicated here."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the hidden test's key names and labels are the intended contract or a benchmark defect.",
+    "Whether the solver would have passed had it adopted s021's labels verbatim.",
+    "No per-memory token/cache attribution; s040's actual contribution is unknown."
+  ],
+  "minimal_intervention": {
+    "change": "Add a pre-coding targeted search step over retrieved episodes for exact output-string conventions (dict keys, plot titles/axis labels) and require the solver to either adopt them or justify divergence.",
+    "fixed": "Same 48-history frozen archive, same startup index, same model, same budget, same hidden tests.",
+    "falsifier": "If the solver still submits different labels/keys and fails, or passes without using any retrieved label, the transfer/opportunity candidates are weakened."
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 6,
+          "quote": "episodes/s021.md"
+        },
+        {
+          "section": "target_visible",
+          "line": 19,
+          "quote": "episodes/s040.md"
+        }
+      ],
+      "reason": "Two direct file reads targeted the bar-chart and frequency-counting episodes from the 48-item index, with no broad scanning."
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "KeyError: 'total_amount_per_category'"
+        },
+        {
+          "section": "target_visible",
+          "line": 77,
+          "quote": "'total_by_category': {'Entertainment': 30.0, 'Food': 150.0, 'Travel': 270.0}"
+        }
+      ],
+      "reason": "The solver's computed values are arithmetically correct on its own test data; failure occurs at the hidden-test key-name boundary not stated in the prompt."
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 8,
+          "quote": "\"truncated\": false"
+        },
+        {
+          "section": "retrieval_and_packing",
+          "line": 9,
+          "quote": "\"error\": null"
+        }
+      ],
+      "reason": "Both reads returned complete, error-free payloads with no truncation or repeated calls observed."
+    }
+  },
+  "causal_claim": false
+}

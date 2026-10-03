@@ -1,0 +1,157 @@
+{
+  "case_id": "review-fbd091b45f2a3d",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=20:True:5"
+        }
+      ],
+      "reason": "s034 passed its own hidden eval, but its single-string seed semantics were only partially relevant to the multi-length target."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 73,
+          "quote": "return dict(collections.Counter(random_string))"
+        }
+      ],
+      "reason": "The retrieved s034 episode faithfully reproduces the source task docstring and accepted solution; no distortion is visible."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 73,
+          "quote": "Generate a random string of a given length using ASCII letters and calculate the frequency of each character"
+        }
+      ],
+      "reason": "Source covers one string per call with per-call seeding; target adds a list of lengths and combined counting, leaving seed scope undefined."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 83,
+          "quote": "This variant takes a list of lengths; I'll seed once and generate one string per length"
+        }
+      ],
+      "reason": "Solver explicitly retrieved s034, stated the adaptation, and extended the pattern to lists; visible adaptation exists but is not proof of causal benefit."
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 83,
+          "quote": "The memory shows the sibling task (s034) uses ASCII letters with `random.seed(seed)` then `random.choice`"
+        }
+      ],
+      "reason": "Visible, explicitly acknowledged reuse of a legally retrieved source shaped the submitted code; it cannot prove the memory caused the failure rather than the model's own choice."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "combined_frequency([10, 20], 0) == {'y': 2, 'W': 3"
+        },
+        {
+          "section": "target_contract_reference_offline",
+          "line": 2,
+          "quote": "combined_counter.update(task_func(length, seed))"
+        }
+      ],
+      "reason": "The reference reseeds per length (first 10 chars counted twice), while the prompt never states seed scope; the evaluator enforces the reference's seed_scope reading, a prior underspecification candidate."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 90,
+          "quote": "print(combined_frequency([5, 0]) == dict(collections.Counter('yWA' + 'cq')))"
+        }
+      ],
+      "reason": "The solver's sanity checks only used inputs whose outputs coincide under both seeding semantics, so they could not distinguish seed-once from reseed-per-length."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 79,
+          "quote": "cat /memory/episodes/s034.md; echo ====; cat /memory/raw/s034."
+        }
+      ],
+      "reason": "The corresponding source s034 was present, surfaced via the index, and opened; exposure of its content is visible, though use remains a behavioral proxy only."
+    }
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "grep -ril \"combined_frequency\" /memory | head; grep -i \"combined frequency\" /memory/MEMORY.md | head"
+        }
+      ],
+      "reason": "Three targeted calls: exact grep, index read, then one source read chosen from the index; no wandering across the 48-item archive."
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 83,
+          "quote": "I'll seed once and generate one string per length"
+        }
+      ],
+      "reason": "All needed info was visible; the divergence is the unspecified seed scope, where the solver's reading differs from the evaluator's implied reading."
+    },
+    "reading_efficiency": {
+      "value": "avoidable_overhead_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 59,
+          "quote": "cat /memory/episodes/s034.md; echo ====; cat /memory/raw/s034."
+        }
+      ],
+      "reason": "The raw JSON largely duplicates the episode transcript, adding bytes without new information; character counts are not tokens, so this is a candidate only."
+    }
+  },
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "TASK_EXECUTION: the contract may be clear enough and the solver simply chose the wrong seeding scheme; no counterfactual run exists.",
+    "The failure is independent of memory access; the same seed-once choice could occur without any retrieval, so memory's role is unproven."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the task text licenses reseed-per-length as the only valid reading (reference is not absolute truth).",
+    "Why the first grep listed all 48 source ids while returning empty content; infra logging semantics are unknown.",
+    "Whether the solver would have chosen seed-once without the s034 memory; no no-memory counterfactual for this target."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same frozen archive, same startup index, same read-only shell access and budget.",
+    "falsifier": "A no-memory run of this target producing the same seed-once submission would refute memory involvement; alternatively, an archive containing a multi-length seeding example changing the submission would support access-relevant transfer."
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,152 @@
+{
+  "case_id": "review-758240762e68f9",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=61:True:5"
+        }
+      ],
+      "reason": "The corresponding source s014 passed its own hidden evaluation (5 tests, correct=true), so it is a legal, successful source experience."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 75,
+          "quote": "level_data[department_code] = [random.choice(LEVELS) for _ in range(num_employees)]"
+        }
+      ],
+      "reason": "The MEMORY_READ returned the full source SUBMIT code whose body matches corresponding_source_original's task_func, so retrieved content is faithful."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 85,
+          "quote": "This variant uses `new_solution(department_data_list)` with a list input, and asks for a JSON object of the *distribution* per department."
+        }
+      ],
+      "reason": "The source's constants and random.choice approach applied, but the target changed input shape (list of dicts) and output shape (per-level counts vs level lists), and the solver's adaptation of those changed parts is what failed."
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 92,
+          "quote": "code = entry.get('code', entry.get('department'))"
+        }
+      ],
+      "reason": "The solver reused the retrieved pattern (LEVELS, random.choice, OrderedDict) but its invented normalization expected dicts with 'code'/'count' keys; the actual elements are dicts mapping code->count, so each entry yielded code=None and was skipped. Visible behavior shows use with wrong adaptation; no counterfactual, so no causal claim."
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 85,
+          "quote": "The archive shows a closely related task using the same constants, where each employee's level was chosen via `random.choice(LEVELS)`."
+        }
+      ],
+      "reason": "The solver explicitly recognized and transferred the retrieved source pattern, but the transfer mis-modeled the target's list-of-dicts input. Supports misuse candidate, not proven cause of failure."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "KeyError: 'EMP$$'"
+        }
+      ],
+      "reason": "The submitted new_solution skipped every element of the hidden test input, producing an empty mapping; the failure is directly visible in the offline eval."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "generate a JSON object that represents the distribution of employee levels"
+        }
+      ],
+      "reason": "The visible prompt's 'distribution' wording and unspecified element format are compatible with the solver's counts-object reading, while hidden tests expect lists of level strings keyed by code; a prompt/test alignment mismatch is a candidate, unresolvable offline."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 10,
+          "quote": "\"returned_source_ids\": [\"s014\"]"
+        }
+      ],
+      "reason": "A matching prior task existed, was retrieved, and its full solution was read; opportunity was present and used, though imperfectly."
+    }
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "\"query\": \"employee levels Junior Mid Senior distribution departments random JSON\""
+        }
+      ],
+      "reason": "Two targeted queries plus one precise MEMORY_READ of the relevant event; no broad wandering or repeated identical queries."
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "assert _eval_record_bool(.loads(new_solution([{'EMP$$': 3, 'MAN$$': 2}, {'DEV$$': 4, 'HR$$': 1}]))['EMP$$'])"
+        }
+      ],
+      "reason": "The element format (dicts mapping code->count) and list-valued output were fixed by hidden tests, not stated in the visible prompt; the solver's self-tests passed under its own contract. Info needed to disambiguate was not visibly available."
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 23,
+          "quote": "\"memory_calls\": 3"
+        }
+      ],
+      "reason": "Only 3 memory calls, one full read of exactly the relevant event, no empty/error/truncated responses; no avoidable overhead identified."
+    }
+  },
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "The 'distribution' wording in the target prompt may legitimately favor a counts-object output, making this a prompt/test contract mismatch rather than pure solver error.",
+    "Without a no-memory baseline on this target, whether the retrieved memory helped, hurt, or was neutral is unknown."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether a no-memory run would have produced the same list-handling error (no counterfactual).",
+    "Whether the hidden test's expected list output can be inferred from the visible prompt at all.",
+    "Whether the solver's internal reading of 'distribution' matched counts or lists is not recorded."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same frozen archive, same startup memory (empty), same search/read tools and budget; retrieval itself was focused and sufficient.",
+    "falsifier": "Not applicable with change=none; a falsifying observation for the contract-mismatch candidate would be a prompt revision that makes the list-of-dicts element format explicit while the solver still fails."
+  },
+  "causal_claim": false
+}

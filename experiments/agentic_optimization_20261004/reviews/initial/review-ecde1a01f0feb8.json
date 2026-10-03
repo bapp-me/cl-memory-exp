@@ -1,0 +1,151 @@
+{
+  "case_id": "review-ecde1a01f0feb8",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        }
+      ],
+      "reason": "Source s026 passed all 5 hidden tests, but it did so with a leap-year boundary rule (`>`) that conflicts with the target evaluator's reference (`>=`), so its rule is only partially transferable."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 52,
+          "quote": "leap_count = int(np.sum((LEAP_SECONDS > parsed.year) & (LEAP_SECONDS <= now.year)))"
+        }
+      ],
+      "reason": "The retrieved s026 episode reproduces the source's code and trajectory verbatim; the target submission reuses the same rule. Fidelity of content does not guarantee the rule matches the target's hidden reference."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_contract_reference_offline",
+          "line": 3,
+          "quote": "leap_seconds = np.sum(LEAP_SECONDS >= given_date.year)"
+        }
+      ],
+      "reason": "Single-date logic applies to the list sum, but the source's `> parsed.year` boundary differs from the target reference's `>= given_date.year`, changing results by 1s for dates in leap-second years (e.g. '1972-01-01')."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 89,
+          "quote": "The memory contains a closely related historical task with the same LEAP_SECONDS array, and its approach"
+        }
+      ],
+      "reason": "The solver explicitly identified the matching episode and adapted its loop-and-boundary logic to a list, then submitted. This is a behavioral proxy only; no counterfactual proves memory caused the failure."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "rg -l -i \"leap\" /memory | head; rg -i \"leap\" /memory/MEMORY.md | head"
+        },
+        {
+          "section": "retrieval_and_packing",
+          "line": 67,
+          "quote": "cat /memory/episodes/s026.md | head -80"
+        }
+      ],
+      "reason": "A directly corresponding source (s026, matching source_index 26) existed, was found via 'leap' search and read in two bounded chunks. Retrieval opportunity clearly existed; not proof of what content reached the model beyond the visible tool results."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 127,
+          "quote": "np.sum((LEAP_SECONDS > parsed.year) & (LEAP_SECONDS <= now.year))"
+        }
+      ],
+      "reason": "Submitted code visibly reuses the source's leap-boundary rule. This is a misapplication candidate: the transferred rule passed the source's tests but conflicts with the target reference's `>=` boundary; causality of the failure is not proven without a counterfactual."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "assert _eval_record_bool(total_elapsed_seconds(['1972-01-01', '2000-01-01', '2020-01-01']) == sum([task_func('1972-01-01'), task_func('2000-01-01'), task_func('2020-01-01')]))"
+        }
+      ],
+      "reason": "Candidate contract inconsistency: the hidden test defines correctness only via equality with a reference task_func whose year-boundary (`>=`) differs from the source task's own passing implementation (`>`), while the prompt's 'including any leap seconds that occurred in this period' is ambiguous at year granularity. Flagged as candidate only."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The failure could be attributed to the evaluator's year-granularity reference being a candidate contract artifact rather than to bad memory use, since the source's identical rule passed its own hidden tests.",
+    "Minor datetime.now() drift between the solver's single call and the reference's per-date calls could in principle affect int truncation, though the 1-second boundary difference is the deterministic gap.",
+    "Without a no-memory counterfactual run, we cannot know whether a fresh solution would have chosen the `>=` boundary."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "No semantic recall gold or per-memory token attribution; exposure of full file contents beyond visible tool results is not established.",
+    "Whether the solver could have legitimately inferred the `>=` boundary from the prompt text alone is undecidable from evidence.",
+    "Only the first assert is shown; whether other checks exist is unknown (tests_run: 0 recorded)."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same frozen 48-source archive, same startup index, same tool budget and model; retrieval itself located and exposed the correct source.",
+    "falsifier": "If an identical-access rerun with a from-scratch (non-boundary-changing) implementation still fails on the same assert, the boundary rule rather than access would be refuted as the differentiator."
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "rg -l -i \"leap\" /memory | head; rg -i \"leap\" /memory/MEMORY.md | head"
+        }
+      ],
+      "reason": "One keyword search directly targeting the task's distinctive concept ('leap'), then two bounded reads only of the matched s026 file."
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "including any leap seconds that occurred in this period"
+        },
+        {
+          "section": "target_contract_reference_offline",
+          "line": 3,
+          "quote": "leap_seconds = np.sum(LEAP_SECONDS >= given_date.year)"
+        }
+      ],
+      "reason": "All relevant source info was visible; the gap is an underspecified year-boundary in the prompt versus a hidden reference convention the solver never saw."
+    },
+    "reading_efficiency": {
+      "value": "contextual_confirmation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 65,
+          "quote": "sed -n 80,200p /memory/episodes/s026.md"
+        }
+      ],
+      "reason": "Bounded, targeted reads of the single matched episode with no repeated or empty calls; no avoidable overhead identified in this small trace."
+    }
+  },
+  "causal_claim": false
+}
