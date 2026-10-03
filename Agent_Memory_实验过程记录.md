@@ -318,3 +318,15 @@ Hermes 固定源码支持五个 bundled 外部 adapter，官方文档另列 Honc
 保留 fallback_attempt1（假服务误判 child 角色后触及原生超时）和 consolidate_attempt1（错误预期忽略默认 180 秒 overflow grace）。组件 .ts 入口最初遇到 tsx CommonJS/top-level-await 解析错误，改 .mts 后运行；没有改生产代码来迎合 fixture。观察器降级是注入模拟，没有损坏实际 SQLite；其他未覆盖错误分支不标成已验收。
 
 建议继续优先考察 Pi coding-agent SDK 加现成扩展，改造集中于活动维护任务可等待接口、全角色/重试/child 计量、逐操作持久化结果、短任务及 child profile 四处。未报未经实施的精确人日/RSS排名；未静默修改前轮 base-system-decision、原生默认 baseline 或 S0 接受状态。生产适配器、真实 provider/GLM 兼容、真实语义效果与付费运行仍待后续单独确定。README 增加本次报告入口。
+
+## 冻结 No Memory 简单题库的 Jaccard 补跑准备（2026-10-04，香港时间）
+
+用户在共同源库讨论后，最终只授权 Jaccard 原样 top-3：已有 No Memory 的 48 道简单题轨迹作为固定库，复杂题完成后不写回，后续目标始终只读取简单题经验。ICL、top-1、精简表示及 16 次小批对照均不执行。本次为独立补充实验，不改变 S0 路线和验收状态。
+
+`experiments/section7_frozen_jaccard_20261004/` 已固定 48 道复杂题 R=1、原 GLM-5.3-Flash high/Pi、48 KB/top-3、原任务预算和评分 mask。源库 241,220 字节，canonical hash 为 dac0179536ec6d1316507b86d7bdbd542345209c5c52492e4b60ef61f0882914；不按源隐藏分数筛选。冻结库重建复用既有轨迹，新增源题和 writer 调用均为 0。
+
+只读 adapter 每题新建副本，候选限源索引 0–47，更新入口丢弃复杂 episode。原 engine/runner/recorder/沙箱文件不编辑，内存 overlay 仅校正归档来源措辞及禁存 complex legal-episode.json。请求、工具和评分仅作隔离审计，模型沙箱不能访问。无模型 fixture 已验证写回丢弃、突变 checkpoint 拒绝、全部 48 题与原 Jaccard 检索一致，以及无主机目录、网络和 key 的 WSL 沙箱。
+
+资源采样为约 25.0 GB 物理内存、10.8 GB 可用、16 逻辑 CPU、CPU 8.5%；冻结记忆任务相互独立，设置最多 8 个并行任务，低于历史用户 API 并发上限 50。首题计入正式 48 题，接线核验后再运行剩余 47；基础设施/记忆/评分异常或未知 usage 停止派发，不自动重跑已执行题。准备检查尚无模型调用，实际结果将在完成后追加。
+
+在首个模型请求前，用户追加“每题单独跑，可以开高并发”。因此正式 v2 改为最多 48 个独立任务/API 并发，首题后其余 47 题并发启动；Python 与评分共用 8 个沙箱槽位，记录排队耗时。v1 的零调用准备配置保留，v2 重新冻结并通过全部无模型检查；没有因调整并发增加实验次数。
