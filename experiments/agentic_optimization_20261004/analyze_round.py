@@ -86,6 +86,11 @@ def main():
         peak_http_attempts=peak, logical_calls=sum(r["calls"] for r in result), unknown_usage_attempts=sum(r["unknown_usage_http_attempts"] for r in result),
         no_stability_or_strict_causal_claim=True, rows=result)
     save(ROOT / "rounds" / rid / "analysis.json", decision)
+    if hypothesis.get("post_round_review_max_independent_targets") == 0:
+        save(ROOT / "records" / f"review-manifest-{rid}.json", dict(cases=[], total=0,
+            reason="Final-round stop: offline analysis only, no additional reviewer calls"))
+        print(json.dumps({k:decision[k] for k in ("round_id", "result", "checks", "summaries", "gains", "losses", "logical_calls")}))
+        return
     # Fixed selection rule: up to six changed outcomes, three unchanged successes and three unchanged failures.
     groups = [[r for r in eligible if r["correct"] != r["baseline_correct"]],
               [r for r in eligible if r["correct"] and r["baseline_correct"]],

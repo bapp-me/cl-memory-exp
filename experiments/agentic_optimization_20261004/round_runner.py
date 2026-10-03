@@ -21,6 +21,7 @@ def candidate_module(round_id):
 
 
 def prepare(round_id):
+    assert_study_open()
     if round_id not in ("r1", "r2", "r3"):
         raise ValueError("Maximum three full validation rounds; round 4 is prohibited")
     hypothesis = read(ROOT / "rounds" / round_id / "hypothesis.json")
@@ -80,7 +81,13 @@ def check(round_id, execution=False):
     return config, corpus
 
 
+def assert_study_open():
+    if read(ROOT / "records/round-budget.json").get("closed"):
+        raise RuntimeError("Study closed after three full rounds; offline audit only")
+
+
 def execute(round_id, stage):
+    assert_study_open()  # Before checking runtime dependencies or loading credentials.
     config, corpus = check(round_id, execution=True)
     fixture = read(ROOT / "rounds" / round_id / "fixtures.json")
     assert fixture["passed"] and fixture["freeze_hash"] == sha(ROOT / "rounds" / round_id / "freeze.json")

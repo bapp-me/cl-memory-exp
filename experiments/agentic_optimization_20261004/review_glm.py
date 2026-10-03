@@ -105,6 +105,8 @@ def validate(obj, packet):
 
 
 def call(case, key, phase, rate_limit_retry=False):
+    if read(ROOT / "records/round-budget.json").get("closed") or phase == "r3":
+        raise RuntimeError("Final-round stop: no new paid reviewer calls; offline audit only")
     folder = ROOT / "api" / phase / case["case_id"]
     original_folder = folder
     if rate_limit_retry:

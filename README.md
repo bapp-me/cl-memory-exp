@@ -4,6 +4,8 @@ Training-free Agent memory 实验代码与研究证据。主要语言为中文�
 
 ## 从这里开始
 
+- [五方案 GLM 细致分析](experiments/agentic_optimization_20261004/五方案细致指标分析.md) / [三轮 agentic search 优化报告](experiments/agentic_optimization_20261004/三轮优化报告.md)：按旧v1.5第7节审查240条轨迹，再完成3×48次全量验证并停止。保留完整索引与精简文件工具返回；两次观察为25/46、733,031 tokens和28/46、790,487 tokens，原参照25/46、993,760。按需索引27/46、1,020,806，未通过效率门槛。节约集中于原参照高成本个例且受缓存影响，不声称稳定15%节约、金额下降或全面超过冻结Jaccard。
+
 - [五种记忆访问方式：240 次独立复杂题执行报告](experiments/agentic_native_20261004/五种记忆访问方式实验报告.md)：三版检索工具加用户追加的原生文件/终端两版，均已完成各 48 题 R=1。原 46 题得分依次为 24/21/25/25/24，均未超过已有冻结 Jaccard 的 27；对应 tokens 也更多。240 次共 4,131,760 tokens、871 个请求，usage 完整；简单库只读、复杂题隔离、实际 payload 曝光和原始归档均通过审计。设计与边界见 [前三版](experiments/agentic_search_20261004/README.md) / [原生两版](experiments/agentic_native_20261004/README.md)，不宣称完整产品复现或稳定因果优势。
 
 - [冻结 No Memory 简单题库的 Jaccard top-3 补跑](experiments/section7_frozen_jaccard_20261004/冻结简单题库Jaccard补跑报告.md)：2026-10-04 完成 48 道复杂题 R=1，复杂题不写回；正确 27/46，与历史在线 Jaccard 相同，有效目标 tokens 574,109→468,934（下降 18.3%），PYTHON 52→48。99 个请求均有 usage，峰值并发 47，来源只读隔离通过。这是独立补充对照，不改变 S0 路线或宣称单因素因果收益。
@@ -27,6 +29,7 @@ Training-free Agent memory 实验代码与研究证据。主要语言为中文�
 
 | 目录 | 内容与状态 |
 |---|---|
+| `experiments/agentic_optimization_20261004/` | 五方案240条GLM审查、三轮144次全量agentic search验证；已关闭实验，原始归档与最终报告 |
 | `experiments/section7_frozen_jaccard_20261004/` | 固定 No Memory 简单源库的 Jaccard top-3：48 道复杂题完成，协议、逐题结果、费用及原始审计归档 |
 | `experiments/section7_hypotheses_20261003/` | 第7.3节假设分析、候选冻结快照、建议预算；仅离线分析，7.4未启动 |
 | `experiments/section7_analysis_20261003/` | 第 7.2 节全量离线分析、三方小样本校准、324 条审查、逐字证据与主 agent 复核、原始调用归档 |
