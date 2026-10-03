@@ -4,6 +4,8 @@ Training-free Agent memory 实验代码与研究证据。主要语言为中文�
 
 ## 从这里开始
 
+- [S0 接入审查与路线决定](experiments/section7_s0_audit_20261003/S0接入审查与路线决定.md)：7.4.1–7.4.2 已完成，选择 Hermes 原生 Harness；Pi 完整桥接约 12–21 人日，原生适配约 6–11 人日（工程估算）。六组无模型接口 spike 通过，S0 尚未验收冻结，未执行在线 canary。现行下一步为 7.4.3，H1 不再自动先行。
+
 - [第 7.3 节可证伪假设分析](experiments/section7_hypotheses_20261003/第7.3节可证伪假设分析.md)：G0测评检查、H1–H5、竞争解释、反驳条件与待确认的最小实验建议。
 
 - [第 7.2 节 baseline 分析报告](experiments/section7_analysis_20261003/第7.2节baseline分析报告.md)：624 次执行重算、324 条审查、模型选择、失败诊断与证据边界。
@@ -59,7 +61,9 @@ GLM 5.3 Flash，单次独立运行。代码复杂目标中，无记忆 18/46，�
 
 审查共 362 个 HTTP 请求（含校准、参数拒绝、余额不足及用户充值后获批补齐），已知 9,700,314 tokens，与 baseline 成本分开。模型输出、失败记录和证据包共 2,094 个文件已归档并核验。见[完整报告](experiments/section7_analysis_20261003/第7.2节baseline分析报告.md)、[完成核对](experiments/section7_analysis_20261003/records/section7.2-completion-audit.json)、[审查费用](experiments/section7_analysis_20261003/records/review-costs.json)及[离线复核说明](experiments/section7_analysis_20261003/REPRODUCING.md)。随后已完成7.3假设分析，见下节；7.4有限干预尚未执行。
 
-## 第 7.3 节分析已完成
+## 第 7.3 节分析已完成（历史建议）
+
+下述 H1 优先建议保留为 7.3 历史记录。现行 v1.5 路线先建立成熟 S0，7.4.1–7.4.2 已选择 Hermes 原生底座；未批准或启动原 H1 分支。
 
 建议先检查评分契约与测试覆盖（G0），再优先检验 H1：冻结合法源信息和注入集合，只改变为可逆去重表示，能否降低总 token 且不新增质量失败。这是进入创新前的简单经济性对照，尚未证明有效；条件显式化、包装、Mem0 提取目标、AWM 更新预算分别作为 H2–H5，保持独立变量。
 

@@ -1,0 +1,150 @@
+{
+  "schema": "s0-interface-spike-v1",
+  "python": "3.14.7 (main, Sep  1 2026, 14:17:30) [MSC v.1944 64 bit (AMD64)]",
+  "packages": {
+    "openai": "2.24.0",
+    "anthropic": "0.87.0",
+    "httpx": "0.28.1",
+    "pydantic": "2.13.4",
+    "ruamel.yaml": "0.18.16",
+    "psutil": "7.2.2"
+  },
+  "platform": {
+    "system": "Windows",
+    "node": "bapp",
+    "release": "11",
+    "version": "10.0.26200",
+    "machine": "AMD64",
+    "processor": "AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD"
+  },
+  "source": "D:\\campus_re\\cl-memory-exp\\experiments\\section7_s0_audit_20261003\\.cache\\hermes-source",
+  "synthetic_only": true,
+  "model_calls": 0,
+  "network_policy": "Python audit hook denies DNS/connect and subprocesses before upstream imports",
+  "blocked_attempts": [
+    {
+      "event": "subprocess.Popen"
+    },
+    {
+      "event": "subprocess.Popen"
+    },
+    {
+      "event": "subprocess.Popen"
+    },
+    {
+      "event": "subprocess.Popen"
+    },
+    {
+      "event": "subprocess.Popen"
+    },
+    {
+      "event": "subprocess.Popen"
+    },
+    {
+      "event": "subprocess.Popen"
+    }
+  ],
+  "checks": [
+    {
+      "name": "memory_snapshot",
+      "passed": true,
+      "evidence": {
+        "native_memory_store": true,
+        "frozen_prompt_unchanged_after_write": true,
+        "next_store_load_observes_disk": true,
+        "replace_persisted": true
+      }
+    },
+    {
+      "name": "session_search_and_db_restore",
+      "passed": true,
+      "evidence": {
+        "search_shapes": [
+          "discovery",
+          "read",
+          "scroll",
+          "no_match"
+        ],
+        "sqlite_backup_restored": true,
+        "native_readonly_db_write_rejected": true,
+        "scope": "SQLite only; not a whole-profile read-only guarantee"
+      }
+    },
+    {
+      "name": "skill_interfaces",
+      "passed": true,
+      "evidence": {
+        "create_view_patch": true,
+        "traversal_name_rejected": true,
+        "preprocess": false,
+        "limitation": "No skill script execution or whole sandbox test"
+      }
+    },
+    {
+      "name": "pending_write_semantics",
+      "passed": true,
+      "evidence": {
+        "native_pending_file_created": true,
+        "unapproved_content_not_committed": true,
+        "background_memory_replace_staged_even_with_approval_config_false": true,
+        "mock": "skill write_approval_enabled=True branch; memory uses actual config and native origin context"
+      }
+    },
+    {
+      "name": "native_review_trigger",
+      "passed": true,
+      "evidence": {
+        "one_session_ten_turns": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          true
+        ],
+        "twelve_fresh_one_turn_sessions": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "mock": "parent state only; actual native counter function"
+      }
+    },
+    {
+      "name": "native_entry_import",
+      "passed": true,
+      "evidence": {
+        "AIAgent_imported": true,
+        "required_parameters": [
+          "api_mode",
+          "base_url",
+          "enabled_toolsets",
+          "session_db",
+          "skip_background_review"
+        ],
+        "constructed": false,
+        "run_conversation_called": false
+      }
+    }
+  ],
+  "limitations": [
+    "No performance task or provider compatibility test",
+    "Not S0 end-to-end acceptance",
+    "No review model or background completion test"
+  ],
+  "passed": true,
+  "script_sha256": "657a9cefd7b31f5b92c18e94d3e0396a1ff8ebafd6d558f3f2b3aae155b871da"
+}
