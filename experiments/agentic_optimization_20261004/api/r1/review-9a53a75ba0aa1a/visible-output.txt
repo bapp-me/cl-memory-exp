@@ -1,0 +1,114 @@
+
+{
+  "case_id": "review-9a53a75ba0aa1a",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {"section": "source_evaluation_offline", "line": 3, "quote": "EVALUATOR_RESULT=26:True:9"}
+      ],
+      "reason": "s001 passed its own hidden tests (9 tests OK), so it is a legal, relevant base task; its solution handles the single-set logic correctly."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {"section": "target_visible", "line": 25, "quote": "Generate sentences with spaces in certain target words replaced by underscores."}
+      ],
+      "reason": "The read s001 memory preserved the source docstring and code verbatim, matching corresponding_source_original; needed content was intact."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {"section": "target_visible", "line": 35, "quote": "I'll build `generate_report` on top of it, processing multiple sets and wrapping each in exception handling"}
+      ],
+      "reason": "The sentence-generation/underscore logic transferred directly, but the target adds a multi-set report layer whose input container type the memory did not cover."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {"section": "target_visible", "line": 66, "quote": "valid sets produce processed sentences matching the s001 behavior (e.g., `apple_banana` underscore replacement)"}
+      ],
+      "reason": "The submitted code visibly reuses s001's choices/join/regex-underscore logic with consistent adaptation; this is behavioral evidence, not proof of causal benefit."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {"section": "target_contract_reference_offline", "line": 2, "quote": "for key, value in data.items():"},
+        {"section": "target_prompt", "line": 1, "quote": "return a dictionary where keys are identifiers for each set of target_words"}
+      ],
+      "reason": "Candidate inconsistency: the prompt never states data is a dict or that keys must come from input; the offline reference iterates data.items() while the solver treated data as a list and invented report_N keys."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {"section": "target_visible", "line": 42, "quote": "data = [\n    (['apple banana'], 1, ['apple', 'banana', 'cherry']),"},
+        {"section": "target_evaluation_offline", "line": 4, "quote": "AssertionError: The generated report does not match the expected output."}
+      ],
+      "reason": "The solver's own sanity checks only used a list of tuples, never a dict input, so the key-schema mismatch went untested and produced the key-set assertion failure."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {"section": "target_visible", "line": 35, "quote": "The memory file s001 contains the closely related base task."},
+        {"section": "retrieval_and_packing", "line": 5, "quote": "path": "episodes/s001.md"}
+      ],
+      "reason": "A matching, already-passed source existed in the startup index and was read in full; opportunity and reading are shown, but not that reuse caused the outcome."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {"section": "target_visible", "line": 42, "quote": "pattern = re.compile(re.escape(target), re.IGNORECASE)"}
+      ],
+      "reason": "The core s001 mechanism (regex underscore replacement, choices/join, ValueError guards) is visibly carried into the submitted code; transfer is a visible proxy, not a proven cause of either success in logic or failure in schema."
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "EVAL_CONTRACT: the prompt genuinely underspecifies the input container and key naming, so the dict-vs-list mismatch could be a spec/test gap rather than pure solver error (previous_contract_candidate also flags dictionary_input_schema).",
+    "The error-string-instead-of-exception choice differs from the reference's exception propagation, but the offline test data contains no invalid sets, so it cannot explain this failure.",
+    "Without the memory, the solver might still have mishandled the container type; no no-memory counterfactual is available for this case."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the evaluator would accept list input with report_N keys is untestable from evidence; only the dict-key assertion is recorded.",
+    "No semantic recall gold or counterfactual run, so memory's net effect on the failure is unknown.",
+    "tests_run=0/checks_executed=0 means the visible evaluation output details are limited to the single assertion message."
+  ],
+  "minimal_intervention": {
+    "change": "Provide a memory-entry or tool note recording input-schema conventions (e.g., when a wrapper function receives multi-set data, check whether the harness passes a dict keyed by identifiers before choosing a container), so the solver probes the schema before submitting.",
+    "fixed": "Same startup index, same s001 memory content, same hidden tests, same budget and model.",
+    "falsifier": "If the solver, after such a prompt-side schema hint, still submits list-keyed output and fails the same assertion, the task-execution/schema-hypothesis is weakened; if it passes, the missing schema probe is supported."
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {"section": "retrieval_and_packing", "line": 5, "quote": "path": "episodes/s001.md"}
+      ],
+      "reason": "One targeted read of the single index entry matching the sentence/underscore task; no glob/grep calls and no overbroad browsing."
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {"section": "target_contract_reference_offline", "line": 2, "quote": "for key, value in data.items():"},
+        {"section": "target_prompt", "line": 1, "quote": "process multiple sets of target_words, n_sentences, and vocabulary"}
+      ],
+      "reason": "The failure sits at the unspecified input container/key contract rather than at the visible sentence logic, which the solver executed correctly for its assumed format."
+    },
+    "reading_efficiency": {
+      "value": "contextual_confirmation",
+      "evidence": [
+        {"section": "retrieval_and_packing", "line": 7, "quote": "\"truncated\": false"}
+      ],
+      "reason": "A single full, untruncated read of 5567 bytes sufficed; no repeated or avoidable reads are visible."
+    }
+  },
+  "causal_claim": false
+}

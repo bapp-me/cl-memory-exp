@@ -1,0 +1,156 @@
+{
+  "case_id": "review-f442cb54414288",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "\"stdout\": \"EVALUATOR_RESULT=36:True:6\\n\""
+        }
+      ],
+      "reason": "s022 passed its own hidden tests (36/36 checks), so the retrieved single-df pattern is a legal, verified source; its statements beyond the code are unverified."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 28,
+          "quote": "df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].mean())"
+        }
+      ],
+      "reason": "The grep output shows the stored s022 code verbatim and it matches the source implementation; necessary content (fillna+mean, describe, histplot) was preserved."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "Given a list of dataframes, each containing numeric columns"
+        }
+      ],
+      "reason": "s022 solves a single dataframe; the target adds a list loop and an ambiguous tuple contract, so the memory covered the per-df core but not the new return structure."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 38,
+          "quote": "The memory shows the single-dataframe version (s022) uses `describe()` for statistics and `sns.histplot`"
+        }
+      ],
+      "reason": "The solver explicitly cited the memory and extended its pattern to the loop; this is a behavioral proxy, not proof the memory caused any outcome."
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 38,
+          "quote": "I'll extend that to a list of dataframes, returning `(processed_df, stats, plots)` per dataframe."
+        }
+      ],
+      "reason": "Visible adaptation of retrieved s022 code into the target's loop; candidate only, no counterfactual showing the memory changed success or failure."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "KeyError: 'count'"
+        },
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "each tuple contains a processed dataframe with statistics and a list of distribution plots"
+        }
+      ],
+      "reason": "The hidden test indexes results[i][0].loc['count'], implying the first tuple element must be the statistics DataFrame, while the prompt can be read as putting the processed dataframe first — a candidate prompt/test inconsistency (flag only; no rescore)."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 100,
+          "quote": "All checks pass: NaN values are filled with column means, statistics are computed, one distribution plot per numeric column is generated"
+        }
+      ],
+      "reason": "The solver self-tested its (processed_df, stats, plots) ordering and submitted; the self-tests never checked .loc['count'] on element 0, so the ordering choice went uncaught."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 10,
+          "quote": "\"truncated\": true,"
+        }
+      ],
+      "reason": "The single grep result was packed down (6907 of 11717 bytes, 59 matches), yet the needed code lines were visible; truncation is a visibility fact, not a retrieval failure."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "The solver's own tuple-ordering choice caused the failure even under a consistent contract; a 2-tuple (stats, plots) mirroring s022's `return description, axes` would likely satisfy results[i][0].loc['count'].",
+    "Plot-related requirements (displot vs histplot, kde) were never exercised (tests_run=0, eval crashed early), so other contract mismatches may exist but are unknown."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the prompt's 'processed dataframe with statistics' was intended to mean the describe() DataFrame cannot be resolved offline.",
+    "Whether memory use affected the outcome relative to baseline_correct=true is unknowable without a counterfactual under identical conditions."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same startup memory index, same environment and token budget, same s022 source content.",
+    "falsifier": "If a rerun returning (stats, plots) per tuple passes while the (processed_df, stats, plots) ordering fails with the same KeyError, the contract-mismatch candidate is confirmed; if both fail elsewhere, it is refuted."
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 14,
+          "quote": "\"pattern\": \"def |return|describe|distplot|histplot\""
+        }
+      ],
+      "reason": "One targeted MEMORY_GREP on episodes/s022.md (the exact matching index entry) with a task-relevant pattern; no wasted broad search."
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "KeyError: 'count'"
+        }
+      ],
+      "reason": "All visible information needed was retrieved; the failure lies in interpreting the ambiguous tuple contract, which the hidden test resolves differently."
+    },
+    "reading_efficiency": {
+      "value": "contextual_confirmation",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 12,
+          "quote": "\"full_bytes\": 11717,"
+        }
+      ],
+      "reason": "A single grep with context=3 surfaced the full single-df implementation needed for adaptation; the truncated tail did not cause avoidable overhead in this trace."
+    }
+  },
+  "causal_claim": false
+}

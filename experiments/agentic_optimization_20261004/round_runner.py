@@ -37,6 +37,10 @@ def prepare(round_id):
         variant=hypothesis["variant"], round_id=round_id, target_indices=list(range(48, 96)),
         hypothesis_sha256=sha(ROOT / "rounds" / round_id / "hypothesis.json"),
         max_full_rounds=3, current_round=int(round_id[1:]), complex_writeback=False)
+    from candidate_memory import CandidateSession
+    candidate = CandidateSession(corpus, current["variant"])
+    current["startup_bytes"] = {"native_files": len(candidate.prelude().encode())}
+    current["startup_policy"] = {"native_files": hypothesis.get("startup_file", "MEMORY.md")}
     paths = [ROOT / p for p in ("candidate_memory.py", "round_runner.py", "audit_round.py", "fixtures_round.py", "common_opt.py")]
     snapshots = []
     for path in paths:

@@ -1,0 +1,103 @@
+{
+ "case_id": "review-2a97b099026050",
+ "result_status": "success",
+ "semantic": {
+  "source_quality": {
+   "value": "pass_with_limits",
+   "evidence": [
+    {"section": "source_evaluation_offline", "line": 3, "quote": "EVALUATOR_RESULT=61:True:5"}
+   ],
+   "reason": "s014 passed its own evaluation (5 tests), but its submission was unverified at write time per the frozen index note."
+  },
+  "memory_fidelity": {
+   "value": "faithful",
+   "evidence": [
+    {"section": "target_visible", "line": 25, "quote": "# s014: historical simple-task execution\\n\\nRaw preserved event values: ../raw/s014."},
+    {"section": "exposure_summary", "line": 2, "quote": "exact_actual_payload_mapping_passed": true}
+   ],
+   "reason": "The read s014 file contains the full original trajectory (task docstring, seed-0 probe, final implementation) matching corresponding_source_original, and packing integrity checks passed."
+  },
+  "target_applicability": {
+   "value": "applicable",
+   "evidence": [
+    {"section": "target_visible", "line": 35, "quote": "The only difference here is the parameter name `department_data_list`, so I'll make it robust to both a dict and a list of (code, count) pairs."}
+   ],
+   "reason": "Target task matches s014's task essentially verbatim; only the parameter name/possible list input differs, and the agent added input normalization."
+  },
+  "visible_use": {
+   "value": "consistent_adaptation",
+   "evidence": [
+    {"section": "target_visible", "line": 35, "quote": "The memory file confirms the original task design: random level assignment via `random.choice(LEVELS)` per employee, JSON dumped as string."}
+   ],
+   "reason": "Agent read s014, stated the reuse rationale, and adapted the stored implementation to the new parameter; only a behavioral proxy, no causal proof."
+  }
+ },
+ "labels": [
+  {
+   "tag": "OPPORTUNITY_SOURCE",
+   "level": "D0",
+   "evidence": [
+    {"section": "target_startup_memory", "line": 4, "quote": "- [s014](episodes/s014.md): Generate a JSON object from employee data based on given department codes and their employee counts."}
+   ],
+   "reason": "The startup index exposed a description matching the target, making the source legible before any read. It does not prove the source content was used."
+  },
+  {
+   "tag": "USE_TRANSFER",
+   "level": "D1",
+   "evidence": [
+    {"section": "target_visible", "line": 35, "quote": "The memory file confirms the original task design: random level assignment via `random.choice(LEVELS)` per employee"},
+    {"section": "retrieval_and_packing", "line": 5, "quote": "path\": \"episodes/s014.md"}
+   ],
+   "reason": "Visible trace shows the submitted solution mirrors the s014 implementation with adaptation for the list input. No counterfactual run, so memory causally enabling success is not established."
+  },
+  {
+   "tag": "RETRIEVAL",
+   "level": "D0",
+   "evidence": [
+    {"section": "retrieval_and_packing", "line": 7, "quote": "truncated": false}
+   ],
+   "reason": "One targeted file read returned the complete 4448-byte episode without truncation. This records that retrieval worked, not that its content caused success."
+  }
+ ],
+ "primary_hypothesis": "USE_TRANSFER",
+ "competing_explanations": [
+  "The target is a near-verbatim restatement of a common task; the model could have solved it from pretraining alone (baseline_correct=false is R=1 evidence, not causal).",
+  "Reference semantics (merging levels across multiple dicts via extend) differ from the solver's overwrite-on-duplicate behavior; hidden tests happen not to probe that divergence, so success may reflect lenient checks rather than full contract coverage."
+ ],
+ "confidence": "high",
+ "uncertainties": [
+  "Whether the solver would have produced an equivalent solution without memory (no counterfactual with same model/budget).",
+  "Whether the overwrite-vs-extend discrepancy on duplicate department codes across list entries would surface under stricter hidden tests.",
+  "No per-memory token attribution exists to quantify the read's actual cost share."
+ ],
+ "minimal_intervention": {
+  "change": "none",
+  "fixed": "Same startup index, same 48-episode library, same read budget and model; only a counterfactual no-memory arm would be added for causal testing.",
+  "falsifier": "If a no-memory run with identical budget succeeds equally, the USE_TRANSFER candidate's advantage claim is refuted; if it fails on the same contract, transfer support strengthens."
+ },
+ "agentic_search": {
+  "search_strategy": {
+   "value": "focused",
+   "evidence": [
+    {"section": "mechanical_metrics", "line": 73, "quote": "memory_calls": 1},
+    {"section": "retrieval_and_packing", "line": 5, "quote": "path\": \"episodes/s014.md"}
+   ],
+   "reason": "After scanning the index, the agent issued exactly one read directly to the matching episode; no glob/grep or exploratory reads."
+  },
+  "failure_boundary": {
+   "value": "no_failure",
+   "evidence": [
+    {"section": "mechanical_metrics", "line": 65, "quote": "correct": true}
+   ],
+   "reason": "Task evaluated correct with 5 checks passed; no execution or contract failure boundary observed."
+  },
+  "reading_efficiency": {
+   "value": "contextual_confirmation",
+   "evidence": [
+    {"section": "retrieval_and_packing", "line": 9, "quote": "full_bytes": 4908}
+   ],
+   "reason": "A single full-file read (~4.4KB visible) sufficed to confirm design and reuse it; no avoidable overhead identified."
+  }
+ },
+ "causal_claim": false
+}

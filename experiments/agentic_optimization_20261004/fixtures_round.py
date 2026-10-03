@@ -30,7 +30,8 @@ def run(round_id):
             after += size(compact)
             calls += 1
     session = CandidateSession(corpus, config["variant"])
-    assert session.prelude() == corpus.files["MEMORY.md"]
+    expected_entry = "memory_summary.md" if config["variant"] == "compact_lazy_index" else "MEMORY.md"
+    assert session.prelude() == corpus.files[expected_entry]
     assert session.call("MEMORY_READ_FILE", dict(path="../../hidden"), "bad").get("error")
     assert session.call("MEMORY_READ_FILE", dict(path="episodes/s048.md"), "complex").get("error")
     query = session.call("MEMORY_GREP", dict(pattern="np.random", literal=True, glob="episodes/s000.md"), "grep")

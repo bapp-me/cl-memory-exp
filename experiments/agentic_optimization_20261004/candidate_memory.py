@@ -18,10 +18,14 @@ def compact_result(original):
 
 class CandidateSession(NativeSession):
     def __init__(self, corpus, variant="compact"):
-        if variant != "compact":
+        if variant not in ("compact", "compact_lazy_index"):
             raise ValueError("Candidate not registered")
         self.variant = variant
         super().__init__(corpus, "native_files")
+
+    def prelude(self):
+        filename = "memory_summary.md" if self.variant == "compact_lazy_index" else "MEMORY.md"
+        return self.corpus.files[filename]
 
     def call(self, name, args, tool_call_id):
         # The inherited backend, query parameters, rank-free ordering and packing are unchanged.

@@ -1,0 +1,146 @@
+{
+  "case_id": "review-cf24ee622f3be4",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=12:True:4"
+        }
+      ],
+      "reason": "The s037 source passed its own evaluation, but the s037 task is single-DataFrame; the target's multi-dataset aggregation is a new condition not covered by the source pass."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 48,
+          "quote": "Performs linear regression on a DataFrame using 'date' (converted to ordinal) as the predictor for 'value'"
+        }
+      ],
+      "reason": "The full s037 file retrieved matches the indexed description and the offline corresponding source; no contradictions visible."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 58,
+          "quote": "I'll adapt that for multiple datasets with aggregation."
+        }
+      ],
+      "reason": "The ordinal-conversion and validation pattern applies, but multi-dataset aggregation, concatenated output format, and the required plot title are new and absent from the source."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 58,
+          "quote": "validate date dtype with `pd.api.types.is_datetime64_any_dtype`, convert dates to ordinal via `pd.Timestamp.toordinal`"
+        }
+      ],
+      "reason": "The submitted code reuses the retrieved pattern consistently and adapts it to multiple datasets; this is a behavioral proxy, not proof of causation."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "plot the aggregated predictions against the original dates from all datasets"
+        },
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "AssertionError: Plot title should be 'Aggregated Predictions vs Date'."
+        }
+      ],
+      "reason": "The evaluator requires an exact literal title that the target prompt never specifies; the failure arises from a prompt/test mismatch candidate, not from misreading what was asked."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 58,
+          "quote": "The s037 history confirms the expected pattern: validate date dtype with `pd.api.types.is_datetime64_any_dtype`"
+        }
+      ],
+      "reason": "Retrieval of s037 visibly informed the submitted implementation (validation, ordinal conversion, model/Axes tuple). Without a no-memory counterfactual this shows visible reuse only, not that memory caused the outcome."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 89,
+          "quote": "All checks pass: predictions aggregate correctly (sorted by date), two models fitted, and all four invalid-input cases raise `ValueError`."
+        }
+      ],
+      "reason": "The solver self-tested aggregation and all specified ValueError cases successfully; the submitted behavior matches every requirement visible in the prompt, so execution on specified requirements shows no error."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "Evaluation halted at the first title assertion (tests_run: 0), so whether other checks would also have failed is unknown; title alone may not be the only failure.",
+    "The solver had no legitimate source of the required title string in prompt, memory, or retrieved file; even perfect retrieval could not have supplied it.",
+    "baseline_correct is also false (mechanical_metrics L0085), suggesting the task is hard for this model family generally, but no per-check breakdown exists to compare failure modes."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "Whether the submission would pass all non-title checks after a title fix (evaluation stopped at the first assertion).",
+    "Whether the source experience causally improved or changed the outcome vs a no-memory run (R=1, no counterfactual).",
+    "Whether the solver considered alternative plot titles; no hidden thinking available."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same frozen 48-episode memory index, same read-only native-files access tools, same startup index, same evaluation harness and budget.",
+    "falsifier": "If the evaluator's title assertion were removed or the prompt specified the required title and the run still failed on other checks, the EVAL_CONTRACT-only candidate would be weakened."
+  },
+  "causal_claim": false,
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 13,
+          "quote": "\"pattern\": \"aggregate_predictions|date.*ordinal|LinearRegression\""
+        }
+      ],
+      "reason": "A single targeted grep on s037 (already matched in the startup index description) plus one full-file read; no broad or repeated searching."
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "Plot title should be 'Aggregated Predictions vs Date'."
+        }
+      ],
+      "reason": "The failing check targets a string absent from the task prompt; boundary is the evaluation contract, not information handling or code execution."
+    },
+    "reading_efficiency": {
+      "value": "contextual_confirmation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 21,
+          "quote": "\"path\": \"episodes/s037.md\""
+        }
+      ],
+      "reason": "One grep then one full read of the single relevant file (~4KB), confirming the pattern before implementing; no avoidable overhead visible in this small episode."
+    }
+  }
+}

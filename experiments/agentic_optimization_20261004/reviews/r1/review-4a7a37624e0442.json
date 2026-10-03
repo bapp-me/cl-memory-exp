@@ -1,0 +1,153 @@
+{
+  "case_id": "review-4a7a37624e0442",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "\"stdout\": \"EVALUATOR_RESULT=14:True:6\\n\""
+        }
+      ],
+      "reason": "Source s028 passed its own hidden tests (6 tests, correct:true), so the reused validation/plot logic has a legal, verified origin; passing does not certify every stored statement."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 85,
+          "quote": "content\":\"        numeric_df = df.select_dtypes(include=[np.number])\\n\""
+        }
+      ],
+      "reason": "The memory tool result shows the stored s028 code verbatim, matching the offline corresponding_source_original implementation of validation and cov/pairplot."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "You are given a list of DataFrames, each potentially containing numeric data."
+        }
+      ],
+      "reason": "s028 covers single-DataFrame validation and pairplot/covariance, but the target adds a list input, per-frame checks, and concatenation the source never handled."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 100,
+          "quote": "numeric_df = df.select_dtypes(include=[np.number])\n        if numeric_df.shape[1] != df.shape[1]:\n            raise TypeError"
+        }
+      ],
+      "reason": "The submitted code visibly reuses s028's select_dtypes/TypeError pattern inside a new loop with pd.concat; this is a behavioral proxy, not proof of causal benefit."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "line": 4,
+          "quote": "- [s028](episodes/s028.md): Generates a pair plot from a numeric DataFrame and calculates its covariance matrix."
+        }
+      ],
+      "reason": "The frozen startup index directly exposed s028 as a near-matching source; this is a recorded opportunity, not evidence it was correctly applied."
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 43,
+          "quote": "\"pattern\": \"numeric|pairplot|cov\""
+        }
+      ],
+      "reason": "Three MEMORY_GREP calls targeted episodes/s028.md and returned relevant stored code lines; retrieval happened and surfaced the needed content."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 131,
+          "quote": "combined_df = pd.concat(df_list, ignore_index=True)"
+        }
+      ],
+      "reason": "The final submission combines s028's validation idiom with new list handling; a candidate reuse signal only, since success has no counterfactual and could also stem from the model's own ability."
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 87,
+          "quote": "\"baseline_tokens\": 13409,\n  \"tokens_delta\": 20887"
+        }
+      ],
+      "reason": "Memory access added roughly 3x baseline tokens and 3 grep calls versus baseline's 1; this describes overhead on this run and cannot by itself assert poor cost-effectiveness."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "Success may come from the model's independent coding ability; the pairplot/covariance pattern is common enough to derive without memory.",
+    "No-memory baseline was also correct (baseline_correct:true), so memory could have been redundant confirmation rather than a contributor.",
+    "Without a hidden-thinking trace, whether grep hits were actually weighed in the solution cannot be verified."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "No counterfactual run with s028 removed, so causal memory contribution is unknown.",
+    "Whether overlapping grep output beyond the visible excerpts influenced the model is unobservable.",
+    "Per-memory token attribution is not available."
+  ],
+  "minimal_intervention": {
+    "change": "Provide a direct file-read tool for a matched episode so one s028 read can replace the three overlapping, truncated MEMORY_GREP calls.",
+    "fixed": "Same frozen startup index, same 48-episode history, same model, same budget and hidden tests.",
+    "falsifier": "If read-first access yields the same correctness but no reduction in memory calls/bytes or redundant output, the overhead candidate is refuted."
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 73,
+          "quote": "\"pattern\": \"select_dtypes|applymap|concat|return\""
+        }
+      ],
+      "reason": "After identifying s028 from the index, all greps targeted that single file with task-relevant patterns; no broad or drifting search occurred."
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 3,
+          "quote": "\"stdout\": \"EVALUATOR_RESULT=4:True:0\\n\""
+        }
+      ],
+      "reason": "The target passed all 4 checks with correct:true, so no failure boundary needs explanation."
+    },
+    "reading_efficiency": {
+      "value": "avoidable_overhead_candidate",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 11,
+          "quote": "\"full_bytes\": 11691,\n    \"actual_bytes\": 6915"
+        }
+      ],
+      "reason": "Three greps on the same small file each returned truncated ~7KB payloads (20768 memory response bytes total) with heavy content overlap; a single full read could plausibly have sufficed."
+    }
+  },
+  "causal_claim": false
+}
