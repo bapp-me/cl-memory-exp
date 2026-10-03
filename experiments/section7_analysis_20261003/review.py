@@ -72,7 +72,7 @@ def call(provider,case,key,phase):
     payload={'model':model,'messages':[{'role':'system','content':(ROOT/'review_prompt.txt').read_text(encoding='utf-8')},
              {'role':'user','content':json.dumps(packet,ensure_ascii=False)}],
              'temperature':1,'max_tokens':10000 if phase=='pilot' else 24000,'thinking':{'type':'enabled'},'response_format':{'type':'json_object'},'stream':False}
-    if phase!='pilot':payload['reasoning_effort']='medium'
+    if phase!='pilot':payload['reasoning_effort']='high' if provider=='glm' else 'medium'
     save(folder/'request.json',payload)
     started=time.monotonic()
     terminal={'provider':provider,'case_id':cid,'phase':phase,'model_requested':model,'endpoint':endpoint,
@@ -107,11 +107,11 @@ def call(provider,case,key,phase):
 
 
 def main():
-    ap=argparse.ArgumentParser();ap.add_argument('--phase',choices=['pilot','pilot2','formal'],required=True)
+    ap=argparse.ArgumentParser();ap.add_argument('--phase',choices=['pilot','pilot2','pilot2_glm_high','formal'],required=True)
     ap.add_argument('--provider',choices=['deepseek','glm','both'],required=True);ap.add_argument('--workers',type=int,default=4)
     args=ap.parse_args();assert 1<=args.workers<=12
     manifest=read(ROOT/'records/manifest.json'); cases=manifest['cases']
-    if args.phase in ['pilot','pilot2']:cases=[c for c in cases if c['pilot']]
+    if args.phase in ['pilot','pilot2','pilot2_glm_high']:cases=[c for c in cases if c['pilot']]
     else:
         selection=read(ROOT/'records/model-selection.json')
         assert args.provider==selection['selected_provider'] and selection['status']=='frozen'
@@ -120,6 +120,12 @@ def main():
         cases.sort(key=lambda c:(c['case_id'] not in manifest['priority_16_ids'],c['case_id']))
     providers=list(MODELS) if args.provider=='both' else [args.provider]
     keys={p:secret(p) for p in providers}
+    if args.phase=='pilot2_glm_high':
+        assert providers==['glm']
+        first=call('glm',cases[0],keys['glm'],args.phase)
+        print(json.dumps({k:first.get(k) for k in ['provider','case_id','status','seconds','usage','error']},ensure_ascii=False),flush=True)
+        if first['status'] not in ['valid','needs_audit']:raise RuntimeError('GLM high preflight did not produce parseable JSON; remaining five not started')
+        cases=cases[1:]
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
         futures=[pool.submit(call,p,c,keys[p],args.phase) for p in providers for c in cases]
         for future in as_completed(futures):

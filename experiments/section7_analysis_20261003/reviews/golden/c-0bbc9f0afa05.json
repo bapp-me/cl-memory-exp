@@ -1,0 +1,118 @@
+{
+  "case_id": "c-0bbc9f0afa05",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "`random.choice` over `string.ascii_letters` reproduces the example exactly"
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=20:True:5"
+        }
+      ],
+      "reason": "源通过固定检查并验证单字符串示例；这不决定多字符串任务的 seed 重置范围。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "`random.choice` over `string.ascii_letters` reproduces the example exactly"
+        },
+        {
+          "section": "injection/2",
+          "quote": "`random.choice` over `string.ascii_letters` reproduces the example exactly"
+        }
+      ],
+      "reason": "实际注入保留了合法源的 choice、ASCII 字母、seed 与 Counter 模式；没有把目标特有的重设 seed 条件伪装成源结论。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Generate a random string of a given length"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "generating multiple random strings of varying lengths"
+        }
+      ],
+      "reason": "字母采样与计数可复用，但目标从一个 length 扩成 lengths，seed 在每项还是整次调用重置需重新确定。"
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "seed once, then use `random.choice` over `string.ascii_letters`, count with `collections.Counter`"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "combined_counter.update(task_func(length, seed))"
+        }
+      ],
+      "reason": "可见明确沿用旧模式，却在整次目标调用只 seed 一次；与评分参考的逐 length 调源函数不同，仅作为适配边界候选。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Following the same pattern as the previous tasks"
+        },
+        {
+          "section": "target_visible",
+          "quote": "seed once, then use `random.choice` over `string.ascii_letters`"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "combined_counter.update(task_func(length, seed))"
+        }
+      ],
+      "reason": "轨迹自述旧模式复用，目标与参考的 RNG 重置范围不同；不能断言错误经验、负迁移或记忆造成失败。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should accept a list of lengths and a seed for random generation."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "combined_counter.update(task_func(length, seed))"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "combined_frequency([10, 20], 0)"
+        }
+      ],
+      "reason": "提示未明确逐长度重设 seed，固定检查却钉住一种组合方式；评分失败保留，题意与测试是否充分一致仍待判断。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "在没有可见多长度示例时，独立实现也可能自然选择只 seed 一次。",
+    "源码样例确证单字符串算法，但无法区分目标的连续 RNG 流与逐长度重置，成功的自测因此没有排除另一契约。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "目标题是否意图逐长度使用同一初始 seed 没有明示。",
+    "没有控制记忆的配对运行，无法归因结果或成本。"
+  ],
+  "minimal_intervention": {
+    "change": "仅在目标提示明示每个 length 都从同一 seed 重新开始生成。",
+    "fixed": "源历史、注入三条轨迹、模型、工具环境、预算与固定评分 mask 相同。",
+    "falsifier": "明示后仍只 seed 一次，或固定失败不变且失败点相同，会削弱把这一选择解释为目标 seed 范围歧义的候选。"
+  },
+  "causal_claim": false
+}

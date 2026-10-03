@@ -8,8 +8,9 @@ def main():
     ids=read(ROOT/'records/manifest.json')['pilot_ids']; reports=[]
     gold={cid:read(ROOT/'reviews/golden'/f'{cid}.json') for cid in ids}
     gold_validation={cid:validate(gold[cid],read(ROOT/'packets'/f'{cid}.json')) for cid in ids}
-    for phase in ['pilot','pilot2']:
+    for phase in ['pilot','pilot2','pilot2_glm_high']:
         for provider in ['deepseek','glm']:
+            if phase=='pilot2_glm_high' and provider!='glm':continue
             records=[];tp=fp=fn=0;f1s=[];field_match=Counter();valid=0
             for cid in ids:
                 terminal=ROOT/'api'/phase/provider/cid/'terminal.json'

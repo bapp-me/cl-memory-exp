@@ -1,0 +1,123 @@
+{
+  "case_id": "c-4285bf012466",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "The example reproduces exactly. Submitting the solution:"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "is a random integer between 1 and max_count (inclusive)."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=35:True:5"
+        }
+      ],
+      "reason": "源通过固定检查，随机计数是其明确契约；它不能证明按真实群组统计时也应随机计数。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "The random counts match exactly with `random.seed(seed)` followed by `random.randint(1, max_count)`"
+        },
+        {
+          "section": "source_prompt",
+          "quote": "is a random integer between 1 and max_count (inclusive)."
+        }
+      ],
+      "reason": "注入完整保留源题的随机计数与动物筛选模式；问题候选在适用范围，不是经验被错误改写。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "count the occurrences of each predefined animal name across all groups."
+        },
+        {
+          "section": "source_prompt",
+          "quote": "with a random count."
+        }
+      ],
+      "reason": "逆字典模式可迁移；目标新增跨群组总出现次数，源的随机计数不直接确定如何累计这些群组。"
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The behavior mirrors the previously verified pattern"
+        },
+        {
+          "section": "target_submission",
+          "quote": "{animal: random.randint(1, max_count) for animal in ANIMALS}"
+        }
+      ],
+      "reason": "目标明确沿用旧随机计数，却只生成一套与群组内容无关的随机数；对跨群组统计属于语义候选，固定成功不消除该疑点。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "def new_task_func(list_of_animal_dicts, max_count=10, seed=0):"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "all_reversed_dicts, total_animal_counts = new_task_func(list_of_animal_dicts)"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "assert all(isinstance(count, int) for count in total_animal_counts.values())"
+        }
+      ],
+      "reason": "测试文本在断言前重新定义同名目标函数，并只检查计数键集与整数类型；固定成功不能单独验证提交函数的跨群组计数，保持原评分。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "per-animal `random.randint(1, max_count)` after seeding"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "a counter with the total occurrences of each animal name."
+        },
+        {
+          "section": "target_submission",
+          "quote": "{animal: random.randint(1, max_count) for animal in ANIMALS}"
+        }
+      ],
+      "reason": "可见源模板与提交重合，但目标总次数没有随群组累计；仅标适配候选，不据此认定记忆有害或成功由记忆造成。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "即使移除同名函数重定义，原断言仍可能因未检查计数值而让单次随机计数通过。",
+    "目标保留 random/max_count/seed 提供了另一种随机计数解读，题意本身也可能含歧义。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "没有执行隔离评分审计，不能由文本重新定义直接断言提交会被判失败。",
+    "真实出现次数、每群组随机计数累计与单套随机计数的目标契约未被有效区分。",
+    "没有记忆反事实。"
+  ],
+  "minimal_intervention": {
+    "change": "仅在隔离审计副本移除测试中的同名 new_task_func 重定义，保留所有原断言。",
+    "fixed": "提交代码、测试输入与断言、环境和固定评分记录相同；原实验评分不改。",
+    "falsifier": "提交函数仍通过全部原断言，会反驳把同名重定义视为固定成功必要原因的候选，并指向断言区分力不足。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,165 @@
+{
+  "case_id": "c-af1fad3cc92b",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "The 'combination' column is added per row as a tuple of the five items in column order."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=15:True:5"
+        }
+      ],
+      "reason": "源列顺序元组、原地新增列与 dict 返回通过固定检查；不推断顺序无关组合或重复调用语义均正确。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "injection/4",
+          "quote": "df[columns].itertuples(index=False, name=None) yields one plain hashable tuple per row"
+        },
+        {
+          "section": "injection/5",
+          "quote": "in-place modification of the input df IS the documented contract"
+        },
+        {
+          "section": "source_visible",
+          "quote": "Empty input naturally yields"
+        }
+      ],
+      "reason": "实际注入保留源支持的行元组、Counter/dict 和文档规定的 mutation 模式；关于 doctest 必然失败的泛化断言不因源通过而自动被证实。"
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "The function should add a 'combination' column to each DataFrame"
+        },
+        {
+          "section": "injection/4",
+          "quote": "count with Counter, then return dict(counter)"
+        }
+      ],
+      "reason": "目标仍要求每表生成组合列并返回总体字典；可将源的单表模式扩成逐表 Counter.update，目标未要求固定五个 item 列。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "injection/4",
+          "quote": "itertuples(index=False, name=None)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "tuple(row) for row in df.itertuples(index=False, name=None)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "df['combination'] = combinations\n        counter.update(combinations)"
+        }
+      ],
+      "reason": "提交把源支持的元组/mutation/计数模式扩到任意列和多表聚合；这是可见一致适配代理，不证明成功由记忆造成。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "injection/4",
+          "quote": "itertuples(index=False, name=None)"
+        },
+        {
+          "section": "injection/5",
+          "quote": "in-place modification of the input df IS the documented contract"
+        },
+        {
+          "section": "target_submission",
+          "quote": "df['combination'] = combinations\n        counter.update(combinations)"
+        }
+      ],
+      "reason": "已注入源模式与目标多表实现一致，并按新条件扩展；代码重合不能单独证明采用来源或增益。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "\"name\": \"SUBMIT\""
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"working_tool_calls\": 0"
+        },
+        {
+          "section": "injection/4",
+          "quote": "Verify with an equality comparison (result == expected_dict)"
+        }
+      ],
+      "reason": "可见目标直接提交且没有工作工具调用，未执行注入建议的验证；只能描述验证步骤未显现，不能从成功轨迹虚构失败或省略原因。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical",
+          "quote": "\"injected_count\": 52"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"injected_text_utf8_bytes\": 43905"
+        },
+        {
+          "section": "injection/0",
+          "quote": "Canonical pattern for 'encode data as Base64 string' tasks"
+        }
+      ],
+      "reason": "注入包含 52 条、43905 文本字节及与本题无关的编码经验，是可见输入开销；没有对照，不能认定干扰、无收益或性价比差。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "offline_target_reference",
+          "quote": "tuple(sorted(row))"
+        },
+        {
+          "section": "target_submission",
+          "quote": "tuple(row) for row in df.itertuples(index=False, name=None)"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "{'A': [1, 2, 3], 'B': [4, 5, 6]}"
+        }
+      ],
+      "reason": "参考按行排序，提交保留列顺序，而所示测试行本已排序；固定成功不能区分这两种组合语义，不把参考当超越题意的真值。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "itertuples、Counter 与原地新增列都是常见实现，模型也可能独立构造同一解法。",
+    "固定测试输入未区分排序与列顺序，成功可能部分来自契约覆盖有限。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "没有记忆屏蔽对照，无法识别源经验对成功、工具调用或 tokens 的因果贡献。",
+    "目标题是否需要顺序无关组合、已有 combination 列和重复调用行为未明确。",
+    "target_update 的 helpful 标签与事后缺少验证解释不是本题行为原因。"
+  ],
+  "minimal_intervention": {
+    "change": "仅屏蔽目标注入中源对应的 sai-00079 与 sai-00080 两条，保留其他条目。",
+    "fixed": "相同源与目标历史、持久库快照、模型、工具环境、预算上限、其他注入条目与固定评分 mask；记录实际输入长度差。",
+    "falsifier": "屏蔽后仍出现相同元组/mutation/聚合实现，且质量与成本无可辨差异，会削弱两条源经验具有可观测增益的候选。"
+  },
+  "causal_claim": false
+}

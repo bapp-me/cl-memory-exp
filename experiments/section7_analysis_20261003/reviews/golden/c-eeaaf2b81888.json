@@ -1,0 +1,146 @@
+{
+  "case_id": "c-eeaaf2b81888",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "`random.choices` with the seed matches the example exactly."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=14:True:5"
+        }
+      ],
+      "reason": "源采样与计数经过示例和固定检查；源没有目标的多组聚合与最小频率规则。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        },
+        {
+          "section": "source_visible",
+          "quote": "`random.choices` with the seed matches the example exactly."
+        },
+        {
+          "section": "injection/0",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        }
+      ],
+      "reason": "源更新未产出专门经验，实际注入也没有其 choices 规则；仅说明本次写入与注入缺席，不推断全库遗忘。"
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "injection/0",
+          "quote": "Task involved drawing a bar chart of value counts from a DataFrame's 'value' column"
+        },
+        {
+          "section": "injection/1",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "target_prompt",
+          "quote": "determine the total frequency of each letter across all strings."
+        }
+      ],
+      "reason": "实际注入是 DataFrame/绘图任务概况，未提供本题采样、分组 seed 或极值规则；共有计数词不足以建立适用经验。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "injection/1",
+          "quote": "Works on a coding task involving pandas DataFrames and matplotlib"
+        },
+        {
+          "section": "target_submission",
+          "quote": "strings.append(''.join(rng.choice(letters) for _ in range(length)))"
+        }
+      ],
+      "reason": "完整可见目标行为是随机字母与 Counter 计算，没有沿用注入的 DataFrame/绘图操作；不能排除不可见的通用知识影响。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "WRITE_ADMISSION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "source_update_operations",
+          "quote": "\"operations\": []"
+        },
+        {
+          "section": "source_auxiliary_visible",
+        "quote": "\"text\": \"\\n{\\\"facts\\\": []}\\n\","
+        },
+        {
+          "section": "source_visible",
+          "quote": "`random.choices` with the seed matches the example exactly."
+        }
+      ],
+      "reason": "有可见可复用源采样经验，但该次 writer 输出空 facts 且更新无操作；未产出经验不能称为已存却检索失败。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_submission",
+          "quote": "rng = random.Random(seed)"
+        },
+        {
+          "section": "target_submission",
+          "quote": "strings.append(''.join(rng.choice(letters) for _ in range(length)))"
+        },
+        {
+          "section": "target_submission",
+          "quote": "frequencies.setdefault(letter, 0)"
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "total_counter.update(task_func(length, count, seed))"
+        }
+      ],
+      "reason": "提交采用 choice、单流 seed 并让零频字母参与极小值；固定参考采用 choices、逐组调源与观测 Counter 极值。多处契约差异存在，当前首次断言不能分离各项贡献。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "identify the most frequent letter and the least frequent letter across all strings."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "least_frequent = total_counter.most_common()[-1][0]"
+        }
+      ],
+      "reason": "提示未明确未出现字母、平局顺序或逐组 seed，检查却要求精确 tuple；仅标语义契约候选，维持固定失败。"
+    }
+  ],
+  "primary_hypothesis": "WRITE_ADMISSION",
+  "competing_explanations": [
+    "就算源规则被写入并注入，目标仍可能独立选择单流 RNG 或把未出现字母当最低频，写入缺席不是已证失败原因。",
+    "提示未钉住 seed 范围和极值平局，固定测试的选择可能是独立解释。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "为什么 writer 没有产生 facts 无法从记录判定。",
+    "源 choices 经验是否足以改变多组 seed 与极值规则未知。",
+    "当前 target_update 在目标之后，不能解释之前执行。"
+  ],
+  "minimal_intervention": {
+    "change": "仅让该源写入一条经过源证据支持的 seed、random.choices 与 Counter 经验，再运行同一目标。",
+    "fixed": "源及目标历史、其他持久记忆、检索规则、模型、工具环境、预算和固定评分 mask 相同。",
+    "falsifier": "该条经验确实注入后仍不改变相关采样行为或固定失败，会反驳把写入缺席视为这条轨迹关键限制的候选。"
+  },
+  "causal_claim": false
+}

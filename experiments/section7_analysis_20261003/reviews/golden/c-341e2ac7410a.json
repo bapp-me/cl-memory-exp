@@ -1,0 +1,118 @@
+{
+  "case_id": "c-341e2ac7410a",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_visible",
+          "quote": "empty DataFrames raise ValueError, and non-numeric data raises TypeError."
+        },
+        {
+          "section": "offline_source_evaluation",
+          "quote": "EVALUATOR_RESULT=14:True:6"
+        }
+      ],
+      "reason": "源实现通过固定检查，并可见测试了两类异常；不保证所有 dtype 或边界均正确。"
+    },
+    "memory_fidelity": {
+      "value": "absent",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "- TypeError: If the DataFrame contains non-numeric data types."
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        },
+        {
+          "section": "injection/3",
+          "quote": "Only numeric columns participate in correlation analysis"
+        }
+      ],
+      "reason": "目标实际注入中没有该源的非数值 TypeError 规则；这是注入层的缺席，不是声称持久库未保存或遗忘。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "source_prompt",
+          "quote": "Generates a pair plot from a numeric DataFrame and calculates its covariance matrix."
+        },
+        {
+          "section": "target_prompt",
+          "quote": "generate a combined pair plot and covariance matrix for all these DataFrames."
+        }
+      ],
+      "reason": "单 DataFrame 的计算与验证可以部分迁移，但目标新增列表合并及跨表列处理，原规则不能包办这些选择。"
+    },
+    "visible_use": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "cov 和 pairplot 的共同调用不足以识别源复用；该源没有实际注入，不能凭操作相似推断使用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval",
+          "quote": "\"selected_before_packing\""
+        },
+        {
+          "section": "retrieval",
+          "quote": "oldest_complete_episode_byte_budget"
+        },
+        {
+          "section": "mechanical",
+          "quote": "\"source_provenance_injected\": false"
+        }
+      ],
+      "reason": "候选选中后按旧完整轨迹字节预算淘汰，且源覆盖未注入；属于打包可见性记录，不能证明源出现会改变结果。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "quote": "raise the appropriate exception."
+        },
+        {
+          "section": "target_submission",
+          "quote": "DataFrame at index {i} contains non-numeric data."
+        },
+        {
+          "section": "offline_target_reference",
+          "quote": "except TypeError:"
+        },
+        {
+          "section": "offline_target_evaluation",
+          "quote": "ValueError: DataFrame at index 0 contains non-numeric data."
+        }
+      ],
+      "reason": "固定检查要求 TypeError，提交在该输入抛 ValueError，解释评分失败；目标题仅写 appropriate exception，异常类型约束的充分性仍是候选疑点。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "目标自行把所有输入验证错误归为 ValueError，可能即使收到源经验也如此。",
+    "保留公共列、dropna 等新增选择可能另有契约问题，但当前评分在异常类型处停止，未证明这些选择导致本次失败。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无法确定未注入源是否造成异常类型选择；没有反事实。",
+    "完整未选中库内容未呈现；不能由覆盖信息评估全库保真。",
+    "未见测试对不同列或缺失值的完整约束。"
+  ],
+  "minimal_intervention": {
+    "change": "仅在目标提示中明示非数值 DataFrame 必须抛 TypeError，然后重跑同一目标。",
+    "fixed": "历史、源状态、实际注入内容、模型、工具环境、预算和固定评分 mask 均相同。",
+    "falsifier": "明示后仍抛 ValueError，会反驳把这次类型选择主要解释为目标题未明确异常类型的候选。"
+  },
+  "causal_claim": false
+}
