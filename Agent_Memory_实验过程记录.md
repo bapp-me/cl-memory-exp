@@ -294,3 +294,13 @@ H1候选为767/619/739/896，全部尚待G0；建议最多4题×2同期条件×R
 决定采用 B：Hermes 原生 Harness，保留原生循环及维护，复用任务工具、WSL 沙箱、评分/manifest 和观测规范。A 可以接工具，但完整保真需建立 Node/Python 生命周期桥。按工作包估计完整 A 12–21 人日、B 6–11 人日，仅工具演示 A 1–2 人日；这些是工程估算，不是实测工时或性能结论。工作范围不含 S1、完整基准及最终场景。
 
 已产出接入报告、源码清单、接口结果、唯一路线决定、拟用 profile/权限和有限 canary 草案。S0 12 次、必要匹配 N/J 时总上限 36 次，R=1；草案中的调用包络未批准或实施，token/金额待下一阶段明确，不能直接执行。计划和 README 已同步完成状态。后续为 7.4.3 适配与完整 fixture，再按批次确认在线范围；S0 尚未冻结，S1 未开始。本轮任务模型调用、付费 HTTP 和重评分均为 0。
+
+## Pi 原生扩展与 Hermes 第三方记忆补充调研（2026-10-03，香港时间）
+
+用户要求查 Pi 原生记忆方案及 Hermes 第三方适配，并追问：既然接受完整 Hermes，Pi coding-agent 是否也可做实验底座。核对官方 SDK 后确认可通过 createAgentSession 编程使用，支持自定义任务工具、资源/会话隔离及扩展生命周期；无需交互终端。此前 B 优于自行搬运完整 Hermes 的结论不覆盖 Pi coding-agent 加现成 memory 扩展。
+
+新增 `experiments/memory_ecosystem_20261003/`，固定 10 个仓库的 61 个来源文件并核对六个 npm 发布项。重点候选为 pi-hermes-memory 0.9.10、Mem0 官方 Pi 0.3.2、社区 Hindsight/Honcho 和 pi-memctx。区分后端公开 QA benchmark、Pi 插件实现、预制 memory pack 效率对照和本项目未做的实际验收。pi-hermes-memory 默认 policy-only、侧模型调用、用户轮次门槛，与当前原生 Hermes 不等价；Hindsight 社区插件仍锁 Pi 0.80.x，Honcho 社区集成有旧包命名，均待兼容验收。
+
+Hermes 固定源码支持五个 bundled 外部 adapter，官方文档另列 Honcho/Hindsight/Supermemory catalog provider；默认内置记忆继续存在、最多一个外部 provider。核对 Mem0 standalone 与 bundled 同名优先级、450 字符 capture 默认及 Hindsight 服务端异步可见性边界。建议将 Pi coding-agent 加 pi-hermes-memory 放入正式候选，Hindsight 作为有后端研究证据的备选；不依公开异模型分数决定本项目赢家。
+
+本轮只读源码/公开资料，模型调用、插件安装、benchmark 运行均为 0；没有改前轮 base-system-decision、方案执行授权、旧分数/轨迹或 S0 验收状态。报告与来源、npm 快照已保存，README 加入新入口。
