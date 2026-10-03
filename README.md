@@ -4,6 +4,8 @@ Training-free Agent memory 实验代码与研究证据。主要语言为中文�
 
 ## 从这里开始
 
+- [Pi 短任务写入与后台观测核验](experiments/pi_memory_lifecycle_20261003/短任务写入与后台观测核验.md)：Pi coding-agent 1.0.0 + pi-hermes-memory 0.9.10 的真实 SDK/原生子进程合成检查，13 组集成和 4 项组件断言通过。默认单轮任务不触发常规 review/flush；waitForIdle/dispose 不能代替记忆完成确认，辅助及子进程调用须单独记账。轻量底座路线可继续，生产适配、真实 provider 和 S0 尚未验收；没有付费模型调用。
+
 - [Pi 与 Hermes 记忆生态补充调研](experiments/memory_ecosystem_20261003/Pi与Hermes记忆生态补充调研.md)：Pi coding-agent 可用 SDK 作为实验底座；核对 pi-hermes-memory、Mem0、Hindsight、Honcho、pi-memctx 和 Hermes 第三方 provider。前轮 B 优于自行移植的结论不能扩成对全部 Pi 现成插件的排名；新候选尚未运行验收。
 
 - [S0 接入审查与路线决定](experiments/section7_s0_audit_20261003/S0接入审查与路线决定.md)：7.4.1–7.4.2 已完成，选择 Hermes 原生 Harness；Pi 完整桥接约 12–21 人日，原生适配约 6–11 人日（工程估算）。六组无模型接口 spike 通过，S0 尚未验收冻结，未执行在线 canary。现行下一步为 7.4.3，H1 不再自动先行。

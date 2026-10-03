@@ -304,3 +304,17 @@ H1候选为767/619/739/896，全部尚待G0；建议最多4题×2同期条件×R
 Hermes 固定源码支持五个 bundled 外部 adapter，官方文档另列 Honcho/Hindsight/Supermemory catalog provider；默认内置记忆继续存在、最多一个外部 provider。核对 Mem0 standalone 与 bundled 同名优先级、450 字符 capture 默认及 Hindsight 服务端异步可见性边界。建议将 Pi coding-agent 加 pi-hermes-memory 放入正式候选，Hindsight 作为有后端研究证据的备选；不依公开异模型分数决定本项目赢家。
 
 本轮只读源码/公开资料，模型调用、插件安装、benchmark 运行均为 0；没有改前轮 base-system-decision、方案执行授权、旧分数/轨迹或 S0 验收状态。报告与来源、npm 快照已保存，README 加入新入口。
+
+## Pi 短任务写入与后台观测核验（2026-10-03，香港时间）
+
+用户授权先摸清独立短任务写入触发、后台调用及写入完成的可观测性，目标是尽量轻量的实验 harness。本轮在 `experiments/pi_memory_lifecycle_20261003/` 安装隔离的 Pi coding-agent/pi-agent-core/pi-ai/pi-tui 1.0.0、pi-hermes-memory 0.9.10 与固定依赖，用真实 SDK、扩展加载器、文件/SQLite store 和原生 Pi child，连接脚本化 loopback SSE 假服务。没有调用真实模型或收费 provider，没有更改上游及旧实验，也未启动 benchmark/canary。
+
+最终 13 组 SDK 与 4 个组件检查通过。最终 SDK 集合 93 个本机请求，92 个返回固定合成 usage、1 个 review 取消且 usage unknown；这些计数不含前期 fixture 调试/为增加进程观测而重放，不是模型性能或成本测量。父子进程网络 guard 和退出记录覆盖最终集，依赖 lock、源码哈希、完整请求/事件/进程日志和完成核对已保存。12 个相关 npm 源文件与前轮固定 Git 在 CRLF 统一后相同；未声称整个 npm 包等于 Git HEAD。
+
+默认 review 要至少 3 个用户轮并达到 turn/tool 阈值，flush 至少 6 轮；12 个独立单轮会话和单轮 20 工具调用都没有常规后台写入。前台 memory_add 跨独立会话可检索；纠错检测也可在短会话发起辅助调用。flushMinTurns=1 加显式 shutdown 可保存单轮经验，但原生 fallback child 继承这个门槛，还会额外发起 child flush。
+
+实测 prompt/waitForIdle 返回时 review 可仍 pending；dispose 不发 session_shutdown；正常 shutdown 先取消 review，再做符合门槛的有界 flush，不能当全部后台任务自然完成的屏障。父主会话 usage 漏掉 direct review/flush/correction 以及原生 child；自动容量 consolidation 即使 direct 配置仍可走 child。direct 无效 JSON + child 缺模型配置时，child exit 1、无记忆，父 shutdown 仍正常返回。写入组件另证实 ok:true 可对应 0 应用/1 跳过或 1 应用/1 跳过，上层丢掉 skippedCount/usage；文件已写时 observer 可未结束，带镜像警告的结果仍可 success:true。
+
+保留 fallback_attempt1（假服务误判 child 角色后触及原生超时）和 consolidate_attempt1（错误预期忽略默认 180 秒 overflow grace）。组件 .ts 入口最初遇到 tsx CommonJS/top-level-await 解析错误，改 .mts 后运行；没有改生产代码来迎合 fixture。观察器降级是注入模拟，没有损坏实际 SQLite；其他未覆盖错误分支不标成已验收。
+
+建议继续优先考察 Pi coding-agent SDK 加现成扩展，改造集中于活动维护任务可等待接口、全角色/重试/child 计量、逐操作持久化结果、短任务及 child profile 四处。未报未经实施的精确人日/RSS排名；未静默修改前轮 base-system-decision、原生默认 baseline 或 S0 接受状态。生产适配器、真实 provider/GLM 兼容、真实语义效果与付费运行仍待后续单独确定。README 增加本次报告入口。
