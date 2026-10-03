@@ -241,3 +241,14 @@ Pi 适配及隔离代码提交为 `38d7fb0`。数据库 canary 两个模型都�
 - `experiments/section7_observability_20261002/recorder_v2.mjs`、`experiments/section7_observability_20261002/pi_runner_v2.mjs`、`experiments/section7_observability_20261002/engine.py`、`experiments/section7_observability_20261002/aux_client.py`、`experiments/section7_observability_20261002/complex_memory.py`：实际 payload/role/call 记录、streaming/工具计时、候选/状态记录及缺少的阶段 span。
 
 本条只核对已有代码和日志并追加结论；新增在线实验、模型调用和离线 LLM 调用均为 0。逐块映射、token 计数/估算、语义审查和额外干预仍按上述状态登记，没有因记录结论而标为完成。
+
+
+## 第 7.2 节启动及审查校准（2026-10-03，香港时间）
+
+用户授权对已完成的 7.1 baseline 做 7.2 分析，并要求先以 GPT 6.1 sol xhigh 子 agent 为 golden reference，与 DeepSeek V4.1 Flash、GLM 5.3 Flash 比较少量相同样本，再选择正式审查模型。用户随后明确选择全量 324 条：六方法各 46 条有效复杂目标及各 8 条 BabyAI；普通源题纳入全量 624 次执行的机械统计，并按诊断回溯。
+
+新产物独立放在 `experiments/section7_analysis_20261003/`；先冻结提示词、6 条校准 ID、324 份证据包哈希与 36 条额外抽核 ID。证据包不含隐藏 reasoning；参考解/测试/评分只出现在离线审查端。未执行新 agent rollout、重评分、第二遍或 D2 干预，未回写在线 memory。
+
+首轮两模型启用 thinking、单请求输出上限 10,000，出现 reasoning 用尽预算而无完整 JSON 的情况。原始请求、响应、usage 与错误均保留。用户明确批准增加最多 12 个请求，以同 6 条、同提示词做第二轮：请求 medium reasoning、输出上限 24,000。官方文档说明 DeepSeek medium 实际映射 high，故不声称对它降低了真实思考强度；可变模型别名、参数语义和成本均另存校准记录。两轮不能算独立效果重复或总体准确率估计。
+
+D0 首轮重算已覆盖 624 次执行、208 条旧任务检索重建及 365 个辅助请求 payload 的部分语义块映射；208 条重建注入哈希与保存注入一致，记忆相邻状态衔接未发现断裂。逐块 token、cache 归属及独立检索/持久化计时继续保持 unavailable；没有用字节换算冒充 provider token。
