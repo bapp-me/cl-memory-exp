@@ -1,0 +1,68 @@
+{
+  "case_id": "review-3075ae7208b43b",
+  "result_status": "success",
+  "evidence": [
+    {
+      "id": "target_prompt",
+      "text": "# You are tasked with generating a detailed category distribution report for multiple datasets. Each dataset has a different range for the counts of categories. Your goal is to create a function that takes a list of datasets, where each dataset is represented by a tuple containing its name and the range for the counts of categories. The function should return a DataFrame that combines the category distributions for all datasets, with an additional column indicating the dataset name. The DataFrame should have three columns: 'Dataset', 'Category', and 'Count'.\nimport pandas as pd\nimport random\n\n# Constants\nCATEGORIES = ['A', 'B', 'C', 'D', 'E']\n\ndef generate_report(datasets):\n",
+      "truncated": false,
+      "note": null
+    },
+    {
+      "id": "target_visible",
+      "text": "[\n  {\n    \"message_index\": 2,\n    \"role\": \"assistant\",\n    \"content\": [\n      {\n        \"type\": \"toolCall\",\n        \"id\": \"call_1dddc8102c1f4dd28d09ad9d\",\n        \"name\": \"PYTHON\",\n        \"arguments\": {\n          \"code\": \"import pandas as pd\\nimport random\\n\\nCATEGORIES = ['A', 'B', 'C', 'D', 'E']\\n\\ndef generate_report(datasets):\\n    rows = []\\n    for name, (low, high) in datasets:\\n        for cat in CATEGORIES:\\n            rows.append({'Dataset': name, 'Category': cat, 'Count': random.randint(low, high)})\\n    return pd.DataFrame(rows, columns=['Dataset', 'Category', 'Count'])\\n\\ndf = generate_report([('ds1', (10, 20)), ('ds2', (100, 200))])\\nprint(df)\\nprint(df.columns.tolist())\\nprint(df.shape)\\n\"\n        }\n      }\n    ]\n  },\n  {\n    \"message_index\": 3,\n    \"role\": \"toolResult\",\n    \"tool\": \"PYTHON\",\n    \"tool_call_id\": \"call_1dddc8102c1f4dd28d09ad9d\",\n    \"isError\": false,\n    \"content\": [\n      {\n        \"type\": \"text\",\n        \"text\": \"{\\\"returncode\\\":0,\\\"stdout\\\":\\\"  Dataset Category  Count\\\\n0     ds1        A     11\\\\n1     ds1        B     10\\\\n2     ds1        C     12\\\\n3     ds1        D     14\\\\n4     ds1        E     13\\\\n5     ds2        A    134\\\\n6     ds2        B    127\\\\n7     ds2        C    175\\\\n8     ds2        D    129\\\\n9     ds2        E    175\\\\n['Dataset', 'Category', 'Count']\\\\n(10, 3)\\\\n\\\",\\\"stderr\\\":\\\"\\\"}\"\n      }\n    ]\n  },\n  {\n    \"message_index\": 4,\n    \"role\": \"assistant\",\n    \"content\": [\n      {\n        \"type\": \"text\",\n        \"text\": \"The function works correctly. Each dataset's counts are randomly generated within its specified range, and the combined DataFrame has the required 'Dataset', 'Category', and 'Count' columns.\"\n      },\n      {\n        \"type\": \"toolCall\",\n        \"id\": \"call_332b7df433f94f91a64432f1\",\n        \"name\": \"SUBMIT\",\n        \"arguments\": {\n          \"code\": \"import pandas as pd\\nimport random\\n\\n# Constants\\nCATEGORIES = ['A', 'B', 'C', 'D', 'E']\\n\\ndef generate_report(datasets):\\n    \\\"\\\"\\\"\\n    Generate a detailed category distribution report for multiple datasets.\\n\\n    Parameters\\n    ----------\\n    datasets : list\\n        A list of tuples, where each tuple contains:\\n        - the dataset's name (str)\\n        - the range for the counts of categories, as a tuple (min_count, max_count)\\n\\n    Returns\\n    -------\\n    pd.DataFrame\\n        A DataFrame with columns 'Dataset', 'Category', and 'Count',\\n        combining the category distributions for all datasets. For each\\n        dataset, a random count for every category is drawn from the\\n        dataset's specified range (inclusive on both ends).\\n    \\\"\\\"\\\"\\n    rows = []\\n    for dataset in datasets:\\n        name = dataset[0]\\n        low, high = dataset[1]\\n        for category in CATEGORIES:\\n            rows.append({\\n                'Dataset': name,\\n                'Category': category,\\n                'Count': random.randint(low, high)\\n            })\\n    return pd.DataFrame(rows, columns=['Dataset', 'Category', 'Count'])\\n\"\n        }\n      }\n    ]\n  },\n  {\n    \"message_index\": 5,\n    \"role\": \"toolResult\",\n    \"tool\": \"SUBMIT\",\n    \"tool_call_id\": \"call_332b7df433f94f91a64432f1\",\n    \"isError\": false,\n    \"content\": [\n      {\n        \"type\": \"text\",\n        \"text\": \"{\\\"submitted\\\":true,\\\"feedback\\\":\\\"Submission recorded. Hidden correctness is not available.\\\"}\"\n      }\n    ]\n  }\n]",
+      "truncated": false,
+      "note": null
+    },
+    {
+      "id": "target_startup_memory",
+      "text": "[]",
+      "truncated": false,
+      "note": "Only these blocks were supplied before dynamic access; not the whole library"
+    },
+    {
+      "id": "target_evaluation_offline",
+      "text": "{\n  \"returncode\": 0,\n  \"stdout\": \"EVALUATOR_RESULT=8:True:0\\n\",\n  \"stderr\": \"----------------------------------------------------------------------\\nRan 0 tests in 0.000s\\n\\nOK\\n\",\n  \"tests_run\": 0,\n  \"checks_executed\": 8,\n  \"correct\": true,\n  \"scorable\": true\n}",
+      "truncated": false,
+      "note": "Never seen by solver, no score changes allowed"
+    },
+    {
+      "id": "target_contract_reference_offline",
+      "text": "{\n  \"reference_solution\": \"    reports = []\\n    for dataset in datasets:\\n        dataset_name, value_range = dataset\\n        report = task_func(value_range)\\n        report['Dataset'] = dataset_name\\n        reports.append(report)\\n    return pd.concat(reports, ignore_index=True)\\n\\n\\n\",\n  \"tests\": \"import pandas as pd\\nimport random\\n\\n# Constants\\nCATEGORIES = ['A', 'B', 'C', 'D', 'E']\\n\\ndef task_func(value_range=(0, 100)):\\n    \\\"\\\"\\\"\\n    Generate a category distribution within a specified range and return as a DataFrame.\\n\\n    Parameters:\\n    value_range (tuple): A tuple specifying the range (min, max) for generating random values for categories.\\n    \\n    Returns:\\n    DataFrame: A pandas DataFrame that has two columns: 'Category' (category names) and 'Count' (count of each category). \\n\\n    Requirements:\\n    - pandas\\n    - random\\n\\n    Example:\\n    >>> random.seed(0)\\n    >>> df = task_func()\\n    >>> df['Count'][0] >= 0\\n    True\\n    \\\"\\\"\\\"\\n\\n\\n    distribution = {category: random.randint(*value_range) for category in CATEGORIES}\\n    df = pd.DataFrame(list(distribution.items()), columns=['Category', 'Count'])\\n\\n    return df\\nimport pandas as pd\\n\\n# Test case 1\\ndatasets = [('Dataset1', (0, 10)), ('Dataset2', (10, 20))]\\nresult = generate_report(datasets)\\nassert isinstance(result, pd.DataFrame), 'Result should be a DataFrame.'\\nassert result.shape[1] == 3, 'DataFrame should have three columns.'\\nassert set(result['Dataset'].unique()) == {'Dataset1', 'Dataset2'}, 'DataFrame should contain both datasets.'\\nassert set(result['Category'].unique()) == set(CATEGORIES), 'DataFrame should contain all categories.'\\n\\n# Test case 2\\ndatasets = [('Dataset3', (50, 100)), ('Dataset4', (0, 50)), ('Dataset5', (20, 30))]\\nresult = generate_report(datasets)\\nassert isinstance(result, pd.DataFrame), 'Result should be a DataFrame.'\\nassert result.shape[1] == 3, 'DataFrame should have three columns.'\\nassert set(result['Dataset'].unique()) == {'Dataset3', 'Dataset4', 'Dataset5'}, 'DataFrame should contain all datasets.'\\nassert set(result['Category'].unique()) == set(CATEGORIES), 'DataFrame should contain all categories.'\"\n}",
+      "truncated": false,
+      "note": "Research-only; reference is not stronger than the task's explicit requirements"
+    },
+    {
+      "id": "corresponding_source_original",
+      "text": "{\n  \"task\": \"import pandas as pd\\nimport random\\n\\n# Constants\\nCATEGORIES = ['A', 'B', 'C', 'D', 'E']\\n\\ndef task_func(value_range=(0, 100)):\\n    \\\"\\\"\\\"\\n    Generate a category distribution within a specified range and return as a DataFrame.\\n\\n    Parameters:\\n    value_range (tuple): A tuple specifying the range (min, max) for generating random values for categories.\\n    \\n    Returns:\\n    DataFrame: A pandas DataFrame that has two columns: 'Category' (category names) and 'Count' (count of each category). \\n\\n    Requirements:\\n    - pandas\\n    - random\\n\\n    Example:\\n    >>> random.seed(0)\\n    >>> df = task_func()\\n    >>> df['Count'][0] >= 0\\n    True\\n    \\\"\\\"\\\"\\n\",\n  \"trajectory\": [\n    {\n      \"type\": \"toolCall\",\n      \"id\": \"call_4748b97d8e1b4b35a86750c3\",\n      \"name\": \"SUBMIT\",\n      \"arguments\": {\n        \"code\": \"import pandas as pd\\nimport random\\n\\n# Constants\\nCATEGORIES = ['A', 'B', 'C', 'D', 'E']\\n\\n\\ndef task_func(value_range=(0, 100)):\\n    \\\"\\\"\\\"\\n    Generate a category distribution within a specified range and return as a DataFrame.\\n\\n    Parameters:\\n    value_range (tuple): A tuple specifying the range (min, max) for generating random values for categories.\\n\\n    Returns:\\n    DataFrame: A pandas DataFrame that has two columns: 'Category' (category names) and 'Count' (count of each category).\\n\\n    Requirements:\\n    - pandas\\n    - random\\n\\n    Example:\\n    >>> random.seed(0)\\n    >>> df = task_func()\\n    >>> df['Count'][0] >= 0\\n    True\\n    \\\"\\\"\\\"\\n    min_val, max_val = value_range\\n\\n    counts = []\\n    for _ in CATEGORIES:\\n        if isinstance(min_val, int) and isinstance(max_val, int):\\n            counts.append(random.randint(min_val, max_val))\\n        else:\\n            counts.append(random.uniform(min_val, max_val))\\n\\n    df = pd.DataFrame({'Category': CATEGORIES, 'Count': counts})\\n    return df\\n\"\n      }\n    },\n    {\n      \"tool\": \"SUBMIT\",\n      \"content\": [\n        {\n          \"type\": \"text\",\n          \"text\": \"{\\\"submitted\\\":true,\\\"feedback\\\":\\\"Submission recorded. Hidden correctness is not available.\\\"}\"\n        }\n      ]\n    }\n  ]\n}",
+      "truncated": false,
+      "note": "Benchmark correspondence for offline opportunity audit, NOT gold source or evidence that it was retrieved"
+    },
+    {
+      "id": "source_evaluation_offline",
+      "text": "{\n  \"returncode\": 0,\n  \"stdout\": \"EVALUATOR_RESULT=18:True:5\\n\",\n  \"stderr\": \"----------------------------------------------------------------------\\nRan 5 tests in 0.002s\\n\\nOK\\n\",\n  \"tests_run\": 5,\n  \"checks_executed\": 18,\n  \"correct\": true,\n  \"scorable\": true\n}",
+      "truncated": false,
+      "note": "Research-only; a passing source does not validate every historical statement"
+    },
+    {
+      "id": "retrieval_and_packing",
+      "text": "[]",
+      "truncated": false,
+      "note": null
+    },
+    {
+      "id": "exposure_summary",
+      "text": "{\n  \"exact_actual_payload_mapping_passed\": true,\n  \"startup_bytes\": 0,\n  \"dynamic_bytes\": 0,\n  \"source_exposed\": false,\n  \"source_opened\": null,\n  \"limitation\": \"Shell file opens do not establish exact source content exposure; all actual memory tool results are in target_visible\"\n}",
+      "truncated": false,
+      "note": null
+    },
+    {
+      "id": "mechanical_metrics",
+      "text": "{\n  \"case_id\": \"review-3075ae7208b43b\",\n  \"index\": 95,\n  \"task_id\": \"new:BigCodeBench/296\",\n  \"result_status\": \"success\",\n  \"correct\": true,\n  \"scorable\": true,\n  \"source_index\": 13,\n  \"source_quality_direct\": true,\n  \"source_scorable\": true,\n  \"usage\": {\n    \"input\": 466,\n    \"output\": 486,\n    \"cacheRead\": 1408,\n    \"cacheWrite\": 0,\n    \"totalTokens\": 2360\n  },\n  \"calls\": 2,\n  \"http_attempts\": 2,\n  \"unknown_usage_attempts\": 0,\n  \"seconds\": 19.344,\n  \"python_calls\": 1,\n  \"memory_calls\": 0,\n  \"tool_metrics\": {\n    \"by_name\": {\n      \"PYTHON\": 1,\n      \"SUBMIT\": 1\n    },\n    \"same_working_arguments_excess\": 0,\n    \"observations_with_error_signals\": 0,\n    \"error_signal_types\": {},\n    \"calls_to_next_same_tool_without_error_signal\": [],\n    \"warning\": \"Identical arguments/error text/recovery proxy are descriptive; no waste or semantic recovery claim.\"\n  },\n  \"no_active_memory_call\": true,\n  \"memory_before_first_python\": false,\n  \"memory_response_bytes\": 0,\n  \"quoted_content_bytes\": 0,\n  \"non_content_response_bytes\": 0,\n  \"non_content_response_fraction\": null,\n  \"startup_memory_bytes\": 0,\n  \"repeated_startup_payload_bytes\": 0,\n  \"accumulated_dynamic_memory_payload_bytes\": 0,\n  \"request_payload_bytes\": 8199,\n  \"duplicate_query_or_command_calls\": 0,\n  \"exact_repeated_source_chars\": 0,\n  \"truncated_response_calls\": 0,\n  \"empty_search_calls\": 0,\n  \"memory_error_calls\": 0,\n  \"corresponding_source_exposed\": false,\n  \"corresponding_source_opened\": null,\n  \"budget_response_bytes_at_end\": 0,\n  \"write_admission\": \"not_applicable_frozen_archive\",\n  \"update_retention\": \"not_applicable_no_writeback\",\n  \"true_recall\": \"unavailable_no_relevance_gold\",\n  \"real_forgetting\": \"not_applicable_frozen_archive\",\n  \"per_memory_tokens\": \"unavailable\",\n  \"per_memory_cache\": \"unavailable\"\n}",
+      "truncated": false,
+      "note": null
+    }
+  ],
+  "global_rules": "All 48 no-memory simple histories are legal and immutable; target traces never enter shared memory. No writer, no update or retention experiment. This is development data, R=1.",
+  "unavailable": "No semantic recall gold, no hidden thinking, no causal use labels, no exact per-memory token/cache attribution"
+}
