@@ -4,6 +4,8 @@ Training-free Agent memory 实验代码与研究证据。主要语言为中文�
 
 ## 从这里开始
 
+- [第 7.3 节可证伪假设分析](experiments/section7_hypotheses_20261003/第7.3节可证伪假设分析.md)：G0测评检查、H1–H5、竞争解释、反驳条件与待确认的最小实验建议。
+
 - [第 7.2 节 baseline 分析报告](experiments/section7_analysis_20261003/第7.2节baseline分析报告.md)：624 次执行重算、324 条审查、模型选择、失败诊断与证据边界。
 
 - [第 6 节完成报告](experiments/agent_memory_plan_20261002/第6节完成报告.md)：本轮结果、成本、协议变更与解释边界。
@@ -15,6 +17,7 @@ Training-free Agent memory 实验代码与研究证据。主要语言为中文�
 
 | 目录 | 内容与状态 |
 |---|---|
+| `experiments/section7_hypotheses_20261003/` | 第7.3节假设分析、候选冻结快照、建议预算；仅离线分析，7.4未启动 |
 | `experiments/section7_analysis_20261003/` | 第 7.2 节全量离线分析、三方小样本校准、324 条审查、逐字证据与主 agent 复核、原始调用归档 |
 | `experiments/agent_memory_plan_20261002/` | 当前 00–06 执行：配置、Pi/工具适配、隔离评分、冻结协议、全部结果索引与审计 |
 | `experiments/memory_scope_fix_20261002/` | 历史跨任务效率迁移、writer scope、memory fix；10 组 a/b/c/d 实验及原始证据 |
@@ -54,7 +57,13 @@ GLM 5.3 Flash，单次独立运行。代码复杂目标中，无记忆 18/46，�
 
 新增审计发现 new:BigCodeBench/316 的测试覆盖被测函数；No Memory/new:BigCodeBench/954 多次提交 fetch failed。原分数、固定 mask 和 memory 均保留。自动标签还出现 D0/D1、来源/实际注入范围及 BabyAI 无 SUBMIT 协议的误判，因此主报告使用 D0 与逐例证据复核，不将原始标签频数当失败率；人类逐条签认尚未登记。
 
-审查共 362 个 HTTP 请求（含校准、参数拒绝、余额不足及用户充值后获批补齐），已知 9,700,314 tokens，与 baseline 成本分开。模型输出、失败记录和证据包共 2,094 个文件已归档并核验。见[完整报告](experiments/section7_analysis_20261003/第7.2节baseline分析报告.md)、[完成核对](experiments/section7_analysis_20261003/records/section7.2-completion-audit.json)、[审查费用](experiments/section7_analysis_20261003/records/review-costs.json)及[离线复核说明](experiments/section7_analysis_20261003/REPRODUCING.md)。下一阶段是讨论并冻结 7.3/7.4 的可证伪假设与有限干预，当前未执行。
+审查共 362 个 HTTP 请求（含校准、参数拒绝、余额不足及用户充值后获批补齐），已知 9,700,314 tokens，与 baseline 成本分开。模型输出、失败记录和证据包共 2,094 个文件已归档并核验。见[完整报告](experiments/section7_analysis_20261003/第7.2节baseline分析报告.md)、[完成核对](experiments/section7_analysis_20261003/records/section7.2-completion-audit.json)、[审查费用](experiments/section7_analysis_20261003/records/review-costs.json)及[离线复核说明](experiments/section7_analysis_20261003/REPRODUCING.md)。随后已完成7.3假设分析，见下节；7.4有限干预尚未执行。
+
+## 第 7.3 节分析已完成
+
+建议先检查评分契约与测试覆盖（G0），再优先检验 H1：冻结合法源信息和注入集合，只改变为可逆去重表示，能否降低总 token 且不新增质量失败。这是进入创新前的简单经济性对照，尚未证明有效；条件显式化、包装、Mem0 提取目标、AWM 更新预算分别作为 H2–H5，保持独立变量。
+
+H1 暂列 767、619、739、896 四个候选目标，全部待 G0 验收；最多8个solver任务是建议预算，未获得执行授权。已逐项写明竞争解释、证伪条件、质量/费用计量和停止规则。本轮新增外部调用与rollout为0，旧分数/memory未修改。见[完整分析](experiments/section7_hypotheses_20261003/第7.3节可证伪假设分析.md)与[完成核对](experiments/section7_hypotheses_20261003/records/section7.3-completion-audit.json)。
 
 ## 数据与凭据边界
 

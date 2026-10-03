@@ -1,0 +1,190 @@
+{
+  "section": "7.3",
+  "status": "analysis_complete_proposals_not_execution_approved",
+  "date_hong_kong": "2026-10-03",
+  "scope": "Generate falsifiable hypotheses from frozen section 7.2 evidence; no new API requests, rollouts, scoring changes or memory writes.",
+  "main_question": "在已有合法源经验进入上下文且任务契约可评的范围内，能否用可逆去重的经验表示减少总 token，而不损害当前任务质量？",
+  "not_claimed": [
+    "已证明主要因果瓶颈",
+    "已确定创新方法",
+    "压缩必然保质",
+    "所有失败都是 memory 问题",
+    "全量标签频数是真实失败率"
+  ],
+  "gate": {
+    "id": "G0",
+    "name": "评分契约与证据可用性检查",
+    "evidence": [
+      "new:BigCodeBench/316 的测试重定义目标函数；六方法原分数均成功。",
+      "No Memory/new:BigCodeBench/954 工具传输失败，无真实提交。",
+      "16 条重点中 15 条有契约疑点，非 15 条已证 scorer 无效。",
+      "本轮静态候选检查发现 815 仅 truthiness、896 主要 shape/columns、739 测试无正离群样本、699 测试否定题面允许的 tie。"
+    ],
+    "requirements": [
+      "原始分数与固定 mask 永久保留；另建 diagnostic eligibility 与评分版本，不能悄悄重评分旧矩阵。",
+      "确认断言调用候选而非 test 自带参考函数；目标输入/输出契约与测试一致；合法目标需求没有依赖只能从隐藏测试知道的细节。",
+      "若补性质检查，先依据用户可见规范和合法源条件定义，再检查候选；新增检查留在离线隔离评分端。",
+      "无法从可见规范消除歧义的题，仅作契约/机制诊断或保持 pending，不用来宣称总体质量保持。",
+      "先冻结可用任务及检查再跑新分支；运行后不因条件表现差替换题。"
+    ],
+    "current_actions": "只读源文件与静态断言，未运行候选代码、未修改 scorer。",
+    "model_calls": 0
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "priority": "recommended_first_after_G0",
+      "name": "经验表示中的可逆重复增加了成本，去重可能保留质量",
+      "phenomenon_and_evidence_level": {
+        "D0": "Jaccard 27/46 对 No Memory 18/46；有效目标 tokens 574109 对 162418，工作工具同为 52。完整代码 tokens 1214123 对 310663。对应源 44/46 实际注入。",
+        "D1_hypothesis": "部分输入成本来自同一 episode 中重复的任务、代码或工具文本；保留原始信息与时序而改变重复内容的表示，有机会减少输入与总 token。",
+        "not_established": "尚未实测可逆去重能省多少字节/token，也未证明去重后的引用表示对模型同样易用。"
+      },
+      "applicable_tasks_history_and_config": "候选 767、619、739、896，均使用各自 Jaccard memory-before 与原选中 episode 集；全部须先过 G0。Pi、GLM-5.3-Flash high、工具与目标环境、18 turns/8192 output/600s 等按既有配置提议重新冻结。主 solver 不是离线审查模型 DeepSeek。",
+      "main_hypothesis_and_competing_explanations": {
+        "main": "精确重复文本去重后，总 token 减少且当次质量不下降。",
+        "alternatives": [
+          "冗余文本反而提供了有用的重复强调和易读性",
+          "模型解释引用需更多 reasoning 或工作工具",
+          "去重破坏缓存，非缓存输入成本/金额不降",
+          "现有分数过弱，表面保质只是 scorer 没检查",
+          "随机性和可变模型别名解释差异"
+        ]
+      },
+      "single_changed_factor": "仅改变相同三条或原数量选中 episode 的序列化表示：R 为原文本，C 为可逆精确去重表示。冻结候选集合、ID、顺序与来源，不用省出的预算追加其他记忆，不加入目标解答提示。",
+      "representation_specification": [
+        "只利用原合法 episode 字节，重复内容保留一个 definition 并用有序 reference 表示；所有非重复任务条件、工具调用、观察、错误与可见说明保留。",
+        "先做无模型 fixture：expand(C) 与原合法 episode 的规范化结构逐字段一致，记录哈希和映射。可逆性不等于模型等效使用。",
+        "不能使用目标隐藏测试、参考解、gold source ID、源隐藏通过标签；不只保留正确源，不丢弃失败轨迹。",
+        "若引用/说明开销后 C 不更短，停止该构造；不自动改成有损摘要或追加 LLM writer。"
+      ],
+      "expected_changes_and_invariants": "预期 C 的实际请求 memory bytes 与 provider 输入量下降；若总 token 与工具迭代没有反向增加，则总开销下降。任务契约、合法知识、来源覆盖、评分与质量约束应不变。缓存、输出、工具数可能变化，必须实际计入。",
+      "falsification": [
+        "C 无法可逆恢复或丢条件：构造无效，尚未形成假设检验。",
+        "有效 C 更短却出现 R 通过/C 失败或性质检查退化：本批质量保持条件被反驳。",
+        "输入字节下降但全角色总 token 不降或增加：本批总-token 经济性不成立。",
+        "仅当前 scorer 通过而性质覆盖不足：证据不充分，不算支持。",
+        "极少数样本保质省 token：只支持当前条件的候选，不证明总体非劣或新算法优势。"
+      ],
+      "calls_budget_and_stop_rules": "建议只先做 4 题×2 条件×R=1，最多 8 个 solver task，0 个 writer LLM 调用。历史四题总 tokens 47839，双倍 95678 仅作量级参照，不是预算上限。任一 G0/哈希/隔离失败停止对应题；402、未知费用或新 scorer 冲突停止批次讨论；不自动补题/重试/重复。具体金额与 token 硬上限需另行确认。",
+      "decision_rule_proposed_not_frozen": "每题当次 Q_C>=Q_R 且满足预声明性质；合计全角色 totalTokens 建议下降至少 20%，在 G0 后冻结的 n<=4 题中至少 ceil(0.75*n) 题下降（四题时为3题）。工作工具、重复/无效操作和非缓存输入另列，若明显退化不得概括为全面效率提升；未获准不得把 20% 当已批准门槛。",
+      "claim_boundary": "这是创新前的简单结构去重基线；若收益仅来自序列化/编码变化，报告为工程经济性收益，不升格为新的记忆学习机制。条件抽象或有损摘要的额外价值需另行证明。"
+    },
+    {
+      "id": "H2",
+      "priority": "separate_small_diagnostic_if_selected",
+      "name": "显式暴露源适用条件可能减少条件越界复用",
+      "phenomenon_and_evidence_level": {
+        "D0": "Jaccard/559 的源通过、原 episode 完整注入，目标仍硬编码 item1–item5 并出现 KeyError。ACE 同题成功，但五种其他方法失败；不是控制变量比较。",
+        "D1_hypothesis": "源条件虽在长 episode 中存在，却没有成为目标适配时被检查的显式条件。",
+        "not_established": "单个案例不能说明普遍频率；失败也可能来自目标任务推理、接口理解或随机性。"
+      },
+      "applicable_tasks_history_and_config": "仅 new:BigCodeBench/559，使用 Jaccard 原冻结起点和同样注入；先把列名适配谓词与未明确的组合排序语义分开。",
+      "main_hypothesis_and_competing_explanations": {
+        "main": "合法源条件的显式说明，比同长度的一般检查提醒更能避免直接复用固定列名。",
+        "alternatives": [
+          "一般提醒引发额外推理就足够",
+          "任何额外计算都有效，非条件内容作用",
+          "模型仍错误处理类型/排序，避免 KeyError 不等于全题正确",
+          "重跑随机性导致差异"
+        ]
+      },
+      "single_changed_factor": "附加说明的语义内容。R 原样；G 一般核对提醒；S 根据源题原文提取的条件说明。G/S 放同位置，UTF-8 字节长度近似匹配并记录偏差；不能冒称精确 token 匹配。",
+      "source_only_note_example": "该源任务规定列为 item1、item2、item3、item4、item5；复用这段实现前核对当前任务是否仍满足该列约束。",
+      "expected_changes_and_invariants": "S 应减少在没有这些列的合法目标输入上访问 item1–item5 的行为；G 未必同样改善。源知识、其余注入、模型、预算、目标及检查相同；总分、类型、排序与成本独立报告。",
+      "falsification": [
+        "S 与 G 行为无差异：不支持条件信息本身的特异效应",
+        "S 仍直接使用固定列名：反驳本条件提示在此例有效的预测",
+        "仅避免 KeyError 而其他质量下降：不支持总体改进",
+        "只有一次三分支差异：不能推出稳定负迁移修复"
+      ],
+      "calls_budget_and_stop_rules": "另行决定后最多 1 题×3 条件=3 个 solver task、0 writer LLM；必须重跑当次 R，不能把旧 7.1 或 H1 结果充当同期对照。检查失败、条件泄漏或异常时停止，不自动加重复。",
+      "claim_boundary": "源条件人工展示只是诊断条件；部署贡献必须由训练/测试隔离的自动源条件形成机制另证，不能使用目标 gold 生成提示。"
+    },
+    {
+      "id": "H3",
+      "priority": "parked_engineering_control",
+      "name": "固定预算下的包装优先级使可用源不可见",
+      "phenomenon_and_evidence_level": {
+        "D0": "ICL 46/46 对应源进入选择集，45/46 包装丢弃；ACE 源候选42/46、注入19/46，部分来源同时存在保留和丢弃条目。",
+        "D1_hypothesis": "query-aware 包装在同字节预算下保留更适用的信息，可能减少再发现成本。"
+      },
+      "applicable_tasks_history_and_config": "从固定 ICL 自己的 before-state 选择预登记目标；不能用不同方法各自历史比较当隔离包装因素。",
+      "main_hypothesis_and_competing_explanations": {
+        "main": "仅改变包装优先级即可改变信息可见性及效率。",
+        "alternatives": [
+          "被丢信息实际不必要或有误",
+          "保留当前最近经验更重要",
+          "Jaccard 这类简单方法已经充分解决，缺创新空间",
+          "覆盖提高但输入噪声/推理成本抵消"
+        ]
+      },
+      "single_changed_factor": "同候选、同48000字节上限，仅 FIFO 与合法 query 词法优先级不同。不得用离线 gold source ID 优先保留；结果出来后才 join 来源标签。",
+      "expected_changes_and_invariants": "预期源/相关信息实际注入改变；模型、任务、总字节上限、history固定。质量与成本是待测结果，不由覆盖推导。",
+      "falsification": [
+        "包装并未提高可用内容可见性",
+        "可见性提高但质量/工具效率不变或变差",
+        "用简单Jaccard即可达到同效果，则不支持更复杂机制的必要性"
+      ],
+      "calls_budget_and_stop_rules": "暂不与H1并跑。未来最多先2题×2条件=4个solver task；来源选择必须合法、保持预算，未满足则零调用停止。",
+      "claim_boundary": "主要是解释当前基线瓶颈和提供强简单对照，不把 FIFO→相关性排序直接命名为研究创新。"
+    },
+    {
+      "id": "H4",
+      "priority": "parked_adapter_diagnostic",
+      "name": "Mem0 当前提取目标与程序经验不匹配",
+      "phenomenon_and_evidence_level": {
+        "D0": "96次代码写入有91次空facts、4次原生JSON拒绝，主要得到两条泛化描述；41个源通过且目标有效的配对均未注入对应源 provenance。",
+        "D1_hypothesis": "提取器关注的事实类型不适配这里的可执行程序经验。"
+      },
+      "applicable_tasks_history_and_config": "冻结一个空facts源 episode与一个真实非空提取episode作为对照，先确定其ID；原prompt与源观察导向prompt使用完全相同合法文本。",
+      "main_hypothesis_and_competing_explanations": {
+        "main": "改变提取目标能形成有条件、可核验的操作经验。",
+        "alternatives": [
+          "原历史确实无值得存的信息",
+          "消息角色或adapter接线问题",
+          "输出格式拒绝与语义空结果是不同问题",
+          "提取多了但错误/无用内容也更多"
+        ]
+      },
+      "single_changed_factor": "仅提取prompt，模型、legal episode、存储/检索配置固定；新版本明确命名为适配变体，不改写原生 baseline 身份。",
+      "expected_changes_and_invariants": "有来源支持的具体操作/条件条目可能增加；事实条数不能替代正确性与下游效用。不得引入隐藏评分筛选。",
+      "falsification": [
+        "仅多写泛话/无证据断言",
+        "错误率增加或必要条件仍缺失",
+        "非空结果不能改善任何预定义下游行为时，不支持任务效用主张"
+      ],
+      "calls_budget_and_stop_rules": "暂停候选：若另行批准，先2 episodes×2 prompts=4 writer调用，仅验证提取，不宣称reader收益；完整流改进必须新跑相应方法流。",
+      "claim_boundary": "优先排查方法适配，不能由该次classic配置推出Mem0全系列无效。"
+    },
+    {
+      "id": "H5",
+      "priority": "parked_budget_diagnostic",
+      "name": "AWM 累计历史预算导致更新停滞，受限历史可能恢复更新但未必保质",
+      "phenomenon_and_evidence_level": {
+        "D0": "索引47–95的49次writer逻辑尝试被320000字节请求上限拒绝，workflow内容不变；writer已知token占全代码73.0%。",
+        "D1_hypothesis": "以既有workflow加当前合法episode替代累计全历史可减少更新输入、恢复写入；信息保留与reader效用未知。"
+      },
+      "applicable_tasks_history_and_config": "从两个已归档长历史检查点复制同起点；原workflow、当前episode、模型/字节上限固定，分叉不回写主流。",
+      "main_hypothesis_and_competing_explanations": {
+        "main": "限制writer历史范围能够通过请求预算并产生新可用更新。",
+        "alternatives": [
+          "增量模式丢了必要旧条件",
+          "现有workflow已经足够，更多更新无价值",
+          "输出成功但泛化质量差",
+          "重算/整理维护成本抵消输入节省"
+        ]
+      },
+      "single_changed_factor": "仅writer输入的历史范围，保持旧workflow+当前episode；不得同时换模型、提高字节上限、改reader检索或扩大输出预算。",
+      "expected_changes_and_invariants": "是否进入HTTP、是否形成内容变化及所花tokens是直接可观测项；未来reader质量必须另测，状态hash变化本身不是学习质量。",
+      "falsification": [
+        "仍超预算或没有合法更新",
+        "新workflow丢失已知必要条件",
+        "更新恢复却reader质量/总成本退化"
+      ],
+      "calls_budget_and_stop_rules": "暂停候选：最多先2个检查点各1个新writer请求，原输入的预算拒绝可离线复核；若要reader效用需另批4个solver task。修改writer后的完整方法结论仍需从初始状态运行完整流。",
+      "claim_boundary": "请求预算下的可运行性/适配问题；不把增量摘要作为已证新算法或把本次冻结当真实遗忘。"
+    }
+  ],
+  "reviewer_limits": "依据原始D0与已复核D1形成分析；46段未匹配引用与模糊全量标签不参与因果排序。未新增人类逐条签认。"
+}
