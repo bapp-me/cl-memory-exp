@@ -1,0 +1,106 @@
+{
+  "status": "registered_before_execution",
+  "round_id": "r1",
+  "variant": "compact",
+  "reference": "native_files R=1, frozen 48-source corpus",
+  "phenomenon": "File-tool responses devote50.78% of eligible-response bytes to non-content structure; multiple successful and failed cases exceed80%.",
+  "hypothesis": "Remove audit-only per-item provenance fields from the model-visible response while preserving every returned content character and actionable file/range/pagination locator. This can reduce total solver tokens without degrading native-file baseline quality.",
+  "single_change": "public response codec; full original metadata remains audit-only",
+  "unchanged": [
+    "full6295-byte startup index",
+    "samefilecorpus",
+    "sameGrep/Glob/Read schemas and backend",
+    "same per-call backend packing",
+    "GLM/high8192",
+    "18turns/15PYTHON/600s",
+    "12memorycalls/48000bytes/12000reply",
+    "source-only/no writeback",
+    "original48/46 score mask"
+  ],
+  "evidence": [
+    {
+      "index": 58,
+      "case_id": "review-d8f824fcfdd36a",
+      "response_bytes": 13807,
+      "non_content_fraction": 0.799449554573767,
+      "memory_calls": 3,
+      "correct": true,
+      "GLM_minimal_intervention": {
+        "change": "首次查询改用函数名无关的模式（如 'task_func|ValueError'）替代猜测性的 'def analyze'，检验是否减少空查询。",
+        "fixed": "相同的冻结历史库、启动索引、预算与目标题面。",
+        "falsifier": "若更宽泛的首次查询不减少调用数/字节数且结果不变，则首次空查询仅是偶然开销而非策略问题。"
+      },
+      "D0_record": "records/d0-initial.json",
+      "GLM_review_record": "records/review-audit-initial.json"
+    },
+    {
+      "index": 62,
+      "case_id": "review-4733d4e6c18dbb",
+      "response_bytes": 17321,
+      "non_content_fraction": 0.8318226430344668,
+      "memory_calls": 2,
+      "correct": true,
+      "GLM_minimal_intervention": {
+        "change": "为 MEMORY_GREP 增加紧凑输出模式（仅返回匹配行内容与来源标识，省去逐项 JSON 元数据），在相同历史/环境/预算下对比 token 消耗与任务成功率",
+        "fixed": "相同的 48 条冻结 No Memory 历史、相同启动索引、相同动态预算与模型",
+        "falsifier": "若紧凑模式下命中内容与成功率不变但 token/字节开销未显著下降，或下降但成功率明显下降（信息丢失），则元数据开销假设被反驳"
+      },
+      "D0_record": "records/d0-initial.json",
+      "GLM_review_record": "records/review-audit-initial.json"
+    },
+    {
+      "index": 72,
+      "case_id": "review-ee6f7c2040d890",
+      "response_bytes": 23707,
+      "non_content_fraction": 0.9157632766693382,
+      "memory_calls": 2,
+      "correct": true,
+      "GLM_minimal_intervention": {
+        "change": "none",
+        "fixed": "相同的冻结 48 源历史、相同启动索引、相同 MEMORY_GREP 工具与预算、相同 GLM 5.3 Flash",
+        "falsifier": "若改为遮蔽 s043 后同题仍稳定成功且代码等价，则削弱 USE_TRANSFER 候选"
+      },
+      "D0_record": "records/d0-initial.json",
+      "GLM_review_record": "records/review-audit-initial.json"
+    },
+    {
+      "index": 88,
+      "case_id": "review-1a9c3ae71786cc",
+      "response_bytes": 35375,
+      "non_content_fraction": 0.9143745583038869,
+      "memory_calls": 3,
+      "correct": true,
+      "GLM_minimal_intervention": {
+        "change": "Add a compact full-file/episode read mode (or raise the grep line/context budget) so the relevant s042 code block could be fetched in one call instead of three truncated, metadata-heavy grep responses.",
+        "fixed": "Same startup index, same frozen memory library, same tool environment and budget, same history.",
+        "falsifier": "If a single compact full read of s042 does not reduce memory call count/response bytes or change visible behavior versus the three truncated greps, the avoidable-overhead hypothesis is refuted."
+      },
+      "D0_record": "records/d0-initial.json",
+      "GLM_review_record": "records/review-audit-initial.json"
+    }
+  ],
+  "competing_explanations": [
+    "metadata may help navigation or scope; removal might harm correctness",
+    "startup index rather than per-result metadata may dominate tokens",
+    "R=1/model alias/cache changes may explain differences",
+    "adaptive queries may consume freed budget rather than save cost"
+  ],
+  "simplest_alternative": "Deterministic codec stripping, no additional model, reranker, index, automatic top-k, or summary",
+  "offline_gate": "Replay all73 original native-file calls, preserve exact content and navigational fields, dynamic-source isolation and realPi mock test",
+  "acceptance": {
+    "min_quality_correct_of46": 25,
+    "min_total_token_reduction_fraction": 0.15,
+    "cost_scopes": [
+      "all48",
+      "scored46"
+    ],
+    "max_python_calls_all48": 65,
+    "max_python_calls_scored46": 62,
+    "source_or_observation_failure_allowed": false
+  },
+  "falsifier": "Quality<25, total-token saving<15% in either scope, extra business calls beyond baseline, or any source/visibility failure rejects a comprehensive-efficiency win",
+  "new_solver_tasks": 48,
+  "canary_index48_included": true,
+  "post_round_review_max_independent_targets": 12,
+  "no_strong_causal_or_stability_claim": true
+}
