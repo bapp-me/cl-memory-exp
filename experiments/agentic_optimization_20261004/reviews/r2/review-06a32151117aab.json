@@ -1,0 +1,163 @@
+{
+  "case_id": "review-06a32151117aab",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 6,
+          "quote": "pre-registered scorer defect; task retained, excluded from scores"
+        }
+      ],
+      "reason": "The corresponding source was never scored (correct: null), so its quality as a prior cannot be established from evidence."
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 111,
+          "quote": "Memory has no direct precedent for this exact task, so I'll implement it straightforwardly and test locally."
+        }
+      ],
+      "reason": "No target-relevant source content was demonstrably retrieved or applied; fidelity of any stored relevant material cannot be assessed."
+    },
+    "target_applicability": {
+      "value": "irrelevant",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 88,
+          "quote": "Generate a category distribution within a specified range and return as a DataFrame."
+        }
+      ],
+      "reason": "The only file read (raw/s013., random category counts) does not cover summary-report key naming or plot conventions required by the target tests."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 111,
+          "quote": "Memory has no direct precedent for this exact task, so I'll implement it straightforwardly and test locally."
+        }
+      ],
+      "reason": "Solver explicitly implemented from scratch after grep; no memory content appears in the submitted code."
+    }
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 7,
+          "quote": "\"pattern\": \"summary report|bar chart|Axes object\""
+        }
+      ],
+      "reason": "Four targeted memory calls with task-specific patterns; solver stopped after concluding no precedent, which is coherent, not a failure of strategy per se."
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "KeyError: 'total_amount_per_category'"
+        }
+      ],
+      "reason": "The failure is exact dict-key naming (and plot title/labels) that the target prompt never specifies; hidden tests demand benchmark-specific names."
+    },
+    "reading_efficiency": {
+      "value": "avoidable_overhead_candidate",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 30,
+          "quote": "\"path\": \"raw/s013.\""
+        }
+      ],
+      "reason": "The single full read went to an irrelevant raw file (random category distribution) while 12 matched episode files were never opened; modest overhead (~2.5KB) with no payoff."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "The report should include the total amount spent in each category, the average amount spent per transaction for each category"
+        },
+        {
+          "section": "target_contract_reference_offline",
+          "line": 3,
+          "quote": "assert ax.get_title() == 'Value Distribution'"
+        },
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "KeyError: 'total_amount_per_category'"
+        }
+      ],
+      "reason": "Prompt specifies content but not key names or title/labels; tests require exact benchmark-specific naming ('total_amount_per_category', title 'Value Distribution'). Candidate contract/test mismatch, not proof."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 142,
+          "quote": "The implementation works correctly, including the edge case of an empty transaction list. Submitting now."
+        }
+      ],
+      "reason": "Direct record: solver invented its own key structure ('total'/'average'/'count'), self-tested only behavior it chose, and submitted; visible execution is correct relative to its self-imposed contract."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 37,
+          "quote": "\"paths\":[\"/memory/MEMORY.md\",\"/memory/episodes/s000.md\",\"/memory/episodes/s006.md\",\"/memory/episodes/s011.md\""
+        }
+      ],
+      "reason": "12 episode files matched bar-chart/Axes patterns but none were opened; whether any holds the corresponding source's plot-convention knowledge is unverifiable, so this is only an unexploited-opportunity candidate."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 101,
+          "quote": "\"total_matches\":71,\"next_offset\":27,\"packing_truncated\":true"
+        }
+      ],
+      "reason": "The episodes content grep was truncated at match 27 of 71; later matches could include more relevant conventions but were not visible. Candidate only."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "Solver could plausibly have guessed canonical key names from the prompt wording; the miss may be ordinary execution variance, not contract unfairness.",
+    "Unread or truncated memory episodes might have conveyed benchmark naming conventions (title/labels/keys); unverifiable from this trace.",
+    "No-memory baseline also failed (baseline_correct: false), suggesting the task is hard regardless of memory."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the corresponding source episode exists in the frozen 48-file library and what it contains.",
+    "What content lay beyond the truncated grep cutoff (matches 28-71).",
+    "Whether any memory content, if read, would have changed key naming or plot conventions."
+  ],
+  "minimal_intervention": {
+    "change": "After files_with_matches hits, open top-matched episode files (content mode or bounded reads) instead of a single raw JSON read, so benchmark plot/naming conventions in matched episodes become visible.",
+    "fixed": "Same 48-file frozen memory, same hidden tests, same budget/round, same model and read-only access.",
+    "falsifier": "If opening the matched episodes reveals no naming-convention content and the run still submits non-canonical keys/title, the retrieval-access candidate is refuted."
+  },
+  "causal_claim": false
+}

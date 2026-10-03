@@ -32,6 +32,17 @@ def run(round_id):
     session = CandidateSession(corpus, config["variant"])
     expected_entry = "memory_summary.md" if config["variant"] == "compact_lazy_index" else "MEMORY.md"
     assert session.prelude() == corpus.files[expected_entry]
+    confirmation = None
+    if config.get("confirmation_of"):
+        prior = candidate_module(config["confirmation_of"]).CandidateSession(corpus, "compact")
+        assert session.system() == prior.system() and session.tools == prior.tools
+        # Pure codec identity is checked on all historical responses above and below.
+        prior_codec = candidate_module(config["confirmation_of"]).compact_result
+        for baseline in baseline_rows():
+            if baseline["method"] == "native_files":
+                for access in jsonl(REPO / baseline["source_path"] / "memory-access.jsonl"):
+                    assert compact_result(access["result"]) == prior_codec(access["result"])
+        confirmation = "same prompt/tools/codec as " + config["confirmation_of"]
     assert session.call("MEMORY_READ_FILE", dict(path="../../hidden"), "bad").get("error")
     assert session.call("MEMORY_READ_FILE", dict(path="episodes/s048.md"), "complex").get("error")
     query = session.call("MEMORY_GREP", dict(pattern="np.random", literal=True, glob="episodes/s000.md"), "grep")
@@ -95,6 +106,7 @@ def run(round_id):
         exact_content_and_read_navigation_preserved=True, source_only=True, fourth_round_rejected=True,
         fixture_folder=native.run_folder("native_files", 999, prefix).relative_to(REPO).as_posix(),
         freeze_hash=sha(ROOT / "rounds" / round_id / "freeze.json"))
+    value["confirmation_equivalence"] = confirmation
     save(ROOT / "rounds" / round_id / "fixtures.json", value)
     print(json.dumps(value))
 

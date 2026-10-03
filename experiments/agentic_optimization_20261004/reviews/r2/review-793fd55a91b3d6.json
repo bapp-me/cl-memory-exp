@@ -1,0 +1,155 @@
+{
+  "case_id": "review-793fd55a91b3d6",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=15:True:5"
+        }
+      ],
+      "reason": "The closest source (s024, single-pair KMeans plot) passed its own hidden evaluation. Passing does not validate its applicability to the multi-pair combined task."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 96,
+          "quote": "    return labels, ax"
+        }
+      ],
+      "reason": "The retrieved s024 snippet exposed the return convention ('labels, ax') and legend/cluster notes intact; the content a target solver would need about return type was readable in the grep output."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 45,
+          "quote": "    >>> labels, ax = task_func(s1, s2, n_clusters=4)"
+        }
+      ],
+      "reason": "Source covers KMeans-on-two-Series with an Axes return; the target adds multiple pairs, an overlay figure, and per-pair color/marker distinction, so only clustering and legend conventions partially apply. The retrieved 'labels, ax' hint was visible but the target prompt never stated a return type."
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 129,
+          "quote": "The memory contains only similar-but-different tasks, so I'll finalize my own design: per-pair individual plots"
+        }
+      ],
+      "reason": "After reading both episodes the agent explicitly rejected adopting their conventions and wrote its own design returning a Figure. Shared generic patterns (KMeans, scatter, legend) are not attributable reuse."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "assert _eval_record_bool(len(ax.collections) == 6)"
+        },
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "AttributeError: 'Figure' object has no attribute 'collections'"
+        },
+        {
+          "section": "target_contract_reference_offline",
+          "line": 2,
+          "quote": "    return ax"
+        }
+      ],
+      "reason": "The hidden evaluator dereferences the returned object as an Axes (reference returns ax), while the target prompt only requires a plot with a legend and never states a return type. The solver returned a Figure whose combined_ax already had 6 cluster scatters, so the visible content was likely contract-compliant but the return type was not. Candidate prompt/test inconsistency; cannot prove the test would fully pass with an Axes return."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 59,
+          "quote": "\"paths\":[\"/memory/episodes/s004.md\",\"/memory/episodes/s024.md\"]"
+        },
+        {
+          "section": "target_visible",
+          "line": 96,
+          "quote": "    return labels, ax"
+        }
+      ],
+      "reason": "The focused grep surfaced s024 (the corresponding source episode) and a content grep exposed its return convention. This establishes retrieval opportunity and exposure only; the agent may or may not weight that hint."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 129,
+          "quote": "The memory contains only similar-but-different tasks, so I'll finalize my own design"
+        }
+      ],
+      "reason": "Visible behavior shows memory was read and consciously not followed; the return-convention hint present in the retrieved snippet was not carried into the final design. D1 because reading is only a proxy and no counterfactual exists."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 8,
+          "quote": "\"pattern\": \"combined_visualization|series_pairs|KMeans\""
+        }
+      ],
+      "reason": "Three targeted greps with domain-specific patterns located the two relevant episodes; no broad or abandoned search. Focused does not mean the content was adopted."
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "AttributeError: 'Figure' object has no attribute 'collections'"
+        }
+      ],
+      "reason": "The evaluator crashed on the return type, not on clustering or plotting logic; the prompt omitted the return-type requirement the hidden test enforces."
+    },
+    "reading_efficiency": {
+      "value": "contextual_confirmation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 35,
+          "quote": "Let me quickly check memory for any similar prior task to align conventions (e.g., return value expectations)."
+        }
+      ],
+      "reason": "The two bounded content greps were aimed at confirming return conventions; small payloads (~6KB each) and no follow-up reads, so no identified overhead."
+    }
+  },
+  "competing_explanations": [
+    "Even if the solver had returned an Axes (as the reference does), other hidden checks (tests_run=0, evaluator crashed early) might still have failed, so the contract mismatch explains the observed crash but not necessarily the full score.",
+    "The solver's own code passed its self-tests, so an own-execution error in clustering/legend logic cannot be ruled in or out from available evidence."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "Whether returning combined_ax (an Axes) would pass all hidden checks, since no test ever completed.",
+    "Whether the agent consciously registered the 'labels, ax' return hint in the retrieved docstring; no hidden thinking is available.",
+    "No semantic recall gold or causal use label exists for this round."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same read-only 48-history memory library, same startup index, same model, same hidden tests and budget; only the access pattern may vary.",
+    "falsifier": "If a re-run with identical memory returns an Axes (e.g., via the same design but returning the combined axes) and the evaluator still fails on a non-collection check, the return-type contract hypothesis is refuted; if it passes the collections asserts, it is supported."
+  },
+  "causal_claim": false
+}

@@ -94,6 +94,13 @@ def validate(obj, packet):
         errors.append("invalid primary")
     if not obj.get("competing_explanations"):
         errors.append("no competing explanation")
+    if obj.get("confidence") not in ("high", "medium", "low", "unable"):
+        errors.append("invalid confidence")
+    if not isinstance(obj.get("uncertainties"), list):
+        errors.append("uncertainties must be a list")
+    intervention = obj.get("minimal_intervention")
+    if not isinstance(intervention, dict) or not all(isinstance(intervention.get(k), str) for k in ("change", "fixed", "falsifier")):
+        errors.append("invalid minimal_intervention")
     return errors
 
 
@@ -164,6 +171,8 @@ def main():
     parser.add_argument("--retry-rate-limited", action="store_true")
     args = parser.parse_args()
     assert 1 <= args.workers <= 48
+    if read(ROOT / "records/round-budget.json").get("closed") or args.phase == "r3":
+        raise RuntimeError("Final-round stop: no new paid reviewer calls; offline audit only")
     manifest = read(ROOT / "records" / f"review-manifest-{args.phase}.json")
     assert sha(ROOT / "review_prompt.txt") == read(ROOT / "records/protocol.json")["review_prompt_sha256"]
     if args.phase != "initial":
@@ -174,7 +183,11 @@ def main():
     cases = manifest["cases"][:1] if args.first else manifest["cases"]
     if not args.first:
         first = read(ROOT / "api" / args.phase / cases[0]["case_id"] / "terminal.json")
-        assert first["status"] in ("valid", "needs_audit") and first["usage"] is not None
+        # Initial transport/JSON compatibility is already established. A later review's
+        # malformed JSON is retained as a quality failure, not a reason to reissue it.
+        compatible = first["status"] in ("valid", "needs_audit") or (
+            args.phase != "initial" and first.get("http_status") == 200 and first.get("finish_reason") == "stop")
+        assert compatible and first["usage"] is not None
     if args.retry_rate_limited:
         cases = [c for c in cases if (ROOT / "api" / args.phase / c["case_id"] / "terminal.json").exists()
                  and read(ROOT / "api" / args.phase / c["case_id"] / "terminal.json").get("http_status") == 429]

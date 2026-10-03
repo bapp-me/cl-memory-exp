@@ -1,0 +1,153 @@
+{
+  "case_id": "review-2f0f35fc963f2c",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=36:True:6"
+        }
+      ],
+      "reason": "源 s022 离线评测通过 6 项测试；但其实现风格（copy、numeric-only fillna）与 reference solution 不同，通过不代表其所有陈述对目标同样成立。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 173,
+          "quote": "df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].mean())"
+        }
+      ],
+      "reason": "MEMORY_READ_FILE 完整返回 s022 的任务、实现与观察，关键内容（fillna 均值、describe、10-bin histplot 返回 Axes）与对应源轨迹一致，未见失真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 173,
+          "quote": "- DataFrame: A pandas DataFrame with statistics. This includes count, mean, standard deviation (std), min, 25%, 50%, 75%, and max values for each numeric column."
+        }
+      ],
+      "reason": "单 DataFrame 版的数值处理与绘图逻辑直接适用；但源返回 (description, axes) 二元组，目标要求按列表返回且目标提示措辞含 'processed dataframe with statistics'，返回结构需重解读，目标还新增空 DataFrame 等边界。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 151,
+          "quote": "The episode s022 is the single-DataFrame version of this exact task. Let me read it fully."
+        }
+      ],
+      "reason": "agent 明确识别 s022 为同任务单帧版本，通读后将其循环化并测试了空表、混合类型与不可变性，属于可见的连贯改写；这仅是行为代理，不能证明记忆造成结果。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 141,
+          "quote": "- [s022](episodes/s022.md): Describe a dataframe and draw a distribution chart for each numeric column after replacing the NaN values with the average of the column."
+        }
+      ],
+      "reason": "记忆库中存在与目标任务几乎同文的合法源 s022，且被 grep 命中并读取；来源覆盖存在，但不证明保真或适用，也不证明使用导致成败。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 212,
+          "quote": "The single-DataFrame version of this task (s022) passed with: copy df, fill numeric NaNs with column mean, `describe()` stats, and seaborn histplots with 10 bins returning Axes. I'll adapt this to the list-of-DataFrames variant."
+        }
+      ],
+      "reason": "提交代码与 s022 方案在数值填充、describe 与 10-bin histplot 上逐行可见重合，是清晰可见的复用改写；无反事实，不能据此断言记忆带来净收益。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "raise KeyError(key)\nKeyError: 'count'"
+        }
+      ],
+      "reason": "评测在 results[i][0].loc['count'] 处 KeyError：agent 返回 (processed_df, stats, plots) 三元组，而测试把 results[i][0] 当作统计 DataFrame；返回形状与测试预期不符是本次失败最直接的可见机制。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "each tuple contains a processed dataframe with statistics and a list of distribution plots"
+        }
+      ],
+      "reason": "提示措辞可读作含 processed df 的三元组，而离线测试与 reference solution（返回 description, plots 二元组）要求首个元素是统计表；题意与测试可能不一致，仅标候选。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "EVAL_CONTRACT：提示措辞含糊，'processed dataframe with statistics' 未必明确排除 agent 的三元组读法，失败可能源于题面歧义而非单纯执行错误",
+    "agent 在 Python 测试中也自行验证了三元组结构并通过（其自设断言与提交一致），失败可能仅在其未见到隐藏测试对元素顺序的要求",
+    "reference_execution_metrics 显示 reference 本身 correct:false，说明该题测试对实现形式敏感，失败未必与记忆使用有关"
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "隐藏测试完整判分逻辑与所有断言未暴露，无法确认除元素顺序外是否还有其他不匹配",
+    "agent 对提示措辞的内部解读理由不可见（无隐藏思考），只能从行为推断",
+    "无无记忆反事实运行，无法量化记忆对本次结果的因果影响"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "保持相同 48 源只读库、startup 索引、MEMORY_GREP/MEMORY_READ_FILE 工具与预算",
+    "falsifier": "若同一历史下仅调整对返回结构的解读（如允许先小样自检测试式索引约定）后评测通过，则反驳'检索/来源不足'类解释并支持契约解读假设；因失败点在契约解读而非检索，未提出检索工具改动"
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 151,
+          "quote": "The episode s022 is the single-DataFrame version of this exact task. Let me read it fully."
+        }
+      ],
+      "reason": "两次 files_with_matches 定位后用递进 pattern（distribution、describe、NaN/fillna）收敛到 s022 并两次读全文，检索路径短且命中准确。"
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "The function should return a list of tuples, where each tuple contains a processed dataframe with statistics and a list of distribution plots"
+        }
+      ],
+      "reason": "失败点在于返回元组结构与隐藏测试对 results[i][0] 的索引预期不一致，指向任务契约解读而非检索缺失或环境故障。"
+    },
+    "reading_efficiency": {
+      "value": "contextual_confirmation",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 74,
+          "quote": "\"full_bytes\": 3673"
+        }
+      ],
+      "reason": "两次读取 s022 共约 6.3KB 即覆盖任务描述、实现与观察，读到的内容随后直接支撑改写，未见明显可省读开销。"
+    }
+  },
+  "causal_claim": false
+}

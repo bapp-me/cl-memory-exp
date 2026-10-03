@@ -41,6 +41,8 @@ def prepare(round_id):
     candidate = CandidateSession(corpus, current["variant"])
     current["startup_bytes"] = {"native_files": len(candidate.prelude().encode())}
     current["startup_policy"] = {"native_files": hypothesis.get("startup_file", "MEMORY.md")}
+    if hypothesis.get("confirmation_of"):
+        current["confirmation_of"] = hypothesis["confirmation_of"]
     paths = [ROOT / p for p in ("candidate_memory.py", "round_runner.py", "audit_round.py", "fixtures_round.py", "common_opt.py")]
     snapshots = []
     for path in paths:
