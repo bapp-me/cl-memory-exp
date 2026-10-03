@@ -1,6 +1,6 @@
 # 从 48 道简单题历史中自主找证据：三版只读记忆检索系统
 
-日期：2026-10-04（香港时间）。当前状态：实现与无付费验收；正式 3 × 48 题配置待用户确认，尚无本轮效果结论。
+日期：2026-10-04（香港时间）。当前状态：已获用户确认，正式 3 × 48 题全部完成并审计；原口径正确率为 24/46、21/46、25/46。用户随后追加的两种原生访问模式也已完成，见 [五模式完整报告](../agentic_native_20261004/五种记忆访问方式实验报告.md)。
 
 本次直接任务是调研、做三版、补齐观测并跑复杂题。研究计划作为背景；它先前“仅更新文档”“下一步只做 P0”的范围不覆盖用户本次新授权，也不自动增加其他 benchmark、重复或在线记忆写入。
 
@@ -64,7 +64,7 @@
 
 历史缺失的原始请求、失败 usage 或流式时间不能补造；新采集解决的是本轮和未来的可观测性。
 
-## 待确认的正式配置
+## 已确认的正式配置（冻结原准备记录）
 
 完整配置：[proposed-config.json](records/proposed-config.json)。
 
@@ -93,6 +93,6 @@ python -X utf8 experiments/agentic_search_20261004/run.py check
 
 复用既有 Pi 安装、AgentCL cache 和 WSL sandbox/broker，依赖说明见仓库 [REPRODUCING](../../docs/REPRODUCING.md)。服务未启动时先启动已有 `section7_observability_20261002/broker.py`；启动 broker 不调用模型。所有凭据仅通过现有本地机制读取，不提交到 Git。
 
-用户确认具体配置后才写入 `records/approval.json`，包含 `approved: true`、配置 hash 和用户授权原文/时间。正式入口依次为 `run.py canary`、`run.py remaining`，随后 `audit.py` 全量审计并汇总。审批文件不存在或 hash 不匹配时不会读取凭据或发出模型请求。
+用户确认已写入 `records/approval.json`，包含 `approved: true`、配置 hash 和用户授权原文/时间。正式入口依次为 `run.py canary`、`run.py remaining`，随后 `audit.py` 全量审计并汇总；这三个步骤本轮均已完成。审批文件不存在或 hash 不匹配时不会读取凭据或发出模型请求。
 
 主要代码：[memory.py](memory.py)、[run.py](run.py)、[recorder.mjs](recorder.mjs)、[audit.py](audit.py)。原始新运行位于旧 runtime 下独立的 `agentic-search-20261004-v1-codeeval-*` 命名空间；完成后应归档原始日志及 hash 清单，再报告逐题配对的质量、PYTHON、memory calls、tokens/cache、延迟、重复读取和未知项。旧实验输出不改写。

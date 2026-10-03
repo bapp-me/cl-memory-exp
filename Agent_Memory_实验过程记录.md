@@ -360,3 +360,19 @@ Hermes 固定源码支持五个 bundled 外部 adapter，官方文档另列 Honc
 拟运行 3 × 48 题、R=1，GLM glm-5.3-flash/high、8192 output tokens、每题 18 轮/15 PYTHON/600 秒；每题最多 12 次 memory 调用、48000 bytes 证据响应、单次 12000 bytes。每版首题各一次 canary 计入 144 次，其余全局 48 任务并发、8 沙箱槽。只做最多 2 次额外传输重试，不重试到成功；原评分 mask 为每版 48 次执行/46 题主评分。原简单库历史 137698 tokens 单列，本轮构建索引没有模型调用。无可靠价格，金额不填估计值。
 
 具体配置与 freeze、验收证据已保存，尚未生成 approval.json，正式付费入口在读取凭据前要求匹配配置哈希的用户确认。本阶段完成设计、实现与无付费验收，尚未完成 144 次目标运行；goal 保持未完成。后续收到确认才启动并报告结果。
+
+## 五种记忆访问方式全部执行完成（2026-10-04，香港时间）
+
+用户确认第一批具体配置后，三版检索工具各 48 题全部执行。随后用户指出希望更接近 Codex/Claude Code 的原生访问：模型自己选择看什么记忆、怎么看，要求额外设计两种模式，并明确后续运行不用再确认配置。因此追加 native_files 和 native_shell，各 48 题，沿用同一简单源、模型和每题预算；没有替换或重跑前三版，总计 240 次 R=1。
+
+新增调研依据为官方 Codex Memories、OpenAI Sandbox Agents 的文件记忆渐进读取、Claude Code 的 MEMORY.md 索引和普通文件工具。两种实现为 GLM + Pi 下的读取协议借鉴，不称完整产品复现。文件版启动加载 6295 bytes 的逐条摘录索引，提供 Glob/Grep/Read；终端版启动只给 486 bytes 目录说明，由模型在真正 Bash 中自己组织 rg/cat/sed/管道。初始披露也不同，因此是系统配置比较，不是仅换界面的单因素消融。98 个记忆文件全部由原 48 道简单题合法轨迹确定性生成，无新 writer/embedding 调用。
+
+原 46 题口径结果：关键词 24/46、634356 tokens、63 PYTHON；混合 21/46、721872 tokens、65 PYTHON；图导航 25/46、669752 tokens、62 PYTHON；原生文件 25/46、993760 tokens、62 PYTHON；原生终端 24/46、765826 tokens、62 PYTHON。参照冻结 Jaccard 为 27/46、468934 tokens、48 PYTHON。这一轮五版均未在质量或总 token 上超过该静态参照，不能据 R=1 推断稳定排名；历史 No Memory 是 18/46、162418 tokens，旧失败请求 usage 仍不可完整核验。
+
+原生文件版在 43/46 道有效题中主动查文件，终端版为 35/46；全部 48 题分别有 28 Grep +45 Read、97 Shell 调用，模型没有使用 Glob。可见首题自主选文件、改表达式、加上下文、对照 Markdown 与 raw JSON，但该题两版仍答错；访问行为可证不等于效果收益可证。
+
+全部 240 次新执行共 4131760 tokens、871 个逻辑生成/HTTP 尝试，均有 provider usage，没有实际传输重试；两个批次 API 并发峰值均为 48。每版首题 canary 计入 48 次，正常答错和不读取不重跑。48 道简单源的历史生成成本 137698 tokens 另列，金额缺少已验证单价仍为 unknown。原 48 执行/46 主评分 mask 保持不变，316/954 的 45/44 题诊断视图另列。
+
+240/240 个任务的源库 before/after 不变，复杂题未写回、不产生可检索 episode。新文件/终端实际返回内容与 provider payload 逐字核对；原生终端的 /memory 在 OS 层只读，host、其他题、网络和凭据不可见。strace 从 chroot 外记录文件打开，保留命令与原始 stdout/stderr；打开文件不等于全部内容进入模型，脚本变换后的精确源字符归因和重复源字符数保留 unknown。首次无付费 fixture 修复了 strace dirfd host mount 拼写与 unfinished/resumed 拼接；正式数据未因此重跑。
+
+原始证据归档 experiments/agentic_native_20261004/artifacts/five-modes-raw.tar.gz：6943 文件、27600003 bytes，SHA256 3368476126412083cf65281e0425e31815da5e4eeea413ab8e8a33f0393b537b。实际 GLM 凭据精确扫描、逐成员 hash、安全恢复预检通过；无 credential 文件、task workspace、缓存或无关个人数据。正式运行完成后核对命令行并停止本聊天创建的业务 broker 34468 与记忆 broker 13224。报告、逐题配对、来源和观测边界见 experiments/agentic_native_20261004/五种记忆访问方式实验报告.md。

@@ -4,7 +4,7 @@ Training-free Agent memory 实验代码与研究证据。主要语言为中文�
 
 ## 从这里开始
 
-- [三版自主记忆检索：设计、隔离与观测验收](experiments/agentic_search_20261004/README.md)：冻结同一份 48 道 No Memory 简单题历史，实现事件 BM25、混合排序与上下文交付、图关系展开三版工具。279 个来源事件逐条核对，真实 Pi + 模拟服务、并行隔离、缺失 usage 和 WSL 检查通过；拟执行 3 × 48 复杂题，具体配置待用户确认，目前无新付费调用。
+- [五种记忆访问方式：240 次独立复杂题执行报告](experiments/agentic_native_20261004/五种记忆访问方式实验报告.md)：三版检索工具加用户追加的原生文件/终端两版，均已完成各 48 题 R=1。原 46 题得分依次为 24/21/25/25/24，均未超过已有冻结 Jaccard 的 27；对应 tokens 也更多。240 次共 4,131,760 tokens、871 个请求，usage 完整；简单库只读、复杂题隔离、实际 payload 曝光和原始归档均通过审计。设计与边界见 [前三版](experiments/agentic_search_20261004/README.md) / [原生两版](experiments/agentic_native_20261004/README.md)，不宣称完整产品复现或稳定因果优势。
 
 - [冻结 No Memory 简单题库的 Jaccard top-3 补跑](experiments/section7_frozen_jaccard_20261004/冻结简单题库Jaccard补跑报告.md)：2026-10-04 完成 48 道复杂题 R=1，复杂题不写回；正确 27/46，与历史在线 Jaccard 相同，有效目标 tokens 574,109→468,934（下降 18.3%），PYTHON 52→48。99 个请求均有 usage，峰值并发 47，来源只读隔离通过。这是独立补充对照，不改变 S0 路线或宣称单因素因果收益。
 
