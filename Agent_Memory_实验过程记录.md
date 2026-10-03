@@ -184,3 +184,60 @@ Pi 适配及隔离代码提交为 `38d7fb0`。数据库 canary 两个模型都�
 ## 独立实验仓库整理（2026-10-02）
 
 用户指定私有仓库 https://github.com/bapp-me/cl-memory-exp 并授权同步实验代码。整理范围包括三个 experiments 子项目、原研究计划、本实验记录及环境知识跨任务复用的支持审计材料；与求职、简历和面试资料无关的内容不纳入。导出保留冻结源码及证据原字节，不迁移校园工作区的混合 Git 历史；密钥、依赖安装、缓存、临时工具工作区不上传。新增独立仓库 README、复现说明及环境变量凭据入口。原始本轮轨迹通过已核验压缩归档提供。推送结果以独立仓库实际提交与远端分支核验为准。
+
+## 7.2.3 现有轨迹可分析范围与采集缺口核对（2026-10-03，香港时间）
+
+用户先询问 B 级 hook 是否已实现，再要求区分已有轨迹可用代码或离线 LLM 分析的指标，以及 baseline 运行时因记录器缺口而无法事后恢复的指标。本条根据当前源码、快照、请求与调用账本核对，记录的是证据可用性和后续分析边界，不把待做分析写成已完成。
+
+7.2.3 的 A0/A1/B/C/D 是原先对获取方式的分类，不能直接当成当前完成状态。此前“7.0 已完成”的表述需限定为已批准范围内的采集验收通过；不表示所有 B 级扩展字段都已实现，也不表示 C 级语义审查或 D 级干预实验已完成。新正式 code 流的 384 个任务观测验收通过，但验收 schema 允许未知 usage、未测逐块 token 等 nullable 字段。
+
+本条“旧流”指第 7 节复用的 No Memory 和 Jaccard episodic retrieval 两组 code/BabyAI 第一遍，共 208 个任务；“新流”指此次接入记录器的受限 ICL、Mem0、AWM、ACE。SQL 出现在此前数据库实验中；第 7 节当前 code/BabyAI baseline 没有 SQL 工具，不能把不适用统计成漏采。
+
+### 逐项判定
+
+| 7.2.3 指标 / 观察 | 现有轨迹可直接分析或离线补做的内容 | 漏采、未知或其他限制 |
+| --- | --- | --- |
+| 正确数、有效分母、逐题配对、目标/全流 token 与工具数、BabyAI 结果 | 代码可按固定 scoring mask 统计；主要结果已有汇总 | 缺失 usage 保留 unknown，汇总只能注明已知 subtotal，不能以 0 补齐 |
+| 每任务 turns、提交、error、stop_reason、timeout、context_exceeded、usage、seconds | 代码可从 execution、Pi 结果和终态提取及交叉分析 | 部分 usage 未返回；已有 seconds 不等于各阶段独立耗时 |
+| 源 episode 注入覆盖、源评分与目标成败交叉 | 代码可检查原始 episode 是否保留、来源是否进入候选/注入，并离线关联源与目标得分 | 抽象记忆的 provenance 只证明来源关联，不证明必要内容完整保留；AWM 来源关联较宽，内容保真度需语义审查 |
+| 输入/输出/cache 拆分、每轮 usage、工具分项、错误码与重复参数 | 已返回 usage、工具参数及返回可用代码分析；LLM 可辅助判断重复动作是否必要或有效 | 旧流缺完整失败/重试请求 usage 账本及 HTTP attempt 归属；新流返回的 raw HTTP usage 比旧 SDK counters 更完整，仍有超时缺项；SQL 在当前 baseline 不适用 |
+| 历史条数/字节、注入条数/字节、源到目标距离、Jaccard 全候选与预算淘汰 | 代码可直接统计；旧简单方法可从 memory-before、injected、任务与冻结算法重建，校验注入 hash | 这里基本没有阻止分析的采集缺口；重建结果与注入不一致时应报错或未知 |
+| 旧代码写入过程 | 可从相邻 memory 快照、memory-after 和终态推导追加内容，最后一步有终态证据 | 状态 diff 可以恢复“写了什么”，不能恢复当时具体写入耗时 |
+| 复杂方法候选、rank/score、过滤原因、入选但未注入 | 新流 retrieval 记录可分析 adapter 可见候选、顺序/分数、包装前选中项、预算淘汰原因及实际注入 | Mem0 记录返回的 top-5，完整持久化记忆池另有快照；未观察的内部候选或筛选过程不能冒充当时日志。可离线重算作为重建/推断。AWM/ACE 原本没有相关性 score，不补造分数 |
+| 提取候选、NOOP/拒绝、合并删除、记忆版本与内容来源 | 原始辅助角色输出、原生操作、前后快照/hash 和来源，可用代码分析变更与拒绝；LLM 可审查提取内容及来源保真度 | ACE 所用原生版本不支持 UPDATE/MERGE/DELETE，属于方法能力限制，不是采集失败；来源 ID 不能替代内容级审查 |
+| 实际请求 payload、最终上下文块映射、辅助角色及重试调用归属 | 新流各角色实际去密钥 payload、call_id、HTTP attempt 已存；solver 记忆块映射已有。辅助角色可结合 payload、快照、反思/操作和冻结代码离线补映射，难以唯一匹配时注明歧义 | 旧流未存当时原始请求 body/hash，也没有完整 HTTP attempt 映射；可以构造重建版内容，但不能证明与旧实际请求逐字一致 |
+| 单次生成完整延迟、工具/检索/写入耗时、writer 提交滞后 | 新流完整 streaming/生成延迟、工具耗时可直接分析；任务起止、submission 到 memory_event/task_commit 的间隔可离线计算并明确所含阶段 | 旧流完整 streaming 延迟及缺失的阶段时间无法恢复。新流没有独立 retrieval/update 起止 span 或精确持久化提交计时；事件间隔不能冒充纯检索/写入耗时 |
+| memory token 占比及缓存贡献 | 记忆文本、字节和请求位置已有；若有与 provider 一致的 tokenizer 可离线计数，否则只能明确标为估算。provider 总 cache usage 可统计 | 当前 token_count 为 null；缺 provider 逐块缓存归属，LLM 无法补出精确记忆缓存贡献。memory 对总缓存/净成本的因果影响需对照实验，不能由一次上下文长度推出 |
+| 记忆正确性、必要条件保留、过度泛化、过期相关性 | 合法来源、状态变化和目标要求足以进行人工或离线 LLM 语义审查；隐藏真值只用于离线审计端 | 当前这类语义审查尚未完成，属于分析未做，不是轨迹丢失；输出为附片段和不确定性的 D1 判断 |
+| 经验实际造成成功/负迁移、压缩质量保持、真实遗忘 | 现有轨迹可提出候选解释或可见复用代理 | 需要同起点干预、预算控制或跨时点只读探针，属于额外实验要求；读日志或 LLM 打标签不能替代反事实 |
+| 项目隔离/全局规则遵循 | 可检查现有运行流的 ID、路径和访问隔离 | 当前没有对应跨项目/全局规则场景与规则真值，无法报告此类遵循率；属于 not_applicable，不是因漏采而未取得分数 |
+
+### 无法事后恢复的记录器缺口
+
+1. 旧流每次生成的完整 streaming 延迟，以及未记录的工具、检索或写入阶段耗时。旧 transport 主要计到响应 headers，原 events 缺统一时间包络，不能用总 seconds 拆出这些历史值。
+2. 新流独立检索、写入和持久化提交的精确耗时。现有单调时间事件可以计算已记录边界间隔，但缺少阶段起止时不能无歧义分离。engine 的 total_system_seconds 起点在初始检索之后；可另用 task_start 到 task_commit 计算有明确边界的任务墙钟时间，但不能把现有字段称为含全部准备阶段的总耗时。
+3. 旧流实际请求的原始 body/hash 证据，以及完整 HTTP 重试归属和失败请求 usage。现有冻结 SDK 与 messages 支持请求重建，但历史原始 hash 不存在；补 hook 后新运行得到的是新观测，不能恢复旧值。
+
+旧请求核验覆盖 208 个任务、549 次本地 payload 构造，模型调用与 HTTP 调用均为 0，字节数检查通过。当前重建脚本保存的是数量/字节核验报告，不能把它描述为已经保存了 549 份历史原始 payload；字节数匹配也不是旧请求的 cryptographic body equality 证明。
+
+### 可补分析、运行缺项与不适用的区分
+
+- 辅助角色逐块上下文映射尚未在线生成，但 payload、快照与相关辅助输出已在，因此可以离线补做；不是“没字段就分析不了”。
+- 逐块 token 尚未实测，但文本已在，因此可以明确口径后计数或估算；估算不能写成 provider 实测值。
+- 新正式 code 流有 4 次 HTTP usage 未返回：1 次 solver 响应超时、3 次 ACE Reflector 超时。这是运行中未取得数据，不能简单归为 hook 未实现；不能由输出长度或 LLM 判断补成真实 token。此处 4 次只指新增正式 code 流，不代表整个矩阵包含的历史/复用 BabyAI 缺项总数。
+- provider 没有提供逐块 cache 归属，不等于漏掉了一个本地字段；现有 provider 总量不足以精确归因。
+- ACE 不支持的原生操作、当前缺少的跨项目场景，以及需要反事实的因果指标，分别属于方法能力、场景范围和额外实验要求，不归为代码漏采。
+- 精确检索 precision/recall 还需要相关性真值；候选列表与 LLM 相关性审查可提供描述或 D1 判断，不能自动生成真值指标。
+
+### 核对证据与本条工作量
+
+以下证据路径以独立实验仓库 `D:\campus_re\cl-memory-exp` 为根目录：
+
+- `Agent_Memory_Research_Plan_CN_v1.0_Final.md`：7.2.2–7.2.4 的证据等级、原表与证据链要求。
+- `experiments/section7_observability_20261002/records/legacy-availability.json`：208 个旧任务的字段盘点；这是当时盘点快照，须结合后续重建报告读取。
+- `experiments/section7_observability_20261002/records/legacy-payload-reconstruction.json`、`experiments/section7_observability_20261002/reconstruct_legacy_payloads.mjs`：549 次构造的字节核验及未记录旧原始 hash 的限制。
+- `experiments/section7_observability_20261002/records/formal-new-streams-acceptance.json`：384 个正式新 code 任务的观测验收及各角色 usage 缺项。
+- `experiments/section7_observability_20261002/records/section7.1-pairs.json`、`experiments/section7_observability_20261002/records/memory-health.json`：已做的配对/状态分析与尚未做的 semantic fidelity。
+- `experiments/section7_observability_20261002/recorder_v2.mjs`、`experiments/section7_observability_20261002/pi_runner_v2.mjs`、`experiments/section7_observability_20261002/engine.py`、`experiments/section7_observability_20261002/aux_client.py`、`experiments/section7_observability_20261002/complex_memory.py`：实际 payload/role/call 记录、streaming/工具计时、候选/状态记录及缺少的阶段 span。
+
+本条只核对已有代码和日志并追加结论；新增在线实验、模型调用和离线 LLM 调用均为 0。逐块映射、token 计数/估算、语义审查和额外干预仍按上述状态登记，没有因记录结论而标为完成。
