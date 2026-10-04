@@ -56,7 +56,7 @@ def main():
         if not directory.is_dir(): continue
         manifest=read(directory/'manifest.json') if (directory/'manifest.json').exists() else {}
         formal=manifest.get('mode')=='formal'
-        for request in directory.rglob('*.request.json'):
+        for request in sorted(directory.rglob('*.request.json')):
             if request.parent.name!='requests': continue
             ident=request.name.removesuffix('.request.json'); out=request.parent.parent
             native_meta=request.with_name(ident+'.attempt.json')
@@ -122,6 +122,13 @@ def main():
         stream['known_total_tokens']=sum(x.get('total_tokens') or 0 for x in calls)
         stream['attempts']=len(calls); stream['unknown_usage_attempts']=sum(x['usage'] is None for x in calls)
         stream['published_price_estimate_known_usd']=round(sum(x['published_price_estimate_usd'] or 0 for x in calls),6)
+    deviations_path=ROOT/'records/protocol-deviations.json'
+    if deviations_path.exists():
+        deviations=read(deviations_path)
+        for stream in streams:
+            affected=[x['index'] for x in deviations['affected'] if x['run_id']==stream['run_id']]
+            stream['protocol_deviation_indices']=affected
+            stream['comparison_disposition']=deviations['status'] if stream['environment']=='codebase_adaptation' else 'no_observed_prompt_deviation'
     summary={'as_of':datetime.now(timezone.utc).isoformat(),'streams':streams,'totals':totals,
         'notes':['Counts include unfinished task attempts; completed-task cost comparison must use committed rows only.',
             'Unknown usage is not zero; known sums are lower bounds when attempts are missing usage.',
@@ -131,7 +138,7 @@ def main():
             'Framework dollar totals and Pi catalog zero placeholders are not GLM bills; discounts/subscriptions and actual debit are unverified.',
             'Parallel task latency is not a serial historical speedup estimate.']}
     save(ROOT/'records/progress-summary.json',summary)
-    save(ROOT/'records/attempt-ledger.json',list(ledger.values()))
+    save(ROOT/'records/attempt-ledger.json',sorted(ledger.values(),key=lambda a:(a['run_id'],a['task'] or '',a['attempt_id'])))
     print(json.dumps({'streams':[{'method':x['method'],'environment':x['environment'],'completed':x['completed'],'target':x['target'],'status':x['status']} for x in streams],
         'totals':totals},ensure_ascii=False))
 

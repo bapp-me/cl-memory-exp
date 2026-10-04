@@ -16,6 +16,14 @@ from src.tasks.codebase_adaptation.evaluator import evaluate_submission
 from docker_dispatch import install, broker
 
 
+def restore_rollout_context(task, index):
+    """Recover the real previous stage before deciding whether to announce it."""
+    task._stage_change_notice = None
+    if index > 0:
+        task._update_rollout_context_for_issue(index - 1, announce=False)
+    task._update_rollout_context_for_issue(index, announce=index > 0)
+
+
 class CodebaseStream:
     def __init__(self, directory, *, restore=False):
         self.directory = Path(directory); self.directory.mkdir(parents=True, exist_ok=True)
@@ -70,7 +78,7 @@ git status --short
             self.task.issue_history = state['issue_history']
             self.task.current_steps = 0
             if self.task.current_issue_idx < len(self.task.instances):
-                self.task._update_rollout_context_for_issue(self.task.current_issue_idx, announce=True)
+                restore_rollout_context(self.task, self.task.current_issue_idx)
                 self.task._start_container()
                 self.query = self.task.build_current_query()
 

@@ -2,6 +2,8 @@
 
 2026-10-05。这是本轮 **R=1 的阶段报告**，六条 Pi 流已全部完成，共 177 个任务；原生三组尚未完成矩阵，不能据此排六组名次。实时执行状态见 [EXECUTION.md](EXECUTION.md)，带时间戳的统计见 [progress-summary.json](records/progress-summary.json)。
 
+**扩展审计发现 Codebase 恢复偏差，结果接纳口径待用户决定。** No Memory 第 14、17 题及 Jaccard 第 19 题，在恢复后多收到一次“切换新仓库”提示。原始问题正文、base commit 与 grader 未变，但不能排除该提示影响当前行为及后续记忆。因此，下列 Codebase 全量数字保留为实际运行记录，暂不作为严格同提示比较。Database 没有这项偏差。已修复未来恢复逻辑，未改写或重跑既有结果；详情及共同未受影响前缀统计见 [protocol-deviations.json](records/protocol-deviations.json)。
+
 这批结果支持一个具体判断：**记忆可以伴随更少的业务操作，但少操作不一定意味着少 token。** Database 的 Jaccard 与无记忆组同为 26/40，查询从 374 次降到 174 次；Codebase 的 Jaccard 从 16/19 提高到 17/19、步骤从 350 降到 205，但已知 token 从约 402 万增加到 520 万。Notepad 在 Codebase 上同为 16/19，使用 293 步、约 271 万 token。它们是这一次运行的系统表现，不是稳定排名或纯记忆因果效应。
 
 ![已完成 Pi 矩阵](figures/pi-comparison.png)
@@ -19,6 +21,8 @@ Codebase v4 的两题验收前缀在配置未变化时延续为正式流，每�
 ## 2. 完整流结果
 
 “动作”在 Database 为 QUERY 次数，在 Codebase 为官方步骤数，包含被官方计数的无效最终动作；两种环境的动作单位不相加比较。Reward 使用官方适配器输出，不另造综合分数。
+
+**“正确”指官方判定，不等于精确数值或 SQL 语义完全一致。** 锁定版本对浮点答案接受 `abs(submitted − expected) <= max(question_tolerance, abs(expected) × 0.01)`，整数则要求精确相等。例如第 25 题，No Memory 与 Claude 采用不同价格列、给出不同数值，仍都被官方接受。机械审计另核对各方法收到相同问题且私有正确答案一致；没有把这些隐藏值或可枚举的答案哈希导出。
 
 | 环境 | 方法 | 正确 / 任务 | 动作 | 平均 reward | 已知总 token | 用量未知的请求 |
 |---|---|---:|---:|---:|---:|---:|
@@ -52,6 +56,15 @@ Codebase No Memory 的一次 HTTP 500 没有 usage，因此 4,018,562 是已知�
 | Codebase / Jaccard | 14 | −84 | +1,367,374 | 13 题，+1,360,198 tokens |
 
 正确率的交换也要看：Database Jaccard 相对 No Memory 有 5 题由错变对、另有 5 题由对变错；Notepad 是 4 题由错变对、6 题由对变错。Codebase Jaccard 为 3 题由错变对、2 题由对变错，Notepad 为 2 题对换。一次运行不足以断言不存在负迁移。
+
+恢复偏差的诊断表如下，是否接纳仍待用户决定，不用子集替换完整 benchmark 成绩。最保守的共同前 13 题不包含多余提示；另列逐字提示相同的全部 16 题。两个 No Memory 偏差任务不携带跨题记忆，Jaccard 的偏差发生在最后一题，所以其余题未通过这两条显式记忆通道收到该提示；这仍不是受影响题目的反事实证明。
+
+| 诊断范围 | No Memory：正确 / 动作 / 已知 tokens | Notepad：正确 / 动作 / tokens | Jaccard：正确 / 动作 / tokens |
+|---|---|---|---|
+| 共同前 13 题 | 10/13 · 236 · 2,433,625 | 11/13 · 200 · 1,544,533 | 13/13 · 123 · 2,587,219 |
+| 全部同提示 16 题 | 13/16 · 315 · 3,822,782* | 13/16 · 265 · 2,514,843 | 15/16 · 192 · 4,935,055 |
+
+星号仍代表包含一条 usage unknown 的失败请求。
 
 Codebase Jaccard 的已知输入 token 为 5,084,925，而 No Memory 为 3,885,458；输出反而较少，117,668 对 133,104。增加量主要在输入侧。Jaccard 每题实际注入的完整 episode 最大合计 58,846 UTF-8 bytes；Notepad 的任务开始笔记最大为 815 bytes。这里的 bytes 只是载荷大小，不能当 tokenizer 数值或相关性真值。
 

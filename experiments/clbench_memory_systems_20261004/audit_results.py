@@ -6,7 +6,7 @@ from protocol import digest,database_feedback,jaccard
 
 
 def main():
-    manifest=read(ROOT/'records/task-manifest.json'); summaries=[]; all_sessions=set()
+    manifest=read(ROOT/'records/task-manifest.json'); summaries=[]; all_sessions=set(); reference_prompts={}; reference_gold={}
     for directory in sorted((ROOT/'private-runs').iterdir()):
         if not (directory/'manifest.json').exists(): continue
         run=read(directory/'manifest.json')
@@ -30,10 +30,17 @@ def main():
             if previous_memory is not None: check(before==previous_memory,'previous committed memory loaded')
             previous_memory=after
             episode=read(out/'legal-episode.json'); barrier=read(out/'barrier.json')
+            task_key=(environment,index)
+            reference_prompts.setdefault(task_key,episode['prompt'])
+            check(episode['prompt']==reference_prompts[task_key],'same full task prompt across methods')
             check(digest(episode)==row['source_watermark']==barrier['source_watermark'],'final legal watermark')
             check(barrier['durable'] and barrier['status'] in {'not_applicable','completed_noop','completed_changed','completed_staged'},'completed durable barrier')
             if environment=='database_exploration':
                 check(episode['feedback']==database_feedback(record,index+1),'feedback allowlist hides gold')
+                # Compare only within this private process. Do not export the
+                # gold values or low-entropy hashes into public audit records.
+                reference_gold.setdefault(task_key,record['ground_truth'])
+                check(record['ground_truth']==reference_gold[task_key],'identical private database gold across methods')
             submission=read(out/'submission.json')
             artifact=submission.get('artifact')
             if artifact:
@@ -70,9 +77,11 @@ def main():
         'scope':'committed formal tasks only; unfinished submissions and maintenance are not silently admitted',
         'model_calls':0,'streams':summaries,'checks':['official order and grader parity','unique native sessions',
             'memory handoff and own-past retrieval','legal feedback projection','frozen submission hashes',
-            'actual model/effort/output budget and measured window','all reported failed-attempt usage retained as unknown']}
+            'actual model/effort/output budget and measured window','all reported failed-attempt usage retained as unknown',
+            'identical official problems and private database gold across methods; no labels exported']}
     save(ROOT/'records/mechanical-audit.json',output)
     print(json.dumps({'status':output['status'],'streams':[(s['run_id'],s['committed_tasks'],s['status'],s['errors']) for s in summaries]}))
+    if output['status']!='passed': raise SystemExit(1)
 
 
 if __name__=='__main__': main()

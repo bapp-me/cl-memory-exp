@@ -103,13 +103,16 @@ def main():
             phases[phase].append(row)
         streams.append({'run_id': stream['run_id'], 'method': stream['method'], 'environment': stream['environment'],
                         'status': stream['status'], 'target': stream['target'], 'stats': aggregate(rows),
+                        'comparison_disposition':stream.get('comparison_disposition','not_assessed'),
+                        'protocol_deviation_indices':stream.get('protocol_deviation_indices',[]),
                         'phases': {k: aggregate(v) for k, v in phases.items()}})
     paired = []
     for target in streams:
         if target['status'] != 'completed' or target['method'] == 'pi_none': continue
         baseline = next(s for s in streams if s['method'] == 'pi_none' and s['environment'] == target['environment'])
         paired.append({'baseline': baseline['run_id'], 'target': target['run_id'], 'method': target['method'],
-                       'environment': target['environment'], **compare(rows_by_run[baseline['run_id']], rows_by_run[target['run_id']])})
+                       'environment': target['environment'], 'comparison_disposition':target['comparison_disposition'],
+                       **compare(rows_by_run[baseline['run_id']], rows_by_run[target['run_id']])})
     output = {'as_of': summary['as_of'], 'generated_at': datetime.now(timezone.utc).isoformat(), 'model_calls': 0,
               'scope': 'Committed tasks only; incomplete native prefixes are not compared against full streams.',
               'streams': streams, 'paired': paired,

@@ -84,3 +84,11 @@ Pi No Memory Codebase 第 16 题发生 HTTP 500。唯一已执行命令仅为读
 共享请求门截至 2026-10-04 19:49 UTC 观察峰值为 **8**，配置上限 50，最大本地信号量等待约 0.016 秒；当时只有 Claude 正式流仍在运行。已归档的全部正式 HTTP attempt 都有该门的进入记录，早期 114 条验收/协议探针在设立共享门前执行，单列为历史差异。HTTP 200 内也可能承载服务端错误，不能只看 HTTP 状态统计失败率。见 [concurrency-observation.json](records/concurrency-observation.json)。
 
 Codex 求解阶段的自动增额续接已补齐：通过 `/budget` 的实际 length/usage 证据后，原生 `exec resume` 必须回到同一 session，输出预留随预算调整；正常结束、网络故障、输入超窗不能触发该路径。14 项离线测试通过，锁定二进制在无网络只读容器内接受所用 CLI 参数。未做新的在线验收，未注入活动流；维护 job 的恢复与 600 秒上限仍受待答问题约束。见 [codex-output-continuation-fixture.json](records/codex-output-continuation-fixture.json)。
+
+## 扩展审计发现的 Codebase 恢复偏差
+
+加入跨方法逐字提示比对后，发现 No Memory 的 index 13、16，以及 Jaccard 的 index 18 多了一句 `NOTICE: We are now coding in a new repo.`。恢复代码原先从初始 tablib 阶段直接恢复到 tenacity，误把重启当成了真实仓库切换。正常顺序只有 index 9 应出现该提示。此前机械审计没有检查跨方法提示逐字相等，所以曾报告通过；新增检查后明确报告失败，不能覆盖这项偏差。
+
+三次多余提示没有改变题目正文、base commit、评分器或实际记忆文件，但可能影响对应任务。进一步检查显示，两个 No Memory 任务不携带跨题记忆，Jaccard 偏差发生在最后一题，未观察到经显式记忆进入后续题目的通道。保留完整原始记录，未重跑。已向用户提出第 4 项待答问题：是否接受披露偏差后的 R=1 并补充共同未受影响前缀，或先讨论重跑范围。后续源代码已修复为先恢复实际上一阶段，再判断当前是否需要发仓库切换提示；2 项离线测试通过，覆盖全部 19 个恢复位置与真实上游顺序，并复现三处旧逻辑问题。
+
+修复前，六条 Pi 流的原始运行文件已逐一与其冻结 config_hash 对齐，保存在私有 runtime-source 中，公开校验回执见 [pi-frozen-runtime-snapshots.json](records/pi-frozen-runtime-snapshots.json)。结果和模型上下文没有被“补正”。Database 跨方法的官方问题和隐藏答案一致，隐藏值及其可枚举哈希均未导出。

@@ -17,7 +17,7 @@ def main():
     plt.rcParams.update({'font.family': 'DejaVu Sans', 'font.size': 11, 'axes.spines.top': False,
                         'axes.spines.right': False, 'axes.titleweight': 'bold',
                         'svg.fonttype': 'none', 'svg.hashsalt': 'clbench-pi-r1'})
-    fig, axes = plt.subplots(2, 3, figsize=(13, 7.6))
+    fig, axes = plt.subplots(2, 3, figsize=(13, 8))
     for row, env in enumerate(['database_exploration', 'codebase_adaptation']):
         stats = [next(s['stats'] for s in data['streams'] if s['method'] == m and s['environment'] == env) for m in methods]
         for col, (metric, title, scale) in enumerate([
@@ -38,9 +38,10 @@ def main():
                 ax.text(bar.get_x() + bar.get_width()/2, value + max(values)*.025, label, ha='center', fontsize=11)
             if col == 0: ax.set_ylabel('Database' if row == 0 else 'Codebase', fontweight='bold')
     fig.suptitle('CL-Bench | Pi system comparison | GLM-5.3-Flash high | R=1', fontsize=16, y=.98)
-    fig.text(.055, .02, '* One failed No Memory Codebase HTTP attempt has unknown usage. Tokens shown are reported sums.\n'
+    fig.text(.055, .02, 'Codebase has 3 extra recovery notices; full rows are descriptive, pending the protocol decision.\n'
+             '* One failed No Memory Codebase HTTP attempt has unknown usage. Tokens shown are reported sums.\n'
              '177 completed tasks; fresh session per task; independent memory per environment. No causal or stable-ranking claim.', fontsize=10)
-    fig.tight_layout(rect=(0, .08, 1, .95))
+    fig.tight_layout(rect=(0, .10, 1, .95))
     target = ROOT / 'figures'; target.mkdir(exist_ok=True)
     fig.savefig(target / 'pi-comparison.png', dpi=180)
     svg = target / 'pi-comparison.svg'
