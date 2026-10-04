@@ -14,6 +14,7 @@ import threading
 import time
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
+from urllib.parse import urlsplit
 import uuid
 from prepare import ROOT, read, save
 from protocol_canary import secret
@@ -38,9 +39,17 @@ def main():
     class Handler(BaseHTTPRequestHandler):
         protocol_version = 'HTTP/1.0'
         def log_message(self, *_): pass
+        def do_GET(self):
+            self.record_unhandled(); self.send_error(404)
+        def record_unhandled(self):
+            with lock:
+                with (ROOT / '.local/native-gateway-unhandled.jsonl').open('a', encoding='utf-8') as log:
+                    log.write(json.dumps({'method': self.command, 'path': self.path,
+                        'at': datetime.now(timezone.utc).isoformat()}) + '\n')
         def do_POST(self):
-            match = re.fullmatch(r'/r/([a-f0-9]{32})/(chat/completions|responses|v1/messages|tool)', self.path)
-            if not match: self.send_error(404); return
+            parsed = urlsplit(self.path)
+            match = re.fullmatch(r'/r/([a-f0-9]{32})/(chat/completions|responses|v1/messages|tool)', parsed.path)
+            if not match: self.record_unhandled(); self.send_error(404); return
             route_id, operation = match.groups()
             route_file = ROOT / '.local/native-routes' / f'{route_id}.json'
             if not route_file.is_file(): self.send_error(404); return
