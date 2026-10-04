@@ -80,9 +80,14 @@ git status --short
                 'project_key': self.task.instances[self.task.current_issue_idx].repo}
 
     def action(self, value):
+        import docker_dispatch
+        docker_dispatch.LAST_INFRASTRUCTURE_ERROR = None
         index = self.task.current_issue_idx
         action = BashCommandResponse(thought=value.get('thought', ''), command=value['command'])
         result = self.task.step(Response(action=action))
+        if docker_dispatch.LAST_INFRASTRUCTURE_ERROR:
+            save(self.private / 'infrastructure-failure.json', docker_dispatch.LAST_INFRASTRUCTURE_ERROR)
+            raise RuntimeError('Code container infrastructure failure; no result admitted')
         self.query = result.next_query
         if result.observation.instance_complete:
             record = self.task.issue_history[-1]

@@ -102,11 +102,12 @@ def main():
             token = uuid.uuid4().hex
             action_records = []
             completed = False
+            controller_failed = False
             last_progress = time.monotonic()
             class Handler(BaseHTTPRequestHandler):
                 def log_message(self, *_): pass
                 def do_POST(self):
-                    nonlocal completed, last_progress
+                    nonlocal completed, last_progress, controller_failed
                     if self.headers.get('X-Run-Token') != token:
                         self.send_error(403); return
                     value = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
@@ -127,6 +128,7 @@ def main():
                         self.send_header('Content-Length', str(len(body))); self.end_headers(); self.wfile.write(body)
                         last_progress = time.monotonic()
                     except Exception as exc:
+                        controller_failed = True
                         save(out / 'controller-error.json', {'type': type(exc).__name__, 'message': str(exc)})
                         self.send_error(500, 'Controller failed; stream is stopped')
             server = HTTPServer(('127.0.0.1', 0), Handler); server.timeout = 0.1
@@ -158,6 +160,8 @@ def main():
                             boundary.start(index, read(out / 'session-start.json')['session_id']); registered = True
                             last_progress = time.monotonic()
                         server.handle_request()
+                        if controller_failed:
+                            raise RuntimeError('Business controller failed; stop before another model request')
                         # The pinned official runner does NOT invoke the task's
                         # get_response_timeout_seconds hook. Do not activate it here.
                         if completed and time.monotonic() - last_progress > 600:

@@ -12,7 +12,7 @@ from prepare import ROOT, save
 from protocol import digest
 
 
-def run_fixture(method, *, note='', sources=None, force_compact=False, timeout=False, grow_output=False):
+def run_fixture(method, *, note='', sources=None, force_compact=False, timeout=False, grow_output=False, tool_failure=False):
     out = ROOT / '.local/fixtures' / uuid.uuid4().hex
     out.mkdir(parents=True)
     requests = []
@@ -23,6 +23,8 @@ def run_fixture(method, *, note='', sources=None, force_compact=False, timeout=F
             value = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
             if self.path == '/tool':
                 actions.append(value)
+                if tool_failure:
+                    self.send_error(500, 'Fixture controller failure'); return
                 data = json.dumps({'instance_complete': True, 'observation': 'Question 1: CORRECT.\nExploratory queries used: 0'}).encode()
                 self.send_response(200); self.send_header('Content-Type', 'application/json')
                 self.send_header('Content-Length', str(len(data))); self.end_headers(); self.wfile.write(data)
@@ -81,6 +83,11 @@ def run_fixture(method, *, note='', sources=None, force_compact=False, timeout=F
         server.shutdown(); server.server_close(); thread.join()
     (out / 'stdout.txt').write_text(proc.stdout, encoding='utf-8')
     (out / 'stderr.txt').write_text(proc.stderr, encoding='utf-8')
+    if tool_failure:
+        assert proc.returncode != 0 and len(requests) == 1
+        return {'method': method, 'session_id': json.loads((out / 'session-start.json').read_text(encoding='utf-8'))['session_id'],
+            'requests': 1, 'raw': out.relative_to(ROOT).as_posix(), 'controller_failure_stops_model_calls': True,
+            'model_calls': 0}
     if proc.returncode:
         raise RuntimeError(proc.stderr[-5000:])
     end = json.loads((out / 'session-end.json').read_text(encoding='utf-8'))
@@ -113,6 +120,7 @@ def main():
     checks.append(run_fixture('pi_jaccard', sources=[{'source_id': 'fixture-past', 'episode': {'text': 'past legal source'}}]))
     checks.append(run_fixture('pi_none', timeout=True))
     checks.append(run_fixture('pi_none', grow_output=True))
+    checks.append(run_fixture('pi_none', tool_failure=True))
     if not args.quick:
         checks.append(run_fixture('pi_jaccard', sources=[{'source_id': 'long-fixture',
             'episode': {'text': ('COBALT fact. ' * 60000)}}], force_compact=True))

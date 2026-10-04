@@ -1,0 +1,12 @@
+{
+  "date": "2026-10-05",
+  "status": "identified_before_formal_execution",
+  "observed": "All three first code candidate containers stopped during repeated WSL boots and Docker daemon initialization. Controllers initially exposed the daemon error as an ordinary tool failure, causing wasted model retries and two false budget-exhaustion results.",
+  "confirmed_evidence": "Docker systemd journal shows multiple boot IDs and daemon starts, including 2026-10-05 00:14:09, 00:15:38, 00:20:24 and 00:21:04 Asia/Hong_Kong. Agent tool records report container-not-running for the three original container IDs.",
+  "unknown": "The precise initiating cause of each WSL shutdown was not observed; automatic idle shutdown is a hypothesis, not a confirmed causal finding.",
+  "affected_runs": ["candidate-code-pi-none-v3", "candidate-code-pi-notepad-v3", "candidate-code-pi-jaccard-v3"],
+  "formal_tasks_affected": 0,
+  "disposition": "quarantine all code v3 candidate results and their inherited memory as canary-only; retain every model attempt and cost; do not promote their prefixes",
+  "mitigation": ["persistent foreground WSL relay keeps an active WSL host connection", "detect non-running container separately from user-command failure", "pause controller and block further model calls after tool transport failure"],
+  "verification": "pending post-fix fixtures"
+}

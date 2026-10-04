@@ -56,6 +56,11 @@ def main():
                     argv = ['exec', '-w', request.get('cwd', '/testbed'), container,
                             'bash', '-lc', request['command']]
                     result = docker(argv, timeout)
+                    if result['returncode']:
+                        state = docker(['inspect', '--format', '{{json .State}}', container], 30)
+                        if state['returncode'] or not json.loads(state['stdout']).get('Running'):
+                            result['infrastructure_error'] = 'benchmark_container_unavailable'
+                            result['container_state'] = state
                 elif op == 'put':
                     container = request['container_id']; require_owned(container)
                     target = request['path']

@@ -20,6 +20,7 @@ let terminal = false;
 let callCounter = 0;
 let outputLimit = 16384;
 let lastFinalAssistant = null;
+let fatalToolError = false;
 const rawCaptures = [];
 const captureErrors = [];
 const realFetch = globalThis.fetch;
@@ -33,6 +34,7 @@ async function gate(operation, body) {
 }
 
 async function recordedFetch(input, options) {
+  if (fatalToolError) throw new Error('Business controller unavailable; no further provider calls permitted');
   const req = new Request(input, options);
   const destination = new URL(req.url);
   if (cfg.fixture ? destination.hostname !== '127.0.0.1' : destination.hostname !== 'api.z.ai') {
@@ -122,7 +124,10 @@ const tool = {name: toolName, label: 'CL-Bench action', description: cfg.tool_de
     const response = await realFetch(cfg.tool_url, {method: 'POST',
       headers: {'Content-Type': 'application/json', 'X-Run-Token': cfg.tool_token},
       body: JSON.stringify({action, notepad, toolCallId})});
-    if (!response.ok) throw new Error(`Business tool transport failed: ${response.status}`);
+    if (!response.ok) {
+      fatalToolError = true;
+      throw new Error(`Business tool transport failed: ${response.status}`);
+    }
     const result = await response.json();
     terminal = result.instance_complete;
     append('tools.jsonl', {...identity, session_id: cfg.session_id, role: 'solver', toolCallId,

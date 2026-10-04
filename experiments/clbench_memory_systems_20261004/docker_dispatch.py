@@ -7,6 +7,7 @@ import subprocess
 from types import SimpleNamespace
 from urllib.request import Request, urlopen
 from prepare import ROOT, read
+LAST_INFRASTRUCTURE_ERROR = None
 
 
 def broker(value):
@@ -18,6 +19,7 @@ def broker(value):
 
 
 def run(argv, **kwargs):
+    global LAST_INFRASTRUCTURE_ERROR
     if not isinstance(argv, list) or argv[0] != 'docker':
         raise ValueError('Only explicit Docker argument arrays are admitted')
     timeout = kwargs.get('timeout') or 120
@@ -48,6 +50,9 @@ def run(argv, **kwargs):
     elif argv[1:3] == ['rm', '-f']:
         result = broker({'op': 'remove', 'container_id': argv[3], 'timeout': timeout})
     else: raise ValueError('Unexpected Docker operation')
+    if result.get('infrastructure_error'):
+        LAST_INFRASTRUCTURE_ERROR = result
+        raise RuntimeError('Benchmark container unavailable; pause stream without scoring')
     stdout, stderr = result.get('stdout', ''), result.get('stderr', '')
     if kwargs.get('stderr') == subprocess.STDOUT: stdout, stderr = stdout + stderr, ''
     completed = subprocess.CompletedProcess(argv, result['returncode'], stdout, stderr)
