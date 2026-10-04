@@ -15,7 +15,8 @@ def main():
     labels = ['No Memory', 'Notepad', 'Jaccard top-3']
     colors = ['#738397', '#17817a', '#cb7640']
     plt.rcParams.update({'font.family': 'DejaVu Sans', 'font.size': 11, 'axes.spines.top': False,
-                        'axes.spines.right': False, 'axes.titleweight': 'bold'})
+                        'axes.spines.right': False, 'axes.titleweight': 'bold',
+                        'svg.fonttype': 'none', 'svg.hashsalt': 'clbench-pi-r1'})
     fig, axes = plt.subplots(2, 3, figsize=(13, 7.6))
     for row, env in enumerate(['database_exploration', 'codebase_adaptation']):
         stats = [next(s['stats'] for s in data['streams'] if s['method'] == m and s['environment'] == env) for m in methods]
@@ -42,7 +43,9 @@ def main():
     fig.tight_layout(rect=(0, .08, 1, .95))
     target = ROOT / 'figures'; target.mkdir(exist_ok=True)
     fig.savefig(target / 'pi-comparison.png', dpi=180)
-    fig.savefig(target / 'pi-comparison.svg')
+    svg = target / 'pi-comparison.svg'
+    fig.savefig(svg, metadata={'Date': None})
+    svg.write_text('\n'.join(line.rstrip() for line in svg.read_text(encoding='utf-8').splitlines()) + '\n', encoding='utf-8')
     plt.close(fig)
     print(str(target / 'pi-comparison.png'))
 
