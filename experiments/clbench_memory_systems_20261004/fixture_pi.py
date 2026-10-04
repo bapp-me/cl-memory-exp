@@ -12,7 +12,7 @@ from prepare import ROOT, save
 from protocol import digest
 
 
-def run_fixture(method, *, note='', sources=None, force_compact=False, timeout=False):
+def run_fixture(method, *, note='', sources=None, force_compact=False, timeout=False, grow_output=False):
     out = ROOT / '.local/fixtures' / uuid.uuid4().hex
     out.mkdir(parents=True)
     requests = []
@@ -48,6 +48,9 @@ def run_fixture(method, *, note='', sources=None, force_compact=False, timeout=F
                 delta = {'role': 'assistant', 'tool_calls': [{'index': 0, 'id': 'call_fixture', 'type': 'function',
                          'function': {'name': 'CLBENCH_ACTION', 'arguments': json.dumps(args)}}]}
                 reason = 'tool_calls'
+            if grow_output and len(requests) == 1:
+                delta = {'role': 'assistant', 'reasoning_content': 'Synthetic output-budget exhaustion.'}
+                reason = 'length'
             def chunk(delta, finish=None, usage=None):
                 result = {'id': 'fixture-' + uuid.uuid4().hex, 'object': 'chat.completion.chunk',
                           'created': 1, 'model': 'glm-5.3-flash',
@@ -94,9 +97,14 @@ def run_fixture(method, *, note='', sources=None, force_compact=False, timeout=F
     if timeout:
         assert end['timed_out']
         assert any('Fixture TIMED OUT' in str(m.get('content', '')) for m in end['messages'])
+    if grow_output:
+        assert end['final_output_limit'] == 32768
+        first_max = requests[0].get('max_tokens', requests[0].get('max_completion_tokens'))
+        second_max = requests[1].get('max_tokens', requests[1].get('max_completion_tokens'))
+        assert (first_max, second_max) == (16384, 32768), (first_max, second_max)
     return {'method': method, 'session_id': end['session_id'], 'requests': len(requests),
             'raw': out.relative_to(ROOT).as_posix(), 'long_compaction': force_compact,
-            'timeout': timeout, 'model_calls': 0}
+            'timeout': timeout, 'output_growth': grow_output, 'model_calls': 0}
 
 
 def main():
@@ -104,6 +112,7 @@ def main():
     checks = [run_fixture('pi_none'), run_fixture('pi_notepad'), run_fixture('pi_notepad', note='PREVIOUS-NOTE')]
     checks.append(run_fixture('pi_jaccard', sources=[{'source_id': 'fixture-past', 'episode': {'text': 'past legal source'}}]))
     checks.append(run_fixture('pi_none', timeout=True))
+    checks.append(run_fixture('pi_none', grow_output=True))
     if not args.quick:
         checks.append(run_fixture('pi_jaccard', sources=[{'source_id': 'long-fixture',
             'episode': {'text': ('COBALT fact. ' * 60000)}}], force_compact=True))

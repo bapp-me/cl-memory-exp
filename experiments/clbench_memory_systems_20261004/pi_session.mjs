@@ -18,9 +18,19 @@ let role = 'solver';
 let notepad = cfg.notepad || '';
 let terminal = false;
 let callCounter = 0;
+let outputLimit = 16384;
+let lastFinalAssistant = null;
 const rawCaptures = [];
 const captureErrors = [];
 const realFetch = globalThis.fetch;
+async function gate(operation, body) {
+  if (!cfg.request_gate) return null;
+  const response = await realFetch(cfg.request_gate.url + '/' + operation, {method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-Gate-Token': cfg.request_gate.token},
+    body: JSON.stringify(body)});
+  if (!response.ok) throw new Error('Shared request gate failed: ' + response.status);
+  return response.json();
+}
 
 async function recordedFetch(input, options) {
   const req = new Request(input, options);
@@ -34,9 +44,14 @@ async function recordedFetch(input, options) {
   if (payload.model !== 'glm-5.3-flash') throw new Error('Undeclared model fallback');
   const meta = {...identity, session_id: cfg.session_id, role, call_id: id, attempt_id: id,
     timestamp: new Date().toISOString(), endpoint: req.url};
-  fs.writeFileSync(path.join(out, 'requests', `${id}.request.json`), requestBody);
-  append('attempts.jsonl', {...meta, phase: 'started'});
   const started = performance.now();
+  const permit = await gate('acquire', {run_id: cfg.run_id, attempt_id: id, role, session_id: cfg.session_id});
+  fs.writeFileSync(path.join(out, 'requests', `${id}.request.json`), requestBody);
+  append('attempts.jsonl', {...meta, phase: 'started', gate_wait_seconds: permit?.wait_seconds ?? 0});
+  let released = false;
+  const release = async () => {
+    if (permit && !released) {released = true; await gate('release', {lease: permit.lease});}
+  };
   try {
     const response = await realFetch(req);
     const capture = response.clone().text().then(text => {
@@ -48,10 +63,11 @@ async function recordedFetch(input, options) {
     }).catch(error => {
       append('attempts.jsonl', {...meta, phase: 'capture_failed', error: error.name});
       captureErrors.push({attempt_id: id, error: error.name});
-    });
+    }).finally(release);
     rawCaptures.push(capture);
     return response;
   } catch (error) {
+    await release();
     append('attempts.jsonl', {...meta, phase: 'transport_failed', error: error.name,
       elapsed_ms: performance.now() - started});
     throw error;
@@ -65,7 +81,7 @@ const runtime = await ModelRuntime.create({authPath: path.join(agentDir, 'auth.j
   allowModelNetwork: false});
 runtime.registerProvider('glm_experiment', {baseUrl: cfg.base_url, api: 'openai-completions',
   models: [{id: 'glm-5.3-flash', name: 'GLM 5.3 Flash',
-    reasoning: true, input: ['text'], contextWindow: 262144, maxTokens: 8192,
+    reasoning: true, input: ['text'], contextWindow: 262144, maxTokens: 131072,
     cost: {input: 0, output: 0, cacheRead: 0, cacheWrite: 0}}]});
 await runtime.setRuntimeApiKey('glm_experiment', process.env.EXPERIMENT_API_KEY);
 // All native summary and solver entry points retain their algorithms, while this
@@ -77,7 +93,8 @@ for (const name of ['stream', 'streamSimple', 'complete', 'completeSimple']) {
     append('contexts.jsonl', {...identity, session_id: cfg.session_id, role,
       sequence: callCounter, model: model.id, contextWindow: model.contextWindow,
       context, timestamp: new Date().toISOString()});
-    return original(model, context, {...options, fetch: recordedFetch, maxTokens: 8192,
+    const maxTokens = role === 'solver' ? outputLimit : Math.min(options.maxTokens ?? 16384, 16384);
+    return original(model, context, {...options, fetch: recordedFetch, maxTokens,
       maxRetries: 0, timeoutMs: 300000, transport: 'sse'});
   };
 }
@@ -135,6 +152,7 @@ session.subscribe(event => {
   append('events.jsonl', {...identity, session_id: cfg.session_id, timestamp: new Date().toISOString(), event});
   if (event.type === 'auto_compaction_start') role = 'compaction';
   if (event.type === 'auto_compaction_end') role = 'solver';
+  if (event.type === 'message_end' && event.message?.role === 'assistant') lastFinalAssistant = event.message;
 });
 let timeoutControl = null;
 let timedOut = false;
@@ -180,13 +198,32 @@ try {
   if (cfg.method_id === 'pi_notepad' && notepad) prefix.push('=== YOUR NOTEPAD ===\n' + notepad + '\n===================');
   prefix.push(cfg.prompt);
   await session.prompt(prefix.join('\n\n'), {expandPromptTemplates: false});
+  while (!terminal && !timedOut) {
+    // Pi can remove a truncated assistant from projected context during native
+    // recovery. Use its authoritative completion event, retained in the audit.
+    const last = lastFinalAssistant;
+    if (last?.stopReason !== 'length' || outputLimit >= 131072) break;
+    const previous = outputLimit;
+    outputLimit = Math.min(outputLimit * 2, 131072);
+    // User authorized automatic output expansion. All methods retain the 256k
+    // window and reserve enough room before their next request; no silent overflow.
+    settings.applyOverrides({compaction: {enabled: true, reserveTokens: outputLimit, keepRecentTokens: 20000}});
+    append('output-budget-adjustments.jsonl', {...identity, session_id: cfg.session_id,
+      timestamp: new Date().toISOString(), from: previous, to: outputLimit,
+      effective_compaction_trigger: 262144 - outputLimit, cause: 'provider_finish_reason_length',
+      retained_same_instance_and_session: true});
+    lastFinalAssistant = null;
+    await session.prompt('Continue the same benchmark instance using its existing observations. Finish the next business action; do not restart completed work.',
+      {expandPromptTemplates: false});
+  }
   if (timeoutControl) await timeoutControl;
   await session.waitForIdle();
   await Promise.all(rawCaptures);
   if (captureErrors.length && !timedOut) throw new Error('Incomplete provider response capture');
   save('session-end.json', {...identity, session_id: cfg.session_id, terminal, notepad,
     messages: session.messages, entries: manager.getEntries(), provider_entry_calls: callCounter,
-    pending_message_count: session.pendingMessageCount, timed_out: timedOut, capture_errors: captureErrors});
+    pending_message_count: session.pendingMessageCount, timed_out: timedOut, capture_errors: captureErrors,
+    final_output_limit: outputLimit});
   if (!terminal) throw new Error('Agent ended before a benchmark submission');
   process.stdout.write(JSON.stringify({ok: true, session_id: cfg.session_id, terminal}) + '\n');
 } finally {

@@ -28,11 +28,11 @@
 
 ## 3. 256k 配置映射
 
-共同值：上下文 262144，触发目标 245760，预留 16384；主求解输出目标上限 8192。配置记录上限、框架有效上限、请求实际计量和 provider 接受范围四者，不能只截图 UI。
+共同值：上下文 262144，触发目标 245760，预留 16384；主求解输出目标上限 16384。配置记录上限、框架有效上限、请求实际计量和 provider 接受范围四者，不能只截图 UI。
 
 ### Pi coding-agent
 
-自定义模型记录 `contextWindow: 262144`、`maxTokens: 8192`，真实 provider/api/model 与统一 GLM 对齐。会话设置映射：[S8](SOURCES.md)
+自定义模型记录 `contextWindow: 262144`、`maxTokens: 16384`，真实 provider/api/model 与统一 GLM 对齐。会话设置映射：[S8](SOURCES.md)
 
 ```json
 {
