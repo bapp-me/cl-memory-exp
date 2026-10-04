@@ -1,12 +1,30 @@
 import base64
 import json
+import hashlib
+import shutil
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
 from prepare import ROOT, read
+BROKER_KIND='default'
+
+
+def freeze_runtime():
+    files={p.name:p.read_bytes() for p in (ROOT/'native-runtime').glob('*.py')}
+    inventory={name:hashlib.sha256(data).hexdigest() for name,data in sorted(files.items())}
+    fingerprint=hashlib.sha256(json.dumps(inventory,sort_keys=True).encode()).hexdigest()
+    directory=ROOT/'.local/native-runtime-builds'/fingerprint
+    if directory.exists():
+        if any(hashlib.sha256((directory/name).read_bytes()).hexdigest()!=value for name,value in inventory.items()):
+            raise RuntimeError('Immutable native runtime snapshot changed')
+    else:
+        directory.mkdir(parents=True)
+        for name,data in files.items(): (directory/name).write_bytes(data)
+    return fingerprint
 
 
 def broker(value):
-    cfg = read(ROOT / '.local/native-broker.json')
+    suffix='' if BROKER_KIND=='default' else '-codex'
+    cfg = read(ROOT / f'.local/native-broker{suffix}.json')
     req = Request(cfg['url'], data=json.dumps(value).encode(),
                   headers={'Content-Type': 'application/json', 'X-Broker-Token': cfg['token']})
     try:

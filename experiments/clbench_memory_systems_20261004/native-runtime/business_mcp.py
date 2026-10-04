@@ -2,6 +2,7 @@
 import json
 import os
 import sys
+from pathlib import Path
 from urllib.request import Request, urlopen
 
 CFG = json.loads(open(sys.argv[1]).read())
@@ -15,7 +16,10 @@ SCHEMA = ({'type': 'object', 'properties': {'action': {'type': 'string', 'enum':
 def action(arguments, call_id):
     request = Request(CFG['gateway'] + '/tool', data=json.dumps({'action': arguments, 'toolCallId': str(call_id)}).encode(),
         headers={'Authorization': 'Bearer ' + CFG['gateway_token'], 'Content-Type': 'application/json'})
-    with urlopen(request, timeout=600) as response: return json.load(response)
+    with urlopen(request, timeout=600) as response: observed=json.load(response)
+    path=Path(sys.argv[1]).parent/'last-business-result.json'
+    temp=path.with_suffix('.tmp'); temp.write_text(json.dumps(observed)); temp.replace(path)
+    return observed
 
 
 def main():

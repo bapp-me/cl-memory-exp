@@ -5,14 +5,17 @@ import json
 import time
 import uuid
 from prepare import ROOT, read, save, sha
-from native_client import broker, put, snapshot
+from native_client import broker, put, snapshot, freeze_runtime
 
 
 def main():
     parser = argparse.ArgumentParser(); parser.add_argument('--framework', choices=['claude', 'hermes', 'codex'], required=True)
     args = parser.parse_args(); run_id = f'native-{args.framework}-capability-' + uuid.uuid4().hex[:8]
+    if args.framework=='codex':
+        import native_client
+        native_client.BROKER_KIND='codex'
     directory = ROOT / 'private-runs' / run_id; directory.mkdir()
-    created = broker({'op': 'create'}); c = created['container_id']
+    created = broker({'op': 'create','runtime_hash':freeze_runtime()}); c = created['container_id']
     save(directory / 'container.json', created)
     try:
         for index in range(2):
@@ -23,6 +26,12 @@ def main():
                 def do_POST(self):
                     if self.headers.get('X-Run-Token') != token: self.send_error(403); return
                     value = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+                    if value.get('control')=='session_start':
+                        save(out/'native-session.json',{'session_id':value['session_id']})
+                        route['session_id']=value['session_id']; save(ROOT/'.local/native-routes'/f'{route_id}.json',route)
+                        data=b'{"registered":true}'; self.send_response(200)
+                        self.send_header('Content-Length',str(len(data))); self.end_headers(); self.wfile.write(data)
+                        return
                     actions.append(value); save(out / 'business-actions.json', actions)
                     result = {'observation': 'Capability probe complete. No hidden answer is available.', 'instance_complete': True, 'done': True}
                     data = json.dumps(result).encode(); self.send_response(200)

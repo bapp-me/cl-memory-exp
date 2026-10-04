@@ -7,7 +7,7 @@ import time
 import uuid
 from prepare import ROOT, read, save, sha
 from protocol import Boundary, digest, namespace, project_episode
-from native_client import broker, put, snapshot
+from native_client import broker, put, snapshot, freeze_runtime
 from native_evidence import archive, memory_snapshot, validate, usage_for
 
 
@@ -24,23 +24,30 @@ def main():
         raise RuntimeError('Acceptance required')
     directory = ROOT / 'private-runs' / args.run_id; directory.mkdir()
     ns = namespace(method, 1, args.environment); boundary = Boundary(directory/'boundary.json',ns)
-    runtime = ['run_native.py','native_evidence.py','native_gateway.py','native-runtime/native_entry.py','native-runtime/business_mcp.py']
+    runtime = ['run_native.py','native_evidence.py','native_gateway.py','budget_control.py','native_client.py',
+        'native-runtime/native_entry.py','native-runtime/business_mcp.py','native-runtime/native_budget.py']
     if args.framework == 'hermes': runtime += ['native-runtime/hermes_session.py']
     runtime += ['database_adapter.py'] if total == 40 else ['codebase_adapter.py','docker_dispatch.py']
     config_hash = digest({f:sha(ROOT/f) for f in runtime})
+    snapshot_dir=directory/'runtime-source'
+    for file in runtime:
+        destination=snapshot_dir/file; destination.parent.mkdir(parents=True,exist_ok=True)
+        destination.write_bytes((ROOT/file).read_bytes())
+    native_hash=freeze_runtime()
     save(directory/'manifest.json',{'run_id':args.run_id,'namespace':ns,'mode':args.mode,'config_hash':config_hash,
-        'cold_start':True,'started_at':datetime.now(timezone.utc).isoformat(),'runtime_files':runtime})
+        'cold_start':True,'started_at':datetime.now(timezone.utc).isoformat(),'runtime_files':runtime,
+        'native_runtime_hash':native_hash,'runtime_policy':'controller modules remain loaded; each agent process mounts the immutable captured native runtime'})
     if total == 40:
         from database_adapter import DatabaseStream
         stream = DatabaseStream(directory)
     else:
         from codebase_adapter import CodebaseStream
         stream = CodebaseStream(directory)
-    created = broker({'op':'create'}); container = created['container_id']; save(directory/'container.json',created)
+    created = broker({'op':'create','runtime_hash':native_hash}); container = created['container_id']; save(directory/'container.json',created)
     results=[]; memory_before={}
     try:
         for index in range(limit):
-            if config_hash != digest({f:sha(ROOT/f) for f in runtime}): raise RuntimeError('Runtime changed at boundary')
+            if config_hash != digest({f:sha(snapshot_dir/f) for f in runtime}): raise RuntimeError('Captured runtime changed at boundary')
             query=stream.public_query(); out=directory/f'task-{index:03d}'; out.mkdir(); task=out.name
             actions=[]; completed=False; failed=False; submitted_at=None
             session=str(uuid.uuid4()); token=uuid.uuid4().hex

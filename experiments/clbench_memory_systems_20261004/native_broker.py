@@ -6,6 +6,9 @@ workspace, evaluator, administrative broker token, or provider key access.
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import base64
 import json
+import re
+import hashlib
+import argparse
 from pathlib import Path
 import secrets
 import subprocess
@@ -17,6 +20,15 @@ RUNTIME = '/mnt/d/campus_re/cl-memory-exp/experiments/clbench_memory_systems_202
 
 
 def main():
+    parser=argparse.ArgumentParser(); parser.add_argument('--kind',choices=['default','codex'],default='default')
+    args=parser.parse_args(); suffix='' if args.kind=='default' else '-codex'
+    binary_mount=[]
+    if args.kind=='codex':
+        from prepare import read
+        expected=read(ROOT/'records/codex-build.json')['binary_sha256']
+        if hashlib.sha256((ROOT/'.local/native-bin/codex').read_bytes()).hexdigest()!=expected:
+            raise ValueError('Codex binary hash mismatch')
+        binary_mount=['--mount','type=bind,src='+RUNTIME.rsplit('/',1)[0]+'/.local/native-bin,dst=/native,readonly']
     token = secrets.token_hex(32); owned = {}; jobs = {}; lock = threading.Lock()
     def docker(args, *, data=None, timeout=120):
         return subprocess.run(['wsl', '-d', 'Ubuntu', '-u', 'root', '--exec', 'docker', *args],
@@ -35,6 +47,14 @@ def main():
                 if not 0 < n <= 32 * 1024 * 1024: raise ValueError('Request size')
                 v = json.loads(self.rfile.read(n)); op = v['op']
                 if op == 'create':
+                    runtime = RUNTIME
+                    if fingerprint := v.get('runtime_hash'):
+                        if not re.fullmatch(r'[a-f0-9]{64}',fingerprint): raise ValueError('Invalid runtime hash')
+                        directory=ROOT/'.local/native-runtime-builds'/fingerprint
+                        inventory={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(directory.glob('*.py'))}
+                        if hashlib.sha256(json.dumps(inventory,sort_keys=True).encode()).hexdigest()!=fingerprint:
+                            raise ValueError('Native runtime snapshot mismatch')
+                        runtime=RUNTIME.rsplit('/',1)[0]+'/.local/native-runtime-builds/'+fingerprint
                     name = 'clmem-native-' + secrets.token_hex(8)
                     volume = name + '-state'
                     checked(['volume', 'create', '--label', 'clbench-memory-study=20261004', volume])
@@ -43,8 +63,8 @@ def main():
                         '--read-only', '--tmpfs', '/tmp:rw,size=1g,mode=1777',
                         '--cap-drop=ALL', '--security-opt=no-new-privileges', '--memory=2g', '--pids-limit=512',
                         '--mount', f'type=volume,src={volume},dst=/state',
-                        '--mount', f'type=bind,src={RUNTIME},dst=/runtime,readonly',
-                        IMAGE, 'sleep', '86400']).decode().strip()
+                        '--mount', f'type=bind,src={runtime},dst=/runtime,readonly',
+                        *binary_mount, IMAGE, 'sleep', '86400']).decode().strip()
                     # Empty volume only; subsequent model processes run as uid 1000.
                     checked(['exec', '--user', '0', container, 'sh', '-c',
                              'mkdir -p /state/home /state/work /state/tasks && chmod 777 /state /state/home /state/work /state/tasks'])
@@ -93,13 +113,13 @@ def main():
                         result = {'removed': True, 'volume_preserved': True}
                     else: raise ValueError('Unknown operation')
                 if op in {'create', 'remove'}:
-                    with lock: save(ROOT / '.local/native-owned.json', owned)
+                    with lock: save(ROOT / f'.local/native-owned{suffix}.json', owned)
                 data = json.dumps(result).encode(); self.send_response(200)
             except Exception as exc:
                 data = json.dumps({'error': type(exc).__name__, 'message': str(exc)}).encode(); self.send_response(400)
             self.send_header('Content-Length', str(len(data))); self.end_headers(); self.wfile.write(data)
     server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
-    save(ROOT / '.local/native-broker.json', {'url': f'http://127.0.0.1:{server.server_port}', 'token': token})
+    save(ROOT / f'.local/native-broker{suffix}.json', {'url': f'http://127.0.0.1:{server.server_port}', 'token': token})
     print('Native container broker ready; real provider credentials are not loaded.', flush=True)
     server.serve_forever()
 

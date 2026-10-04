@@ -22,7 +22,9 @@ def response_usage(path):
         if chunk.get('type')=='message_start': chunk=chunk['message']
         if 'response' in chunk: chunk=chunk['response']
         usage.update(chunk.get('usage') or {}); model=chunk.get('model') or model
-        finish=chunk.get('stop_reason') or chunk.get('delta',{}).get('stop_reason') or finish
+        delta=chunk.get('delta')
+        finish=chunk.get('stop_reason') or (delta.get('stop_reason') if isinstance(delta,dict) else None) or finish
+        if (chunk.get('incomplete_details') or {}).get('reason')=='max_output_tokens': finish='max_tokens'
         for choice in chunk.get('choices',[]):
             finish=choice.get('finish_reason') or finish
             thinking_characters+=len(choice.get('delta',{}).get('reasoning_content') or '')

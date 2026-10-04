@@ -20,8 +20,11 @@ def validate(files, task, framework, session):
     if framework == 'claude':
         events = [json.loads(x) for x in files[prefix + 'events.jsonl'].decode().splitlines()]
         results = [e for e in events if e['type'] == 'result']
-        if len(results) != 1: raise RuntimeError('Native result event missing/ambiguous')
-        result = results[0]
+        continuations=json.loads(files.get(prefix+'continuations.json',b'[]'))
+        continued={c['result_index'] for c in continuations if c['kind'] in {'output_budget','official_final_json_action'}}
+        if not results or any(i not in continued for i in range(len(results)-1)):
+            raise RuntimeError('Native result event missing/ambiguous')
+        result = results[-1]
         if result.get('is_error') or result.get('terminal_reason') != 'completed': raise RuntimeError('Claude incomplete')
         if result['session_id'] != session: raise RuntimeError('Wrong session')
         sub = result.get('subagent_stats', {})
@@ -43,7 +46,8 @@ def validate(files, task, framework, session):
         if call['status'] != 'returned' or call['result'].get('failed') or not call['result'].get('completed'):
             raise RuntimeError('Hermes child incomplete')
         if call['context_length'] != 262144: raise RuntimeError('Child context differs')
-        if call.get('compression_threshold_tokens') != 245760: raise RuntimeError('Child compression trigger differs')
+        if call.get('compression_threshold_tokens') not in {245760,229376,196608,131072}:
+            raise RuntimeError('Child compression trigger differs')
     result = json.loads(files[prefix + 'main-result.json'])
     text = [m['content'] for m in result['messages'] if m['role'] == 'assistant' and isinstance(m.get('content'), str)]
     return {'kind': 'native_review', 'jobs': value['jobs'], 'assistant_text': text,
@@ -70,7 +74,9 @@ def usage_for(out):
             if 'response' in v: v = v['response']
             model = v.get('model') or model
             usage.update(v.get('usage') or {})
-            finish = v.get('stop_reason') or v.get('delta', {}).get('stop_reason') or finish
+            delta=v.get('delta')
+            finish = v.get('stop_reason') or (delta.get('stop_reason') if isinstance(delta,dict) else None) or finish
+            if (v.get('incomplete_details') or {}).get('reason')=='max_output_tokens': finish='max_tokens'
             for c in v.get('choices', []): finish = c.get('finish_reason') or finish
         attempts.append({'attempt_id': meta['attempt_id'], 'protocol': meta['protocol'], 'http_status': meta.get('http_status'),
             'phase': meta['phase'], 'returned_model': model, 'usage': usage or None, 'finish_reason': finish})

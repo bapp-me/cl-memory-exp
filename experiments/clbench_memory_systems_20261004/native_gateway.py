@@ -16,6 +16,7 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from urllib.parse import urlsplit
 import uuid
+from budget_control import authorize_growth
 from prepare import ROOT, read, save
 from protocol_canary import secret
 
@@ -48,7 +49,7 @@ def main():
                         'at': datetime.now(timezone.utc).isoformat()}) + '\n')
         def do_POST(self):
             parsed = urlsplit(self.path)
-            match = re.fullmatch(r'/r/([a-f0-9]{32})/(chat/completions|responses|v1/messages|tool)', parsed.path)
+            match = re.fullmatch(r'/r/([a-f0-9]{32})/(chat/completions|responses|v1/messages|tool|budget)', parsed.path)
             if not match: self.record_unhandled(); self.send_error(404); return
             route_id, operation = match.groups()
             route_file = ROOT / '.local/native-routes' / f'{route_id}.json'
@@ -60,6 +61,18 @@ def main():
             length = int(self.headers.get('Content-Length', '0'))
             if not 0 < length <= 32 * 1024 * 1024: self.send_error(413); return
             raw = self.rfile.read(length)
+            if operation == 'budget':
+                out = ROOT / route['audit_relative_path']
+                try:
+                    with lock:
+                        route = read(route_file)
+                        updated, receipt = authorize_growth(out,route,int(json.loads(raw)['previous_limit']))
+                        save(route_file,updated)
+                        with (out/'output-budget-adjustments.jsonl').open('a') as log: log.write(json.dumps(receipt)+'\n')
+                    body=json.dumps(receipt).encode(); self.send_response(200)
+                    self.send_header('Content-Length',str(len(body))); self.end_headers(); self.wfile.write(body)
+                except ValueError: self.send_error(409,'Output exhaustion not established')
+                return
             if operation == 'tool':
                 req = Request(route['tool_url'], data=raw,
                     headers={'Content-Type': 'application/json', 'X-Run-Token': route['tool_token']})
@@ -72,6 +85,11 @@ def main():
             protocol = {'chat/completions': 'chat', 'responses': 'responses', 'v1/messages': 'anthropic'}[operation]
             payload = json.loads(raw)
             if payload.get('model') != 'glm-5.3-flash': self.send_error(422, 'Undeclared model route'); return
+            # GLM-5.3-Flash rejects disabled reasoning. Preserve the native main
+            # high setting; map only unsupported auxiliary none/off to its floor.
+            if protocol == 'chat' and payload.get('reasoning_effort') in {'none','off'}:
+                payload['reasoning_effort']='low'
+                payload['thinking']={'type':'enabled'}
             attempt = uuid.uuid4().hex
             out = ROOT / route['audit_relative_path'] / 'requests'
             if not out.resolve().is_relative_to((ROOT / 'private-runs').resolve()): self.send_error(403); return

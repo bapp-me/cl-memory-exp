@@ -15,7 +15,7 @@ def run(path, cfg, out, project):
         OPENAI_API_KEY=cfg['gateway_token'], OPENAI_BASE_URL=cfg['gateway'])
     settings = {'model': {'default': 'glm-5.3-flash', 'provider': 'custom', 'base_url': cfg['gateway'], 'context_length': 262144},
         'compression': {'enabled': True, 'threshold': .9375},
-        'memory': {'memory_enabled': True, 'user_profile_enabled': True, 'write_approval': False, 'nudge_interval': 1},
+        'memory': {'memory_enabled': True, 'user_profile_enabled': True, 'write_approval': False, 'nudge_interval': 10},
         'auxiliary': {'compression': {'provider': 'main', 'model': 'glm-5.3-flash', 'context_length': 262144},
             'background_review': {'enabled': True, 'provider': 'auto', 'model': 'glm-5.3-flash', 'defer': 'never', 'max_input_tokens': 2097152}},
         'terminal': {'backend': 'local', 'cwd': str(project)}, 'checkpoints': {'enabled': False}}
@@ -26,9 +26,29 @@ def run(path, cfg, out, project):
     from tools.registry import registry
     from business_mcp import SCHEMA, action
     from agent import background_review as review
+    from agent import turn_response_check
+    from native_budget import grow
+    original_truncation=turn_response_check.recover_from_truncation
+    def truncation(agent,response,*args,**kwargs):
+        usage=getattr(response,'usage',None)
+        output=getattr(usage,'completion_tokens',0) or 0
+        old=int(agent.max_tokens or 16384)
+        if output>=old and old<131072:
+            receipt=grow(cfg,old)
+            agent.max_tokens=receipt['output_limit']
+            agent.context_compressor.max_tokens=receipt['output_limit']
+            agent.context_compressor.threshold_tokens=receipt['compression_threshold']
+            event('output_budget_increase',receipt)
+        return original_truncation(agent,response,*args,**kwargs)
+    turn_response_check.recover_from_truncation=truncation
+    last_business_result = None
+    def business_action(arguments):
+        nonlocal last_business_result
+        last_business_result = action(arguments, uuid.uuid4().hex)
+        return last_business_result
     registry.register(name='CLBENCH_ACTION', toolset='clbench',
         schema={'name': 'CLBENCH_ACTION', 'description': cfg['tool_description'], 'parameters': SCHEMA},
-        handler=lambda arguments, **kwargs: json.dumps(action(arguments, uuid.uuid4().hex)),
+        handler=lambda arguments, **kwargs: json.dumps(business_action(arguments)),
         check_fn=lambda: True)
     jobs = []; calls = []; failures = []; lock = threading.RLock(); local = threading.local()
     def save(name, value):
@@ -106,18 +126,43 @@ def run(path, cfg, out, project):
         if not any(t['function']['name'] == 'CLBENCH_ACTION' for t in available):
             raise RuntimeError('Business tool missing from native searchable registry')
         result = agent.run_conversation(cfg['prompt'], system_message=cfg['framing'])
+        main_turns = 1
+        while not (last_business_result or {}).get('instance_complete'):
+            if result.get('failed') or not result.get('completed'):
+                raise RuntimeError('Native main turn incomplete')
+            # The official task asks for a final JSON action. Accept that exact
+            # schema through the same counted controller, as its own runner does.
+            # This is not a new solve or a fabricated submission command.
+            final_action = json.loads(result['final_response'])
+            required = {'action', 'content'} if cfg['environment']=='database_exploration' else {'command'}
+            if not isinstance(final_action, dict) or not required <= final_action.keys():
+                raise RuntimeError('Native nonterminal response has no official action')
+            observed = business_action(final_action)
+            event('final_json_action_dispatch', {'action': final_action, 'result': observed})
+            result = agent.run_conversation(json.dumps(observed), system_message=cfg['framing'],
+                                            conversation_history=result['messages'])
+            main_turns += 1
         save('main-result.json', result)
         if result.get('failed') or not result.get('completed'): raise RuntimeError('Native main turn incomplete')
         deadline = time.monotonic() + 600
         while any(j['status'] != 'returned' for j in jobs) or any(c['status'] == 'running' for c in calls):
             if time.monotonic() > deadline: raise TimeoutError('Native jobs did not drain')
             time.sleep(.1)
-        if not jobs: raise RuntimeError('Native memory review was not triggered')
+        final_hash = digest(result['messages'])
+        if not any(j['source_hash']==final_hash for j in jobs):
+            # One explicit boundary review after all legal terminal feedback;
+            # intermediate native skill/memory jobs retain their normal triggers.
+            agent._spawn_background_review(messages_snapshot=list(result['messages']), review_memory=True)
+            if not any(j['source_hash']==final_hash for j in jobs):
+                raise RuntimeError('Native boundary review was not admitted')
+            while any(j['status']!='returned' for j in jobs) or any(c['status']=='running' for c in calls):
+                if time.monotonic()>deadline: raise TimeoutError('Native boundary review did not drain')
+                time.sleep(.1)
         if failures or any(j.get('error') or j.get('native_result') in {None, 'error'} for j in jobs):
             raise RuntimeError('Native review failed or lacks completion evidence')
         if any(c.get('error') or c.get('result', {}).get('failed') or not c.get('result', {}).get('completed') for c in calls):
             raise RuntimeError('Native child returned incomplete')
-        save('barrier-candidate.json', {'jobs': jobs, 'calls': calls, 'final_messages_hash': digest(result['messages']),
+        save('barrier-candidate.json', {'jobs': jobs, 'calls': calls, 'final_messages_hash': final_hash, 'main_turns':main_turns,
             'status': 'native_jobs_returned_requires_external_audit'})
         return 0
     finally:

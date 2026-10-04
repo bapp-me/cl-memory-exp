@@ -1,6 +1,6 @@
 # CL-Bench：同一 GLM 下的跨会话记忆系统比较
 
-**版本：1.1｜日期：2026-10-04｜状态：本地适配与验收进行中，正式任务尚未启动。**
+**版本：1.1｜日期：2026-10-05｜状态：正式实验已启动；Pi Database 三组完成，其他已放行流继续运行，原生 Codebase 与 Codex 仍在验收。**
 
 本地执行确认：用户已授权本轮 R=1 与必要验收，不额外设置金额或模型请求总数上限；保留官方业务动作限制。六种方法 × 两种环境最多 12 条独立流通过各自验收后即可运行，不再等待整个 Database 阶段结束。所有角色共享账户 50 请求并发上限，实际吞吐与限流另行记录。Database 和 Codebase 使用不同 home、会话及所有长期记忆，Codebase 从空记忆启动。Database 结束反馈移除正确答案，仅保留对错、提交内容、查询次数和超时信息。这是相对原生反馈的显式适配。授权记录见 [execution-authorization.json](records/execution-authorization.json)。
 
@@ -10,7 +10,7 @@
 
 目标：比较简单记忆管理和成熟 agent 系统在连续任务中的质量、成本、可靠性与经验交接情况。不是预设新算法，也不是仅改变 memory 模块的严格消融。主模型相同不代表系统提示、工具编排和辅助计算相同。
 
-本轮只提交调研、方案与声明式配置；本地 Codex 负责适配、有限验收和执行。已停止的两个资格案例不恢复，旧成绩与评分口径不覆盖。入口见 [LOCAL_CODEX_TASK.md](LOCAL_CODEX_TASK.md)。
+本地执行事实、尚待决定的兼容性差异见 [EXECUTION.md](EXECUTION.md)；机械进度见 [progress-summary.json](records/progress-summary.json)。本地 Codex 负责适配、有限验收和执行。已停止的两个旧资格案例不恢复，旧成绩与评分口径不覆盖。入口见 [LOCAL_CODEX_TASK.md](LOCAL_CODEX_TASK.md)。
 
 ## 1. 已定实验矩阵
 
