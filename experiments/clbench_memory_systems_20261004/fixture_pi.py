@@ -98,6 +98,7 @@ def run_fixture(method, *, note='', sources=None, force_compact=False, timeout=F
     assert end['terminal'] and end['pending_message_count'] == 0
     assert len(list((out / 'requests').glob('*.request.json'))) == len(requests)
     assert all(x['model'] == 'glm-5.3-flash' for x in requests)
+    assert all(x.get('reasoning_effort') == 'high' for x in requests if x.get('tools'))
     if method == 'pi_notepad' and not timeout: assert end['notepad'] == 'COBALT'
     if note: assert note in json.dumps(requests[0])
     if force_compact: assert (out / 'compaction-after-fixture.json').exists()

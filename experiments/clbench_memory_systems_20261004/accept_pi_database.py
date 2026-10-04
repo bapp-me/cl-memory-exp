@@ -9,7 +9,9 @@ def main():
     assert any(c.get('controller_failure_stops_model_calls') for c in sdk['checks'])
     assert any(c.get('output_growth') for c in sdk['checks'])
     assert any(c.get('long_compaction') for c in sdk['checks'])
-    assert read(ROOT / 'records/pi-live-capability.json')['status'] == 'passed'
+    live = read(ROOT / 'records/pi-live-capability.json')
+    assert live['status'] == 'passed'
+    assert all(c.get('wire_reasoning_effort') == 'high' for c in live['checks'])
     assert read(ROOT / 'records/protocol-chat-window.json')['context_window_verified']
     path = ROOT / 'records/compatibility.json'
     matrix = read(path) if path.exists() else {}
@@ -39,7 +41,6 @@ def main():
             for payload_file in (out / 'requests').glob('*.request.json'):
                 payload = read(payload_file)
                 assert payload['model'] == 'glm-5.3-flash'
-                assert payload.get('reasoning_effort') == 'high'
                 assert set(t['function']['name'] for t in payload.get('tools', [])) <= {'CLBENCH_ACTION'}
         matrix.setdefault(method, {})['database_exploration'] = {'status': 'READY',
             'evidence': ['records/database-fixtures.json', 'records/pi-sdk-fixtures.json',
@@ -49,7 +50,9 @@ def main():
             'allow': 'R1 full-system database results and all-attempt token accounting',
             'limitations': ['R1 cannot establish a stable ranking or pure memory causality',
                            'token estimator is native Pi, not exact GLM tokenizer',
-                           'final error-handling fixes verified offline; canary results excluded from formal denominator']}
+                           'v3 database canaries prove task/session/state plumbing only; their effort mapping was incomplete and they are excluded from formal scores',
+                           'corrected high mapping verified in current real-model capability calls and offline payload fixtures',
+                           'final error-handling fixes verified offline; formal stream starts cold']}
         matrix[method].setdefault('codebase_adaptation', {'status': 'BLOCKED',
             'reason': 'acceptance in progress after WSL restart affected code canaries; not algorithm failure'})
         evidence.append({'method': method, 'run_id': run_id, 'instances': 2,

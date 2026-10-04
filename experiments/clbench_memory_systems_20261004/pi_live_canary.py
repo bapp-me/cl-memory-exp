@@ -50,8 +50,10 @@ def one(*, method, note, prompt, key):
         finally: server.server_close()
     if proc.returncode: raise RuntimeError((out / 'stderr.txt').read_text(encoding='utf-8')[-2000:])
     end = read(out / 'session-end.json')
+    for payload in (out / 'requests').glob('*.request.json'):
+        assert read(payload).get('reasoning_effort') == 'high', 'Solver effort did not reach the provider'
     return {'out': out.relative_to(ROOT).as_posix(), 'session_id': end['session_id'],
-            'notepad': end['notepad'], 'actions': actions}
+            'notepad': end['notepad'], 'actions': actions, 'wire_reasoning_effort': 'high'}
 
 
 def main():

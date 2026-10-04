@@ -84,6 +84,8 @@ const runtime = await ModelRuntime.create({authPath: path.join(agentDir, 'auth.j
 runtime.registerProvider('glm_experiment', {baseUrl: cfg.base_url, api: 'openai-completions',
   models: [{id: 'glm-5.3-flash', name: 'GLM 5.3 Flash',
     reasoning: true, input: ['text'], contextWindow: 262144, maxTokens: 131072,
+    compat: {thinkingFormat: 'zai', supportsReasoningEffort: true},
+    thinkingLevelMap: {low: 'low', medium: 'high', high: 'high', xhigh: 'max', max: 'max'},
     cost: {input: 0, output: 0, cacheRead: 0, cacheWrite: 0}}]});
 await runtime.setRuntimeApiKey('glm_experiment', process.env.EXPERIMENT_API_KEY);
 // All native summary and solver entry points retain their algorithms, while this

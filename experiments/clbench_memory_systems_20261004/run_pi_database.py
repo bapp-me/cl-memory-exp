@@ -70,7 +70,9 @@ def main():
     state = read(directory / 'memory.json') if (directory / 'memory.json').exists() else {
         'namespace': ns, 'history': [], 'notepad': '', 'previous_feedback': ''}
     if state['namespace'] != ns: raise ValueError('Cross-environment memory')
-    runtime_files = ['pi_session.mjs', 'protocol.py', 'database_adapter.py', 'codebase_adapter.py', 'docker_dispatch.py', 'run_pi_database.py']
+    runtime_files = ['pi_session.mjs', 'protocol.py', 'run_pi_database.py']
+    runtime_files += (['database_adapter.py'] if args.environment == 'database_exploration'
+                      else ['codebase_adapter.py', 'docker_dispatch.py'])
     config_hash = digest({'files': {f: sha(ROOT / f) for f in runtime_files},
                           'plan': sha(ROOT / 'config/experiment.json'), 'namespace': ns})
     manifest = {'run_id': args.run_id, 'namespace': ns, 'mode': args.mode, 'config_hash': config_hash,
