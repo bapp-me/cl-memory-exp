@@ -31,8 +31,15 @@ def main():
             previous_memory=after
             episode=read(out/'legal-episode.json'); barrier=read(out/'barrier.json')
             task_key=(environment,index)
-            reference_prompts.setdefault(task_key,episode['prompt'])
-            check(episode['prompt']==reference_prompts[task_key],'same full task prompt across methods')
+            comparison_prompt=episode['prompt']
+            if environment=='codebase_adaptation':
+                notice='NOTICE: We are now coding in a new repo.\n\n'
+                schedule=manifest[environment]
+                expected_notice=index>0 and schedule[index]['project_key']!=schedule[index-1]['project_key']
+                check(comparison_prompt.startswith(notice)==expected_notice,'repository-switch notice matches actual schedule stage')
+                comparison_prompt=comparison_prompt.removeprefix(notice)
+            reference_prompts.setdefault(task_key,comparison_prompt)
+            check(comparison_prompt==reference_prompts[task_key],'same official problem body across methods')
             check(digest(episode)==row['source_watermark']==barrier['source_watermark'],'final legal watermark')
             check(barrier['durable'] and barrier['status'] in {'not_applicable','completed_noop','completed_changed','completed_staged'},'completed durable barrier')
             if environment=='database_exploration':
@@ -78,7 +85,8 @@ def main():
         'model_calls':0,'streams':summaries,'checks':['official order and grader parity','unique native sessions',
             'memory handoff and own-past retrieval','legal feedback projection','frozen submission hashes',
             'actual model/effort/output budget and measured window','all reported failed-attempt usage retained as unknown',
-            'identical official problems and private database gold across methods; no labels exported']}
+            'identical official problem bodies and private database gold across methods; no labels exported',
+            'Codebase repository-switch notices occur only at the real schedule transition']}
     save(ROOT/'records/mechanical-audit.json',output)
     print(json.dumps({'status':output['status'],'streams':[(s['run_id'],s['committed_tasks'],s['status'],s['errors']) for s in summaries]}))
     if output['status']!='passed': raise SystemExit(1)
