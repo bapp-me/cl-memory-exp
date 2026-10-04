@@ -1,6 +1,6 @@
 # CL-Bench 跨会话记忆系统比较：执行入口
 
-2026-10-04。状态：方案已确定，运行适配与实测交由本地 Codex；本次没有运行新实验。
+2026-10-05。状态：本轮实验已执行，尚未完成全部矩阵。阶段结果、恢复偏差及待决定的口径见 [阶段报告](experiments/clbench_memory_systems_20261004/RESULTS_PARTIAL.md) 和 [执行记录](experiments/clbench_memory_systems_20261004/EXECUTION.md)；不要把已完成的部分结果当作六组最终结论。
 
 请从 [实验方案](experiments/clbench_memory_systems_20261004/README.md) 和 [本地 Codex 执行交接](experiments/clbench_memory_systems_20261004/LOCAL_CODEX_TASK.md) 开始。
 
