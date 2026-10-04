@@ -82,3 +82,5 @@ Pi No Memory Codebase 第 16 题发生 HTTP 500。唯一已执行命令仅为读
 对既有能力探针的离线复核：Claude 两个新会话确实写入并召回受控标记；Hermes 也写入并召回，原记录的 jobs/calls 已结束且覆盖末水位，但旧探针未采集当前合同要求的压缩阈值字段，不能单独作为当前完整验收证据。当前阈值及原生技能在下一会话的真实可见性由 `candidate-db-hermes-v2` 另行核验。Codex 管线完成、标记召回失败，两者分开登记，未放行正式流。
 
 共享请求门截至 2026-10-04 19:49 UTC 观察峰值为 **8**，配置上限 50，最大本地信号量等待约 0.016 秒；当时只有 Claude 正式流仍在运行。已归档的全部正式 HTTP attempt 都有该门的进入记录，早期 114 条验收/协议探针在设立共享门前执行，单列为历史差异。HTTP 200 内也可能承载服务端错误，不能只看 HTTP 状态统计失败率。见 [concurrency-observation.json](records/concurrency-observation.json)。
+
+Codex 求解阶段的自动增额续接已补齐：通过 `/budget` 的实际 length/usage 证据后，原生 `exec resume` 必须回到同一 session，输出预留随预算调整；正常结束、网络故障、输入超窗不能触发该路径。14 项离线测试通过，锁定二进制在无网络只读容器内接受所用 CLI 参数。未做新的在线验收，未注入活动流；维护 job 的恢复与 600 秒上限仍受待答问题约束。见 [codex-output-continuation-fixture.json](records/codex-output-continuation-fixture.json)。

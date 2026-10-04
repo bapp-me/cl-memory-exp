@@ -10,6 +10,51 @@ import time
 from urllib.request import Request,urlopen
 
 
+def run_solver(cfg,out,project,home,env):
+    """Continue the same native thread only after proven output exhaustion."""
+    from native_budget import grow
+    base=['/native/codex','exec','--json','--skip-git-repo-check','--dangerously-bypass-approvals-and-sandbox',
+        '-C',str(project),'--output-last-message',str(out/'final.txt')]
+    session=None; output_limit=16384; prompt=cfg['prompt']; continuations=[]
+    with (out/'events.jsonl').open('w') as events,(out/'stderr.txt').open('w') as stderr:
+        while True:
+            command=base+([prompt] if session is None else ['resume',session,prompt])
+            proc=subprocess.Popen(command,env=env,cwd=project,stdout=subprocess.PIPE,stderr=stderr,text=True)
+            for line in proc.stdout:
+                events.write(line); events.flush()
+                value=json.loads(line)
+                if value.get('type')=='thread.started':
+                    received=value['thread_id']
+                    if session is not None:
+                        if received!=session: raise RuntimeError('Output continuation created a different Codex session')
+                        continue
+                    session=received; (out/'session-start.json').write_text(json.dumps({'session_id':session}))
+                    request=Request(cfg['gateway']+'/tool',data=json.dumps({'control':'session_start','session_id':session}).encode(),
+                        headers={'Authorization':'Bearer '+cfg['gateway_token'],'Content-Type':'application/json'})
+                    with urlopen(request,timeout=30) as response: response.read()
+            code=proc.wait()
+            observed=json.loads((out/'last-business-result.json').read_text()) if (out/'last-business-result.json').exists() else {}
+            if not code and session and observed.get('instance_complete'): return session
+            if not session: raise RuntimeError('Native Codex did not produce a session')
+            # /budget rejects normal stop, network errors, input exhaustion,
+            # reused evidence and growth beyond the provider output maximum.
+            decision=grow(cfg,output_limit)
+            output_limit=decision['output_limit']
+            config_path=home/'config.toml'; config=config_path.read_text()
+            lines=config.splitlines()
+            positions=[i for i,line in enumerate(lines) if line.startswith('model_auto_compact_token_limit = ')]
+            if len(positions)!=1: raise RuntimeError('Ambiguous Codex compression reserve')
+            lines[positions[0]]=f"model_auto_compact_token_limit = {decision['compression_threshold']}"
+            config_path.write_text('\n'.join(lines)+'\n')
+            continuations.append({**decision,'kind':'output_budget','session_id':session,
+                'previous_exit_code':code,'business_already_complete':bool(observed.get('instance_complete'))})
+            (out/'solver-continuations.json').write_text(json.dumps(continuations))
+            prompt=('The previous response exhausted its output budget; the output allowance is now larger. '
+                'Continue this same task from the saved state. Do not repeat already completed actions. '
+                + ('The benchmark submission is already fixed. Finish only the current turn; do not perform further benchmark actions.'
+                   if observed.get('instance_complete') else 'Finish the current benchmark instance.'))
+
+
 def run(path,cfg,out,project):
     from codex_catalog import CATALOG
     home=Path('/state/home/.codex'); home.mkdir(exist_ok=True)
@@ -48,23 +93,7 @@ args = ["/runtime/business_mcp.py", {json.dumps(str(path))}]
     env={**os.environ,'HOME':'/state/home','CODEX_HOME':str(home),'PATH':'/native:'+os.environ['PATH'],
         'EXPERIMENT_API_KEY':cfg['gateway_token'],'CLBENCH_MEMORY_BOUNDARY_MODE':'1'}
     env.pop('CLBENCH_MEMORY_SOURCE_THREAD',None)
-    command=['/native/codex','exec','--json','--skip-git-repo-check','--dangerously-bypass-approvals-and-sandbox',
-        '-C',str(project),'--output-last-message',str(out/'final.txt'),cfg['prompt']]
-    session=None
-    with (out/'events.jsonl').open('w') as events,(out/'stderr.txt').open('w') as stderr:
-        proc=subprocess.Popen(command,env=env,cwd=project,stdout=subprocess.PIPE,stderr=stderr,text=True)
-        for line in proc.stdout:
-            events.write(line); events.flush()
-            value=json.loads(line)
-            if value.get('type')=='thread.started':
-                session=value['thread_id']; (out/'session-start.json').write_text(json.dumps({'session_id':session}))
-                request=Request(cfg['gateway']+'/tool',data=json.dumps({'control':'session_start','session_id':session}).encode(),
-                    headers={'Authorization':'Bearer '+cfg['gateway_token'],'Content-Type':'application/json'})
-                with urlopen(request,timeout=30) as response: response.read()
-        code=proc.wait()
-    if code or not session: raise RuntimeError('Native Codex solver failed')
-    observed=json.loads((out/'last-business-result.json').read_text()) if (out/'last-business-result.json').exists() else {}
-    if not observed.get('instance_complete'): raise RuntimeError('Native Codex did not submit through the business controller')
+    session=run_solver(cfg,out,project,home,env)
     # No future question and no user turn are sent to this maintenance process.
     receipt=home/'clbench-memory-pipeline.json'
     if receipt.exists(): receipt.unlink()
