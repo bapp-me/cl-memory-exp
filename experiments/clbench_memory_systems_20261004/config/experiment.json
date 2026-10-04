@@ -1,15 +1,21 @@
 {
   "schema_version": "clbench-memory-study.plan.v1",
-  "status": "PLAN_ONLY_NOT_A_NATIVE_RUNTIME_CONFIG",
+  "status": "ADAPTATION_AND_ACCEPTANCE_IN_PROGRESS",
   "created_date": "2026-10-04",
   "execution_owner": "local_codex",
   "research_branch": "clbench_memory_systems_20261004",
   "scope": {
     "purpose": "full_system_cross_session_comparison",
-    "excluded": ["full_history_icl", "arbitrary_agent_memory_cross_product", "reopen_closed_qualification", "automatic_method_optimization"],
+    "excluded": [
+      "full_history_icl",
+      "arbitrary_agent_memory_cross_product",
+      "reopen_closed_qualification",
+      "automatic_method_optimization"
+    ],
     "initial_repetitions": 1,
     "auto_add_repetitions": false,
-    "expected_task_executions_if_all_six_eligible": 354
+    "expected_task_executions_if_all_six_eligible": 354,
+    "environment_execution_order": "independent_after_per_stream_acceptance"
   },
   "version_policy": {
     "resolve": "latest_official_non_prerelease_at_local_bootstrap",
@@ -27,10 +33,10 @@
     "same_account_backend_preferred": true,
     "solver_output_tokens_target": 8192,
     "credential_env": "EXPERIMENT_API_KEY",
-    "responses_base_url": null,
-    "anthropic_base_url": null,
-    "chat_completions_base_url": null,
-    "route_status": "LOCAL_ACCOUNT_AND_PROTOCOL_ACCEPTANCE_REQUIRED"
+    "responses_base_url": "https://api.z.ai/api/v1",
+    "anthropic_base_url": "https://api.z.ai/api/anthropic",
+    "chat_completions_base_url": "https://api.z.ai/api/paas/v4",
+    "route_status": "THREE_PROTOCOL_IDENTITY_CANARIES_PASSED_CONTEXT_AND_FRAMEWORK_PENDING"
   },
   "context": {
     "definition_of_256k": "256 * 1024",
@@ -50,7 +56,10 @@
       "name": "database_exploration",
       "schedule": "default",
       "expected_instances_at_research_revision": 40,
-      "expected_stages": [20, 20],
+      "expected_stages": [
+        20,
+        20
+      ],
       "development_exposure": "previously_accessed",
       "reset_memory_at_schema_drift": false,
       "action_budget": "inherit_locked_official_QUERY_ANSWER_contract"
@@ -59,7 +68,10 @@
       "name": "codebase_adaptation",
       "schedule": "default",
       "expected_instances_at_research_revision": 19,
-      "expected_project_blocks": {"tablib": 9, "tenacity": 10},
+      "expected_project_blocks": {
+        "tablib": 9,
+        "tenacity": 10
+      },
       "working_tree": "restore_each_instance_official_base_commit",
       "retain_previous_solution_patch": false,
       "project_memory_sidecar": "preserve_with_stable_project_identity",
@@ -70,42 +82,109 @@
     "new_session_on": "benchmark_instance_complete",
     "resume_within_instance": true,
     "hard_reset_only_on": "new_run_or_independent_environment",
-    "state_namespace": ["method_id", "repetition", "environment"],
+    "state_namespace": [
+      "method_id",
+      "repetition",
+      "environment"
+    ],
     "stable_project_key_required": true,
     "no_future_task_visible_to_maintenance": true,
     "next_context_created_after_barrier": true,
-    "legal_feedback": "locked_official_environment_contract_only"
+    "legal_feedback": "hide_ground_truth_keep_correctness_query_count_timeout"
   },
   "methods": [
-    {"id": "pi_none", "framework": "pi_coding_agent", "memory": "none", "baseline_only": true},
-    {"id": "pi_notepad", "framework": "pi_coding_agent", "memory": "official_notepad_semantics_port", "clear_messages_between_instances": true, "keep_notepad_between_instances": true, "update": "optional_full_replacement_with_action", "dedicated_writer": false},
-    {"id": "pi_jaccard", "framework": "pi_coding_agent", "memory": "own_legal_episodes", "top_k": 3, "tokenization": "lowercase_regex_\\w+_set", "tie_break": "newest_first", "injection_order": "chronological", "query": "current_public_instance_prompt", "retrieval_timing": "once_at_instance_start", "oversize": "bounded_ingestion_and_native_pi_compaction_with_source_mapping"},
-    {"id": "codex_memory_ready", "framework": "codex", "memory": "native", "single_conversation": false, "maintenance": "completed_source_native_phase1_then_phase2", "idle_policy": "verified_public_immediate_control_else_run_scoped_scheduler_patch"},
-    {"id": "claude_memory_ready", "framework": "claude_code", "memory": "native_auto_memory", "single_conversation": false, "maintenance": "finish_native_writes_and_discovered_background_jobs", "custom_forced_writer": false},
-    {"id": "hermes_memory_ready", "framework": "hermes_native", "memory": "native_notes_sessions_skills", "maintenance": "native_review_at_final_instance_watermark", "nudge_interval_1_only_if_instance_equals_user_turn": true, "generic_flush_1_assumed": false}
+    {
+      "id": "pi_none",
+      "framework": "pi_coding_agent",
+      "memory": "none",
+      "baseline_only": true
+    },
+    {
+      "id": "pi_notepad",
+      "framework": "pi_coding_agent",
+      "memory": "official_notepad_semantics_port",
+      "clear_messages_between_instances": true,
+      "keep_notepad_between_instances": true,
+      "update": "optional_full_replacement_with_action",
+      "dedicated_writer": false
+    },
+    {
+      "id": "pi_jaccard",
+      "framework": "pi_coding_agent",
+      "memory": "own_legal_episodes",
+      "top_k": 3,
+      "tokenization": "lowercase_regex_\\w+_set",
+      "tie_break": "newest_first",
+      "injection_order": "chronological",
+      "query": "current_public_instance_prompt",
+      "retrieval_timing": "once_at_instance_start",
+      "oversize": "bounded_ingestion_and_native_pi_compaction_with_source_mapping"
+    },
+    {
+      "id": "codex_memory_ready",
+      "framework": "codex",
+      "memory": "native",
+      "single_conversation": false,
+      "maintenance": "completed_source_native_phase1_then_phase2",
+      "idle_policy": "verified_public_immediate_control_else_run_scoped_scheduler_patch"
+    },
+    {
+      "id": "claude_memory_ready",
+      "framework": "claude_code",
+      "memory": "native_auto_memory",
+      "single_conversation": false,
+      "maintenance": "finish_native_writes_and_discovered_background_jobs",
+      "custom_forced_writer": false
+    },
+    {
+      "id": "hermes_memory_ready",
+      "framework": "hermes_native",
+      "memory": "native_notes_sessions_skills",
+      "maintenance": "native_review_at_final_instance_watermark",
+      "nudge_interval_1_only_if_instance_equals_user_turn": true,
+      "generic_flush_1_assumed": false
+    }
   ],
   "barrier": {
     "required": true,
-    "deduplication_key": ["run_id", "instance_id", "source_watermark"],
+    "deduplication_key": [
+      "run_id",
+      "instance_id",
+      "source_watermark"
+    ],
     "wait_timeout_seconds": 600,
-    "maintenance_chain_model_attempt_limit": 32,
+    "maintenance_chain_model_attempt_limit": null,
     "force_nonempty_memory": false,
     "recursive_maintenance": false,
-    "accepted_terminal_states": ["completed_changed", "completed_noop", "completed_staged", "not_applicable"],
+    "accepted_terminal_states": [
+      "completed_changed",
+      "completed_noop",
+      "completed_staged",
+      "not_applicable"
+    ],
     "not_applicable_requires_proven_absence_of_async_mechanism": true,
     "staged_is_not_committed": true,
     "automatic_pending_approval": false,
     "failure_policy": "pause_affected_stream_preserve_submission_and_cost",
-    "never_accept_as_noop": ["not_triggered", "idle_ineligible", "timeout", "error", "still_running", "uncommitted_storage"]
+    "never_accept_as_noop": [
+      "not_triggered",
+      "idle_ineligible",
+      "timeout",
+      "error",
+      "still_running",
+      "uncommitted_storage"
+    ]
   },
   "resources": {
-    "initial_global_model_request_concurrency": 4,
+    "initial_global_model_request_concurrency": 50,
     "include_auxiliary_and_subagents": true,
     "business_budgets": "inherit_locked_official_task_config",
     "native_tighter_limits": "record_explicitly_check_they_do_not_disable_required_maintenance",
     "budget_manifest_required_before_paid_execution": true,
-    "monetary_authorization": "use_current_local_user_authorization_not_closed_batches",
-    "unknown_usage_is_zero": false
+    "monetary_authorization": "records/execution-authorization.json",
+    "unknown_usage_is_zero": false,
+    "provider_limit_source": "user_reported_2026-10-04",
+    "independent_stream_concurrency": 12
   },
   "observability": {
     "raw_wire_requests_and_responses": "required_or_documented_equivalent",
@@ -118,6 +197,10 @@
     "initial_semantic_review_max_independent_targets": 12,
     "causal_claims_from_logs_only": false
   },
-  "compatibility_statuses": ["READY", "LIMITED_OBSERVABILITY", "BLOCKED"],
+  "compatibility_statuses": [
+    "READY",
+    "LIMITED_OBSERVABILITY",
+    "BLOCKED"
+  ],
   "unsupported_configuration_policy": "document_tradeoff_keep_other_eligible_arms_do_not_silently_downgrade"
 }
