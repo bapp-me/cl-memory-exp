@@ -13,11 +13,14 @@ from native_evidence import archive, memory_snapshot, validate, usage_for
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument('--framework', choices=['claude', 'hermes'], required=True)
+    p.add_argument('--framework', choices=['claude', 'hermes','codex'], required=True)
     p.add_argument('--environment', choices=['database_exploration','codebase_adaptation'], required=True)
     p.add_argument('--mode', choices=['canary','formal'], required=True)
     p.add_argument('--run-id', required=True); p.add_argument('--limit', type=int)
     args = p.parse_args(); method = args.framework + '_memory_ready'
+    if args.framework=='codex':
+        import native_client
+        native_client.BROKER_KIND='codex'
     total = 40 if args.environment == 'database_exploration' else 19; limit = args.limit or total
     if not 1 <= limit <= total or not args.run_id.replace('-', '').isalnum(): raise ValueError('Invalid run scope')
     if args.mode == 'formal' and read(ROOT/'records/compatibility.json')[method][args.environment]['status'] != 'READY':
@@ -27,6 +30,7 @@ def main():
     runtime = ['run_native.py','native_evidence.py','native_gateway.py','budget_control.py','native_client.py',
         'native-runtime/native_entry.py','native-runtime/business_mcp.py','native-runtime/native_budget.py']
     if args.framework == 'hermes': runtime += ['native-runtime/hermes_session.py']
+    if args.framework == 'codex': runtime += ['native-runtime/codex_session.py','native-runtime/codex_catalog.py']
     runtime += ['database_adapter.py'] if total == 40 else ['codebase_adapter.py','docker_dispatch.py']
     config_hash = digest({f:sha(ROOT/f) for f in runtime})
     snapshot_dir=directory/'runtime-source'
@@ -51,15 +55,21 @@ def main():
             query=stream.public_query(); out=directory/f'task-{index:03d}'; out.mkdir(); task=out.name
             actions=[]; completed=False; failed=False; submitted_at=None
             session=str(uuid.uuid4()); token=uuid.uuid4().hex
-            boundary.start(index,session)
+            if args.framework!='codex': boundary.start(index,session)
             route_id=uuid.uuid4().hex; route_token=uuid.uuid4().hex
             class Handler(BaseHTTPRequestHandler):
                 def log_message(self,*_): pass
                 def do_POST(self):
-                    nonlocal completed,failed,submitted_at
+                    nonlocal completed,failed,submitted_at,session
                     if self.headers.get('X-Run-Token')!=token: self.send_error(403); return
-                    if completed: self.send_error(409); return
                     value=json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+                    if value.get('control')=='session_start' and args.framework=='codex':
+                        session=str(uuid.UUID(value['session_id'])); boundary.start(index,session)
+                        route['session_id']=session; save(ROOT/'.local/native-routes'/f'{route_id}.json',route)
+                        save(out/'session-start.json',{'session_id':session})
+                        data=b'{"registered":true}'; self.send_response(200)
+                        self.send_header('Content-Length',str(len(data))); self.end_headers(); self.wfile.write(data); return
+                    if completed: self.send_error(409); return
                     try:
                         result=stream.action(value['action']); completed=result['instance_complete']
                         actions.append({'action':value['action'],'observation':result['observation'],'toolCallId':value['toolCallId']})
@@ -80,7 +90,7 @@ def main():
                 'tool_url':f'http://127.0.0.1:{server.server_port}/tool','tool_token':token,'output_limit':16384}
             save(ROOT/'.local/native-routes'/f'{route_id}.json',route)
             cfg={'framework':args.framework,'session_id':session,'project_key':route['project_key'],
-                'gateway':f'http://172.30.0.1:43191/r/{route_id}','gateway_token':route_token,'environment':args.environment,
+                'gateway':f'http://172.30.0.1:{43193 if args.framework=="codex" else 43191}/r/{route_id}','gateway_token':route_token,'environment':args.environment,
                 'tool_description':('Execute an official database QUERY or submit ANSWER; every QUERY consumes the official budget.' if total==40
                     else 'Execute one official benchmark Bash command. All commands consume the official issue action budget; use its submission sentinel to finish.'),
                 'framing':query.get('brief','')+'\nUse CLBENCH_ACTION (discover it if needed) for all benchmark business actions. Local files and shell are only for native memory and bookkeeping. The benchmark workspace is accessible only through CLBENCH_ACTION. After instance_complete, end your turn.',

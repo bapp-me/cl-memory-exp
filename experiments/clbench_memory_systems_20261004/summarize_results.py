@@ -51,6 +51,7 @@ def normalize(usage,protocol):
 
 def main():
     ledger={}; streams=[]; root=ROOT/'private-runs'
+    pricing=read(ROOT/'records/provider-pricing.json') if (ROOT/'records/provider-pricing.json').exists() else None
     for directory in sorted(root.iterdir()):
         if not directory.is_dir(): continue
         manifest=read(directory/'manifest.json') if (directory/'manifest.json').exists() else {}
@@ -85,9 +86,12 @@ def main():
                 if environment=='database_exploration': phases['before_migration' if row['index']<20 else 'after_migration'].append(row)
                 else: phases[row['project_key']].append(row)
             def stats(values):
+                def duration(row):
+                    return row.get('seconds') if not row.get('seconds_basis') else None
                 return {'completed':len(values),'correct':sum(x['correct'] for x in values),
                     'business_actions':sum(x['actions'] for x in values),'reward_sum':sum(x['reward'] for x in values),
-                    'task_seconds_sum':round(sum(x['seconds'] for x in values),3)}
+                    'task_seconds_known_sum':round(sum(duration(x) for x in values if duration(x) is not None),3),
+                    'task_seconds_unknown_count':sum(duration(x) is None for x in values)}
             streams.append({'run_id':directory.name,'method':method,'environment':environment,'status':state,'target':target,
                 **stats(rows),'phases':{k:stats(v) for k,v in phases.items()},
                 'distinct_sessions':len({x['session_id'] for x in rows}),
@@ -100,21 +104,31 @@ def main():
             'category':'acceptance_or_debug','task':None,'method_id':None,'role':'protocol_canary','protocol':record['protocol'],
             'phase':'finished' if not record.get('error') else 'failed','status':record.get('http_status'),
             'returned_model':record.get('returned_model'),'usage':record.get('usage'),**normalize(record.get('usage'),record['protocol'])}
+    for attempt in ledger.values():
+        inputs,cache,outputs=(attempt.get(k) for k in ['input_tokens','cached_input_tokens','output_tokens'])
+        estimate=None
+        if pricing and inputs is not None and cache is not None and outputs is not None and 0<=cache<=inputs:
+            estimate=((inputs-cache)*pricing['uncached_input']+cache*pricing['cached_input']+outputs*pricing['output'])/1_000_000
+        attempt['published_price_estimate_usd']=estimate
     totals={}
     for category in ['formal','acceptance_or_debug']:
         selected=[x for x in ledger.values() if x['category']==category]
         totals[category]={'attempts':len(selected),'unknown_usage_attempts':sum(x['usage'] is None for x in selected),
+            'published_price_estimate_known_usd':round(sum(x['published_price_estimate_usd'] or 0 for x in selected),6),
+            'unpriced_attempts':sum(x['published_price_estimate_usd'] is None for x in selected),
             **{key+'_known_sum':sum(x.get(key) or 0 for x in selected) for key in ['input_tokens','output_tokens','cached_input_tokens','reasoning_tokens','total_tokens']}}
     for stream in streams:
         calls=[x for x in ledger.values() if x['run_id']==stream['run_id']]
         stream['known_total_tokens']=sum(x.get('total_tokens') or 0 for x in calls)
         stream['attempts']=len(calls); stream['unknown_usage_attempts']=sum(x['usage'] is None for x in calls)
+        stream['published_price_estimate_known_usd']=round(sum(x['published_price_estimate_usd'] or 0 for x in calls),6)
     summary={'as_of':datetime.now(timezone.utc).isoformat(),'streams':streams,'totals':totals,
         'notes':['Counts include unfinished task attempts; completed-task cost comparison must use committed rows only.',
             'Unknown usage is not zero; known sums are lower bounds when attempts are missing usage.',
             'reasoning tokens are a subset of output where reported; never added again.',
             'Anthropic input combines uncached input, cache reads and cache creation; chat/Responses inputs already include cache.',
-            'Framework dollar totals and Pi catalog zero placeholders are not GLM bills; monetary cost is unverified.',
+            'Published GLM token-price equivalents are estimates from records/provider-pricing.json, not account debits or a lower bound on actual spending.',
+            'Framework dollar totals and Pi catalog zero placeholders are not GLM bills; discounts/subscriptions and actual debit are unverified.',
             'Parallel task latency is not a serial historical speedup estimate.']}
     save(ROOT/'records/progress-summary.json',summary)
     save(ROOT/'records/attempt-ledger.json',list(ledger.values()))

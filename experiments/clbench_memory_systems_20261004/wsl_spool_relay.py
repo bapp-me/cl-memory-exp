@@ -8,8 +8,12 @@ import json
 from pathlib import Path
 import time
 import uuid
+import argparse
 
-ROOT = Path(__file__).resolve().parent / '.local/native-spool'
+parser=argparse.ArgumentParser(); parser.add_argument('--kind',choices=['default','codex'],default='default')
+parser.add_argument('--port',type=int,default=43191); args=parser.parse_args()
+suffix='' if args.kind=='default' else '-codex'
+ROOT = Path(__file__).resolve().parent / ('.local/native-spool'+suffix)
 ROOT.mkdir(exist_ok=True)
 
 
@@ -38,4 +42,4 @@ class Handler(BaseHTTPRequestHandler):
                 else: time.sleep(.05)
 
 
-ThreadingHTTPServer(('172.30.0.1', 43191), Handler).serve_forever()
+ThreadingHTTPServer(('172.30.0.1', args.port), Handler).serve_forever()

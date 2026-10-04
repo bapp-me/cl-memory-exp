@@ -57,6 +57,8 @@ Hermes 的官方最终 JSON action 经过同一业务入口执行，反馈回到
 
 所有旧 canary、失败调用、错误配置与修复后的探针分别保留，均不静默删除费用。已有事件包括错误启用未被官方 runner 调用的 60 秒 hook、最初 high 参数漏映射、WSL 重启导致的旧 Codebase 容器失效、原生控制器并发写状态文件冲突，以及上述 Codex 异步整合误判。它们是适配/基础设施验收问题，不赋予算法零分。
 
+Pi No Memory Codebase 的第 13 题则是另一种情形：模型正常结束，但把提交标记放在说明文本中，没有产生合法结构化动作。已核实官方 `CodebaseAdaptationTask.handle_system_error` 明确对此计零分，因此零模型调用地补齐该原生失败记录并继续下一题；不把它当传输故障，不从文本补提交，不重跑求解。前 8 个命令及最后一次无效动作共记官方 9 步。该题原始控制器耗时无法精确恢复，时间列记 unknown，实际模型用量完整保留。
+
 并发状态写入冲突修复后，真实容器的四路创建及 100 次并发状态读取通过，零模型调用。实际停止 Codebase 容器的故障注入也验证了：不会生成可计分的业务结果。
 
 [attempt-ledger.json](records/attempt-ledger.json) 按唯一实际 HTTP attempt 汇总；[progress-summary.json](records/progress-summary.json) 包含时间戳及未完成流。进行中的请求暂无 usage，不等于失败或零成本。已失败但没有 usage 的请求单列 unknown，已知量只是下界。缓存不重复计入 input，reasoning 不重复加到 output。

@@ -3,18 +3,22 @@ import json
 from pathlib import Path
 import threading
 import time
+import argparse
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from prepare import ROOT, read
 
-spool = ROOT / '.local/native-spool'; spool.mkdir(exist_ok=True)
+parser=argparse.ArgumentParser(); parser.add_argument('--kind',choices=['default','codex'],default='default')
+parser.add_argument('--port',type=int,default=43191); args=parser.parse_args()
+suffix='' if args.kind=='default' else '-codex'
+spool = ROOT / ('.local/native-spool'+suffix); spool.mkdir(exist_ok=True)
 seen = set()
 
 
 def serve(job):
     request = read(job / 'request.json')
     headers = {k: v for k,v in request['headers'].items() if k.lower() not in {'host','connection','content-length'}}
-    req = Request('http://172.21.16.1:43191' + request['path'], data=(job / 'body.bin').read_bytes(), headers=headers)
+    req = Request(f'http://172.21.16.1:{args.port}' + request['path'], data=(job / 'body.bin').read_bytes(), headers=headers)
     def meta(status, content_type):
         p = job / 'response.tmp'; p.write_text(json.dumps({'status': status, 'content_type': content_type}))
         p.replace(job / 'response.json')

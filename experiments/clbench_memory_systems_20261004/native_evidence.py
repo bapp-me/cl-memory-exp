@@ -10,13 +10,27 @@ def archive(path):
 
 
 def memory_snapshot(files, framework):
-    needles = ['/.claude/projects/'] if framework == 'claude' else ['/.hermes/memories/', '/.hermes/skills/', '/.hermes/pending/']
+    needles = (['/.claude/projects/'] if framework == 'claude' else ['/.codex/memories/'] if framework=='codex'
+        else ['/.hermes/memories/', '/.hermes/skills/', '/.hermes/pending/'])
     return {name: hashlib.sha256(data).hexdigest() for name, data in sorted(files.items())
-        if any(n in '/' + name for n in needles) and (framework != 'claude' or '/memory/' in name)}
+        if any(n in '/' + name for n in needles) and '/.git/' not in name and (framework != 'claude' or '/memory/' in name)}
 
 
 def validate(files, task, framework, session):
     prefix = f'tasks/{task}/'
+    if framework=='codex':
+        barrier=json.loads(files[prefix+'barrier-candidate.json'])
+        if barrier['session_id']!=session or barrier['status']!='native_pipeline_verified':
+            raise RuntimeError('Wrong Codex native session or barrier')
+        if len(barrier['stage1'])!=1 or barrier['stage1'][0]['status']!='done': raise RuntimeError('Extraction incomplete')
+        if barrier['stage1'][0]['last_success_watermark']<barrier['source_updated_at']: raise RuntimeError('Stale extraction')
+        if any(j['status']!='done' for j in barrier['phase2']): raise RuntimeError('Consolidation incomplete')
+        if barrier['has_stage1_output'] and (not barrier['phase2'] or barrier['phase2'][0]['last_success_watermark']<barrier['source_updated_at']):
+            raise RuntimeError('Stale consolidation')
+        events=[json.loads(x) for x in files[prefix+'events.jsonl'].decode().splitlines()]
+        if not any(e.get('type')=='turn.completed' for e in events): raise RuntimeError('Codex turn incomplete')
+        text=[e['item']['text'] for e in events if e.get('type')=='item.completed' and e.get('item',{}).get('type')=='agent_message']
+        return {'kind':'native_codex_two_phase_pipeline','jobs':barrier,'assistant_text':text}
     if framework == 'claude':
         events = [json.loads(x) for x in files[prefix + 'events.jsonl'].decode().splitlines()]
         results = [e for e in events if e['type'] == 'result']

@@ -34,6 +34,7 @@ def gate(operation, payload):
 
 def main():
     parser = argparse.ArgumentParser(); parser.add_argument('--bind', required=True); parser.add_argument('--port', type=int, default=43191)
+    parser.add_argument('--kind',choices=['default','codex'],default='default')
     args = parser.parse_args()
     key = secret()
     lock = threading.Lock()
@@ -90,6 +91,10 @@ def main():
             if protocol == 'chat' and payload.get('reasoning_effort') in {'none','off'}:
                 payload['reasoning_effort']='low'
                 payload['thinking']={'type':'enabled'}
+            if protocol=='responses' and isinstance(payload.get('reasoning'),dict):
+                effort=payload['reasoning'].get('effort')
+                if effort=='medium': payload['reasoning']['effort']='high'
+                elif effort in {'none','off','minimal'}: payload['reasoning']['effort']='low'
             attempt = uuid.uuid4().hex
             out = ROOT / route['audit_relative_path'] / 'requests'
             if not out.resolve().is_relative_to((ROOT / 'private-runs').resolve()): self.send_error(403); return
@@ -138,7 +143,10 @@ def main():
                     'gate_wait_seconds': permit['wait_seconds']})
                 gate('release', {'lease': permit['lease']})
     server = ThreadingHTTPServer((args.bind, args.port), Handler)
-    save(ROOT / '.local/native-gateway.json', {'bind': args.bind, 'port': server.server_port,
+    from prepare import sha
+    suffix='' if args.kind=='default' else '-codex'
+    save(ROOT / f'.local/native-gateway{suffix}.json', {'bind': args.bind, 'port': server.server_port,
+                                             'source_hashes':{f:sha(ROOT/f) for f in ['native_gateway.py','budget_control.py','native_evidence.py']},
                                              'account': 'existing_zai', 'credential_value_logged': False})
     print('Native protocol gateway ready on the WSL host interface; credentials remain host-only.', flush=True)
     server.serve_forever()

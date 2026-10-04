@@ -45,7 +45,7 @@ def main():
                 'tool_url': f'http://127.0.0.1:{server.server_port}/tool', 'tool_token': token, 'output_limit': 16384}
             save(ROOT / '.local/native-routes' / f'{route_id}.json', route)
             cfg = {'framework': args.framework, 'session_id': session, 'project_key': 'database',
-                'gateway': f'http://172.30.0.1:43191/r/{route_id}', 'gateway_token': route_token,
+                'gateway': f'http://172.30.0.1:{43193 if args.framework=="codex" else 43191}/r/{route_id}', 'gateway_token': route_token,
                 'environment': 'database_exploration', 'tool_description': 'Submit the requested probe answer using action ANSWER and content.',
                 'framing': 'This is an isolated capability probe. Use your native memory mechanism when asked. Submit the answer via CLBENCH_ACTION, then end your turn.',
                 'prompt': ('Remember in your native persistent memory that this project uses the marker COBALT-739. Save it, then submit READY using CLBENCH_ACTION.'
