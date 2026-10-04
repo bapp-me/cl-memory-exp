@@ -4,6 +4,8 @@
 
 本地执行确认：用户已授权本轮 R=1 与必要验收，不额外设置金额或模型请求总数上限；保留官方业务动作限制。六种方法 × 两种环境最多 12 条独立流通过各自验收后即可运行，不再等待整个 Database 阶段结束。所有角色共享账户 50 请求并发上限，实际吞吐与限流另行记录。Database 和 Codebase 使用不同 home、会话及所有长期记忆，Codebase 从空记忆启动。Database 结束反馈移除正确答案，仅保留对错、提交内容、查询次数和超时信息。这是相对原生反馈的显式适配。授权记录见 [execution-authorization.json](records/execution-authorization.json)。
 
+验收发现并修正：Database 源码声明60秒响应超时hook，但锁定版本的官方runner未调用它。v1适配器曾误启用该限制，导致两条canary轨迹被截断；整批v1 canary只计测试成本，不进入正式结果。正式适配不添加该业务截止；HTTP传输故障单独登记并暂停流，不直接赋零分。见 [timeout-incident.json](records/timeout-incident.json)。
+
 目标：比较简单记忆管理和成熟 agent 系统在连续任务中的质量、成本、可靠性与经验交接情况。不是预设新算法，也不是仅改变 memory 模块的严格消融。主模型相同不代表系统提示、工具编排和辅助计算相同。
 
 本轮只提交调研、方案与声明式配置；本地 Codex 负责适配、有限验收和执行。已停止的两个资格案例不恢复，旧成绩与评分口径不覆盖。入口见 [LOCAL_CODEX_TASK.md](LOCAL_CODEX_TASK.md)。
@@ -28,7 +30,7 @@ Pi 三组使用 coding-agent 的实际会话与压缩能力，不只调用 pi-ag
 分别验收 `database_exploration/default` 和 `codebase_adaptation/default`，各自通过即可并行运行。调研快照为 CL-Bench `5f8c50eb1e84b2eda2ef4faff757dfc812a0ea26`；本地开始时复查当前版本，固定数据、schedule、工具/评分版本与镜像 digest。[S1–S2](SOURCES.md)
 
 - Database：当前默认 40 个问题，前 20 / 后 20 为迁移前后。保留原生 QUERY/ANSWER、查询预算、反馈与计分，不将隐藏答案或参考 SQL 交给任何主/辅助 agent。此环境已有开发暴露，不重新称未见验证。
-- Codebase：当前默认 tablib 9 题、tenacity 10 题，共 19。每题恢复其官方 base commit，不携带上一题代码补丁到下一题；保留许可的项目知识和历史。隐藏 test_patch/参考 patch/评分代码留在独立 evaluator。
+- Codebase：当前默认 tablib 9 题、tenacity 10 题，共 19。每题恢复其官方 base commit，不携带上一题代码补丁到下一题；保留许可的项目知识和历史。2026-10-04 用户确认保留官方方式：求解前应用 test_patch，agent 可读可运行这些测试；参考修复 patch 和评分器私有记录仍不提供。评分在独立 evaluator 中重新应用官方测试，不采用 agent 修改过的测试。
 - `instance` 是一个完整问题/issue，不是一次模型响应或 QUERY/Bash 调用。同题正常续会话；仅在 instance 完成后新建下一会话。不得逐工具调用清空上下文。
 - 每个方法×重复×环境一个独立实验身份与 home。数据库迁移不清空记忆；代码库切换记录 project_key，原生项目路由保留。同一环境流的既往合法历史可被该方法访问，禁止跨方法、跨重复、跨环境复制经验。
 - 代码项目工作树可按 base commit 重建，但逻辑项目路径保持稳定；记忆 sidecar 不随 `git reset` 删除。不同仓库用不同 project_key，不把随机 Docker 路径误当新项目。全局/项目路由差异单列为系统差异，不强行伪造完全等价的原生存储结构。

@@ -19,6 +19,7 @@ let notepad = cfg.notepad || '';
 let terminal = false;
 let callCounter = 0;
 const rawCaptures = [];
+const captureErrors = [];
 const realFetch = globalThis.fetch;
 
 async function recordedFetch(input, options) {
@@ -46,7 +47,7 @@ async function recordedFetch(input, options) {
         elapsed_ms: performance.now() - started});
     }).catch(error => {
       append('attempts.jsonl', {...meta, phase: 'capture_failed', error: error.name});
-      throw error;
+      captureErrors.push({attempt_id: id, error: error.name});
     });
     rawCaptures.push(capture);
     return response;
@@ -63,9 +64,10 @@ const runtime = await ModelRuntime.create({authPath: path.join(agentDir, 'auth.j
   modelsPath: null, modelsStorePath: path.join(agentDir, 'models-store.json'), refreshOnCreate: false,
   allowModelNetwork: false});
 runtime.registerProvider('glm_experiment', {baseUrl: cfg.base_url, api: 'openai-completions',
-  apiKey: 'EXPERIMENT_API_KEY', models: [{id: 'glm-5.3-flash', name: 'GLM 5.3 Flash',
+  models: [{id: 'glm-5.3-flash', name: 'GLM 5.3 Flash',
     reasoning: true, input: ['text'], contextWindow: 262144, maxTokens: 8192,
     cost: {input: 0, output: 0, cacheRead: 0, cacheWrite: 0}}]});
+await runtime.setRuntimeApiKey('glm_experiment', process.env.EXPERIMENT_API_KEY);
 // All native summary and solver entry points retain their algorithms, while this
 // transport hook captures actual HTTP attempts and disables implicit SDK retries.
 for (const name of ['stream', 'streamSimple', 'complete', 'completeSimple']) {
@@ -76,13 +78,13 @@ for (const name of ['stream', 'streamSimple', 'complete', 'completeSimple']) {
       sequence: callCounter, model: model.id, contextWindow: model.contextWindow,
       context, timestamp: new Date().toISOString()});
     return original(model, context, {...options, fetch: recordedFetch, maxTokens: 8192,
-      maxRetries: 0, timeoutMs: 60000, transport: 'sse'});
+      maxRetries: 0, timeoutMs: 300000, transport: 'sse'});
   };
 }
 const model = runtime.getModel('glm_experiment', 'glm-5.3-flash');
 if (!model) throw new Error('Registered GLM model missing');
 const settings = SettingsManager.inMemory({compaction: {enabled: true, reserveTokens: 16384, keepRecentTokens: 20000},
-  retry: {enabled: false, provider: {maxRetries: 0, timeoutMs: 60000}},
+  retry: {enabled: false, provider: {maxRetries: 0, timeoutMs: 300000}},
   cacheWarming: 'off', enableAnalytics: false, enableInstallTelemetry: false});
 const toolName = 'CLBENCH_ACTION';
 const properties = cfg.environment === 'codebase_adaptation'
@@ -134,6 +136,21 @@ session.subscribe(event => {
   if (event.type === 'auto_compaction_start') role = 'compaction';
   if (event.type === 'auto_compaction_end') role = 'solver';
 });
+let timeoutControl = null;
+let timedOut = false;
+const controlTimer = setInterval(() => {
+  const controlFile = path.join(out, 'task-timeout.json');
+  if (cfg.fixture && !timeoutControl && fs.existsSync(controlFile)) {
+    const control = JSON.parse(fs.readFileSync(controlFile, 'utf8'));
+    timedOut = true;
+    timeoutControl = (async () => {
+      await session.abort();
+      await session.sendCustomMessage({customType: 'benchmark-terminal-feedback', display: false,
+        content: control.observation, details: {simulated_fixture_cancellation: true}});
+      terminal = true;
+    })();
+  }
+}, 100);
 try {
   for (const source of cfg.sources || []) {
     const text = JSON.stringify(source.episode);
@@ -163,14 +180,17 @@ try {
   if (cfg.method_id === 'pi_notepad' && notepad) prefix.push('=== YOUR NOTEPAD ===\n' + notepad + '\n===================');
   prefix.push(cfg.prompt);
   await session.prompt(prefix.join('\n\n'), {expandPromptTemplates: false});
+  if (timeoutControl) await timeoutControl;
   await session.waitForIdle();
   await Promise.all(rawCaptures);
+  if (captureErrors.length && !timedOut) throw new Error('Incomplete provider response capture');
   save('session-end.json', {...identity, session_id: cfg.session_id, terminal, notepad,
     messages: session.messages, entries: manager.getEntries(), provider_entry_calls: callCounter,
-    pending_message_count: session.pendingMessageCount});
+    pending_message_count: session.pendingMessageCount, timed_out: timedOut, capture_errors: captureErrors});
   if (!terminal) throw new Error('Agent ended before a benchmark submission');
   process.stdout.write(JSON.stringify({ok: true, session_id: cfg.session_id, terminal}) + '\n');
 } finally {
+  clearInterval(controlTimer);
   await session.waitForIdle();
   session.dispose();
   await Promise.all(rawCaptures);

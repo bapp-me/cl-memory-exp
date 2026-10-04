@@ -1,0 +1,22 @@
+{
+  "status": "identified_and_fixed_before_formal_execution",
+  "date": "2026-10-04",
+  "clbench_commit": "5f8c50eb1e84b2eda2ef4faff757dfc812a0ea26",
+  "cause": "adapter incorrectly activated a declared but unused Database 60s response deadline hook",
+  "source_evidence": {
+    "declaration": "src/tasks/database_exploration/task.py:49",
+    "unused_hook": "src/tasks/database_exploration/task.py:529",
+    "actual_direct_respond_call": "src/runtime/runner.py:261",
+    "provider_http_transport_timeout": "src/systems/utils/provider_adapters.py:512"
+  },
+  "truncated_cases": [
+    {"run_id": "acceptance-db-pi-none-v1", "index": 0, "last_request_started": "2026-10-04T15:36:36.450Z", "last_observed_thinking_delta": "2026-10-04T15:37:35.507Z"},
+    {"run_id": "acceptance-db-pi-jaccard-v1", "index": 1, "last_request_started": "2026-10-04T15:39:00.509Z", "last_observed_thinking_delta": "2026-10-04T15:39:59.190Z"}
+  ],
+  "evidence_boundary": "Both were generating near 59s; queueing, generation and logging overhead are not causally decomposed.",
+  "affected_canary_batch": ["acceptance-db-pi-none-v1", "acceptance-db-pi-notepad-v1", "acceptance-db-pi-jaccard-v1"],
+  "formal_tasks_affected": 0,
+  "disposition": "preserve all raw attempts and original outcomes as adaptation-test evidence; exclude from formal scores; no retroactive invented answer",
+  "fix": "remove extra business wall deadline; use 300s provider transport timeout; transport failure pauses stream and is not converted to an incorrect benchmark answer",
+  "verification": "pending post-fix acceptance"
+}

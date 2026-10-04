@@ -12,7 +12,7 @@ from prepare import ROOT, save
 from protocol import digest
 
 
-def run_fixture(method, *, note='', sources=None, force_compact=False):
+def run_fixture(method, *, note='', sources=None, force_compact=False, timeout=False):
     out = ROOT / '.local/fixtures' / uuid.uuid4().hex
     out.mkdir(parents=True)
     requests = []
@@ -27,7 +27,15 @@ def run_fixture(method, *, note='', sources=None, force_compact=False):
                 self.send_response(200); self.send_header('Content-Type', 'application/json')
                 self.send_header('Content-Length', str(len(data))); self.end_headers(); self.wfile.write(data)
                 return
+            if self.headers.get('Authorization') != 'Bearer FIXTURE-NOT-A-SECRET':
+                self.send_error(401); return
             requests.append(value)
+            if timeout:
+                self.send_response(200); self.send_header('Content-Type', 'text/event-stream'); self.end_headers()
+                self.wfile.write(b'data: {"choices":[]}\n\n'); self.wfile.flush()
+                save(out / 'task-timeout.json', {'observation': 'Fixture TIMED OUT. No hidden answer.'})
+                threading.Event().wait(0.5)
+                return
             messages = value.get('messages', [])
             summary = not value.get('tools')
             finished = messages and messages[-1].get('role') == 'tool'
@@ -75,21 +83,27 @@ def run_fixture(method, *, note='', sources=None, force_compact=False):
     end = json.loads((out / 'session-end.json').read_text(encoding='utf-8'))
     start = json.loads((out / 'session-start.json').read_text(encoding='utf-8'))
     assert start['active_tools'] == ['CLBENCH_ACTION']
-    assert len(actions) == 1 and 'notepad_update' not in actions[0]['action']
+    assert len(actions) == (0 if timeout else 1)
+    if actions: assert 'notepad_update' not in actions[0]['action']
     assert end['terminal'] and end['pending_message_count'] == 0
     assert len(list((out / 'requests').glob('*.request.json'))) == len(requests)
     assert all(x['model'] == 'glm-5.3-flash' for x in requests)
-    if method == 'pi_notepad': assert end['notepad'] == 'COBALT'
+    if method == 'pi_notepad' and not timeout: assert end['notepad'] == 'COBALT'
     if note: assert note in json.dumps(requests[0])
     if force_compact: assert (out / 'compaction-after-fixture.json').exists()
+    if timeout:
+        assert end['timed_out']
+        assert any('Fixture TIMED OUT' in str(m.get('content', '')) for m in end['messages'])
     return {'method': method, 'session_id': end['session_id'], 'requests': len(requests),
-            'raw': out.relative_to(ROOT).as_posix(), 'long_compaction': force_compact, 'model_calls': 0}
+            'raw': out.relative_to(ROOT).as_posix(), 'long_compaction': force_compact,
+            'timeout': timeout, 'model_calls': 0}
 
 
 def main():
     parser = argparse.ArgumentParser(); parser.add_argument('--quick', action='store_true'); args = parser.parse_args()
     checks = [run_fixture('pi_none'), run_fixture('pi_notepad'), run_fixture('pi_notepad', note='PREVIOUS-NOTE')]
     checks.append(run_fixture('pi_jaccard', sources=[{'source_id': 'fixture-past', 'episode': {'text': 'past legal source'}}]))
+    checks.append(run_fixture('pi_none', timeout=True))
     if not args.quick:
         checks.append(run_fixture('pi_jaccard', sources=[{'source_id': 'long-fixture',
             'episode': {'text': ('COBALT fact. ' * 60000)}}], force_compact=True))

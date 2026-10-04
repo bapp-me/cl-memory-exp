@@ -62,7 +62,8 @@ def main():
         with ThreadPoolExecutor(max_workers=4) as pool:
             releases = dict(pool.map(release, REPOS.items()))
     files = ['pyproject.toml', 'uv.lock', 'src/interface.py', 'src/usage.py',
-             'src/tasks/schedules.py', 'src/tasks/variants.py',
+             'src/tasks/schedules.py', 'src/tasks/variants.py', 'src/runtime/runner.py',
+             'src/systems/utils/provider_adapters.py',
              'src/tasks/database_exploration/task.py', 'src/tasks/database_exploration/prompts.py',
              'src/tasks/database_exploration/schedules/default.json',
              'src/tasks/database_exploration/variants/schema_drift.json',
@@ -107,9 +108,10 @@ def main():
         'task_manifest_sha256': sha(ROOT / 'records/task-manifest.json'),
         'counts': {'database': len(questions), 'codebase': len(code_ids),
                    'codebase_projects': dict(Counter(by_id[i]['repo'] for i in code_ids))},
-        'business_limits': {'database_queries_per_question': 15, 'database_response_timeout_seconds': 60,
+        'business_limits': {'database_queries_per_question': 15, 'database_declared_timeout_hook_seconds': 60,
+                            'database_effective_runner_response_deadline_seconds': None,
                             'database_sql_timeout_seconds': 10, 'codebase_steps_per_issue': 40},
-        'limits_note': 'Codebase checks >=40 before execution; preserve this exact upstream behavior.',
+        'limits_note': 'Codebase checks >=40 before execution. Database declares a 60s hook but the pinned runner never invokes it; preserve actual behavior.',
         'framework_global_model_attempt_limit': None, 'model_calls': 0,
         'acceptance': 'PENDING_RUNTIME_FIXTURES_AND_ONLINE_CANARIES',
     }

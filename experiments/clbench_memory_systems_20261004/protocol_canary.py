@@ -34,11 +34,14 @@ def secret():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--protocol', choices=['chat', 'responses', 'anthropic'], required=True)
+    parser.add_argument('--window', action='store_true', help='Isolated near-256k provider input probe, no benchmark content')
     args = parser.parse_args()
     authorization = read(ROOT / 'records/execution-authorization.json')
     if authorization.get('monetary_policy') != 'user_authorized_no_additional_cap':
         raise RuntimeError('Current batch authorization missing')
     prompt = 'This is an isolated protocol connectivity test. Reply with exactly OK.'
+    if args.window:
+        prompt = 'Ignore the repeated filler below.\n' + (' cat' * 245000) + '\nReply with exactly OK.'
     definitions = {
         'chat': ('https://api.z.ai/api/paas/v4/chat/completions',
                  {'model': MODEL, 'messages': [{'role': 'user', 'content': prompt}],
@@ -88,10 +91,14 @@ def main():
                   'response_status': data.get('status'),
                   'raw_evidence': out.relative_to(ROOT).as_posix()})
     event['identity_passed'] = event['http_status'] == 200 and str(data.get('model', '')).lower() == MODEL
-    event['context_window_verified'] = False
+    usage = data.get('usage') or {}
+    input_tokens = usage.get('prompt_tokens', usage.get('input_tokens'))
+    event['probe'] = 'near_256k_input' if args.window else 'identity'
+    event['context_window_verified'] = bool(args.window and event['identity_passed']
+        and isinstance(input_tokens, int) and 240000 <= input_tokens <= 262144 - 2048)
     event['framework_acceptance'] = False
     save(out / 'attempt.json', event)
-    save(ROOT / 'records' / ('protocol-' + args.protocol + '.json'), event)
+    save(ROOT / 'records' / ('protocol-' + args.protocol + ('-window' if args.window else '') + '.json'), event)
     print(json.dumps(event, ensure_ascii=True))
 
 
