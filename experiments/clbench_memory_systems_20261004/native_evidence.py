@@ -95,3 +95,51 @@ def usage_for(out):
         attempts.append({'attempt_id': meta['attempt_id'], 'protocol': meta['protocol'], 'http_status': meta.get('http_status'),
             'phase': meta['phase'], 'returned_model': model, 'usage': usage or None, 'finish_reason': finish})
     return attempts
+
+
+def validate_attempt_accounting(out, attempts):
+    """Require settled, preserved attempts; failed usage remains unknown, not zero.
+
+    This does not validate task completion or authorize a retry. The caller must
+    separately verify the native lifecycle and frozen benchmark submission.
+    """
+    if not attempts:
+        raise RuntimeError('Native task has no captured attempts')
+    expected = {p.name.removesuffix('.request.json') for p in (out / 'requests').glob('*.request.json')}
+    ids = [a['attempt_id'] for a in attempts]
+    if len(set(ids)) != len(ids) or set(ids) != expected:
+        raise RuntimeError('Attempt inventory mismatch')
+    known_successes = 0
+    unknown_failures = []
+    for attempt in attempts:
+        stem = out / 'requests' / attempt['attempt_id']
+        request = json.loads(stem.with_suffix('.request.json').read_text(encoding='utf-8'))
+        meta = json.loads(stem.with_suffix('.attempt.json').read_text(encoding='utf-8'))
+        if request.get('model') != 'glm-5.3-flash' or attempt['returned_model'] not in {None, 'glm-5.3-flash'}:
+            raise RuntimeError('Native model identity mismatch')
+        if attempt['phase'] not in {'finished', 'failed'}:
+            raise RuntimeError('Native request is still in flight')
+        response = stem.with_suffix('.response.bin')
+        raw = response.read_text(encoding='utf-8') if response.exists() else ''
+        values = []
+        for line in raw.splitlines():
+            line = line.removeprefix('data: ').strip()
+            try: values.append(json.loads(line))
+            except json.JSONDecodeError: pass
+        try: values.append(json.loads(raw))
+        except json.JSONDecodeError: pass
+        provider_error = any(isinstance(v, dict) and (v.get('error') or v.get('type') in {'error', 'response.failed'}
+            or isinstance(v.get('response'), dict) and v['response'].get('error')) for v in values)
+        failed = bool(meta.get('error') or provider_error or (attempt['http_status'] is not None and attempt['http_status'] >= 400))
+        if not failed:
+            if not response.exists() or attempt['http_status'] != 200 or not attempt['usage'] or attempt['returned_model'] != 'glm-5.3-flash':
+                raise RuntimeError('Successful response lacks verifiable usage or model evidence')
+            known_successes += 1
+        elif attempt['usage'] is None:
+            unknown_failures.append(attempt['attempt_id'])
+    if not known_successes:
+        raise RuntimeError('No verified model completion')
+    return {'status': 'captured_settled', 'attempts': len(attempts),
+            'successful_responses_with_usage': known_successes,
+            'failed_attempts_with_unknown_usage': unknown_failures,
+            'cost_interpretation': 'Reported usage only; unknown failure usage is not zero.'}

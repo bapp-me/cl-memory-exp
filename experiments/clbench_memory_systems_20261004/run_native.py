@@ -8,7 +8,7 @@ import uuid
 from prepare import ROOT, read, save, sha
 from protocol import Boundary, digest, namespace, project_episode
 from native_client import broker, put, snapshot, freeze_runtime
-from native_evidence import archive, memory_snapshot, validate, usage_for
+from native_evidence import archive, memory_snapshot, validate, usage_for, validate_attempt_accounting
 
 
 def main():
@@ -109,19 +109,17 @@ def main():
             snapshot(container,out/'native-state.tar.gz'); files=archive(out/'native-state.tar.gz')
             if state['exit_code'] or not completed: raise RuntimeError('Native process or business instance incomplete')
             evidence=validate(files,task,args.framework,session); save(out/'native-completion.json',evidence)
+            # Audit before advancing the durable boundary. A preserved transport
+            # failure can coexist with successful native recovery; its unknown
+            # usage must not erase the completed business result or become zero.
+            attempts=usage_for(out)
+            save(out/'transport-accounting.json',validate_attempt_accounting(out,attempts))
             episode=project_episode(namespace=ns,index=index,instance_id=query['instance_id'],prompt=query['prompt'],
                 assistant_text=evidence['assistant_text'],tools=actions,feedback=actions[-1]['observation'])
             watermark=digest(episode); boundary.freeze(read(out/'submission.json'),watermark)
             save(out/'legal-episode.json',episode)
             memory_after=memory_snapshot(files,args.framework); save(out/'memory-after.json',memory_after)
             status='completed_changed' if memory_before!=memory_after else 'completed_noop'
-            receipt=boundary.complete(status=status,covered_watermark=watermark,
-                jobs=[{'status':status,'covered_watermark':watermark,'native_evidence':'native-completion.json'}],
-                memory_version=digest(memory_after),durable=True)
-            save(out/'barrier.json',receipt); memory_before=memory_after
-            attempts=usage_for(out)
-            if any(a['phase']!='finished' or a['http_status']!=200 or a['usage'] is None or a['returned_model']!='glm-5.3-flash' for a in attempts):
-                raise RuntimeError('Native transport accounting requires audit before next task')
             grade=read(directory/'evaluator-private'/f'result-{index:03d}.json'); record=grade['record']
             correct=record['correct'] if total==40 else record['success']; count=record['num_queries'] if total==40 else record['steps']
             result={'index':index,'instance_id':query['instance_id'],'session_id':session,'environment':args.environment,
@@ -129,6 +127,13 @@ def main():
                 'reward':grade['outcome']['reward'] if grade['outcome'] else 1-record['regret']/15 if total==40 else 0,
                 'timed_out':record.get('timed_out',False),'seconds':round(time.monotonic()-started,3),
                 'maintenance_seconds':round(time.monotonic()-submitted_at,3),'attempts':attempts,'source_watermark':watermark}
+            # A crash after boundary commit can be recovered from this exact row,
+            # without reconstructing timings or running the business task again.
+            save(out/'prepared-result.json',result)
+            receipt=boundary.complete(status=status,covered_watermark=watermark,
+                jobs=[{'status':status,'covered_watermark':watermark,'native_evidence':'native-completion.json'}],
+                memory_version=digest(memory_after),durable=True)
+            save(out/'barrier.json',receipt); memory_before=memory_after
             results.append(result); save(directory/'results.json',results)
             print(json.dumps({'run_id':args.run_id,'completed':index+1,'correct':correct,'actions':count}),flush=True)
         save(directory/'stream-status.json',{'status':'completed' if limit==total else 'prefix_completed','completed':len(results),'mode':args.mode})
