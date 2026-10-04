@@ -78,3 +78,7 @@ Pi No Memory Codebase 第 16 题发生 HTTP 500。唯一已执行命令仅为读
 离线检查还修正了后续原生控制器的提交顺序：先核对所有 HTTP attempt 已结束且保留证据，再提交完成屏障；有完整失败证据的传输请求保留 usage unknown，不因原生已成功恢复就丢弃该请求，也不把它填零。屏障前暂存完整结果行，便于崩溃后不重跑业务地恢复。6 个故障 fixture 加 5 个预算 fixture 共 11 项通过，并重放核对 43 个已完成真实任务；见 [native-accounting-fixture.json](records/native-accounting-fixture.json)。该改动未热替换正在运行的 Claude 流，未恢复超时维护，也未增加重试授权。
 
 [阶段报告](RESULTS_PARTIAL.md) 已整理完整 Pi 矩阵、配对效率与 8 个重点目标的证据索引；首次语义复核还剩 4 个目标名额。
+
+对既有能力探针的离线复核：Claude 两个新会话确实写入并召回受控标记；Hermes 也写入并召回，原记录的 jobs/calls 已结束且覆盖末水位，但旧探针未采集当前合同要求的压缩阈值字段，不能单独作为当前完整验收证据。当前阈值及原生技能在下一会话的真实可见性由 `candidate-db-hermes-v2` 另行核验。Codex 管线完成、标记召回失败，两者分开登记，未放行正式流。
+
+共享请求门截至 2026-10-04 19:49 UTC 观察峰值为 **8**，配置上限 50，最大本地信号量等待约 0.016 秒；当时只有 Claude 正式流仍在运行。已归档的全部正式 HTTP attempt 都有该门的进入记录，早期 114 条验收/协议探针在设立共享门前执行，单列为历史差异。HTTP 200 内也可能承载服务端错误，不能只看 HTTP 状态统计失败率。见 [concurrency-observation.json](records/concurrency-observation.json)。
