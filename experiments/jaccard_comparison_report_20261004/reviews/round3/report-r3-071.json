@@ -1,0 +1,153 @@
+{
+  "case_id": "report-r3-071",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=11:True:5"
+        }
+      ],
+      "reason": "s027 通过了其隐藏评测（5 测试），但通过不保证历史陈述全部正确，且 s027 是签名不同的相邻任务。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 25,
+          "quote": "\"truncated\":false}],\"packing_truncated\":false"
+        }
+      ],
+      "reason": "s027  episode 完整返回（5817/6277 字节，未截断），其中保存的轨迹与 corresponding_source_original 一致，目标所需核心信息（randint 范围、成本=penalties×1000、回归结构）在 episode 内可见。"
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 35,
+          "quote": "The memory episode s027 is a closely related variant. I'll adapt its approach"
+        }
+      ],
+      "reason": "s027 与目标共享同一任务族（随机进球/犯规、PENALTY_COST 回归），目标新增条件是按 num_matches 累加而非单场，solver 显式识别并适配了该差异。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 42,
+          "quote": "total_goals += randint(0, 5)      # goals scored in this match"
+        }
+      ],
+      "reason": "读取 s027 后第一次代码即复用其 randint(0,5)/randint(0,3) 与成本映射，并新增累加循环匹配 simulate_league 签名；这是行为代理，非因果证明。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "line": 4,
+          "quote": "[s027](episodes/s027.md): Simulates football match results with random goals and penalties for multiple teams,"
+        }
+      ],
+      "reason": "启动索引明确列出 s027 摘要，使目标存在直接对应源；这是机会的存在性，不证明被检索或使用。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 6,
+          "quote": "\"path\": \"episodes/s027.md\""
+        }
+      ],
+      "reason": "solver 用一次 MEMORY_READ_FILE 精确读取了匹配 episode，检索本身成功；不能仅凭命中证明内容被因果利用。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 35,
+          "quote": "is a closely related variant. I'll adapt its approach: simulate `num_matches` matches per team"
+        }
+      ],
+      "reason": "读取与改编在时间上连续且代码结构重合（randint 范围、cost 映射、回归调用），支持语义复用候选；无反事实（无 memory 对照），不能证明记忆造成成功。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 4,
+          "quote": "\"seconds\": 46.75,"
+        }
+      ],
+      "reason": "仅一次 memory 读取（5817 字节）与 3 次 turn 完成任务，开销很小；但单题成功不能断言性价比收益。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "任务对模型可能本就简单（8 checks 全过、0 tests），无 memory 时也可能一次通过，无反事实无法排除",
+    "启动索引摘要本身已含关键提示，未必需要 episode 全文",
+    "tests 只检查 shape/列名/类型，不校验数值语义，正确性对随机细节不敏感，削弱'必须依赖记忆'的解释强度"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无 no-memory 反事实，无法量化记忆对成功概率或用时的贡献",
+    "隐藏 thinking 不可见，无法确认 solver 是先有独立方案再借记忆确认还是直接复用",
+    "target_evaluation 显示 tests_run=0 而 checks_executed=8，评测机制细节未知，但结果状态按给定记录不变"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "相同 48 题历史库、相同启动索引、相同只读 native-files 访问方式、相同模型与预算（R=1）",
+    "falsifier": "无建议改动；若未来做对照，同题在去掉 s027 或索引摘要的条件下表现不降，将反驳 USE_TRANSFER 候选"
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 73,
+          "quote": "\"memory_calls\": 1,"
+        }
+      ],
+      "reason": "仅一次读取且直接命中主题匹配的 s027，无 glob/grep 扩散调用。"
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 7,
+          "quote": "\"correct\": true,"
+        }
+      ],
+      "reason": "首次提交即被判正确，无失败边界可归因。"
+    },
+    "reading_efficiency": {
+      "value": "contextual_confirmation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 35,
+          "quote": "The memory episode s027 is a closely related variant. I'll adapt its approach"
+        }
+      ],
+      "reason": "读取一个相关 episode 用以确认模式并适配新签名，未见明显可避免开销（一次读取、3 turns、46.75 秒）。"
+    }
+  },
+  "causal_claim": false
+}

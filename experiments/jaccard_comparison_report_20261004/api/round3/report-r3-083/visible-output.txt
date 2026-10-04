@@ -1,0 +1,114 @@
+
+{
+  "case_id": "report-r3-083",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {"section": "source_evaluation_offline", "line": 3, "quote": "EVALUATOR_RESULT=39:True:6"}
+      ],
+      "reason": "s007 passed its own hidden tests (correct: true), so the retrieved experience came from a legitimately solved source."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {"section": "target_visible", "line": 79, "quote": "df = pd.DataFrame(array, columns=['A', 'B', 'C', 'D', 'Response'])"}
+      ],
+      "reason": "The retrieved s007 code matches the corresponding_source_original submission, so the memory content the solver saw was a faithful record."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {"section": "target_visible", "line": 89, "quote": "The memory shows this task is an extension of s007 (2D list → DataFrame with columns A, B, C, D, Response → OLS with constant)."},
+        {"section": "target_prompt", "line": 1, "quote": "create a summary report that includes the DataFrame, regression results, and a comparison of the R-squared values for each dataset"}
+      ],
+      "reason": "s007 covered the single-dataset regression core, but the multi-dataset summary report schema is a new target condition not present in memory."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {"section": "target_visible", "line": 151, "quote": "matching the s007 reference output for the single-dataset case"}
+      ],
+      "reason": "The solver read s007, explicitly recognized the relationship, and adapted its validation/OLS code; this is a behavioral proxy, not a causal claim."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D0",
+      "evidence": [
+        {"section": "target_prompt", "line": 1, "quote": "The function should return a summary report with the details of each regression analysis."},
+        {"section": "target_evaluation_offline", "line": 4, "quote": "KeyError: 'Dataset 1'"}
+      ],
+      "reason": "The prompt never specifies report key names, while hidden tests demand exactly 'Dataset N'/'DataFrame'/'R-squared'; the schema is underspecified candidate (previous_contract_candidate: report_schema)."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {"section": "target_visible", "line": 158, "quote": "\"datasets\": {\"dataset_0\": {\"dataframe\": pd.DataFrame,"}
+      ],
+      "reason": "The solver invented 'dataset_0'/'dataframe' keys; the first evaluator assertion fails on KeyError, so the visible failure is the solver's own schema choice, not a memory error."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {"section": "target_visible", "line": 79, "quote": "results = model.fit()\n    return df, results"},
+        {"section": "target_visible", "line": 151, "quote": "matching the s007 reference output for the single-dataset case"}
+      ],
+      "reason": "Regression logic visibly derives from retrieved s007 and was functionally adapted; without a counterfactual this cannot prove the reuse caused success, nor that any memory content caused the failure."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {"section": "target_startup_memory", "line": 4, "quote": "- [s007](episodes/s007.md): Generate a Pandas DataFrame from a 2D list and perform a multiple linear regression."},
+        {"section": "retrieval_and_packing", "line": 13, "quote": "returned_source_ids": ["s007"]}
+      ],
+      "reason": "s007 was a legitimately solved, topically matching source listed in the startup index and actually retrieved; its content covered only part of the target's new report requirement."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "TASK_EXECUTION: the solver could have chosen 'Dataset 1'-style keys on its own; the prompt's silence means either naming is defensible, so prompt underspecification vs. solver guess cannot be separated from this run alone.",
+    "Unknown whether a memory-only run without s007 would produce the same schema error; no counterfactual exists."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "Exact hidden-test key expectations were never visible to the solver; only offline evaluation shows them.",
+    "Whether the s007 retrieval changed the final schema decision (vs. what an unaided attempt would produce) is unknowable here.",
+    "No per-memory token/cache attribution is available."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same startup index, same read-only memory files, same budget and model; retrieval already surfaced the relevant source and the failure lies in the unspecified report schema, not in access.",
+    "falsifier": "If identical runs with a schema-explicit prompt (still memory-enabled) pass while current-style prompts fail across cases, the EVAL_CONTRACT candidate is supported; conversely, if memory-enabled runs systematically produce non-reference key names where no-memory runs do not, a transfer-related candidate would gain support."
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {"section": "retrieval_and_packing", "line": 6, "quote": "\"glob\": \"episodes/s007.md\","},
+        {"section": "retrieval_and_packing", "line": 25, "quote": "\"pattern\": \"r2|R-squared|rsquared\""}
+      ],
+      "reason": "Two targeted greps (exact file plus R-squared keyword) and one scoped file read directly served the task; no broad browsing."
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {"section": "target_evaluation_offline", "line": 4, "quote": "assert _eval_record_bool(isinstance(report['Dataset 1']['DataFrame'], pd.DataFrame))\nKeyError: 'Dataset 1'"}
+      ],
+      "reason": "All computed regressions ran correctly in the solver's own tests; the only failure point is the hidden test's expected report key schema that the prompt did not state."
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {"section": "retrieval_and_packing", "line": 42, "quote": "\"args\": {\n        \"path\": \"episodes/s007.md\",\n        \"start_line\": 42,\n        \"line_count\": 60\n      },"}
+      ],
+      "reason": "The read was scoped to the code body of the relevant episode; the truncated first grep (7144 of 11774 bytes) was bounded and followed by a precise read, so no clear avoidable overhead."
+    }
+  },
+  "causal_claim": false
+}

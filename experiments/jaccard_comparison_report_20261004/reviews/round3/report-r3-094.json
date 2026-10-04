@@ -1,0 +1,140 @@
+{
+  "case_id": "report-r3-094",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 4,
+          "quote": "AssertionError: Expected 'show' to have been called once. Called 0 times."
+        }
+      ],
+      "reason": "s012 源提交离线复评为 7 测中 1 失败（plt.show 未调用），核心逻辑通过但不完全合法。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 33,
+          "quote": "# s012: historical simple-task execution\\n\\nRaw preserved event values"
+        }
+      ],
+      "reason": "内存文件逐字保留源轨迹的任务、代码与提交事件，与 corresponding_source_original 一致。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 56,
+          "quote": "The memory episodes s011/s012 are the single-list versions of this task; this one is the list-of-sublists variant"
+        }
+      ],
+      "reason": "源为单列表版本，目标新增 per-sublist 平均、组合直方图与总计数，需结构性改写而非直接复用。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 56,
+          "quote": "I'll adapt the structure: per-sublist average filtering, per-sublist bisect counting, combined sorted histogram"
+        }
+      ],
+      "reason": "提交代码沿用了 s012 的 bisect 计数与直方图骨架并扩展到子列表；仅为行为代理，非因果证明。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "line": 4,
+          "quote": "- [s012](episodes/s012.md): Analyzes a list of numerical data, identifies values greater than the average,"
+        }
+      ],
+      "reason": "启动索引中 s011/s012 与目标高度相关，agent 随后读取两文件，存在合法复用机会。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 63,
+          "quote": "sorted_sublist = sorted(sublist)\\n        idx = bisect.bisect_right(sorted_sublist, value)"
+        }
+      ],
+      "reason": "提交代码与 s012 的 bisect 计数/直方图结构语义重合且做了必要改写；无反事实，不能证明记忆导致成功。"
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 80,
+          "quote": "\"memory_response_bytes\": 10518,"
+        }
+      ],
+      "reason": "两次整文件读取带来约 10.5KB 内存上下文与 2 次额外调用；成功案例下不能断言性价比差。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "任务简单，模型可能无记忆也能独立写出同类解，成功不必然归因于记忆。",
+    "s011（DataFrame 版本）对目标贡献不明确，可能只是冗余上下文。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无语义召回 gold，无法验证索引选择是否为最优；",
+    "无无记忆基线，无法估计记忆的净贡献；",
+    "hidden thinking 不可见，检索后的推理过程只能靠行为代理。"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "保持相同 48 条历史索引、只读文件访问与相同预算",
+    "falsifier": "无改动则无直接证伪条件；若对照显示无记忆基线同等成功率且更低开销，则 USE_TRANSFER 候选被削弱"
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 6,
+          "quote": "\"path\": \"episodes/s012.md\""
+        }
+      ],
+      "reason": "从索引直接命中两个最相关 episode，无 glob/grep 泛搜，两次读取全部返回未截断。"
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 7,
+          "quote": "\"correct\": true,"
+        }
+      ],
+      "reason": "两次断言失败均为 agent 自写测试期望错误并当轮修正，最终 6 checks 全过。"
+    },
+    "reading_efficiency": {
+      "value": "contextual_confirmation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 56,
+          "quote": "the single-list versions of this task; this one is the list-of-sublists variant with the same imports"
+        }
+      ],
+      "reason": "读取 s011+s012 用于确认导入与结构差异，属可辩护的确认性阅读，未观察到明显可避免开销。"
+    }
+  },
+  "causal_claim": false
+}

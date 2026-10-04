@@ -1,0 +1,188 @@
+{
+  "case_id": "report-r3-086",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "failed_or_partial",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 4,
+          "quote": "KeyError: 'A'"
+        }
+      ],
+      "reason": "对应源 s018 的提交在离线评测中失败（4 error + 1 failure），其 df 用行索引而非列。源经验只覆盖部分契约（距离/绘图），DataFrame 构造与评测契约冲突。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 33,
+          "quote": "df = pd.DataFrame([a, b], index=[\\\"A\\\", \\\"B\\\"])"
+        }
+      ],
+      "reason": "s018 记忆文件逐字保留了源轨迹（含同样错误的 DataFrame 构造），与 corresponding_source_original 一致。保真指内容未被篡改，不保证源本身正确。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "DataFrame shape mismatch"
+        }
+      ],
+      "reason": "s018 的距离计算与绘图可泛化到 pairs 循环，但其行索引 DataFrame (2,3) 与目标隐藏测试期望的列式 (3,2) 不符；部分适用。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 59,
+          "quote": "def new_task_func(list_of_pairs):"
+        }
+      ],
+      "reason": "提交代码将 s018 的单对实现改为遍历 list_of_pairs 的循环，且沿用了提示词字面的 'indices A/B'。这是行为代理，不构成因果结论。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "line": 4,
+          "quote": "Calculate the Euclidean distance between two lists, create a Pandas DataFrame from these lists"
+        },
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "\"path\": \"episodes/s018.md\""
+        }
+      ],
+      "reason": "启动索引中 s018 描述与目标基础任务直接匹配，solver 确实读取了该文件。读取与索引匹配只证明机会存在，不证明内容被正确使用。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 59,
+          "quote": "df = pd.DataFrame([a, b], index=[\\\"A\\\", \\\"B\\\"])"
+        },
+        {
+          "section": "target_visible",
+          "line": 33,
+          "quote": "df = pd.DataFrame([a, b], index=[\\\"A\\\", \\\"B\\\"])"
+        }
+      ],
+      "reason": "提交代码与记忆中 s018 解决方案的构造几乎逐字一致并泛化为循环，是可见复用代理。无反事实，不能证明记忆导致失败或成功。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "with indices 'A' and 'B'"
+        },
+        {
+          "section": "target_contract_reference_offline",
+          "line": 3,
+          "quote": "pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})"
+        },
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "DataFrame shape mismatch"
+        }
+      ],
+      "reason": "提示词要求行索引 'A'/'B'，隐藏测试却断言列式 DataFrame (3,2)；失败形状 (2,3) 与按提示词实现的预期一致。属候选的题意/测试张力，非确定性结论。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 83,
+          "quote": "Works as expected. Submitting."
+        },
+        {
+          "section": "target_evaluation_offline",
+          "line": 7,
+          "quote": "\"correct\": false"
+        }
+      ],
+      "reason": "solver 自测 returncode 0 后即提交，本地验证未覆盖隐藏测试的 DataFrame 方向断言。这是执行/验证边界的直接记录。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "自身执行问题：solver 也可能独立选择行索引（提示词字面即如此），无记忆也会同样写出，不能归因于记忆复用",
+    "s009 的读取是否影响了 DataFrame 构造决策无法判断，其内容（连续点距离）未出现在最终代码中",
+    "题意/测试是否真矛盾需人工裁定（previous_contract_candidate 标注为候选而非真值）"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无反事实：无法判断不用记忆时 solver 是否会改用列式 DataFrame",
+    "隐藏测试与提示词的矛盾是基准缺陷还是措辞歧义，离线证据无法定论",
+    "s009 读取的实际作用与是否属必要确认未知"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "相同启动索引、相同只读记忆库、相同预算与历史（R=1）",
+    "falsifier": "若隐藏测试实际接受行索引 DataFrame（或同一访问方式在其他方向歧义任务上稳定通过），则契约张力解释被反驳"
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 75,
+          "quote": "\"glob_calls\": 0"
+        },
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "\"path\": \"episodes/s018.md\""
+        }
+      ],
+      "reason": "依据索引描述直接定点读取 s018/s009 两个文件，无浏览或 grep。检索针对性强。"
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "with indices 'A' and 'B'"
+        },
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "DataFrame shape mismatch"
+        }
+      ],
+      "reason": "所需信息（提示词措辞与记忆代码）均可见，solver 按提示词字面实现却与隐藏测试的列式期望冲突。契约张力是候选而非确证。"
+    },
+    "reading_efficiency": {
+      "value": "avoidable_overhead_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 19,
+          "quote": "\"path\": \"episodes/s009.md\""
+        }
+      ],
+      "reason": "s009（连续点距离）内容未体现在最终解中，第二次读取约 4.7KB 属可省候选开销；是否为刻意交叉确认无法排除。"
+    }
+  },
+  "causal_claim": false
+}

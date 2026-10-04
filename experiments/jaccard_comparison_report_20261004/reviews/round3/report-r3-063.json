@@ -1,0 +1,166 @@
+{
+  "case_id": "report-r3-063",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 4,
+          "quote": "Ran 10 tests in 0.000s\n\nOK"
+        }
+      ],
+      "reason": "源 s032 通过其全部测试，但其解只处理单文本且不在循环内重播种，未覆盖目标变体的逐文本种子行为。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 25,
+          "quote": "if seed is not None:\n        random.seed(seed)"
+        }
+      ],
+      "reason": "读取的 s032 文件内容与 corresponding_source_original 轨迹逐字一致，含未截断标记，保真无矛盾证据。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "Given a list of texts, each containing multiple sentences"
+        },
+        {
+          "section": "target_visible",
+          "line": 25,
+          "quote": "text (str): The text to be scrambled."
+        }
+      ],
+      "reason": "核心打乱逻辑可直接复用，但目标新增列表输入与隐含的逐文本重播种条件，源经验未编码后者。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 38,
+          "quote": "return [re.sub(r'\\w+', scramble, text) for text in texts]"
+        },
+        {
+          "section": "target_visible",
+          "line": 62,
+          "quote": "The list-based variant works: words >3 chars are scrambled"
+        }
+      ],
+      "reason": "读取 s032 后立即把单文本实现改为列表推导并自测，行为上是一致的适配；非因果结论。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "line": 4,
+          "quote": "- [s032](episodes/s032.md): Scramble the letters in each word of a given text, keeping the first and last letters of each word intact."
+        },
+        {
+          "section": "retrieval_and_packing",
+          "line": 6,
+          "quote": "\"path\": \"episodes/s032.md\""
+        }
+      ],
+      "reason": "启动索引直接列出与目标几乎同文的 s032，agent 仅一次读取即命中，机会存在是直接记录。命中不证明该经验导致结果。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 38,
+          "quote": "return [re.sub(r'\\w+', scramble, text) for text in texts]"
+        }
+      ],
+      "reason": "提交代码核心与 s032 解逐字重合并仅做列表化改写，是可见复用代理；无反事实，不能证明复用造成失败或成功。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_contract_reference_offline",
+          "line": 2,
+          "quote": "return [task_func(text, seed) for text in texts]"
+        },
+        {
+          "section": "previous_contract_candidate",
+          "line": 3,
+          "quote": "\"category\": \"per_text_seed\""
+        }
+      ],
+      "reason": "参考解对每个文本重新以 seed 播种，而 target_prompt 只说 seed 用于可复现，未声明逐文本重播种；隐藏断言精确字符串因此超出题面陈述，属题意/测试不一致候选。"
+    }
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 73,
+          "quote": "\"memory_calls\": 1"
+        },
+        {
+          "section": "retrieval_and_packing",
+          "line": 6,
+          "quote": "\"path\": \"episodes/s032.md\""
+        }
+      ],
+      "reason": "仅一次精确读取索引中语义最匹配的 s032，无冗余检索。"
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "assert _eval_record_bool(new_task_func(['Hello world! This is a test.', 'Python is fun and powerful.'], 123) == ['Hlleo wlrod! This is a tset.', 'Photyn is fun and pfwuoerl.'])"
+        }
+      ],
+      "reason": "失败源于隐藏断言要求逐文本重播种的精确乱序输出，题面未陈述该条件；非信息缺失于库或自身执行错误。"
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 8,
+          "quote": "\"truncated\": false"
+        }
+      ],
+      "reason": "单次读取完整未截断，3395 字节，无重复或可避免读取。"
+    }
+  },
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "无法排除 agent 即使重新播种一次全局 PRNG 仍因 random.shuffle 实现细节与期望不符而失败的可能",
+    "agent 只在单文本场景自测，多文本自测也可能暴露差异，属自身执行层面的候选，但当前证据不足以区分",
+    "失败也可能与记忆无关：不复用 s032 而独立实现同样会遇到逐文本播种问题"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无 agent 隐藏思考，无法确认其是否意识到每次调用应重置 PRNG 状态",
+    "无逐记忆 token/缓存归因，读取成本无法精确分摊",
+    "previous_contract_candidate 是先前 AI 审计候选，非人工真值"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "相同启动索引、相同 48 源只读库、相同预算与模型",
+    "falsifier": "若在相同检索下 agent 独立于 s032 实现并仍因逐文本播种断言失败，则 EVAL_CONTRACT 候选仍成立而 USE_TRANSFER 与失败无关；若逐文本重播种实现后通过全部断言，则确认契约差异为失败边界"
+  },
+  "causal_claim": false
+}

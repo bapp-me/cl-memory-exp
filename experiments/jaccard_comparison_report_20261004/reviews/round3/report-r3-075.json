@@ -1,0 +1,170 @@
+{
+  "case_id": "report-r3-075",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        },
+        {
+          "section": "corresponding_source_original",
+          "line": 2,
+          "quote": "The function filters rows in a dict of list in which the values of the 'Word' column begin with a specified letter."
+        }
+      ],
+      "reason": "配对源 s044 自身评测通过，但它解决的是按首字母过滤后统计词长，与目标的按类别分组统计词长只是部分重叠。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "与目标最相关的 s044 从未被打开，其内容保真度无法评估；被读取的 s040 与目标无关。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "line": 4,
+          "quote": "[s044](episodes/s044.md): The function filters rows in a dict of list in which the values of the 'Word' column begin with a specified letter."
+        }
+      ],
+      "reason": "s044 涉及词长统计这一核心操作，但目标新增了按 Category 分组并要求类别到词长计数的嵌套字典，源条件仅部分适用。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 58,
+          "quote": "I'll write the function and test it."
+        }
+      ],
+      "reason": "读取的 s040 是组合频率任务且与目标无关，grep 命中 s032/s044 后未跟进读取；提交代码为独立实现，无任何记忆内容被引用或改编。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 94,
+          "quote": "\"name\": \"SUBMIT\","
+        },
+        {
+          "section": "target_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=1:True:0"
+        }
+      ],
+      "reason": "直接记录：solver 自行实现、本地测试后提交，评测返回 correct=true。这只是成功事实，不证明记忆复用起作用。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 48,
+          "quote": "\"paths\":[\"/memory/episodes/s032.md\",\"/memory/episodes/s044.md\"],\"total_matches\":2"
+        },
+        {
+          "section": "corresponding_source_original",
+          "line": 2,
+          "quote": "The function filters rows in a dict of list in which the values of the 'Word' column begin with a specified letter."
+        }
+      ],
+      "reason": "grep 定位到与配对源一致的 s044，但仅返回路径（files_with_matches 模式）且未被打开；只说明存在未利用的合法来源机会，不能断言利用它就会改变结果。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 21,
+          "quote": "\"pattern\": \"word length|len\\\\(word|most common\""
+        },
+        {
+          "section": "target_visible",
+          "line": 58,
+          "quote": "I'll write the function and test it."
+        }
+      ],
+      "reason": "检索定位到两个命中文件后，下一轮即直接写代码，没有读取命中文件验证相关性；这是候选的检索跟进不足，不能等同于检索失败（模式本身命中了相关源）。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 5,
+          "quote": "Ran 0 tests in 0.000s"
+        },
+        {
+          "section": "target_contract_reference_offline",
+          "line": 3,
+          "quote": "all_words.extend(doc['Content'].split())"
+        }
+      ],
+      "reason": "隐藏评测实际运行 0 个测试，而提交用 \\w+ 正则分词与参考解的 .split() 在含标点文本上会产生不同词长（如 world!! 为 5 vs 7）；只标候选不一致，评分 mask 不变。"
+    }
+  ],
+  "primary_hypothesis": "TASK_EXECUTION",
+  "competing_explanations": [
+    "成功可完全由模型自身编码能力解释，与读取的无关记忆 s040 无因果关系；grep 的 items 为空是 files_with_matches 输出模式所致，不能当作检索失败或打包截断的证据。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "隐藏测试未运行（tests_run=0），\\w+ 与 .split() 的分词差异是否影响真实判分无法验证",
+    "s032/s044 的实际内容是否会被改编使用从未发生，无法反事实评估",
+    "grep 模式只命中 2 个文件是否漏掉库内其他相关表述也无法确认"
+  ],
+  "minimal_intervention": {
+    "change": "在 files_with_matches 返回路径后追加一次 content 模式 grep 或读取命中文件（如 s044）以确认相关性，再决定是否改编。",
+    "fixed": "相同的启动索引、记忆库、环境与预算、模型与历史轨迹。",
+    "falsifier": "若读取命中文件内容后行为与提交结果完全不变（或表现更差），则机会未被利用与检索跟进不足的候选被削弱。"
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "overbroad_candidate",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 6,
+          "quote": "\"path\": \"episodes/s040.md\""
+        }
+      ],
+      "reason": "读取的 s040 是组合频率任务，与词长统计无内容关联；grep 模式本身较聚焦，但该次读取属漫无目的的探索。"
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=1:True:0"
+        }
+      ],
+      "reason": "目标成功且 scorable，无需归因失败边界。"
+    },
+    "reading_efficiency": {
+      "value": "avoidable_overhead_candidate",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 14,
+          "quote": "\"actual_bytes\": 3222"
+        }
+      ],
+      "reason": "花费一次读取带回约 3KB 与任务无关的 s040 全文；这是可见代理，字节不等于 token，且不能据此断言成本-收益差。"
+    }
+  },
+  "causal_claim": false
+}

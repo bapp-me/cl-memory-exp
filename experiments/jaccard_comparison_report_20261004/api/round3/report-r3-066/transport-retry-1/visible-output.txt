@@ -1,0 +1,99 @@
+
+{
+  "case_id": "report-r3-066",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [{"section": "source_evaluation_offline", "line": 3, "quote": "EVALUATOR_RESULT=12:True:4"}],
+      "reason": "s037 source passed its hidden tests (correct:true), but passing does not certify all its statements apply to the target."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [{"section": "target_visible", "line": 48, "quote": "\"path\":\"/memory/episodes/s037.md\",\"start_line\":1,\"end_line\":106"}],
+      "reason": "Full 106-line s037 file was returned untruncated and its submitted code matches the corresponding_source_original trajectory; the transferred date-to-ordinal pattern was accurately represented. The file contains no target-specific title string, so nothing relevant was distorted."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [{"section": "target_prompt", "line": 1, "quote": "You are given multiple datasets, each containing 'date' and 'value' columns."}],
+      "reason": "s037 covers per-DataFrame date-ordinal regression and validation, but the target adds multi-dataset iteration, aggregation, and an aggregated plot — all new conditions the source does not address."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [{"section": "target_visible", "line": 58, "quote": "The memory file s037 gives a closely related pattern (date→ordinal regression with validation). Now let me implement the multi-dataset version"}],
+      "reason": "The solver explicitly acknowledged s037 and visibly extended its per-df pattern to a list of datasets with matching validation style. This is a behavioral proxy, not proof the memory caused success or the title failure."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {"section": "target_evaluation_offline", "line": 4, "quote": "AssertionError: Plot title should be 'Aggregated Predictions vs Date'."},
+        {"section": "previous_contract_candidate", "line": 3, "quote": "\"category\": \"literal_plot_title\""}
+      ],
+      "reason": "First failing check is an exact plot-title assertion; the prompt (target_prompt L0001) never states any required title, and the solver used a reasonable descriptive title. This supports a literal-title contract mismatch candidate; hidden tests stopped at 0 tests run, so later failures cannot be ruled out, and no re-scoring is allowed."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {"section": "target_visible", "line": 48, "quote": "X = df[\\\"date\\\"].map(pd.Timestamp.toordinal).values.reshape(-1, 1)"},
+        {"section": "target_visible", "line": 58, "quote": "The memory file s037 gives a closely related pattern (date→ordinal regression with validation)."}
+      ],
+      "reason": "The submitted code visibly reuses s037's date-to-ordinal regression and validation skeleton, adapted to the multi-dataset contract. The failure is in an element (exact title) absent from the source, so transfer looks non-harmful here, but without a no-memory counterfactual no causal benefit or harm can be established."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {"section": "target_startup_memory", "line": 4, "quote": "[s037](episodes/s037.md): Performs linear regression on a DataFrame using 'date' (converted to ordinal) as the predictor for 'value'."},
+        {"section": "target_visible", "line": 21, "quote": "\"path\": \"episodes/s037.md\""}
+      ],
+      "reason": "A legally stored, relevant source (s037) was listed in the startup index and its file was actually read at runtime, so the opportunity for reuse demonstrably existed and was exercised. This is only an opportunity record, not proof of information fidelity or causal effect."
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D0",
+      "evidence": [{"section": "target_visible", "line": 35, "quote": "\"items\":[],\"total_matches\":0,\"next_offset\":null,\"packing_truncated\":false}],
+      "reason": "The MEMORY_GREP for 'aggregate_predictions|datasets' returned zero matches, so keyword retrieval missed nothing harmful here because the relevant source was instead reached via the startup index and a direct file read. Recorded as retrieval-path observation only; no packing truncation occurred."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "Hidden tests stopped at 0 tests run due to the first title assertion; additional latent mismatches (e.g., column names, sort order, legend labels) could also exist but are unverifiable from the evidence.",
+    "The title failure might have occurred even without any memory use, since the required title appears in no source and not in the prompt — a no-memory run could plausibly fail identically, so memory is not implicated by this failure."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "Whether any additional hidden checks after the title assertion would also fail (tests_run: 0).",
+    "Whether a no-memory counterfactual run would produce the same or a different title, so no causal statement about memory is possible.",
+    "Whether the exact expected title exists anywhere in the memory library (grep evidence covers only one pattern)."
+  ],
+  "minimal_intervention": {
+    "change": "Add a pre-submit verification step in the search tooling that surfaces literal output-contract constants (titles/labels) via an exact-string index over memory episodes, so the solver can check unverifiable literals before SUBMIT.",
+    "fixed": "Same 48 no-memory immutable histories, same startup index, same read-only access tools, same budget and model, same target and hidden tests.",
+    "falsifier": "If runs with this retrieval strategy still assert-fail on the exact plot title (or the strategy never surfaces a title candidate because none exists in memory), the access-tool hypothesis is refuted and the mismatch is attributable to the prompt/test contract itself."
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {"section": "target_visible", "line": 11, "quote": "\"pattern\": \"aggregate_predictions|datasets\""},
+        {"section": "target_visible", "line": 21, "quote": "\"path\": \"episodes/s037.md\""}
+      ],
+      "reason": "Two targeted memory calls: one content grep plus one direct read of the single indexed source clearly matching the task; no broad browsing."
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [{"section": "target_evaluation_offline", "line": 4, "quote": "assert _eval_record_bool(ax.get_title() == 'Aggregated Predictions vs Date'), \"Plot title should be 'Aggregated Predictions vs Date'.\""}],
+      "reason": "The failure is at a hidden exact-string assertion never stated in the prompt, matching the literal_plot_title contract candidate; the visible implementation logic otherwise passed the solver's own checks."
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [{"section": "retrieval_and_packing", "line": 23, "quote": "\"truncated\": false"}],
+      "reason": "Only one ~4KB file read, untruncated and directly relevant; the grep miss (118 bytes) was cheap and the index sufficed to locate the right source."
+    }
+  },
+  "causal_claim": false
+}

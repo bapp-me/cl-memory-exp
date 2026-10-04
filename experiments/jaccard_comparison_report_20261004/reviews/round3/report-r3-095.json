@@ -1,0 +1,145 @@
+{
+  "case_id": "report-r3-095",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "quote": "\"Ran 5 tests in 0.002s\\n\\nOK\", \"correct\": true",
+          "line": 4
+        }
+      ],
+      "reason": "源 s013 离线评测通过 5 个测试；但启动索引声明提交并非已验证解，且源只覆盖单数据集版本。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "Generate a category distribution within a specified range and return as a DataFrame.",
+          "line": 25
+        }
+      ],
+      "reason": "读到的 s013 全文完整（truncated:false），含原始任务描述与提交代码，未截断。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The memory episode s013 gives the base category-distribution logic. I'll extend it to multiple datasets.",
+          "line": 35
+        }
+      ],
+      "reason": "s013 的类别分布生成逻辑可直接复用，但目标新增多数据集组合与 Dataset 列，源经验本身不含该部分。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "counts.append(random.randint(min_val, max_val))",
+          "line": 42
+        }
+      ],
+      "reason": "提交代码逐行保留 s013 的 randint/uniform 逻辑并外层加 datasets 循环与 concat，是可见的一致改写；仅为行为代理，非因果证明。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "quote": "[s013](episodes/s013.md): Generate a category distribution within a specified range and return as a DataFrame.",
+          "line": 13
+        }
+      ],
+      "reason": "启动索引含与目标高度相关的合法源 s013，机会存在；这不证明被检索或使用。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "quote": "\"path\": \"episodes/s013.md\"",
+          "line": 6
+        }
+      ],
+      "reason": "solver 在索引中选择并完整读取 s013，检索命中明确；命中本身仍不等于有效使用。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "quote": "The memory episode s013 gives the base category-distribution logic. I'll extend it to multiple datasets.",
+          "line": 35
+        }
+      ],
+      "reason": "solver 自述复用 s013 且代码结构重合，属一致改编候选；无反事实，不能证明记忆导致成功。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "目标任务较简单，无记忆也可能直接写出多数据集版本，无法排除无记忆基线同样成功",
+    "索引中其他 DataFrame/分布类条目（如 s002、s040）可能提供相似启发，仅一次读取不排除索引本身的影响"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无语义检索金标，无法确认 s013 是否为最优或唯一相关源",
+    "无反事实（no-memory 对照轨迹未提供），复用对成功的贡献不可量化",
+    "target_evaluation_offline 显示 tests_run=0 而 checks_executed=8，隐藏测试执行方式与题意是否一致的细节不可见"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "保持相同的启动索引、只读文件库与 R=1 单轮预算",
+    "falsifier": "若在相同索引下移除 s013 条目而目标仍以相同代码结构成功，则削弱 USE_TRANSFER 候选"
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "quote": "\"path\": \"episodes/s013.md\", \"truncated\": false",
+          "line": 6
+        }
+      ],
+      "reason": "仅一次内存调用，直接定位并完整读取最相关文件，无冗余浏览。"
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "quote": "\"correct\": true, \"scorable\": true",
+          "line": 7
+        }
+      ],
+      "reason": "目标一次通过，无失败边界需要归因。"
+    },
+    "reading_efficiency": {
+      "value": "contextual_confirmation",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "quote": "\"actual_bytes\": 2298, \"full_backend_bytes\": 2721",
+          "line": 14
+        },
+        {
+          "section": "mechanical_metrics",
+          "quote": "\"memory_calls\": 1, \"python_calls\": 1",
+          "line": 73
+        }
+      ],
+      "reason": "单次读取即确认所需基类逻辑并转入改写，读入量小且无可见多余开销。"
+    }
+  },
+  "causal_claim": false
+}

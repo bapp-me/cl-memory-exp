@@ -1,0 +1,140 @@
+{
+  "case_id": "report-r3-081",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=10:True:5"
+        }
+      ],
+      "reason": "源 s026 通过其 5 个隐藏测试，但其闰秒计数约定（严格大于起始年）只是该源测试接受的一种解释，并非保证适用于目标的约定。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 25,
+          "quote": "leap_count = int(np.sum((LEAP_SECONDS > parsed.year) & (LEAP_SECONDS <= now.year)))"
+        }
+      ],
+      "reason": "s026 记忆内容与 corresponding_source_original 中的轨迹逐字一致，包括闰秒公式；未发现失真。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_contract_reference_offline",
+          "line": 3,
+          "quote": "leap_seconds = np.sum(LEAP_SECONDS >= given_date.year)"
+        }
+      ],
+      "reason": "单日逻辑结构适用，但目标评估器自带的 task_func 使用 >= given_date.year 且无上界，与记忆/源沿用的 > 起始年且 <= now.year 约定不同（如起始年为 1972/2000/2020 时结果不同）。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 35,
+          "quote": "This task is the list variant — sum across all dates. Let me implement and test."
+        }
+      ],
+      "reason": "模型明确识别列表变体并逐项求和、做了合理性检查后提交；这是行为代理，不构成因果结论。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 25,
+          "quote": "leap_count = int(np.sum((LEAP_SECONDS > parsed.year) & (LEAP_SECONDS <= now.year)))"
+        }
+      ],
+      "reason": "可见上模型直接复用了 s026 记忆中的闰秒边界约定到列表变体；该约定与目标评估器定义的 task_func 不一致，与失败相关但无反事实，不能证明记忆导致失败。"
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "assert _eval_record_bool(total_elapsed_seconds(['1972-01-01', '2000-01-01', '2020-01-01']) == sum([task_func('1972-01-01'), task_func('2000-01-01'), task_func('2020-01-01')]))"
+        }
+      ],
+      "reason": "评估一致性断言依赖测试内自定义 task_func（>= given_date.year），而目标提示只要求包含周期内闰秒，未指明起始年边界；题意与测试约定存在候选性不一致，模型在测试前无法看到该约定。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 6,
+          "quote": "\"path\": \"episodes/s026.md\""
+        }
+      ],
+      "reason": "对应源 s026 在启动索引中且被精确读取，机会已实现；但来源覆盖不证明该经验的约定适用于目标的新边界条件。"
+    }
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "\"path\": \"episodes/s026.md\""
+        }
+      ],
+      "reason": "仅一次针对 s026 的文件读取，直接命中语义对应源，无多余搜索。"
+    },
+    "failure_boundary": {
+      "value": "info_visible_but_adaptation",
+      "evidence": [
+        {
+          "section": "target_contract_reference_offline",
+          "line": 3,
+          "quote": "leap_seconds = np.sum(LEAP_SECONDS >= given_date.year)"
+        }
+      ],
+      "reason": "所需单日逻辑在读取的记忆中完全可见并被正确改造为列表求和；失败边界在于闰秒起始年约定这一未在提示中规定的细节 adaptation。"
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 8,
+          "quote": "\"truncated\": false"
+        }
+      ],
+      "reason": "单次读取返回完整未截断的目标相关文件（4482 字节），无明显可避免开销。"
+    }
+  },
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "提示本身对闰秒边界（起始年当年是否计入）未作规定，即使无记忆，模型也可能选择 > 约定而失败，记忆只是提供了具体但与评估器不同的选择。",
+    "评估器唯一断言的一致性检查依赖其自定义 task_func 的 >= 约定，这可能属于契约/测试候选不一致，而非记忆适用性错误；现有证据无法区分这两者。"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无反事实：无记忆基线在同一目标上的闰秒约定选择未知。",
+    "无隐藏思考，无法确认模型是否考虑过边界年歧义。",
+    "源测试为何接受 > 约定而目标测试定义 >= 约定，属于离线观察，无法从本题证据判定契约设计意图。"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "保持相同的冻结索引、启动记忆内容、s026 源历史、模型与工具预算",
+    "falsifier": "若在检索结果中附加与任务相关的歧义澄清（不泄露测试）后模型仍沿用不一致约定并失败，或无记忆基线同样失败，则记忆迁移候选被削弱"
+  },
+  "causal_claim": false
+}

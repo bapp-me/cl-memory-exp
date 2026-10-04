@@ -1,0 +1,89 @@
+
+{
+  "case_id": "report-r3-065",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [{"section": "source_evaluation_offline", "line": 3, "quote": "EVALUATOR_RESULT=22:True:10"}],
+      "reason": "The source s031 passed its 10 hidden tests offline; passing does not validate every statement in the historical docstring/trajectory."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [{"section": "target_visible", "line": 25, "quote": "wave = amplitude * window * np.exp(2j * np.pi * frequency * time)"}],
+      "reason": "The read s031.md content matches corresponding_source_original's trajectory verbatim, including the Hann-window complex-exponential code and successful observation."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {"section": "target_prompt", "line": 1, "quote": "a complex wave with multiple harmonics, each with its own amplitude and frequency"},
+        {"section": "target_visible", "line": 25, "quote": "def task_func(amplitude, frequency, time)"}
+      ],
+      "reason": "s031 covers the single-harmonic Hann-window pattern and plot contract, but the target adds plural amplitudes/frequencies requiring a summation loop, a condition absent from the source."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [{"section": "target_visible", "line": 38, "quote": "wave += amp * window * np.exp(2j * np.pi * freq * time)"}],
+      "reason": "After reading s031, the solver's code reuses its exact structure (get_window('hann'), complex exponential, plot labels) and adapts via a zip loop over harmonics; this is a visible proxy, not a proven cause of success."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [{"section": "target_startup_memory", "line": 4, "quote": "[s031](episodes/s031.md): Generates and plots a complex wave with a specified amplitude and frequency"}],
+      "reason": "The startup index directly listed s031, the near-identical single-harmonic task, as a legal read-only source; direct record of opportunity."
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D0",
+      "evidence": [{"section": "target_visible", "line": 11, "quote": "\"path\": \"episodes/s031.md\""}],
+      "reason": "A successful MEMORY_READ_FILE of s031.md is directly recorded (truncated:false); retrieval itself happened, independent of whether its content caused success."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [{"section": "target_visible", "line": 38, "quote": "window = get_window('hann', len(time))"}],
+      "reason": "Temporal order (read then submit) plus near-verbatim structural reuse supports candidate transfer; without a no-memory counterfactual this cannot prove memory caused the success."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [{"section": "target_visible", "line": 52, "quote": "\"stdout\":\"20 complex128\\nComplex Wave with Multiple Harmonics and Hann Window | Time | Amplitude\"}],
+      "reason": "The solver tested once via PYTHON, verified title/labels/dtype, then submitted; direct record of a clean execution path."
+    }
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [{"section": "mechanical_metrics", "line": 73, "quote": "\"memory_calls\": 1"}],
+      "reason": "From the 48-item index the solver made exactly one targeted read of the most relevant episode and proceeded to solve."
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [{"section": "target_evaluation_offline", "line": 3, "quote": "EVALUATOR_RESULT=4:True:0"}],
+      "reason": "The target was scored correct offline; there is no failure boundary to localize."
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [{"section": "retrieval_and_packing", "line": 8, "quote": "\"truncated\": false"}],
+      "reason": "A single full, untruncated read of the directly relevant episode; no repeated or exploratory reads are visible."
+    }
+  },
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The task is a near-mechanical extension (loop over harmonics) that the model might solve identically without memory; no no-memory counterfactual exists for this run.",
+    "Success is only an offline evaluator result (4 checks, 0 tests run); the solver never saw hidden feedback, so internal reliance on memory content versus the prompt's explicit spec cannot be distinguished."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "Whether the solver would have produced the same solution without reading s031 (no counterfactual).",
+    "Whether per-token/cache attribution of the memory read influenced the correct submission beyond visible structural overlap."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same startup index, same read-only episode library, same budget and tool set.",
+    "falsifier": "A no-memory counterfactual producing an equally correct submission in similar structure would refute the transfer candidate; a failed or structurally divergent no-memory run would strengthen it."
+  },
+  "causal_claim": false
+}

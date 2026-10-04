@@ -4,6 +4,8 @@ Training-free Agent memory 实验代码与研究证据。主要语言为中文�
 
 ## 从这里开始
 
+- [Jaccard基线下的完整HTML分析报告](experiments/jaccard_comparison_report_20261004/report.html)（[离线分享包](experiments/jaccard_comparison_report_20261004/jaccard-memory-report.zip)）：面向外部读者，从数据集构造、48条来源、七种访问配置、执行/评分隔离到336次逐题对照、指标定义、GLM提示词/输入输出和真实轨迹逐项解释。第三轮48条补充语义审查已完成，未新增求解；含搜索时机、证据充分性和条件迁移的文献讨论，明确评分缺陷、开发集复用与评审局限。
+
 - [五方案 GLM 细致分析](experiments/agentic_optimization_20261004/五方案细致指标分析.md) / [三轮 agentic search 优化报告](experiments/agentic_optimization_20261004/三轮优化报告.md)：按旧v1.5第7节审查240条轨迹，再完成3×48次全量验证并停止。保留完整索引与精简文件工具返回；两次观察为25/46、733,031 tokens和28/46、790,487 tokens，原参照25/46、993,760。按需索引27/46、1,020,806，未通过效率门槛。节约集中于原参照高成本个例且受缓存影响，不声称稳定15%节约、金额下降或全面超过冻结Jaccard。
 
 - [五种记忆访问方式：240 次独立复杂题执行报告](experiments/agentic_native_20261004/五种记忆访问方式实验报告.md)：三版检索工具加用户追加的原生文件/终端两版，均已完成各 48 题 R=1。原 46 题得分依次为 24/21/25/25/24，均未超过已有冻结 Jaccard 的 27；对应 tokens 也更多。240 次共 4,131,760 tokens、871 个请求，usage 完整；简单库只读、复杂题隔离、实际 payload 曝光和原始归档均通过审计。设计与边界见 [前三版](experiments/agentic_search_20261004/README.md) / [原生两版](experiments/agentic_native_20261004/README.md)，不宣称完整产品复现或稳定因果优势。

@@ -1,0 +1,88 @@
+
+{
+  "case_id": "report-r3-073",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [{"section": "target_visible", "line": 33, "quote": "All test cases pass. Submitting the solution."}],
+      "reason": "s021 存档轨迹内自测通过（2 patches、空表、ValueError 均符合），但 source_evaluation_offline 因 scorer 缺陷 correct=null，仅本地可见证据支持。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [{"section": "target_visible", "line": 33, "quote": "Draw a bar chart of the counts of each unique value in the 'value' column of a pandas DataFrame and return the Axes object."}],
+      "reason": "读回的 s021 内容与 corresponding_source_original 轨迹逐字一致，未截断。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [{"section": "target_visible", "line": 33, "quote": "ax.set_title(\\\"Value Distribution\\\")"}],
+      "reason": "s021 只覆盖计数柱状图与返回 Axes，目标新增按类别汇总总额/均值与嵌套字典 schema，源不含这些内容。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [{"section": "target_visible", "line": 56, "quote": "The memory examples confirm the general style (pandas + matplotlib, return an Axes). I'll implement and test my solution."}],
+      "reason": "解法采用 s021 的 value_counts+bar 模式并适配到类别计数，属可见行为代理，非因果证明。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {"section": "target_evaluation_offline", "line": 4, "quote": "KeyError: 'total_amount_per_category'"},
+        {"section": "target_prompt", "line": 1, "quote": "The report should include the total amount spent in each category, the average amount spent per transaction for each category"}
+      ],
+      "reason": "隐藏断言要求键名 total_amount_per_category 等精确 schema，而 target_prompt 只描述内容未规定键名，属题意/测试可能不一致候选。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {"section": "target_visible", "line": 56, "quote": "The memory examples confirm the general style (pandas + matplotlib, return an Axes)."},
+        {"section": "target_contract_reference_offline", "line": 3, "quote": "assert ax.get_title() == 'Value Distribution'"}
+      ],
+      "reason": "s021 柱状图模式被可见地适配复用；s021 中存在隐藏测试期待的标签字符串但 prompt 未要求，不能据此断言误用或记忆致败。"
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [{"section": "retrieval_and_packing", "line": 6, "quote": "path": "episodes/s021.md"}],
+      "reason": "最相关合法源 s021 确实被读取（对应柱状图部分），机会被利用；但其内容不含报告键名，机会覆盖不等于全部需求可满足。"
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [{"section": "retrieval_and_packing", "line": 6, "quote": "\"path\": \"episodes/s021.md\""}],
+      "reason": "仅 2 次定向 MEMORY_READ_FILE，命中与柱状图/统计最相关的 s021 与 s040，无 glob/grep 泛搜。"
+    },
+    "failure_boundary": {
+      "value": "info_missing_candidate",
+      "evidence": [{"section": "target_evaluation_offline", "line": 4, "quote": "KeyError: 'total_amount_per_category'"}],
+      "reason": "失败首因是必需键名既不在 prompt 也不在任何已读记忆中；图表标签部分另属 info_visible_but_adaptation 混合，不能单归执行错误。"
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [{"section": "retrieval_and_packing", "line": 8, "quote": "\"truncated\": false"}],
+      "reason": "两次读取均未截断、体量小（~8KB），无可见冗余读取开销。"
+    }
+  },
+  "competing_explanations": [
+    "即使键名正确，隐藏测试还断言图表标签 'Value Distribution'/'Value'/'Count'，这些也未在 prompt 规定，双重契约缺口。",
+    "evaluator 在第一个断言即崩溃（tests_run=0），后续检查未执行，无法确认其余部分是否本会通过。",
+    "s040 的读取对失败无可见作用，其读取动机（字典风格确认）仅为推测。"
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "完整隐藏测试集内容未知，只有首断言可见。",
+    "s040 是否对解法产生任何实质影响无法核实。",
+    "若 prompt 规定键名与标签，solver 是否会全部通过无法反事实验证。"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "相同 48 条只读历史、相同启动索引与 2 文件读取预算",
+    "falsifier": "若对同一后端做全文关键词检索能命中含报告键名/标签先例的源，则『信息缺失』判断被反驳，检索策略改动才有意义；当前证据显示所需键名不在库中。"
+  },
+  "causal_claim": false
+}

@@ -1,0 +1,151 @@
+{
+  "case_id": "report-r3-092",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=61:True:5"
+        }
+      ],
+      "reason": "The corresponding source s014 passed its offline evaluation (5 tests OK); passing does not certify every historical statement."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 25,
+          "quote": "level_data = collections.OrderedDict()\n\n    for department_code, num_employees in department_data.items()"
+        }
+      ],
+      "reason": "The memory file s014 preserves the source trajectory and submitted code verbatim, including the seeded example the target reuses."
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 35,
+          "quote": "The memory file s014 matches this task closely. I'll adapt it to the `new_solution(department_data_list)` signature"
+        }
+      ],
+      "reason": "Target reuses the same department codes/levels with only the input signature changed; the solver extended input handling (dict, pairs, list-of-dicts) to cover the list-based target tests."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 56,
+          "quote": "{\"EMP$$\": [\"Mid\", \"Mid\", \"Junior\", \"Mid\", \"Senior\", \"Mid\", \"Mid\", \"Mid\", \"Mid\", \"Mid\"], \"MAN$$\""
+        }
+      ],
+      "reason": "Solver reproduced the memory's seeded example exactly, verified totals for multiple input formats, then submitted; visible behavior is consistent adaptation, not proof of causation."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "line": 4,
+          "quote": "[s014](episodes/s014.md): Generate a JSON object from employee data based on given department codes and their employee counts."
+        }
+      ],
+      "reason": "An essentially identical source task was listed in the startup index, creating a legitimate reuse opportunity. Opportunity does not itself prove retrieval or use."
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "path\": \"episodes/s014.md"
+        }
+      ],
+      "reason": "Solver issued exactly one memory read, of the episode matching the target description. This shows the read occurred, not that memory caused success."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 42,
+          "quote": "if isinstance(department_data_list, dict):\n    items = list(department_data_list.items())"
+        }
+      ],
+      "reason": "Submitted code visibly extends the memory's dict-based solution to accept list/pair/dict inputs as the target requires. Visible proxy only; no counterfactual."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 8,
+          "quote": "\"truncated\": false"
+        }
+      ],
+      "reason": "The selected file was returned in full (4448 of 4908 backend bytes) without packing truncation. Full delivery does not guarantee every line was attended to."
+    }
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "line": 4,
+          "quote": "[s014](episodes/s014.md): Generate a JSON object from employee data based on given department codes and their employee counts."
+        }
+      ],
+      "reason": "The index description of s014 directly matches the target, and the solver went straight to that one file with no exploratory reads (glob/grep = 0)."
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 87,
+          "quote": "{\"submitted\":true,\"feedback\":\"Submission recorded. Hidden correctness is not available.\"}"
+        }
+      ],
+      "reason": "Submission succeeded on first attempt after one verification run; offline evaluation reports correct: true."
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 14,
+          "quote": "\"actual_bytes\": 4448"
+        }
+      ],
+      "reason": "A single read returned one directly relevant file in full; one short verification execution preceded submission, so no avoidable overhead is evident in this trace."
+    }
+  },
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The task is simple enough (random level assignment) that the solver could plausibly have solved it without memory; no no-memory counterfactual for this target is available.",
+    "Success cannot be attributed to memory alone: the target's list-input handling is new relative to the source and was written by the solver, so the contribution is partial even if real."
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "No semantic recall gold or hidden thinking; whether the model's selection was driven by index text or prior recognition is unknowable.",
+    "No counterfactual run, so memory's causal contribution to success is unverified."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same frozen 48-episode startup index, same read-only file access tool, same R=1 budget.",
+    "falsifier": "N/A with change=none; a comparator run without access to s014 showing equal success would weaken any reuse hypothesis."
+  },
+  "causal_claim": false
+}

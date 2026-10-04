@@ -1,0 +1,151 @@
+{
+  "case_id": "report-r3-067",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=18:True:9"
+        }
+      ],
+      "reason": "源 s035 在离线评估中 9 个测试全部通过；但历史提交未经隐藏验证，仅覆盖单字符串清洗+哈希。"
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 50,
+          "quote": "clean=re.sub(r'[^a-zA-Z0-9]', '', s)"
+        }
+      ],
+      "reason": "s035 记忆文件保留了正则清洗与 SHA256 hexdigest 的关键代码，与目标所需的清洗逻辑完全一致且无矛盾内容。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "find the most common hash among them and return it along with the list of hashes"
+        }
+      ],
+      "reason": "源覆盖逐字符串清洗与哈希，可直接复用；但目标是列表输入并用 Counter 找最常见哈希，这是源未包含的新增条件。"
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 63,
+          "quote": "hashlib.sha256(re.sub(r'[^a-zA-Z0-9]', '', s).encode('utf-8')).hexdigest()"
+        }
+      ],
+      "reason": "读取 s035 后提交的解逐字符沿用源的正则与 SHA256 模式并扩展到列表与 Counter；这只是行为代理，不证明因果复用。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "line": 4,
+          "quote": "[s035](episodes/s035.md): Removes all special characters, punctuation marks, and spaces from the input string using a regular expression,"
+        }
+      ],
+      "reason": "启动索引中 s035 描述与目标清洗部分直接对应，是合法源机会；索引存在本身不证明使用。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 11,
+          "quote": "\"pattern\": \"hash|digest|hex|Counter\""
+        }
+      ],
+      "reason": "grep 精确针对 s035 并命中 14 处（含 hashlib 与 SHA256 描述），检索本身直接记录；命中不等于内容被采用。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 63,
+          "quote": "re.sub(r'[^a-zA-Z0-9]', '', s)"
+        }
+      ],
+      "reason": "提交代码与源 s035 的正则/哈希写法高度重合且适配了列表与新返回要求；无反事实，不能证明记忆导致成功。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 104,
+          "quote": "\"submitted\":true,\"feedback\":\"Submission recorded. Hidden correctness is not available.\""
+        }
+      ],
+      "reason": "一次本地自测通过后即提交，执行干净；隐藏正确性对 solver 不可见，正确结论只来自离线评估。"
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "任务提示已给出 re/hashlib/Counter 导入与完整需求，模型可能不依赖记忆也能写出同样解法",
+    "字符串/代码重合只是可见代理，无法排除模型独立得到相同正则（这是常见惯用法）"
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "无语义召回金标，无法验证 s035 是否为唯一/最佳源",
+    "本地自测样本与隐藏检查的重合度未知；记忆使用的反事实不可得"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "相同的 48 条历史索引、只读文件访问工具、R=1 与目标答案",
+    "falsifier": "若移除/屏蔽 s035 后目标仍以相同代码且同预算成功，则削弱 USE_TRANSFER 候选"
+  },
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 7,
+          "quote": "\"glob\": \"episodes/s035.md\""
+        }
+      ],
+      "reason": "从启动索引定位到唯一匹配文件后，用关键词 grep 加定向读 60 行，仅 2 次记忆调用即完成。"
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 77,
+          "quote": "\"returncode\":0"
+        }
+      ],
+      "reason": "本地自测一次通过并成功提交，无执行或协议中断。"
+    },
+    "reading_efficiency": {
+      "value": "contextual_confirmation",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 33,
+          "quote": "\"actual_bytes\": 1718"
+        }
+      ],
+      "reason": "读取的 60 行覆盖任务 docstring、正则验证与哈希示例，实际负载 1718/2153 字节，未见明显冗余开销。"
+    }
+  },
+  "causal_claim": false
+}

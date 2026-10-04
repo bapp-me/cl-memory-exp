@@ -1,0 +1,87 @@
+
+{
+ "case_id": "report-r3-049",
+ "result_status": "success",
+ "semantic": {
+  "source_quality": {
+   "value": "pass_with_limits",
+   "evidence": [{"section": "source_evaluation_offline", "line": 3, "quote": "EVALUATOR_RESULT=35:True:5"}],
+   "reason": "离线评估显示源任务 s008 通过（correct:true, 5 tests），但通过不代表其全部陈述正确。"
+  },
+  "memory_fidelity": {
+   "value": "faithful",
+   "evidence": [{"section": "target_visible", "line": 51, "quote": "def task_func(animal_dict, max_count=10, seed=0):"}],
+   "reason": "s008.md 内容与 corresponding_source_original 轨迹逐字一致，含完整实现与验证，目标相关必要内容在记忆中保留。"
+  },
+  "target_applicability": {
+   "value": "partial",
+   "evidence": [{"section": "target_visible", "line": 66, "quote": "pattern\": \"list_of_animal_dicts|list of dictionaries"}],
+   "reason": "源是单 dict 版本，目标新增 list_of_animal_dicts 与跨组累加；grep 确认库中无现成 list 版经验，核心逻辑需自行扩展。"
+  },
+  "visible_use": {
+   "value": "consistent_adaptation",
+   "evidence": [{"section": "target_visible", "line": 113, "quote": "I found the closely related historical task (s008). Now let me implement the list-based variant and verify it:"}],
+   "reason": "提交代码沿用 s008 的 sorted+groupby+Counter 结构并改为列表循环累加，属于可见的一致性改写；仅为行为代理非因果。"
+  }
+ },
+ "labels": [
+  {
+   "tag": "OPPORTUNITY_SOURCE",
+   "level": "D0",
+   "evidence": [{"section": "target_startup_memory", "line": 4, "quote": "- [s008](episodes/s008.md): Given a constant list of animals in ANIMALS, and a dictionary 'animal_dict' with keys as people's names and values"}],
+   "reason": "启动索引中 s008 描述与目标高度相似，存在合法可复用机会；索引出现不等于内容已适用。"
+  },
+  {
+   "tag": "RETRIEVAL",
+   "level": "D0",
+   "evidence": [{"section": "target_visible", "line": 11, "quote": "pattern\": \"new_task_func|reversed|ANIMALS\""}],
+   "reason": "先按索引锁定 s008 定向 grep，再用目标特有词确认无更近经验（0 命中）；检索方向明确。D0 只记录检索发生与命中。"
+  },
+  {
+   "tag": "USE_TRANSFER",
+   "level": "D1",
+   "evidence": [{"section": "target_visible", "line": 120, "quote": "for animal_dict in list_of_animal_dicts:"}],
+   "reason": "提交实现复用 s008 的排序分组与随机计数逻辑并扩展为跨组累加；无反事实，不能证明记忆导致成功。"
+  },
+  {
+   "tag": "PACKING_VISIBILITY",
+   "level": "D0",
+   "evidence": [{"section": "target_visible", "line": 38, "quote": "total_matches\":193,\"next_offset\":30,\"packing_truncated\":true}],
+   "reason": "首次 grep 被截断（total_matches=193），solver 改为整文件读取获得完整实现；截断属打包可见性问题且被绕过。"
+  }
+ ],
+ "agentic_search": {
+  "search_strategy": {
+   "value": "focused",
+   "evidence": [{"section": "retrieval_and_packing", "line": 7, "quote": "glob\": \"episodes/s008.md\""}],
+   "reason": "由索引直接锁定 s008 定向查询，并以目标关键词反查确认无重复源，调用次数少（grep 2、read 2）。"
+  },
+  "failure_boundary": {
+   "value": "no_failure",
+   "evidence": [{"section": "target_evaluation_offline", "line": 3, "quote": "EVALUATOR_RESULT=6:True:0"}],
+   "reason": "目标评估 correct:true，且轨迹中验证脚本全部通过（returncode 0）。"
+  },
+  "reading_efficiency": {
+   "value": "contextual_confirmation",
+   "evidence": [{"section": "target_visible", "line": 103, "quote": "All checks pass, including the exact docstring example. Submitting:"}],
+   "reason": "grep 截断后改读整文件属合理：需完整实现与验证上下文才能改写；未见明显可避免开销。"
+  }
+ },
+ "primary_hypothesis": "USE_TRANSFER",
+ "competing_explanations": [
+  "目标为源的单行扩展变体，模型自身能力可能无需记忆即可解决；成功不能归因于记忆。",
+  "代码重合是可见代理，模型可能仅受索引描述启发而非使用读取的完整实现；评估仅 6 checks/0 tests，正确性边界有限。"
+ ],
+ "confidence": "high",
+ "uncertainties": [
+  "无反事实（无记忆条件下）结果，无法量化记忆贡献。",
+  "无语义召回 gold，无法确认 solver 内部是否依赖记忆内容而非自身能力。",
+  "checks_executed=6 而 tests_run=0，具体检查内容不可见。"
+ ],
+ "minimal_intervention": {
+  "change": "none",
+  "fixed": "相同的 48 条历史库、启动索引、只读访问工具与记忆预算",
+  "falsifier": "若在相同历史下去除 s008 访问后成功率/解法结构无差异，则削弱 USE_TRANSFER 候选"
+ },
+ "causal_claim": false
+}

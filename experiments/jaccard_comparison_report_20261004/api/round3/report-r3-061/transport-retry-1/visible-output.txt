@@ -1,0 +1,114 @@
+
+{
+  "case_id": "report-r3-061",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {"section": "source_evaluation_offline", "line": 7, "quote": "\"correct\": true,"}
+      ],
+      "reason": "s017 passed its offline evaluation (5 tests OK), but per its own memory the submission feedback said 'Hidden correctness is not available'; pass is evaluator-side only."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {"section": "target_visible", "line": 48, "quote": "sentences = [sentence.strip() for sentence in re.split(r'\\\\.', text) if sentence.strip()]"}
+      ],
+      "reason": "The stored s017 task text, code, and trajectory match corresponding_source_original verbatim, including the sentence-split and empty-input handling reused here."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {"section": "target_prompt", "line": 1, "quote": "Each document should be processed individually to create its own document-term matrix"}
+      ],
+      "reason": "s017's per-text pattern (period split, CountVectorizer, feature-name columns) covers per-document processing, but the target adds a cross-document combination step absent from memory."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {"section": "target_visible", "line": 58, "quote": "The memory file s017 confirms the family pattern (split on periods with `re`, CountVectorizer, DataFrame with feature names)."}
+      ],
+      "reason": "Solver explicitly cited s017 and adapted its pattern to the list-of-documents variant; this is a behavioral proxy only, not proof memory caused the outcome."
+    }
+  },
+  "labels": [
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {"section": "target_prompt", "line": 1, "quote": "all these matrices should be concatenated horizontally to form a single combined matrix"},
+        {"section": "target_contract_reference_offline", "line": 2, "quote": "combined_df = pd.concat(all_dtm, axis=0, ignore_index=True)"},
+        {"section": "target_contract_reference_offline", "line": 3, "quote": "assert result.shape == (4, 11)"}
+      ],
+      "reason": "Task text mandates horizontal (axis=1) concat; solver implemented axis=1, but the reference and the (4,11) shape test match vertical concat (axis=0), which yields the union of per-doc vocabularies. Explicit text/test tension flagged as candidate, not adjudicated."
+    },
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {"section": "retrieval_and_packing", "line": 13, "quote": "\"returned_source_ids\": [\n      \"s017\"\n    ]"},
+        {"section": "target_startup_memory", "line": 4, "quote": "[s017](episodes/s017.md): Analyze a text by creating a document term matrix with CountVectorizer."}
+      ],
+      "reason": "A legal, topically matching source existed in the startup index and was retrieved; opportunity existed, but retrieval does not prove beneficial use."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {"section": "target_visible", "line": 58, "quote": "This variant processes a list of documents individually and concatenates horizontally."}
+      ],
+      "reason": "Visible code reuses s017's split/empty-handling/DataFrame pattern and adapts it; cannot establish the transfer caused success or failure without a counterfactual."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {"section": "target_visible", "line": 89, "quote": "The implementation works."},
+        {"section": "target_visible", "line": 79, "quote": "   hello  there  world  again  hello  world"}
+      ],
+      "reason": "Solver's own test visibly produced duplicate columns from overlapping vocabularies under axis=1, yet solver accepted the output without checking an expected shape; the hidden (4,11) assertion then failed."
+    }
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {"section": "retrieval_and_packing", "line": 8, "quote": "pattern": "CountVectorizer|sentence|split|re\\.""}
+      ],
+      "reason": "One targeted grep on the single matching index entry (s017) plus one full read; no wandering queries."
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {"section": "target_contract_reference_offline", "line": 2, "quote": "pd.concat(all_dtm, axis=0, ignore_index=True)"}
+      ],
+      "reason": "Failure point is the horizontal-vs-vertical concat contract tension: the solver followed the literal task text while the hidden test matches the reference's axis=0."
+    },
+    "reading_efficiency": {
+      "value": "avoidable_overhead_candidate",
+      "evidence": [
+        {"section": "retrieval_and_packing", "line": 16, "quote": "\"actual_bytes\": 6109,"}
+      ],
+      "reason": "The grep already returned 24 matches (6109 bytes) covering the relevant s017 code; the full MEMORY_READ_FILE (4680 bytes) largely duplicated it. Overhead is modest and non-verdict on usefulness."
+    }
+  },
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "The solver may have failed identically without any memory, since the axis choice follows the task text itself; no counterfactual run exists.",
+    "The solver might still have failed under axis=0 for other unseen reasons (only test 1 output is observed; tests_run=0 in the eval record).",
+    "Cannot determine whether the solver ever considered vertical concatenation; no hidden thinking is available."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Whether the hidden test set matches the offline reference tests exactly; solver never saw them.",
+    "Whether reading only the grep results (skipping the full file read) would have changed anything.",
+    "No semantic recall gold, so memory fidelity rests on textual comparison with corresponding_source_original."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same startup index, same read-only memory files, same budget and tool set.",
+    "falsifier": "N/A with change=none; a candidate falsifier for the EVAL_CONTRACT flag would be an evaluator that accepts axis=1 column-prefixed output at shape (4,11), which the current assert contradicts."
+  },
+  "causal_claim": false
+}

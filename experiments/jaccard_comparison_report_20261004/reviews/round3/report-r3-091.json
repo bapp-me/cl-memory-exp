@@ -1,0 +1,172 @@
+{
+  "case_id": "report-r3-091",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=20:True:5"
+        }
+      ],
+      "reason": "s030 passed its own hidden tests offline, but solver never saw this; only the raw episode was available to it."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 55,
+          "quote": "\"content\":\"# s030: historical simple-task execution\\n\\nRaw preserved event values: ../raw/s030."
+        }
+      ],
+      "reason": "Full 196-line s030 episode, including the reusable plot parameters (green/alpha 0.6/red lw2/99% PDF range), was read intact with truncated:false."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 65,
+          "quote": "This task differs: a list of arrays, subplots per array, and a figure-level title. I'll adapt: normalize each array (flattened)"
+        }
+      ],
+      "reason": "Source covers the single-array histogram/PDF styling; target adds a list of arrays, per-array subplots, flattened normalization, and a figure-level title."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 72,
+          "quote": "ax.hist(normalized_data, bins=30, density=True, alpha=0.6, color='green')"
+        }
+      ],
+      "reason": "After reading s030, the solver reused its styling/edge-case logic and explicitly adapted the structure (subplots, suptitle, flatten); behavior proxy only, not a causal conclusion."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "line": 4,
+          "quote": "[s030](episodes/s030.md): Plots a histogram of normalized data from an input 2D numpy array alongside the probability density function (PDF)"
+        }
+      ],
+      "reason": "Startup index directly exposed s030 as a near-match, giving the solver a legal pointer before any dynamic access; index presence alone proves opportunity, not use."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 65,
+          "quote": "The memory episode s030 is a closely related variant. This task differs: a list of arrays, subplots per array, and a figure-level title."
+        },
+        {
+          "section": "target_visible",
+          "line": 72,
+          "quote": "x = np.linspace(norm.ppf(0.005), norm.ppf(0.995), 100)"
+        }
+      ],
+      "reason": "Visible sequence (read s030 -> adaptation note -> code with matching styling parameters) supports semantic reuse candidate, but success plus overlap cannot prove memory caused the result without a no-memory counterfactual."
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 14,
+          "quote": "\"total_matches\": 0"
+        }
+      ],
+      "reason": "The grep for 'plot_histograms' in s030.md matched nothing (name is target-specific), yet access still succeeded because the startup index already supplied the file pointer; this shows grep limitation, not retrieval failure."
+    },
+    {
+      "tag": "COST_UTILITY",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 4,
+          "quote": "\"seconds\": 44.516"
+        },
+        {
+          "section": "mechanical_metrics",
+          "line": 73,
+          "quote": "\"memory_calls\": 2"
+        }
+      ],
+      "reason": "Only two memory calls and one Python verification within a 4-turn run; overhead appears bounded. Per-case efficiency of memory vs. solving from scratch stays unproven here."
+    }
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "line": 4,
+          "quote": "[s030](episodes/s030.md): Plots a histogram of normalized data"
+        },
+        {
+          "section": "retrieval_and_packing",
+          "line": 7,
+          "quote": "\"glob\": \"episodes/s030.md\""
+        }
+      ],
+      "reason": "One targeted grep plus one direct file read on the single most similar indexed episode; no browsing across the other 47 entries."
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=2:True:0"
+        }
+      ],
+      "reason": "The run succeeded with all visible self-checks passing; no failure boundary to localize."
+    },
+    "reading_efficiency": {
+      "value": "contextual_confirmation",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 14,
+          "quote": "\"total_matches\": 0"
+        },
+        {
+          "section": "target_visible",
+          "line": 43,
+          "quote": "\"path\": \"episodes/s030.md\""
+        }
+      ],
+      "reason": "The failed grep cheaply confirmed the target function name was absent before a single full-file read supplied the needed reusable content; no avoidable expansion observed."
+    }
+  },
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The target prompt itself specifies every styling detail (bins, density, 60% opacity, green/red, 99% PDF range), so the solution may be derivable from the prompt alone without memory.",
+    "No no-memory counterfactual exists for this run, so the contribution of reading s030 to the success is unknown."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "No hidden thinking or semantic recall gold; whether the reused parameters were recalled from memory or independently re-derived is unknown.",
+    "The offline evaluation ran 0 tests (2 checks only), so depth of correctness verification is limited beyond the recorded success.",
+    "Whether a cheaper grep pattern (e.g., 'norm.ppf') would have matched is untested."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same startup index, same 48-episode read-only library, same read/grep tools and budget, same model.",
+    "falsifier": "Not applicable since no intervention is proposed; a counterfactual no-memory run of the same target would be needed to test USE_TRANSFER, but that is outside this post-hoc review."
+  },
+  "causal_claim": false
+}

@@ -66,14 +66,23 @@ def main():
                 for item in json.loads(result['serialized']).get('items',[]):
                     for key in ('content','stderr'):
                         if isinstance(item.get(key),str):content_bytes+=len(json.dumps(item[key],ensure_ascii=False)[1:-1].encode())
-            exposed=set();opened=set()
+            exposed=set();opened=set();visible_memory_calls=set()
             for event in exposure:
                 for mapping in event['mappings']:
                     if not mapping['matches']:continue
+                    visible_memory_calls.add(mapping['tool_call_id'])
                     for part in mapping['ranges']:
                         if 'source_id' in part:exposed.add(part['source_id'])
                         elif part.get('path','').startswith(('/memory/episodes/','/memory/raw/')):exposed.update(part.get('source_ids',[]))
                         elif part.get('kind')=='terminal_output':opened.update(part.get('source_ids',[]))
+            # Compact results intentionally omit source_ids from the public response.
+            # Join an actually exposed call to its separately audited private source ranges.
+            if method=='compact_r3':
+                for a in access:
+                    if a['tool_call_id'] not in visible_memory_calls:continue
+                    for item in a['full_result'].get('items',[]):
+                        if item.get('path','').startswith(('/memory/episodes/','/memory/raw/')) and item.get('content','').strip():
+                            exposed.update(item.get('source_ids',[]))
             queries=[a['args'].get('query',a['args'].get('pattern',a['args'].get('command',''))) for a in access]
             queries=[q for q in queries if q]
             injected=tracked(folder/'injected.json')
@@ -89,7 +98,7 @@ def main():
                 seconds=old['seconds'],python_calls=len(pycalls),memory_calls=len(memcalls),submit_calls=sum(c['name']=='SUBMIT' for c in calls),tools_by_name=tools['by_name'],
                 memory_response_bytes=response_bytes,content_bytes=content_bytes,noncontent_bytes=response_bytes-content_bytes,
                 static_exposure_bytes=static_bytes,dynamic_exposure_bytes=dynamic_bytes,request_bytes_sum=sum(r['bytes'] for r in requests),
-                startup_memory_bytes=sum(len(b.get('text','').encode()) for b in initial.get('memory_blocks',[])),
+                startup_memory_bytes=sum(len(b.get('serialized','').encode()) for b in initial.get('memory_blocks',[])),
                 duplicate_queries=sum(n-1 for n in Counter(queries).values()),duplicate_python_args=duplicate(pycalls),duplicate_memory_args=duplicate(memcalls),
                 error_observations=tools['observations_with_error_signals'],error_signal_types=tools['error_signal_types'],
                 recovery_proxy=tools['calls_to_next_same_tool_without_error_signal'],memory_errors=sum(bool(a['result'].get('error')) for a in access),
@@ -123,7 +132,7 @@ def main():
             runs=[dict(method=r['method'],correct=r['correct'],tokens=r['tokens'],python_calls=r['python_calls'],memory_calls=r['memory_calls'],
                 trajectory=visible(tracked(REPO/r['source_path']/'pi-result.json')['messages']),
                 submission=(REPO/r['source_path']/'submission.py').read_text(encoding='utf-8') if (REPO/r['source_path']/'submission.py').exists() else None,
-                evaluation=tracked(REPO/r['source_path']/'evaluator.json')) for r in rows if r['index']==idx and r['method'] in ('jaccard','native_files','compact_r3')]))
+                evaluation=tracked(REPO/r['source_path']/'evaluator.json')) for r in rows if r['index']==idx and (number==325 or r['method'] in ('jaccard','native_files','compact_r3'))]))
     sourcescores=[tracked(REPO/'experiments/agent_memory_plan_20261002/runs/full-codeeval-glm-no_memory'/f'{i:03d}'/'evaluator.json') for i in range(48)]
     data=dict(names=NAMES,rows=rows,summary=summary,task_count=336,independent_target_count=48,
         dataset=dict(revision='a01e2ca6e33fd07d9cf80e4bd69a5b3585d3400f',file='codeeval-pro/bigcodebench_lite_pro.dependent.json',

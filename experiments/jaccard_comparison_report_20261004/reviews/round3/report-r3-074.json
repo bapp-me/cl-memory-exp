@@ -1,0 +1,153 @@
+{
+  "case_id": "report-r3-074",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "EVALUATOR_RESULT=26:True:9"
+        }
+      ],
+      "reason": "s001 passed its own hidden evaluation (26 checks, 9 tests), so its task_func content is a legitimately passing source; passing does not validate every historical statement."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 25,
+          "quote": "# s001: historical simple-task execution"
+        }
+      ],
+      "reason": "The read s001 file contains the same task_func logic and doctests as corresponding_source_original; full file returned untruncated."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {
+          "section": "target_contract_reference_offline",
+          "line": 2,
+          "quote": "for key, value in data.items():"
+        }
+      ],
+      "reason": "Single-set logic transfers directly, but the target wraps it in a multi-set report over a dict input; the reference iterates data.items() with original keys, while the solver assumed a list with new keys."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 35,
+          "quote": "The memory history for s001 gives me the exact underlying single-set logic (including the doctest examples)."
+        }
+      ],
+      "reason": "Solver explicitly read s001 and reused its verified task_func verbatim inside a new wrapper; no causal claim is made about the outcome."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 6,
+          "quote": "\"path\": \"episodes/s001.md\""
+        }
+      ],
+      "reason": "Direct record: exactly one memory read targeting s001, whose content matches the target's single-set core. Recorded access does not prove the transfer caused any outcome."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 66,
+          "quote": "Both doctest examples from the underlying task reproduce exactly, dict/tuple inputs work, and exceptions are handled gracefully per set."
+        }
+      ],
+      "reason": "Visible adaptation: s001's passing logic was reused and locally validated. Candidate semantic reuse, but cannot prove memory caused success or the failure."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "AssertionError: The generated report does not match the expected output."
+        }
+      ],
+      "reason": "Evaluation fails on the key-set assertion; the reference builds report keys from data.items() while the test data uses 'set1'/'set2', and the solver produced 'set_0'/'set_1'. The prompt's 'keys are identifiers' is ambiguous, so this stays a candidate contract mismatch."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 73,
+          "quote": "key = \"set_{}\".format(idx)"
+        }
+      ],
+      "reason": "The submitted wrapper enumerates a list input and synthesizes keys instead of preserving input-dict identifiers. Visible proxy for the mismatch; the hidden test data beyond the first assertion is unknown."
+    }
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 11,
+          "quote": "\"returned_source_ids\": ["
+        }
+      ],
+      "reason": "One targeted MEMORY_READ_FILE of the single relevant episode (s001), returned untruncated; no overbroad browsing."
+    },
+    "failure_boundary": {
+      "value": "task_contract_candidate",
+      "evidence": [
+        {
+          "section": "target_evaluation_offline",
+          "line": 4,
+          "quote": "The generated report does not match the expected output."
+        }
+      ],
+      "reason": "Memory content was correct and used; the first failing check is the report key-set comparison, pointing at the input/identifier contract rather than missing info or broken execution."
+    },
+    "reading_efficiency": {
+      "value": "contextual_confirmation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 56,
+          "quote": "'set_0': ['banana apple apple apple cherry cherry cherry apple_banana apple']"
+        }
+      ],
+      "reason": "The single 5567-byte read was directly consumed: doctests were re-verified via one Python call before submission, with no identified avoidable overhead."
+    }
+  },
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "The prompt's 'keys are identifiers for each set' is ambiguous; a solver without memory could make the same list/enum interpretation, so memory reuse is not implicated in the key mismatch.",
+    "Hidden test content beyond the first assertion (tests_run=0) is unknown; a content-level mismatch under the fixed seed cannot be fully excluded.",
+    "previous_contract_candidate flags the dictionary_input_schema as an underspecified area, consistent with either reading being defensible."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "Exact hidden tests beyond the first failing assertion were never executed, so whether matching keys alone would pass is unverified.",
+    "No counterfactual no-memory run exists; effect of memory on this outcome is unknown.",
+    "Whether the solver considered data being a dict is not visible in the trace."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same startup index (48 No Memory histories), same s001 episode file, R=1, GLM 5.3 Flash, one-file read budget.",
+    "falsifier": "Not applicable to an access-tool change; the contract hypothesis would be weakened if unchanged-memory reruns pass, showing the failure is nondeterministic rather than a stable input-schema misreading."
+  },
+  "causal_claim": false
+}
