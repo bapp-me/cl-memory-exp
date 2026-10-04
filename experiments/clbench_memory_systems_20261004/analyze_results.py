@@ -29,9 +29,13 @@ def aggregate(rows):
     result['role_total_tokens_known'] = {
         role: sum(c.get('total_tokens') or 0 for c in calls if c['role'] == role)
         for role in result['role_attempts']}
-    result['maximum_explicit_memory_bytes_before'] = max((r['explicit_memory_bytes_before'] or 0 for r in rows), default=0)
-    result['maximum_selected_episode_bytes'] = max((r['selected_episode_bytes'] for r in rows), default=0)
-    result['compaction_events'] = sum(r['compaction_events'] for r in rows)
+    memory_sizes=[r['explicit_memory_bytes_before'] for r in rows if r['explicit_memory_bytes_before'] is not None]
+    selected_sizes=[r['selected_episode_bytes'] for r in rows if r['selected_episode_bytes'] is not None]
+    result['maximum_explicit_memory_bytes_before'] = max(memory_sizes) if memory_sizes else None
+    result['maximum_selected_episode_bytes'] = max(selected_sizes) if selected_sizes else None
+    result['compaction_events_known_sum'] = sum(r['compaction_events'] for r in rows if r['compaction_events'] is not None)
+    result['compaction_events_unknown_tasks'] = sum(r['compaction_events'] is None for r in rows)
+    result['compaction_events'] = None if result['compaction_events_unknown_tasks'] else result['compaction_events_known_sum']
     return result
 
 
@@ -85,9 +89,9 @@ def main():
                         'seconds': result.get('seconds') if not result.get('seconds_basis') else None,
                         'maintenance_seconds': result.get('maintenance_seconds'), 'calls': calls,
                         'explicit_memory_bytes_before': explicit,
-                        'selected_episode_bytes': sum(len(json.dumps(s['episode'], ensure_ascii=False, separators=(',', ':')).encode('utf-8')) for s in selected),
+                        'selected_episode_bytes': sum(len(json.dumps(s['episode'], ensure_ascii=False, separators=(',', ':')).encode('utf-8')) for s in selected) if stream['method'].startswith('pi_') else None,
                         'selected_past_indices': [s['episode']['index'] for s in selected],
-                        'compaction_events': 0, 'barrier_sha256': sha(out / 'barrier.json')})
+                        'compaction_events': None, 'barrier_sha256': sha(out / 'barrier.json')})
             events = out / 'events.jsonl'
             if events.exists():
                 row['compaction_events'] = sum('"type":"auto_compaction_start"' in line.replace(' ', '') for line in events.read_text(encoding='utf-8').splitlines())

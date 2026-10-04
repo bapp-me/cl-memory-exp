@@ -1,6 +1,6 @@
 # 执行记录
 
-2026-10-05。实验仍在进行，本文件不是最终结论。运行事实来自本次私有轨迹、评分器记录与机械汇总；方案中的预期不作为验收成功证据。
+2026-10-05。本轮未完成，当前停在四项待用户决定的口径处，无模型请求运行。本文件不是最终结论。运行事实来自本次私有轨迹、评分器记录与机械汇总；方案中的预期不作为验收成功证据。
 
 ## 已冻结的口径
 
@@ -98,3 +98,11 @@ Codex 求解阶段的自动增额续接已补齐：通过 `/budget` 的实际 le
 Hermes 第 10 题超时后的状态卷已只读封存，确认主会话 22 条消息、已固定的正确业务提交和未完成 review 都在。快照里的 `running` 是进程停止前的历史状态，不能当当前仍在执行或成功 NOOP；见 [hermes-maintenance-checkpoint.json](records/hermes-maintenance-checkpoint.json)。
 
 Codex 的真实 Database canary 还完成了一项离线交接核对：首题已提交的 `memory_summary.md` 中 9 条非标题长文本，在第二题业务提交前的实际模型请求中可见；两题 session ID 不同。时间筛选排除了业务结束后才发出的提取/整合请求，避免把 writer 读取误称为求解时读取。它说明原生记忆确实进入新题上下文，不证明模型依赖该记忆，也不补齐第二题失败的维护。见 [codex-real-memory-handoff.json](records/codex-real-memory-handoff.json)。
+
+## 本次停点
+
+Claude Database 已完整完成并通过当前机械审计：**32/40，187 QUERY，8,838,994 tokens，370 个请求的用量完整**。迁移前 17/20，迁移后 15/20。七条完整流合计 217 题；Hermes 另有 9 题完成业务与屏障，第 10 题业务已固定但维护未完成，所以正式结果行总数为 226。三处 Codebase 提示偏差仍在审计中明确报错。
+
+共享门当前 active=0、历史 peak=8、ceiling=50；未创建自动唤醒或监控。原生服务保持可恢复状态，不会自行发起下一批模型请求。版本锁与 [idle-checkpoint.json](records/idle-checkpoint.json) 已更新。
+
+尚待用户答复的四项：原生 Codebase 最终 JSON 处理；Codex 保留原生 235,929 压缩阈值或修改源码；维护等待是否随输出预算从 600 秒扩展；保留有披露的 Codebase R=1 与诊断子集，或先讨论重跑。前两项决定原生流的准入配置，第三项决定如何恢复未完成维护，第四项决定已执行 Codebase 结果的接纳口径。没有把尚未答复视为批准。详见 [pending-decisions.json](records/pending-decisions.json)。
