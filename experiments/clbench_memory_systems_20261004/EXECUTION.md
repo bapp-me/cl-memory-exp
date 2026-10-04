@@ -92,3 +92,9 @@ Codex 求解阶段的自动增额续接已补齐：通过 `/budget` 的实际 le
 三次多余提示没有改变题目正文、base commit、评分器或实际记忆文件，但可能影响对应任务。进一步检查显示，两个 No Memory 任务不携带跨题记忆，Jaccard 偏差发生在最后一题，未观察到经显式记忆进入后续题目的通道。保留完整原始记录，未重跑。已向用户提出第 4 项待答问题：是否接受披露偏差后的 R=1 并补充共同未受影响前缀，或先讨论重跑范围。后续源代码已修复为先恢复实际上一阶段，再判断当前是否需要发仓库切换提示；2 项离线测试通过，覆盖全部 19 个恢复位置与真实上游顺序，并复现三处旧逻辑问题。
 
 修复前，六条 Pi 流的原始运行文件已逐一与其冻结 config_hash 对齐，保存在私有 runtime-source 中，公开校验回执见 [pi-frozen-runtime-snapshots.json](records/pi-frozen-runtime-snapshots.json)。结果和模型上下文没有被“补正”。Database 跨方法的官方问题和隐藏答案一致，隐藏值及其可枚举哈希均未导出。
+
+## 待决定恢复的保全证据
+
+Hermes 第 10 题超时后的状态卷已只读封存，确认主会话 22 条消息、已固定的正确业务提交和未完成 review 都在。快照里的 `running` 是进程停止前的历史状态，不能当当前仍在执行或成功 NOOP；见 [hermes-maintenance-checkpoint.json](records/hermes-maintenance-checkpoint.json)。
+
+Codex 的真实 Database canary 还完成了一项离线交接核对：首题已提交的 `memory_summary.md` 中 9 条非标题长文本，在第二题业务提交前的实际模型请求中可见；两题 session ID 不同。时间筛选排除了业务结束后才发出的提取/整合请求，避免把 writer 读取误称为求解时读取。它说明原生记忆确实进入新题上下文，不证明模型依赖该记忆，也不补齐第二题失败的维护。见 [codex-real-memory-handoff.json](records/codex-real-memory-handoff.json)。
