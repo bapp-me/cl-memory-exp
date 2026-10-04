@@ -83,6 +83,8 @@ def main():
                     elif op == 'snapshot':
                         blob = checked(['exec', '--user', '1000:1000', c, 'tar', '-C', '/state', '-czf', '-', '.'], timeout=120)
                         result = {'data': base64.b64encode(blob).decode()}
+                    elif op == 'stop':
+                        checked(['stop', '--timeout', '5', c]); result = {'stopped': True, 'volume_preserved': True}
                     elif op == 'remove':
                         if any(j['container'] == c and j['output'] is None for j in jobs.values()):
                             raise ValueError('Active native jobs')
@@ -90,7 +92,8 @@ def main():
                         # Retain named state volume for recovery; never recursive host delete.
                         result = {'removed': True, 'volume_preserved': True}
                     else: raise ValueError('Unknown operation')
-                save(ROOT / '.local/native-owned.json', owned)
+                if op in {'create', 'remove'}:
+                    with lock: save(ROOT / '.local/native-owned.json', owned)
                 data = json.dumps(result).encode(); self.send_response(200)
             except Exception as exc:
                 data = json.dumps({'error': type(exc).__name__, 'message': str(exc)}).encode(); self.send_response(400)

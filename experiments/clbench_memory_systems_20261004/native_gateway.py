@@ -54,6 +54,7 @@ def main():
             route_file = ROOT / '.local/native-routes' / f'{route_id}.json'
             if not route_file.is_file(): self.send_error(404); return
             route = read(route_file)
+            if route.get('disabled'): self.send_error(410, 'Run route stopped'); return
             supplied = self.headers.get('Authorization', '').removeprefix('Bearer ') or self.headers.get('x-api-key', '')
             if not secrets.compare_digest(supplied, route['token']): self.send_error(403); return
             length = int(self.headers.get('Content-Length', '0'))

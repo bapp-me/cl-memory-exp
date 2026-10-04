@@ -1,0 +1,124 @@
+"""Native Hermes AIAgent with transparent job/result instrumentation only."""
+import hashlib
+import json
+import os
+from pathlib import Path
+import sys
+import threading
+import time
+import uuid
+
+
+def run(path, cfg, out, project):
+    home = Path('/state/home/.hermes'); home.mkdir(exist_ok=True)
+    os.environ.update(HERMES_HOME=str(home), HOME='/state/home',
+        OPENAI_API_KEY=cfg['gateway_token'], OPENAI_BASE_URL=cfg['gateway'])
+    settings = {'model': {'default': 'glm-5.3-flash', 'provider': 'custom', 'base_url': cfg['gateway'], 'context_length': 262144},
+        'compression': {'enabled': True, 'threshold': .9375},
+        'memory': {'memory_enabled': True, 'user_profile_enabled': True, 'write_approval': False, 'nudge_interval': 1},
+        'auxiliary': {'compression': {'provider': 'main', 'model': 'glm-5.3-flash', 'context_length': 262144},
+            'background_review': {'enabled': True, 'provider': 'auto', 'model': 'glm-5.3-flash', 'defer': 'never', 'max_input_tokens': 2097152}},
+        'terminal': {'backend': 'local', 'cwd': str(project)}, 'checkpoints': {'enabled': False}}
+    (home / 'config.yaml').write_text(json.dumps(settings))
+    os.chdir(project); sys.path.insert(0, '/opt/hermes')
+    from run_agent import AIAgent
+    from hermes_state import SessionDB
+    from tools.registry import registry
+    from business_mcp import SCHEMA, action
+    from agent import background_review as review
+    registry.register(name='CLBENCH_ACTION', toolset='clbench',
+        schema={'name': 'CLBENCH_ACTION', 'description': cfg['tool_description'], 'parameters': SCHEMA},
+        handler=lambda arguments, **kwargs: json.dumps(action(arguments, uuid.uuid4().hex)),
+        check_fn=lambda: True)
+    jobs = []; calls = []; failures = []; lock = threading.RLock(); local = threading.local()
+    def save(name, value):
+        with lock:
+            p = out / (name + '.tmp'); p.write_text(json.dumps(value, default=str, ensure_ascii=False)); p.replace(out / name)
+    def digest(value): return hashlib.sha256(json.dumps(value, sort_keys=True, default=str).encode()).hexdigest()
+    def event(kind, data):
+        with lock:
+            with (out / 'events.jsonl').open('a') as f:
+                f.write(json.dumps({'event': kind, 'data': data, 'thread': threading.current_thread().name}, default=str) + '\n')
+    original_spawn = review.spawn_background_review_thread
+    def spawn(agent, messages_snapshot, *args, **kwargs):
+        target, prompt = original_spawn(agent, messages_snapshot, *args, **kwargs)
+        job = {'id': uuid.uuid4().hex, 'parent_session_id': agent.session_id,
+            'source_hash': digest(messages_snapshot), 'messages': messages_snapshot, 'status': 'created'}
+        jobs.append(job); save('jobs.json', jobs)
+        def wrapped():
+            local.job = job['id']; job['status'] = 'running'; save('jobs.json', jobs)
+            try: target()
+            except BaseException as exc:
+                job['error'] = repr(exc); raise
+            finally:
+                job['status'] = 'returned'; save('jobs.json', jobs)
+        return wrapped, prompt
+    review.spawn_background_review_thread = spawn
+    original_completion = review._log_review_completion
+    def completion(usage, result):
+        for job in jobs:
+            if job['id'] == getattr(local, 'job', None): job.update(native_result=result, usage=usage)
+        save('jobs.json', jobs); return original_completion(usage, result)
+    review._log_review_completion = completion
+    original_failure = AIAgent._emit_auxiliary_failure
+    def failure(self, task, exc):
+        failures.append({'task': task, 'error': repr(exc), 'session_id': self.session_id}); save('failures.json', failures)
+        return original_failure(self, task, exc)
+    AIAgent._emit_auxiliary_failure = failure
+    original_run = AIAgent.run_conversation
+    def conversation(self, *args, **kwargs):
+        call = {'id': uuid.uuid4().hex, 'session_id': self.session_id,
+            'parent_session_id': getattr(self, 'parent_session_id', None), 'job_id': getattr(local, 'job', None),
+            'status': 'running', 'context_length': self.context_compressor.context_length,
+            'compression_threshold_tokens': self.context_compressor.threshold_tokens}
+        calls.append(call); save('conversations.json', calls)
+        try:
+            result = original_run(self, *args, **kwargs)
+            call['result'] = result; call['status'] = 'returned'; return result
+        except BaseException as exc:
+            call['error'] = repr(exc); call['status'] = 'failed'; raise
+        finally: save('conversations.json', calls)
+    AIAgent.run_conversation = conversation
+    original_init = AIAgent.__init__
+    def initialize(self, *args, **kwargs):
+        original_init(self, *args, **kwargs)
+        # Current Hermes computes its percentage after reserving output tokens.
+        # Use its public token-threshold setter to map the agreed exact trigger.
+        self.context_compressor.threshold_tokens = 262144 - int(self.max_tokens or 16384)
+    AIAgent.__init__ = initialize
+    db = SessionDB()
+    agent = AIAgent(model='glm-5.3-flash', provider='custom', api_mode='chat_completions',
+        base_url=cfg['gateway'], api_key=cfg['gateway_token'], max_tokens=16384,
+        reasoning_config={'enabled': True, 'effort': 'high'},
+        request_overrides={'reasoning_effort': 'high', 'extra_body': {'thinking': {'type': 'enabled'}}},
+        session_id=cfg['session_id'], session_db=db, cwd=str(project), platform='cli',
+        enabled_toolsets=['memory', 'skills', 'session_search', 'delegation', 'file', 'terminal', 'clbench'],
+        event_callback=event, skip_context_files=False, skip_memory=False, skip_background_review=False,
+        quiet_mode=True)
+    try:
+        save('effective-config.json', {'context_length': agent.context_compressor.context_length,
+            'compression_threshold': agent.context_compressor.threshold_tokens,
+            'tools': sorted(agent.valid_tool_names), 'session_id': agent.session_id})
+        if agent.context_compressor.context_length != 262144: raise RuntimeError('Wrong native context window')
+        from model_tools import get_tool_definitions
+        available = get_tool_definitions(enabled_toolsets=agent.enabled_toolsets,
+            disabled_toolsets=agent.disabled_toolsets, quiet_mode=True, skip_tool_search_assembly=True)
+        if not any(t['function']['name'] == 'CLBENCH_ACTION' for t in available):
+            raise RuntimeError('Business tool missing from native searchable registry')
+        result = agent.run_conversation(cfg['prompt'], system_message=cfg['framing'])
+        save('main-result.json', result)
+        if result.get('failed') or not result.get('completed'): raise RuntimeError('Native main turn incomplete')
+        deadline = time.monotonic() + 600
+        while any(j['status'] != 'returned' for j in jobs) or any(c['status'] == 'running' for c in calls):
+            if time.monotonic() > deadline: raise TimeoutError('Native jobs did not drain')
+            time.sleep(.1)
+        if not jobs: raise RuntimeError('Native memory review was not triggered')
+        if failures or any(j.get('error') or j.get('native_result') in {None, 'error'} for j in jobs):
+            raise RuntimeError('Native review failed or lacks completion evidence')
+        if any(c.get('error') or c.get('result', {}).get('failed') or not c.get('result', {}).get('completed') for c in calls):
+            raise RuntimeError('Native child returned incomplete')
+        save('barrier-candidate.json', {'jobs': jobs, 'calls': calls, 'final_messages_hash': digest(result['messages']),
+            'status': 'native_jobs_returned_requires_external_audit'})
+        return 0
+    finally:
+        agent.close(); db.close()

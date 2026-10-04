@@ -1,0 +1,117 @@
+diff --git a/codex-rs/memories/write/src/phase1.rs b/codex-rs/memories/write/src/phase1.rs
+index 1fa128c..9aab359 100644
+--- a/codex-rs/memories/write/src/phase1.rs
++++ b/codex-rs/memories/write/src/phase1.rs
+@@ -127,10 +127,18 @@ async fn claim_startup_jobs(
+         return None;
+     };
+ 
+-    let allowed_sources = INTERACTIVE_SESSION_SOURCES
++    let boundary_mode = std::env::var("CLBENCH_MEMORY_BOUNDARY_MODE").as_deref() == Ok("1")
++        && std::env::var("CLBENCH_MEMORY_SOURCE_THREAD")
++            .ok()
++            .and_then(|value| codex_protocol::ThreadId::from_string(&value).ok())
++            .is_some();
++    let mut allowed_sources = INTERACTIVE_SESSION_SOURCES
+         .iter()
+         .map(ToString::to_string)
+         .collect::<Vec<_>>();
++    if boundary_mode {
++        allowed_sources.push("exec".to_string());
++    }
+ 
+     match state_db
+         .claim_stage1_jobs_for_startup(
+@@ -139,7 +147,11 @@ async fn claim_startup_jobs(
+                 scan_limit: crate::stage_one::THREAD_SCAN_LIMIT,
+                 max_claimed: memories_config.max_rollouts_per_startup,
+                 max_age_days: memories_config.max_rollout_age_days,
+-                min_rollout_idle_hours: memories_config.min_rollout_idle_hours,
++                min_rollout_idle_hours: if boundary_mode {
++                    0
++                } else {
++                    memories_config.min_rollout_idle_hours
++                },
+                 allowed_sources: allowed_sources.as_slice(),
+                 lease_seconds: crate::stage_one::JOB_LEASE_SECONDS,
+             },
+diff --git a/codex-rs/memories/write/src/start.rs b/codex-rs/memories/write/src/start.rs
+index ebd0b99..c6ba136 100644
+--- a/codex-rs/memories/write/src/start.rs
++++ b/codex-rs/memories/write/src/start.rs
+@@ -30,6 +30,16 @@ pub fn start_memories_startup_task(
+     parent_permission_profile: PermissionProfile,
+     source: &SessionSource,
+ ) {
++    // CL-Bench scheduling adaptation: business sessions do not race their
++    // predecessors' memory jobs. An isolated maintenance launch supplies the
++    // exact completed source thread; no future task is passed to that launch.
++    let boundary_mode = std::env::var("CLBENCH_MEMORY_BOUNDARY_MODE").as_deref() == Ok("1");
++    let boundary_source = std::env::var("CLBENCH_MEMORY_SOURCE_THREAD")
++        .ok()
++        .and_then(|value| ThreadId::from_string(&value).ok());
++    if boundary_mode && boundary_source.is_none() {
++        return;
++    }
+     if config.ephemeral
+         || !config.features.enabled(Feature::MemoryTool)
+         || source.is_non_root_agent()
+@@ -88,7 +98,19 @@ pub fn start_memories_startup_task(
+             // Run phase 1.
+             phase1::run(Arc::clone(&context), Arc::clone(&config)).await;
+             // Run phase 2.
++            let receipt_path = config.codex_home.join("clbench-memory-pipeline.json");
+             phase2::run(context, config, parent_permission_profile).await;
++            if boundary_mode {
++                // This records pipeline return, not success. The controller must
++                // independently verify jobs, source watermarks, and durable state.
++                let receipt = serde_json::json!({
++                    "source_thread": boundary_source.map(|id| id.to_string()),
++                    "status": "returned_requires_job_verification",
++                });
++                if let Err(err) = tokio::fs::write(receipt_path, receipt.to_string()).await {
++                    warn!("failed writing CL-Bench pipeline receipt: {err}");
++                }
++            }
+         });
+     }
+ }
+diff --git a/codex-rs/state/src/runtime/memories.rs b/codex-rs/state/src/runtime/memories.rs
+index 2cb66d1..20bcbbe 100644
+--- a/codex-rs/state/src/runtime/memories.rs
++++ b/codex-rs/state/src/runtime/memories.rs
+@@ -239,6 +239,16 @@ FROM threads
+             /*include_thread_id_tiebreaker*/ false,
+         );
+         builder.push(" AND threads.memory_mode = 'enabled'");
++        if std::env::var("CLBENCH_MEMORY_BOUNDARY_MODE").as_deref() == Ok("1") {
++            // Fail closed on a missing/invalid selector in the study namespace.
++            let source = std::env::var("CLBENCH_MEMORY_SOURCE_THREAD")
++                .ok()
++                .and_then(|value| ThreadId::from_string(&value).ok());
++            let Some(source) = source else {
++                return Ok(Vec::new());
++            };
++            builder.push(" AND threads.id = ").push_bind(source.to_string());
++        }
+         builder
+             .push(" AND threads.id != ")
+             .push_bind(current_thread_id.as_str());
+@@ -1091,7 +1101,16 @@ WHERE kind = ? AND job_key = ?
+     ) -> anyhow::Result<Phase2JobClaimOutcome> {
+         let now = Utc::now().timestamp();
+         let lease_until = now.saturating_add(lease_seconds.max(0));
+-        let cooldown_cutoff = now.saturating_sub(PHASE2_SUCCESS_COOLDOWN_SECONDS);
++        let boundary_mode = std::env::var("CLBENCH_MEMORY_BOUNDARY_MODE").as_deref() == Ok("1")
++            && std::env::var("CLBENCH_MEMORY_SOURCE_THREAD")
++                .ok()
++                .and_then(|value| ThreadId::from_string(&value).ok())
++                .is_some();
++        let cooldown_cutoff = now.saturating_sub(if boundary_mode {
++            0
++        } else {
++            PHASE2_SUCCESS_COOLDOWN_SECONDS
++        });
+         let ownership_token = Uuid::new_v4().to_string();
+         let worker_id = worker_id.to_string();
+ 

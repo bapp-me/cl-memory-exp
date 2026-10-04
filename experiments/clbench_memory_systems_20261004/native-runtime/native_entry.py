@@ -11,6 +11,9 @@ def main():
     home = Path('/state/home'); project = Path('/state/work') / cfg.get('project_key', 'database')
     project.mkdir(parents=True, exist_ok=True)
     env = {**os.environ, 'HOME': str(home), 'DISABLE_AUTOUPDATER': '1'}
+    if cfg['framework'] == 'hermes':
+        from hermes_session import run
+        return run(path, cfg, out, project)
     if cfg['framework'] == 'claude':
         claude_home = home / '.claude'; claude_home.mkdir(exist_ok=True)
         env.update(CLAUDE_CONFIG_DIR=str(claude_home), ANTHROPIC_BASE_URL=cfg['gateway'],
