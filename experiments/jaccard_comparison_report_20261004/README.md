@@ -4,6 +4,8 @@
 
 本次新增授权：用户于2026-10-04明确选择“补做48条GLM审查，报告口径对齐”。只分析已存在的第三轮48条轨迹，复用前五方案完整提示词。GLM glm-5.3-flash/high、max_tokens24000、并发24；首条计入48，无质量重试，无自动传输重发。全部尝试和未知usage保留，金额未知。
 
+运行后追加的传输修订：24并发波次出现19个真实HTTP429/1302，在途5个成功响应全部保留（含坏JSON），停止继续派发。并发降到4，仅允许真实429请求原样重发一次；最多48个语义案例、96个HTTP尝试，不扩大案例或重跑求解。原授权配置存于 records/review-authorization-original.json，修订及失败usage未知见 records/transport-recovery.json。无质量重试规则不变。
+
 主体比较：冻结简单库Jaccard + lexical、hybrid_context、graph_walk、native_files、native_shell + 第三轮compact原生文件，共7种配置、336次既有求解执行。第1、2轮优化仅解释研究历程，既有历史No Memory单列。新报告不会把旧在线Jaccard的DeepSeek审查冒充冻结Jaccard的同口径GLM审查。
 
 待完成：统一逐题机械指标与配对；第三轮48条审查与引用审核；数据集来源和构造；真实样例；指标字典/完整prompt/输入输出；研究与局限；HTML交互和离线展示核验；限定范围导出与提交。

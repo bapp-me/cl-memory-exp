@@ -11,17 +11,22 @@ from common_report import *
 from review_glm import render, validate
 
 
-def review(case,key):
+def review(case,key,retry=False):
     folder=ROOT/'api/round3'/case['case_id']
+    original_folder=folder
+    if retry:
+        assert read(folder/'terminal.json').get('http_status')==429
+        folder=folder/'transport-retry-1'
     if (folder/'terminal.json').exists():return read(folder/'terminal.json')
     if folder.exists() and any(folder.iterdir()):raise RuntimeError('Ambiguous in-flight attempt; no reissue')
     packet=read(ROOT/case['packet']);assert sha(ROOT/case['packet'])==case['packet_sha256']
     body=dict(model='glm-5.3-flash',messages=[dict(role='system',content=(ROOT/'review_prompt.txt').read_text(encoding='utf-8')),dict(role='user',content=render(packet))],
         temperature=1,max_tokens=24000,thinking=dict(type='enabled'),reasoning_effort='high',response_format=dict(type='json_object'),stream=False)
+    if retry:assert body==read(original_folder/'request.json')
     raw=json.dumps(body,ensure_ascii=False).encode();assert len(raw)<=400000
     save(folder/'request.json',body)
     state=dict(case_id=case['case_id'],role='offline_reviewer',model=body['model'],phase='round3',usage=None,money=None,status='started',
-        request_bytes=len(raw),raw_request_sha256=hashlib.sha256(raw).hexdigest(),packet_sha256=case['packet_sha256'],started_at_utc=datetime.now(timezone.utc).isoformat(),http_attempts=1)
+        request_bytes=len(raw),raw_request_sha256=hashlib.sha256(raw).hexdigest(),packet_sha256=case['packet_sha256'],started_at_utc=datetime.now(timezone.utc).isoformat(),http_attempts=1,transport_retry=retry)
     save(folder/'started.json',state);started=time.perf_counter()
     try:
         req=Request('https://api.z.ai/api/paas/v4/chat/completions',data=raw,headers={'Content-Type':'application/json','Authorization':'Bearer '+key})
@@ -43,7 +48,7 @@ def review(case,key):
 
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('stage',choices=['first','remaining']);args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('stage',choices=['first','remaining','retry429']);args=parser.parse_args()
     auth=read(ROOT/'records/review-authorization.json');manifest=read(ROOT/'records/review-manifest-round3.json')
     assert auth['approved'] and not auth.get('closed') and len(manifest['cases'])==48
     assert sha(ROOT/'records/review-manifest-round3.json')==auth['manifest_sha256']
@@ -51,19 +56,26 @@ def main():
     for path,expected in auth['implementation_hashes'].items():assert sha(REPO/path)==expected
     for path,expected in manifest['source_files'].items():assert sha(REPO/path)==expected
     cases=manifest['cases'][:1] if args.stage=='first' else manifest['cases'][1:]
-    if args.stage=='remaining':
+    if args.stage!='first':
         first=read(ROOT/'api/round3'/manifest['cases'][0]['case_id']/'terminal.json')
         assert first.get('http_status')==200 and first.get('usage') is not None
-    assert len(list((ROOT/'api/round3').glob('*/started.json')))<=48
+    if args.stage=='retry429':
+        assert auth['transport_reissues']==1
+        cases=[c for c in manifest['cases'] if (ROOT/'api/round3'/c['case_id']/'terminal.json').exists()
+            and read(ROOT/'api/round3'/c['case_id']/'terminal.json').get('http_status')==429]
+    assert len(list((ROOT/'api/round3').rglob('started.json')))<=auth['max_http_attempts']
     import run_native
     eng,_=run_native.engine();key=eng.secret()
-    jobs=iter(c for c in cases if not (ROOT/'api/round3'/c['case_id']/'terminal.json').exists())
+    def terminal(case):
+        base=ROOT/'api/round3'/case['case_id']
+        return (base/'transport-retry-1' if args.stage=='retry429' else base)/'terminal.json'
+    jobs=iter(c for c in cases if not terminal(c).exists())
     active={};completed=[];errors=[]
     with ThreadPoolExecutor(max_workers=auth['workers']) as pool:
         def dispatch():
             try:case=next(jobs)
             except StopIteration:return False
-            active[pool.submit(review,case,key)]=case['case_id'];return True
+            active[pool.submit(review,case,key,args.stage=='retry429')]=case['case_id'];return True
         for _ in range(auth['workers']):
             if not dispatch():break
         while active:

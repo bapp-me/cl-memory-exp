@@ -1,0 +1,87 @@
+
+{
+  "case_id": "report-r3-053",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [{"section": "source_evaluation_offline", "line": 3, "quote": "EVALUATOR_RESULT=23:True:6"}],
+      "reason": "对应源任务（s015 散点图）离线评估通过 6 项测试，但通过不保证其陈述全部适用于目标。"
+    },
+    "memory_fidelity": {
+      "value": "unknown",
+      "evidence": [],
+      "reason": "memory_calls=0，从未读取任何记忆内容，无法评估与目标相关的必要内容是否被忠实保存。"
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [{"section": "target_startup_memory", "line": 4, "quote": "[s015](episodes/s015.md): Generates a simple scatter plot with 'n' points."}],
+      "reason": "s015 是单幅散点图的子问题，目标是网格化并为每个子图分配不同种子，源只部分覆盖；且目标新增嵌套返回结构。"
+    },
+    "visible_use": {
+      "value": "no_visible_use",
+      "evidence": [{"section": "mechanical_metrics", "line": 73, "quote": "\"memory_calls\": 0"}],
+      "reason": "求解器未发起任何记忆调用，首次工具调用即直接写出完整解，无任何记忆内容可见地进入解法。"
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D1",
+      "evidence": [{"section": "target_startup_memory", "line": 4, "quote": "[s015](episodes/s015.md): Generates a simple scatter plot with 'n' points."}],
+      "reason": "启动索引中 s015 与离线对应源任务高度匹配，是潜在合法来源；但索引摘要不证明求解器读过其内容，也未据此推断检索失败。"
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D0",
+      "evidence": [{"section": "mechanical_metrics", "line": 73, "quote": "\"memory_calls\": 0"}],
+      "reason": "零次记忆调用，检索环节完全未发生；这只说明未搜索，不能判定检索能力或记忆有害。"
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [{"section": "target_visible", "line": 25, "quote": "\"text\": \"{\\\"returncode\\\":0,\\\"stdout\\\":\\\"6 2 3 (10, 2)\"}],
+      "reason": "一次自检调用验证了图数、嵌套形状与种子确定性后即提交，执行轨迹干净且离线评估 correct=true。"
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [{"section": "mechanical_metrics", "line": 74, "quote": "\"python_calls\": 1"}],
+      "reason": "无记忆调用且仅一次 Python 调用即成功，无可见的迁移或复用行为；不能证明成功与记忆无关的因果，只能说本例无可见记忆使用。"
+    }
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "no_search_need_unknown",
+      "evidence": [{"section": "mechanical_metrics", "line": 73, "quote": "\"memory_calls\": 0"}],
+      "reason": "未发起任何记忆搜索，需求是否本就不需要搜索无法由本题确定；不等价于检索失败。"
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [{"section": "target_evaluation_offline", "line": 3, "quote": "\"EVALUATOR_RESULT=4:True:0"}],
+      "reason": "目标离线评估通过（correct=true），不存在需要归因的失败边界。"
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [{"section": "mechanical_metrics", "line": 29, "quote": "\"turns\": 2"}],
+      "reason": "仅启动索引（约 6KB）+2 轮即完成，无重复读取或无关展开的可避免开销迹象。"
+    }
+  },
+  "primary_hypothesis": "unknown",
+  "competing_explanations": [
+    "成功最可能由模型自身代码能力直接产生，记忆路径完全未被触及",
+    "即使 s015 被检索，其单图任务也只部分适用，可能并不改善结果，无法反事实比较"
+  ],
+  "confidence": "high",
+  "uncertainties": [
+    "无检索记录，无法评估 s015 全文内容的保真度与适用细节",
+    "无语义召回 gold，无法确认 s015 就是官方配对源",
+    "previous_contract_candidate 的 nested_return_shape 疑虑在本题测试下未显现矛盾，但无法进一步验证"
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "相同启动索引、只读记忆库、预算与隐藏测试",
+    "falsifier": "无失败需要反驳；若未来同类任务在检索 s015 后性能显著变化，才可测试记忆访问的价值"
+  },
+  "causal_claim": false
+}

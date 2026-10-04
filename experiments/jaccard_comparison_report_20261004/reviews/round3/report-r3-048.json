@@ -1,0 +1,162 @@
+{
+  "case_id": "report-r3-048",
+  "result_status": "scorable_failure",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {
+          "section": "source_evaluation_offline",
+          "line": 3,
+          "quote": "\"stdout\": \"EVALUATOR_RESULT=20:True:5\\n\""
+        }
+      ],
+      "reason": "Source s034 passed its own evaluator (correct:true, 5 tests); pass validates only that submission, not all episode statements."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 57,
+          "quote": "def task_func(length, seed=0):"
+        }
+      ],
+      "reason": "Retrieved s034 content matches the corresponding_source_original task code, including the in-function random.seed(seed) line relevant to target behavior."
+    },
+    "target_applicability": {
+      "value": "applicable",
+      "evidence": [
+        {
+          "section": "target_startup_memory",
+          "line": 4,
+          "quote": "Generate a random string of a given length using ASCII letters and calculate the frequency of each character."
+        }
+      ],
+      "reason": "Single-string seed+frequency pattern is the core building block; only the new multi-length aggregation differs."
+    },
+    "visible_use": {
+      "value": "misapplication_candidate",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 94,
+          "quote": "consistent with the known-good single-string pattern (seed=0 yields the same first characters"
+        },
+        {
+          "section": "target_visible",
+          "line": 70,
+          "quote": "random.seed(seed)\n    combined = []"
+        }
+      ],
+      "reason": "Solver adapted the pattern but seeded once per call, whereas the retrieved task_func reseeds on every invocation; the submitted [10,20] stream diverges from the per-string-reseed expectation."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 57,
+          "quote": "def task_func(length, seed=0):"
+        }
+      ],
+      "reason": "A directly reusable seed+frequency source (s034) existed and was retrieved and read in full relevant section. Retrieval opportunity is recorded; it does not prove the reuse caused the outcome."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 94,
+          "quote": "consistent with the known-good single-string pattern (seed=0 yields the same first characters"
+        }
+      ],
+      "reason": "Visible proxy of reuse: solver explicitly cited the s034 pattern and reproduced its first-string output. Behavioral overlap only; no counterfactual, so no causal claim about memory helping or hurting."
+    },
+    {
+      "tag": "EVAL_CONTRACT",
+      "level": "D1",
+      "evidence": [
+        {
+          "section": "target_prompt",
+          "line": 1,
+          "quote": "The function should accept a list of lengths and a seed for random generation."
+        },
+        {
+          "section": "previous_contract_candidate",
+          "line": 3,
+          "quote": "\"category\": \"seed_scope\""
+        }
+      ],
+      "reason": "Candidate ambiguity: the prompt does not state whether the seed is reset for each generated string; the hidden test expects per-string reseeding while the solver's one-shot reading is textually defensible. Flagged as candidate, not established inconsistency."
+    },
+    {
+      "tag": "TASK_EXECUTION",
+      "level": "D0",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 84,
+          "quote": "'y': 1, 'W': 1, 'A': 1, 'c': 1, 'q': 1, 'G': 2, 'F': 1, 'z': 1, 'Y': 1, 't': 1, 'E': 1, 'w': 1, 'L': 1, 'n': 1"
+        }
+      ],
+      "reason": "Solver's self-check printed [5,10] output and only tested determinism; no expected values were available to distinguish one-shot vs per-string reseeding, so the error survived self-verification."
+    }
+  ],
+  "primary_hypothesis": "EVAL_CONTRACT",
+  "competing_explanations": [
+    "Own-execution adaptation error independent of contract ambiguity: the retrieved memory itself showed per-call random.seed inside task_func, and inlining it as a single seed deviated from the visible source pattern (info visible but not followed).",
+    "Whether the test's per-string reseed semantics is 'intended task meaning' or an evaluator artifact cannot be settled from the prompt text alone."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "No hidden thinking or gold semantic-recall label; cannot verify why the solver chose one-shot seeding over the source's per-call seeding.",
+    "No counterfactual no-memory run for this target, so memory's net effect on the failure is undetermined.",
+    "Whether reseeding per string is the intended contract or an evaluator quirk is unresolved."
+  ],
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {
+          "section": "retrieval_and_packing",
+          "line": 9,
+          "quote": "\"pattern\": \"random|seed|choice\""
+        }
+      ],
+      "reason": "Two targeted calls: one grep pinned to the single most relevant episode (s034), then a read of the code section; no broad exploration."
+    },
+    "failure_boundary": {
+      "value": "info_visible_but_adaptation",
+      "evidence": [
+        {
+          "section": "target_visible",
+          "line": 70,
+          "quote": "random.seed(seed)\n    combined = []"
+        }
+      ],
+      "reason": "All needed information (including per-call reseeding in task_func) was visible in the retrieved memory; the failure arose in how the solver adapted it into one-shot seeding."
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {
+          "section": "mechanical_metrics",
+          "line": 73,
+          "quote": "\"memory_calls\": 2"
+        }
+      ],
+      "reason": "Only 2 memory calls (~8.8KB visible) covering exactly the needed source section; no avoidable re-reading or detours observed."
+    }
+  },
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same startup index, same 48-episode read-only library, same budget and model; retrieval already surfaced the correct source.",
+    "falsifier": "Not applicable with change=none; if a seed-scope clarification were ever added offline, a run producing per-string-reseeded output would refute the misadaptation reading."
+  },
+  "causal_claim": false
+}

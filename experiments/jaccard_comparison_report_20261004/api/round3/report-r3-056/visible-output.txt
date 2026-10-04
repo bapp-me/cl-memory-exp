@@ -1,0 +1,118 @@
+
+{
+  "case_id": "report-r3-056",
+  "result_status": "success",
+  "semantic": {
+    "source_quality": {
+      "value": "pass_with_limits",
+      "evidence": [
+        {"section": "source_evaluation_offline", "line": 3, "quote": "EVALUATOR_RESULT=10:True:5"},
+        {"section": "target_visible", "line": 25, "quote": "# s029: historical simple-task execution"}
+      ],
+      "reason": "s029 passed its own hidden tests (5 tests OK), but it only covers the single-array variant returning an Axes, not the list/subplot/figure variant."
+    },
+    "memory_fidelity": {
+      "value": "faithful",
+      "evidence": [
+        {"section": "target_visible", "line": 25, "quote": "row_sums = arr.sum(axis=1)\n\n    # Reshape into a 2D array with a single feature so PCA can be applied"}
+      ],
+      "reason": "The stored s029 episode content matches the corresponding_source_original trajectory verbatim (same code and observations), so the recalled source is a faithful record for the target-relevant approach."
+    },
+    "target_applicability": {
+      "value": "partial",
+      "evidence": [
+        {"section": "target_visible", "line": 25, "quote": "- ax (matplotlib.axes.Axes): An Axes object from matplotlib."},
+        {"section": "target_prompt", "line": 1, "quote": "The figure should have subplots corresponding to each array"}
+      ],
+      "reason": "The source's core computation (row sums -> single-feature PCA -> EVR bar plot) applies, but the target adds a list of arrays, per-array subplots with indexed titles, and returning a Figure instead of Axes."
+    },
+    "visible_use": {
+      "value": "consistent_adaptation",
+      "evidence": [
+        {"section": "target_visible", "line": 35, "quote": "The memory confirms the general approach for the single-array variant; now I need to extend it to a list of arrays with subplots."},
+        {"section": "target_visible", "line": 42, "quote": "row_sums = arr.sum(axis=1).reshape(-1, 1)"}
+      ],
+      "reason": "The submitted code visibly reuses the row-sum/reshape/PCA/bar-chart pattern from s029 and adapts it to the list/subplot/figure contract. This is a behavioral proxy, not proof of causation."
+    }
+  },
+  "labels": [
+    {
+      "tag": "OPPORTUNITY_SOURCE",
+      "level": "D0",
+      "evidence": [
+        {"section": "target_startup_memory", "line": 4, "quote": "- [s029](episodes/s029.md): Performs Principal Component Analysis (PCA) on the sum of rows of a 2D numpy array and plots the explained variance ratio."},
+        {"section": "retrieval_and_packing", "line": 6, "quote": "\"path\": \"episodes/s029.md\""}
+      ],
+      "reason": "A directly relevant legal source (s029, single-array PCA-on-row-sums variant) existed in the startup index and was actually opened. That the corresponding_source_original appears in the review package alone would not prove access, but the startup index and read confirm real opportunity."
+    },
+    {
+      "tag": "RETRIEVAL",
+      "level": "D0",
+      "evidence": [
+        {"section": "target_startup_memory", "line": 4, "quote": "- [s029](episodes/s029.md): Performs Principal Component Analysis (PCA) on the sum of rows of a 2D numpy array and plots the explained variance ratio."},
+        {"section": "retrieval_and_packing", "line": 5, "quote": "\"args\": {\n      \"path\": \"episodes/s029.md\"\n    }"}
+      ],
+      "reason": "Exactly one targeted read of the topically matching episode was made based on the startup index descriptions; retrieval located the relevant source. This shows the read happened, not that its content caused success."
+    },
+    {
+      "tag": "USE_TRANSFER",
+      "level": "D1",
+      "evidence": [
+        {"section": "target_visible", "line": 35, "quote": "The memory confirms the general approach for the single-array variant; now I need to extend it to a list of arrays with subplots."},
+        {"section": "target_visible", "line": 42, "quote": "pca = PCA(n_components=n_components)"}
+      ],
+      "reason": "The visible solution mirrors s029's row-sum/reshape/PCA/bar pattern and explicitly acknowledges extending it to the multi-array case, a candidate for valid transfer. No counterfactual (no-memory run) exists, so this cannot be established as causal."
+    },
+    {
+      "tag": "PACKING_VISIBILITY",
+      "level": "D0",
+      "evidence": [
+        {"section": "retrieval_and_packing", "line": 8, "quote": "\"truncated\": false,\n    \"error\": null,"},
+        {"section": "target_visible", "line": 25, "quote": "\"truncated\":false}],\"packing_truncated\":false}"
+      ],
+      "reason": "The single selected memory file was returned untruncated (6543 bytes of 7039), so the full episode content was visible to the solver. Visibility of content does not itself prove all of it was used."
+    }
+  ],
+  "primary_hypothesis": "USE_TRANSFER",
+  "competing_explanations": [
+    "The model may have solved the task from its own knowledge of PCA/matplotlib without needing the memory content; the single-array pattern is a common idiom.",
+    "The offline evaluator only ran 0 tests with 2 checks (target_evaluation_offline), so correctness signal is weaker than a full test suite; success could partially reflect lenient checking.",
+    "Contribution of the memory vs. independent derivation is unidentifiable without a no-memory counterfactual."
+  ],
+  "confidence": "medium",
+  "uncertainties": [
+    "No hidden thinking or no-memory baseline, so causal effect of the memory read on success is unknown.",
+    "Whether other index entries were considered but not opened is unknown (no search traces besides the single read).",
+    "The evaluator's 'correct: true' with tests_run=0 and checks_executed=2 leaves the exact pass criterion opaque."
+  ],
+  "minimal_intervention": {
+    "change": "none",
+    "fixed": "Same frozen 48-episode memory index, same read-only file access tool, same budget and environment, same target task order.",
+    "falsifier": "A matched no-memory run on this target that also succeeds quickly would weaken the transfer hypothesis; a no-memory run failing on the row-sum/reshape step would strengthen it."
+  },
+  "causal_claim": false,
+  "agentic_search": {
+    "search_strategy": {
+      "value": "focused",
+      "evidence": [
+        {"section": "retrieval_and_packing", "line": 6, "quote": "\"path\": \"episodes/s029.md\""}
+      ],
+      "reason": "One read call only, aimed directly at the single index entry matching the target's PCA-on-row-sums topic; no glob/grep calls needed."
+    },
+    "failure_boundary": {
+      "value": "no_failure",
+      "evidence": [
+        {"section": "mechanical_metrics", "line": 85, "quote": "\"result_status\": \"success\""},
+        {"section": "target_evaluation_offline", "line": 7, "quote": "\"correct\": true,\n  \"scorable\": true"}
+      ],
+      "reason": "The run completed successfully with the first submitted implementation passing the offline checks."
+    },
+    "reading_efficiency": {
+      "value": "no_identified_overhead",
+      "evidence": [
+        {"section": "retrieval_and_packing", "line": 14, "quote": "\"actual_bytes\": 6543,\n    \"full_backend_bytes\": 7039"}
+      ],
+      "reason": "A single ~6.5KB untruncated read of a directly relevant episode; no repeated or irrelevant reads observed."
+    }
+  }
+}
