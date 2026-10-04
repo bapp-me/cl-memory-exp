@@ -1,6 +1,6 @@
 # CL-Bench：同一 GLM 下的跨会话记忆系统比较
 
-**版本：1.1｜日期：2026-10-05｜状态：正式实验已启动；Pi Database 三组完成，其他已放行流继续运行，原生 Codebase 与 Codex 仍在验收。**
+**版本：1.1｜日期：2026-10-05｜状态：六条 Pi 流共 177 题已完成；Claude Database 继续运行，Hermes 暂停于未完成维护，原生 Codebase 与 Codex 尚待验收及口径决定。**
 
 本地执行确认：用户已授权本轮 R=1 与必要验收，不额外设置金额或模型请求总数上限；保留官方业务动作限制。六种方法 × 两种环境最多 12 条独立流通过各自验收后即可运行，不再等待整个 Database 阶段结束。所有角色共享账户 50 请求并发上限，实际吞吐与限流另行记录。Database 和 Codebase 使用不同 home、会话及所有长期记忆，Codebase 从空记忆启动。Database 结束反馈移除正确答案，仅保留对错、提交内容、查询次数和超时信息。这是相对原生反馈的显式适配。授权记录见 [execution-authorization.json](records/execution-authorization.json)。
 
