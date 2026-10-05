@@ -66,6 +66,7 @@ def run_solver(cfg,out,project,home,env):
 
 def run(path,cfg,out,project):
     from codex_catalog import CATALOG
+    from codex_completion import read_databases, phase2_jobs, save_barrier
     from responses_format_proxy import start
     provider_url=start(cfg,out)
     home=Path('/state/home/.codex'); home.mkdir(exist_ok=True)
@@ -105,6 +106,17 @@ args = ["/runtime/business_mcp.py", {json.dumps(str(path))}]
         'EXPERIMENT_API_KEY':cfg['gateway_token'],'CLBENCH_MEMORY_BOUNDARY_MODE':'1'}
     env.pop('CLBENCH_MEMORY_SOURCE_THREAD',None)
     session=cfg['session_id'] if cfg.get('maintenance_only') else run_solver(cfg,out,project,home,env)
+    plan=cfg.get('consolidation_schedule')
+    before_db=read_databases(home,session)
+    before_phase2=phase2_jobs(before_db)
+    if plan and not plan['consolidation_required']:
+        current=[j for v in before_db.values() for j in v.get('jobs',[]) if j['kind']=='memory_stage1' and j['job_key']==session]
+        sources=[s for v in before_db.values() for s in v.get('source_thread',[])]
+        if len(current)==1 and current[0]['status']=='done' and len(sources)==1 and (current[0].get('last_success_watermark') or 0)>=int(sources[0]['updated_at_ms'])//1000:
+            # Previously completed extraction is reused without any model call.
+            save_barrier(home,out,session,plan,before_phase2,
+                {'consolidation_deferred':True,'extraction_reused':True})
+            return 0
     if cfg.get('recover_format_error') or cfg.get('retry_native_maintenance') or cfg.get('retry_transport_maintenance'):
         receipts=[]
         for dbpath in home.glob('memories_*.sqlite'):
@@ -125,6 +137,8 @@ args = ["/runtime/business_mcp.py", {json.dumps(str(path))}]
     receipt=home/'clbench-memory-pipeline.json'
     if receipt.exists(): receipt.unlink()
     maint_env={**env,'CLBENCH_MEMORY_SOURCE_THREAD':session}
+    if plan:
+        maint_env['CLBENCH_MEMORY_CONSOLIDATION']='run' if plan['consolidation_required'] else 'defer'
     messages=queue.Queue()
     with (out/'maintenance-stderr.txt').open('w') as stderr,(out/'maintenance-events.jsonl').open('w') as event_log:
         maint=subprocess.Popen(['/native/codex','app-server'],env=maint_env,cwd=project,
@@ -171,12 +185,16 @@ args = ["/runtime/business_mcp.py", {json.dumps(str(path))}]
                     with sqlite3.connect(dbpath) as db:
                         db.row_factory=sqlite3.Row
                         live_jobs.extend(dict(r) for r in db.execute('SELECT * FROM jobs'))
-                if any(j['status']=='error' for j in live_jobs):
+                relevant=live_jobs if not plan or plan['consolidation_required'] else [j for j in live_jobs if j['kind']=='memory_stage1']
+                if any(j['status']=='error' for j in relevant):
                     (out/'failed-memory-jobs.json').write_text(json.dumps(live_jobs))
                     raise RuntimeError('Native memory job failed')
                 if not any(j['status']=='running' for j in live_jobs): break
                 if time.monotonic()>deadline: raise TimeoutError('Native consolidation did not settle')
                 time.sleep(.2)
+            if plan:
+                save_barrier(home,out,session,plan,before_phase2,json.loads(receipt.read_text()))
+                return 0
             databases={}
             for dbpath in home.glob('*.sqlite'):
                 with sqlite3.connect(dbpath) as db:

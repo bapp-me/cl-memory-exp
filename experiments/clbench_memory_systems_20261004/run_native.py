@@ -71,7 +71,7 @@ def main():
     runtime = ['run_native.py','native_evidence.py','native_gateway.py','provider_errors.py','budget_control.py','native_client.py',
         'native-runtime/native_entry.py','native-runtime/business_mcp.py','native-runtime/native_budget.py']
     if args.framework == 'hermes': runtime += ['native-runtime/hermes_session.py','native-runtime/hermes_completion.py']
-    if args.framework == 'codex': runtime += ['native-runtime/codex_session.py','native-runtime/codex_catalog.py','native-runtime/responses_format_proxy.py']
+    if args.framework == 'codex': runtime += ['native-runtime/codex_session.py','native-runtime/codex_catalog.py','native-runtime/responses_format_proxy.py','native-runtime/codex_completion.py','records/codex-build.json','records/codex-batch-policy.json']
     runtime += ['database_adapter.py'] if total == 40 else ['codebase_adapter.py','docker_dispatch.py']
     config_hash = digest({f:sha(ROOT/f) for f in runtime})
     snapshot_dir=directory/('runtime-source-resume-'+uuid.uuid4().hex[:8] if args.resume else 'runtime-source')
@@ -103,7 +103,7 @@ def main():
     memory_before=read(directory/f'task-{first_index-1:03d}'/'memory-after.json') if first_index else {}
     if args.resume and first_index+bool(pending):
         previous=directory/f'task-{first_index if pending else first_index-1:03d}'
-        candidates=[previous/name for name in ['recovery-timeout-state.tar.gz','recovered-native-state.tar.gz','timeout-state.tar.gz','native-state.tar.gz'] if (previous/name).exists()]
+        candidates=[previous/name for name in ['batched-resume-state.tar.gz','recovery-timeout-state.tar.gz','recovered-native-state.tar.gz','timeout-state.tar.gz','native-state.tar.gz'] if (previous/name).exists()]
         archive_path=max(candidates,key=lambda p:p.stat().st_mtime_ns) if candidates else None
         if archive_path is None: raise RuntimeError('Missing preserved native state')
         if pending:
@@ -195,6 +195,14 @@ def main():
             if total==19 and not recovering:
                 from src.systems.utils.structured_output import schema_to_prompt_instruction
                 cfg['prompt']+=schema_to_prompt_instruction(stream.query.response_schema)
+            if args.framework=='codex':
+                import importlib.util
+                spec=importlib.util.spec_from_file_location('codex_schedule',ROOT/'native-runtime/codex_completion.py')
+                scheduling=importlib.util.module_from_spec(spec);spec.loader.exec_module(scheduling)
+                policy=read(ROOT/'records/codex-batch-policy.json')
+                if policy.get('status')!='approved':raise RuntimeError('Batched consolidation requires user authorization')
+                cfg['consolidation_schedule']=scheduling.schedule(args.environment,index)
+                cfg['codex_binary_sha256']=read(ROOT/'records/codex-build.json')['binary_sha256']
             if recovering:
                 cfg.update(maintenance_only=not recovering_business,solver_transport_resume=recovering_business,
                     framing=original_cfg['framing'],recover_format_error=args.recover_format,
@@ -240,6 +248,8 @@ def main():
             save(out/'legal-episode.json',episode)
             memory_after=memory_snapshot(files,args.framework); save(out/'memory-after.json',memory_after)
             status='completed_changed' if memory_before!=memory_after else 'completed_noop'
+            if args.framework=='codex' and not cfg['consolidation_schedule']['consolidation_required']:
+                status='completed_staged'
             grade=read(directory/'evaluator-private'/f'result-{index:03d}.json'); record=grade['record']
             correct=record['correct'] if total==40 else record['success']; count=record['num_queries'] if total==40 else record['steps']
             result={'index':index,'instance_id':query['instance_id'],'session_id':session,'environment':args.environment,
@@ -247,6 +257,9 @@ def main():
                 'reward':grade['outcome']['reward'] if grade['outcome'] else 1-record['regret']/15 if total==40 else 0,
                 'timed_out':record.get('timed_out',False),'seconds':round(time.monotonic()-started,3),
                 'maintenance_seconds':round(time.monotonic()-submitted_at,3),'attempts':attempts,'source_watermark':watermark}
+            if args.framework=='codex':
+                result['consolidation_schedule']=cfg['consolidation_schedule']
+                result['codex_binary_sha256']=cfg['codex_binary_sha256']
             if recovering:
                 proof=read(out/'recovery-provenance.json')
                 if recovering_business:
@@ -263,7 +276,8 @@ def main():
             # without reconstructing timings or running the business task again.
             save(out/'prepared-result.json',result)
             receipt=boundary.complete(status=status,covered_watermark=watermark,
-                jobs=[{'status':status,'covered_watermark':watermark,'native_evidence':'native-completion.json'}],
+                jobs=[{'status':status,'covered_watermark':watermark,'native_evidence':'native-completion.json',
+                       'consolidation_schedule':cfg.get('consolidation_schedule')}],
                 memory_version=digest(memory_after),durable=True)
             save(out/'barrier.json',receipt); memory_before=memory_after
             results.append(result); save(directory/'results.json',results)

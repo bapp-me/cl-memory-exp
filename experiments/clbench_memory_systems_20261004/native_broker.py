@@ -90,14 +90,20 @@ def main():
                         code='''import os,signal,time
 from pathlib import Path
 def targets():
- return [int(p.name) for p in Path('/proc').iterdir() if p.name.isdigit() and p.stat().st_uid==1000]
+ found=[]
+ for p in Path('/proc').iterdir():
+  try:
+   if p.name.isdigit() and int(p.name)!=os.getpid() and p.stat().st_uid==os.getuid():found.append(int(p.name))
+  except FileNotFoundError:pass
+ return found
 for sig in [signal.SIGTERM,signal.SIGKILL]:
  for pid in targets():
   try:os.kill(pid,sig)
   except ProcessLookupError:pass
  time.sleep(1)
 '''
-                        checked(['exec','--user','0',c,'python','-c',code])
+                        # CAP_KILL is intentionally absent; signal peers as uid 1000.
+                        checked(['exec','--user','1000:1000',c,'python','-c',code])
                         result={'quiesced':True}
                     elif op == 'put':
                         path = v['path']
