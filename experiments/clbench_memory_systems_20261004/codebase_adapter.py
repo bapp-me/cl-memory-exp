@@ -25,7 +25,7 @@ def restore_rollout_context(task, index):
 
 
 class CodebaseStream:
-    def __init__(self, directory, *, restore=False):
+    def __init__(self, directory, *, restore=False, restore_pending_readonly=False):
         self.directory = Path(directory); self.directory.mkdir(parents=True, exist_ok=True)
         self.private = self.directory / 'evaluator-private'; self.private.mkdir(exist_ok=True)
         tempfile.tempdir = str(self.private)
@@ -72,11 +72,12 @@ git status --short
         task_module.evaluate_submission = record_submission
         if restore and (self.private / 'state.json').exists():
             state = read(self.private / 'state.json')
-            if state['current_steps']:
+            if state['current_steps'] and not restore_pending_readonly:
                 raise RuntimeError('Interrupted code issue requires its saved workspace; do not restart business work')
             self.task.current_issue_idx = state['current_issue_idx']
             self.task.issue_history = state['issue_history']
-            self.task.current_steps = 0
+            self.task.current_steps = state['current_steps']
+            self.task.total_interactions=sum(r['steps'] for r in state['issue_history'])+state['current_steps']
             if self.task.current_issue_idx < len(self.task.instances):
                 restore_rollout_context(self.task, self.task.current_issue_idx)
                 self.task._start_container()
@@ -120,6 +121,16 @@ git status --short
         from prepare import sha
         path = self.private / f'submission-{index:03d}.diff'
         return {'path': path.relative_to(self.directory).as_posix(), 'sha256': sha(path)} if path.exists() else None
+
+    def preserve_pending(self,out):
+        # Keep the entire owned filesystem, including untracked files and /tmp.
+        # Detach it before the official object's destructor performs cleanup.
+        env=self.task._env
+        if env is None or not env.container_id:return
+        save(Path(out)/'business-container-checkpoint.json',{'container_id':env.container_id,
+            'current_issue_idx':self.task.current_issue_idx,'current_steps':self.task.current_steps,
+            'preserved_live_container':True,'no_business_action_replayed':True})
+        env.container_id=None
 
     def close(self): self.task._cleanup_container()
 

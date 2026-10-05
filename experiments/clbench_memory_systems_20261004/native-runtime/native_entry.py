@@ -39,6 +39,16 @@ def main():
             command[-1:-1]=['--json-schema',json.dumps(SCHEMA)]
         budget=cfg.get('output_limit',65536)
         continuations=[]
+        if cfg.get('solver_transport_resume'):
+            events=[json.loads(x) for x in (out/'events.jsonl').read_text().splitlines()]
+            previous=[e for e in events if e.get('type')=='result']
+            if not previous or not previous[-1].get('is_error') or previous[-1]['session_id']!=cfg['session_id']:
+                raise RuntimeError('No matching failed native Claude session to resume')
+            if (out/'continuations.json').exists():continuations=json.loads((out/'continuations.json').read_text())
+            continuations.append({'kind':'transport_resume','result_index':len(previous)-1,'session_id':cfg['session_id'],
+                'reason':'user-confirmed provider resource restoration','prompt':cfg['transport_resume_prompt']})
+            (out/'continuations.json').write_text(json.dumps(continuations))
+            command[command.index('--session-id')]='--resume';command[-1]=cfg['transport_resume_prompt']
         while True:
             with (out / 'events.jsonl').open('a') as stdout, (out / 'stderr.txt').open('a') as stderr:
                 result = subprocess.run(command, env=env, cwd=project, stdout=stdout, stderr=stderr)

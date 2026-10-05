@@ -22,6 +22,7 @@ def main():
     p.add_argument('--recover-format',action='store_true')
     p.add_argument('--retry-native-maintenance',action='store_true')
     p.add_argument('--retry-transport-maintenance',action='store_true')
+    p.add_argument('--resume-business',action='store_true')
     args = p.parse_args(); method = args.framework + '_memory_ready'
     if args.framework=='codex':
         import native_client
@@ -35,8 +36,18 @@ def main():
     elif not directory.is_dir(): raise RuntimeError('No saved stream to resume')
     ns = namespace(method, 1, args.environment); boundary = Boundary(directory/'boundary.json',ns)
     first_index=boundary.state['next_index']; pending=boundary.state['pending']
-    if pending and not (directory/f'task-{first_index:03d}'/'submission.json').exists():
+    if pending and not (directory/f'task-{first_index:03d}'/'submission.json').exists() and not args.resume_business:
         raise RuntimeError('Interrupted business work needs a separate same-session recovery; no replay allowed')
+    if args.resume_business:
+        resource=read(ROOT/'records/provider-resource-block.json')
+        if resource.get('status')!='user_confirmed_restored' or not pending:
+            raise RuntimeError('Business recovery requires the confirmed resource checkpoint')
+        proof=next((s for s in resource['streams'] if s['run_id']==args.run_id and s['pending_index']==first_index),None)
+        if not proof or proof['business_submitted'] or proof['session_id']!=pending['session_id']:
+            raise RuntimeError('Business recovery scope differs from preserved checkpoint')
+        if total==19 and (not proof.get('pending_code_actions_reviewed_read_only') or
+            proof['actions_sha256']!=sha(directory/f'task-{first_index:03d}'/'business-actions.json')):
+            raise RuntimeError('No verified unchanged code worktree recovery')
     if args.recover_format and (not pending or args.framework!='codex'):
         raise RuntimeError('Format recovery is only for a submitted Codex task')
     if args.retry_native_maintenance:
@@ -47,9 +58,13 @@ def main():
         if not pending or args.framework!='codex':raise RuntimeError('Transport maintenance recovery requires a frozen Codex submission')
         metas=[read(p) for p in (directory/f'task-{first_index:03d}'/'requests').glob('*.attempt.json')]
         latest=max(metas,key=lambda m:m['timestamp'])
-        if latest.get('error') not in {'TimeoutError','ConnectionResetError','RemoteDisconnected','URLError','ConnectionAbortedError'} and (latest.get('http_status') or 0)<500:
+        from provider_errors import resource_error
+        response_path=directory/f'task-{first_index:03d}'/'requests'/f"{latest['attempt_id']}.response.bin"
+        restored_quota=(resource_error(response_path.read_text(encoding='utf8')) and
+            read(ROOT/'records/provider-resource-block.json').get('status')=='user_confirmed_restored')
+        if not restored_quota and latest.get('error') not in {'TimeoutError','ConnectionResetError','RemoteDisconnected','URLError','ConnectionAbortedError'} and (latest.get('http_status') or 0)<500:
             raise RuntimeError('Latest request does not establish a transport failure')
-    runtime = ['run_native.py','native_evidence.py','native_gateway.py','budget_control.py','native_client.py',
+    runtime = ['run_native.py','native_evidence.py','native_gateway.py','provider_errors.py','budget_control.py','native_client.py',
         'native-runtime/native_entry.py','native-runtime/business_mcp.py','native-runtime/native_budget.py']
     if args.framework == 'hermes': runtime += ['native-runtime/hermes_session.py','native-runtime/hermes_completion.py']
     if args.framework == 'codex': runtime += ['native-runtime/codex_session.py','native-runtime/codex_catalog.py','native-runtime/responses_format_proxy.py']
@@ -65,7 +80,8 @@ def main():
         'native_runtime_hash':native_hash,'runtime_policy':'controller modules remain loaded; each agent process mounts the immutable captured native runtime'}
     if manifest['namespace']!=ns: raise RuntimeError('Resume namespace mismatch')
     if args.resume:
-        manifest.setdefault('continuations',[]).append({'from_index':first_index,'maintenance_only_first':bool(pending),
+        manifest.setdefault('continuations',[]).append({'from_index':first_index,'maintenance_only_first':bool(pending) and not args.resume_business,
+            'solver_transport_resume':args.resume_business,
             'config_hash':config_hash,'native_runtime_hash':native_hash,'runtime_source':snapshot_dir.name,
             'at':datetime.now(timezone.utc).isoformat(),'output_limit':65536})
         if args.mode=='formal' and manifest['mode']!='formal':
@@ -77,7 +93,7 @@ def main():
         stream = DatabaseStream(directory,restore=args.resume)
     else:
         from codebase_adapter import CodebaseStream
-        stream = CodebaseStream(directory,restore=args.resume)
+        stream = CodebaseStream(directory,restore=args.resume,restore_pending_readonly=args.resume_business)
     created = broker({'op':'create','runtime_hash':native_hash}); container = created['container_id']; save(directory/'container.json',created)
     results=read(directory/'results.json') if args.resume else []
     memory_before=read(directory/f'task-{first_index-1:03d}'/'memory-after.json') if first_index else {}
@@ -102,6 +118,7 @@ def main():
         for index in range(first_index,limit):
             if config_hash != digest({f:sha(snapshot_dir/f) for f in runtime}): raise RuntimeError('Captured runtime changed at boundary')
             recovering=bool(pending and index==first_index)
+            recovering_business=recovering and args.resume_business
             out=directory/f'task-{index:03d}'; out.mkdir(exist_ok=recovering); task=out.name
             if recovering:
                 original_cfg=read(out/'input.json')
@@ -113,8 +130,9 @@ def main():
                 query={'prompt':original_prompt,'project_key':original_cfg['project_key'],
                     'instance_id':read(ROOT/'records/task-manifest.json')[args.environment][index]['instance_id']}
             else: query=stream.public_query()
-            actions=read(out/'business-actions.json') if recovering else []
-            completed=recovering; failed=False; submitted_at=None
+            actions=read(out/'business-actions.json') if recovering and (out/'business-actions.json').exists() else []
+            original_actions=list(actions)
+            completed=recovering and not recovering_business; failed=False; submitted_at=None
             session=pending['session_id'] if recovering else str(uuid.uuid4()); token=uuid.uuid4().hex
             if args.framework!='codex' and not recovering: boundary.start(index,session)
             route_id=uuid.uuid4().hex; route_token=uuid.uuid4().hex
@@ -174,18 +192,23 @@ def main():
                 from src.systems.utils.structured_output import schema_to_prompt_instruction
                 cfg['prompt']+=schema_to_prompt_instruction(stream.query.response_schema)
             if recovering:
-                cfg.update(maintenance_only=True,framing=original_cfg['framing'],recover_format_error=args.recover_format,
+                cfg.update(maintenance_only=not recovering_business,solver_transport_resume=recovering_business,
+                    framing=original_cfg['framing'],recover_format_error=args.recover_format,
                     retry_native_maintenance=args.retry_native_maintenance,retry_transport_maintenance=args.retry_transport_maintenance)
+                if recovering_business:
+                    cfg['transport_resume_prompt']='Continue the same unfinished benchmark instance from the saved conversation and business state. Do not repeat completed actions.'
                 save(out/'recovery-input.json',cfg)
-                save(out/'recovery-provenance.json',{'original_submission_sha256':sha(out/'submission.json'),
+                save(out/'recovery-provenance.json',{'original_submission_sha256':sha(out/'submission.json') if completed else None,
                     'source_archive_sha256':sha(archive_path),'source_archive':archive_path.relative_to(directory).as_posix(),
-                    'original_business_actions_sha256':sha(out/'business-actions.json'),'business_replayed':False,
+                    'original_business_actions_sha256':sha(out/'business-actions.json') if (out/'business-actions.json').exists() else None,
+                    'original_business_action_count':len(actions),'original_business_actions_digest':digest(actions),
+                    'business_replayed':False,'solver_transport_resume':recovering_business,
                     'recovery_started_at':datetime.now(timezone.utc).isoformat(),'config_hash':config_hash})
             else:
                 save(out/'input.json',cfg); save(out/'memory-before.json',memory_before)
             put(container,f'/state/tasks/{task}/input.json',cfg)
             started=time.monotonic()
-            if recovering: submitted_at=started
+            if recovering and not recovering_business: submitted_at=started
             job=broker({'op':'launch','container_id':container,'task':task})['job_id']; poll_at=0
             save(out/('recovery-job.json' if recovering else 'native-job.json'),{'job_id':job,'container_id':container})
             while True:
@@ -222,11 +245,16 @@ def main():
                 'maintenance_seconds':round(time.monotonic()-submitted_at,3),'attempts':attempts,'source_watermark':watermark}
             if recovering:
                 proof=read(out/'recovery-provenance.json')
-                if proof['original_submission_sha256']!=sha(out/'submission.json') or proof['original_business_actions_sha256']!=sha(out/'business-actions.json'):
-                    raise RuntimeError('Recovery changed frozen business evidence')
-                result.update(seconds=None,seconds_basis='Interrupted task total wall time unknown; recovery time separately reported',
-                    maintenance_seconds=None,maintenance_recovery_seconds=round(time.monotonic()-started,3),
-                    recovered_maintenance=True)
+                if recovering_business:
+                    if digest(actions[:proof['original_business_action_count']])!=proof['original_business_actions_digest']:
+                        raise RuntimeError('Recovery changed prior business actions')
+                    result.update(seconds=None,seconds_basis='Provider-resource interruption; original end-to-end time unknown',
+                        solver_recovery_seconds=round(time.monotonic()-started,3),recovered_solver=True)
+                else:
+                    if proof['original_submission_sha256']!=sha(out/'submission.json') or proof['original_business_actions_sha256']!=sha(out/'business-actions.json'):
+                        raise RuntimeError('Recovery changed frozen business evidence')
+                    result.update(seconds=None,seconds_basis='Interrupted task total wall time unknown; recovery time separately reported',
+                        maintenance_seconds=None,maintenance_recovery_seconds=round(time.monotonic()-started,3),recovered_maintenance=True)
             # A crash after boundary commit can be recovered from this exact row,
             # without reconstructing timings or running the business task again.
             save(out/'prepared-result.json',result)
@@ -244,6 +272,7 @@ def main():
         try:
             broker({'op':'quiesce','container_id':container})
             if 'out' in locals(): snapshot(container,out/('recovery-timeout-state.tar.gz' if recovering else 'timeout-state.tar.gz'))
+            if total==19 and not completed:stream.preserve_pending(out)
             broker({'op':'stop','container_id':container})
         except Exception: pass
         save(directory/'stream-status.json',{'status':'paused_error','completed':len(results),'type':type(exc).__name__,'message':str(exc)})

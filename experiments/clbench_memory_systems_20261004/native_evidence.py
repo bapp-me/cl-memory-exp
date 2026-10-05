@@ -35,7 +35,7 @@ def validate(files, task, framework, session):
         events = [json.loads(x) for x in files[prefix + 'events.jsonl'].decode().splitlines()]
         results = [e for e in events if e['type'] == 'result']
         continuations=json.loads(files.get(prefix+'continuations.json',b'[]'))
-        continued={c['result_index'] for c in continuations if c['kind'] in {'output_budget','official_final_json_action'}}
+        continued={c['result_index'] for c in continuations if c['kind'] in {'output_budget','official_final_json_action','transport_resume'}}
         if not results or any(i not in continued for i in range(len(results)-1)):
             raise RuntimeError('Native result event missing/ambiguous')
         result = results[-1]

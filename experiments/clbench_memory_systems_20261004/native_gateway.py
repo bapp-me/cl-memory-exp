@@ -19,6 +19,7 @@ import uuid
 from budget_control import authorize_growth
 from prepare import ROOT, read, save
 from protocol_canary import secret
+from provider_errors import resource_error
 
 DESTINATIONS = {'chat': 'https://api.z.ai/api/paas/v4/chat/completions',
                 'responses': 'https://api.z.ai/api/v1/responses',
@@ -92,6 +93,9 @@ def main():
                 self.send_header('Content-Length', str(len(data))); self.end_headers(); self.wfile.write(data)
                 return
             protocol = {'chat/completions': 'chat', 'responses': 'responses', 'v1/messages': 'anthropic'}[operation]
+            resource_state=ROOT/'records/provider-resource-block.json'
+            if resource_state.exists() and read(resource_state).get('status')=='blocked_provider_resource':
+                self.send_error(503,'Provider resource exhausted; waiting for user-confirmed account recovery');return
             payload = json.loads(raw)
             if payload.get('model') != 'glm-5.3-flash': self.send_error(422, 'Undeclared model route'); return
             # GLM-5.3-Flash rejects disabled reasoning. Preserve the native main
@@ -142,6 +146,14 @@ def main():
             except Exception as exc:
                 error = type(exc).__name__
             finally:
+                response_file=out/f'{attempt}.response.bin'
+                quota=resource_error(response_file.read_text(encoding='utf8',errors='replace')) if response_file.exists() else None
+                if quota:
+                    state={'status':'blocked_provider_resource','as_of':datetime.now(timezone.utc).isoformat(),
+                        'account':'existing_ZAI_GLM_identity','provider_code':quota['code'],
+                        'provider_message':quota['message'],'trigger_attempt_id':attempt,'run_id':route['run_id']}
+                    temporary=resource_state.with_name(resource_state.name+'.'+uuid.uuid4().hex+'.tmp')
+                    temporary.write_text(json.dumps(state,indent=2)+'\n',encoding='utf8');temporary.replace(resource_state)
                 save(out / f'{attempt}.attempt.json', {**meta, 'phase': 'finished' if error is None else 'failed',
                     'http_status': status, 'error': error, 'seconds': time.monotonic() - started,
                     'gate_wait_seconds': permit['wait_seconds']})

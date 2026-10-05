@@ -146,6 +146,15 @@ def run(path, cfg, out, project):
                 # Historical interrupted skill-only job; no completed writer is replayed.
                 agent._spawn_background_review(messages_snapshot=prior[0]['messages'],review_memory=False,review_skills=True)
             last_business_result={'instance_complete':True}
+        elif cfg.get('solver_transport_resume'):
+            previous=json.loads((out/'conversations.json').read_text())
+            save('conversations-before-transport.json',previous)
+            if (out/'jobs.json').exists() and any(j['status']!='returned' or j.get('native_result') in {None,'error'} for j in json.loads((out/'jobs.json').read_text())):
+                raise RuntimeError('Pending native writer needs separate recovery before solver continuation')
+            failed=previous[-1]['result']
+            if not failed.get('failed') or not failed.get('messages'):
+                raise RuntimeError('No failed native conversation history to resume')
+            result=agent.run_conversation(cfg['transport_resume_prompt'],system_message=cfg['framing'],conversation_history=failed['messages'])
         else:
             result = agent.run_conversation(cfg['prompt'], system_message=cfg['framing'])
         main_turns = 1
