@@ -2,6 +2,15 @@
 import hashlib
 import json
 import tarfile
+import time
+
+
+def wait_for_settled_attempts(out, deadline):
+    """Drain already-issued requests without starting any new model work."""
+    while any(json.loads(p.read_text(encoding='utf8'))['phase']=='started' for p in (out/'requests').glob('*.attempt.json')):
+        if time.monotonic()>=deadline:
+            raise TimeoutError('Captured provider requests did not settle within the maintenance window')
+        time.sleep(.1)
 
 
 def archive(path):

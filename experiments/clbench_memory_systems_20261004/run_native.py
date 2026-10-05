@@ -9,7 +9,7 @@ import uuid
 from prepare import ROOT, read, save, sha
 from protocol import Boundary, digest, namespace, project_episode
 from native_client import broker, put, snapshot, restore, freeze_runtime
-from native_evidence import archive, memory_snapshot, validate, usage_for, validate_attempt_accounting
+from native_evidence import archive, memory_snapshot, validate, usage_for, validate_attempt_accounting, wait_for_settled_attempts
 
 
 def main():
@@ -274,6 +274,7 @@ def main():
             # Audit before advancing the durable boundary. A preserved transport
             # failure can coexist with successful native recovery; its unknown
             # usage must not erase the completed business result or become zero.
+            wait_for_settled_attempts(out,submitted_at+cfg.get('maintenance_wait_seconds',600))
             attempts=usage_for(out)
             save(out/'transport-accounting.json',validate_attempt_accounting(out,attempts))
             episode=project_episode(namespace=ns,index=index,instance_id=query['instance_id'],prompt=query['prompt'],
