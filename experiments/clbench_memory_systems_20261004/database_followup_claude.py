@@ -49,13 +49,29 @@ def helpers(processes):
     raise RuntimeError('D2 gateway not ready')
 
 
-def job(index,arm,repeat,runtime_hash,lock):
+def job(index,arm,repeat,runtime_hash,lock,resume=False):
     ident=f'd2-q{index+1}-{arm.lower()}-{repeat}'
-    out=PRIVATE/ident;out.mkdir()
+    out=PRIVATE/ident;out.mkdir(exist_ok=resume)
     values=sources(index)
     pre=restored_prefix('claude',index)
-    initial=ROOT/pre['path']
-    session=str(uuid.uuid4());route_id=uuid.uuid4().hex;token=uuid.uuid4().hex
+    original=ROOT/pre['path'];initial=original
+    if resume:
+        failure=read(out/'failure.json')
+        if failure['type']!='TimeoutError' and not any((a.get('http_status') or 0)>=500 for a in usage_for(out)):
+            raise RuntimeError('No infrastructure/transport interruption to restore')
+        if (out/'result.json').exists():raise RuntimeError('Completed maintenance cannot be replayed')
+        history=out/('recovery-history-'+uuid.uuid4().hex[:8]);history.mkdir()
+        for name in ['input.json','failure.json','process.json','stopped-native-state.tar.gz']:
+            if (out/name).exists():shutil.copy2(out/name,history/name)
+        initial=out/'stopped-native-state.tar.gz'
+        old_cfg=read(out/'input.json');session=old_cfg['session_id']
+        if not any(session in name and '/.claude/projects/' in '/'+name for name in archive(initial)):
+            raise RuntimeError('Interrupted native Claude session is missing')
+        save(out/'transport-recovery.json',{'authorization':'User requested completing Claude; recover the same infrastructure-interrupted maintenance job, never quality replay',
+            'session_id':session,'interrupted_state':ref(initial),'original_before':ref(original),
+            'prior_failure':failure,'existing_attempts':usage_for(out),'original_completed_business_feedback_unchanged':True})
+    else:session=str(uuid.uuid4())
+    route_id=uuid.uuid4().hex;token=uuid.uuid4().hex
     route_path=ROOT/'.local/native-routes'/f'{route_id}.json'
     route={'token':token,'run_id':'database-followup-d2','phase':'native_maintenance_and_any_auxiliary',
         'method_id':'claude_memory_ready',
@@ -76,6 +92,7 @@ def job(index,arm,repeat,runtime_hash,lock):
             'Only update files within /state/home/.claude/projects/-state-work-database/memory/. '
             'The source directory contains this method\'s legal history through the current event; no new business actions are available.',
         'prompt':prompt}
+    if resume:cfg.update(maintenance_transport_resume=True,maintenance_resume_prompt='Continue this same interrupted memory-maintenance session from its saved source records and memory files. The host waiting window interrupted the unfinished provider stream. Finish the same maintenance operation with the existing tools and budgets; do not redo business actions.')
     save(out/'input.json',cfg)
     source_refs=[{**ref(ROOT/'trajectories/claude_code/database'/f'task-{i:03d}.json'),
         'index':i,'legal_projection_sha256':digest(v)} for i,v in values.items()]
@@ -83,7 +100,7 @@ def job(index,arm,repeat,runtime_hash,lock):
         'sources':source_refs,'source_projection':'prompt, complete tools/action/observation, final legal binary feedback; no posthoc writer text',
         'current_record_sha256':digest(values[index]),'common_prompt_sha256':digest(prompt.removesuffix('\n\n'+extra) if extra else prompt),
         'extra_instruction':extra,'source_cutoff':index,'future_sources':False})
-    before_files=archive(initial)
+    before_files=archive(original)
     before={n:d for n,d in before_files.items() if n.startswith(MEMORY)}
     container=None;started=time.monotonic()
     try:
@@ -140,7 +157,8 @@ def job(index,arm,repeat,runtime_hash,lock):
             'rejected_write_attempts':rejected,
             'memory_diff':ref(out/'memory-diff.json'),'native_state':ref(out/'native-state.tar.gz'),
             'common_source_cutoff':index,'semantic_review':'pending_source_based_review_not_human_gold',
-            'cost_basis':'unique Responses gateway attempts; native compatibility usage not added again','monetary_cost':None}
+            'same_session_infrastructure_recovery':resume,
+            'cost_basis':'unique native Anthropic gateway attempts; native duplicate usage not added again','monetary_cost':None}
         save(out/'result.json',result);return result
     except Exception as exc:
         save(out/'failure.json',{'type':type(exc).__name__,'message':str(exc)})
@@ -155,22 +173,46 @@ def job(index,arm,repeat,runtime_hash,lock):
 
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--recover-infrastructure',action='store_true')
+    parser.add_argument('--continue-authorized',action='store_true')
     args=parser.parse_args()
     native_client.BROKER_KIND='default'
     old=read(PUBLIC/'d2-claim-review.json')
+    previous=[]
     if old.get('native_jobs',0):
-        if not args.recover_infrastructure or any(r.get('attempts') or r['status']!='blocked' for r in old['results']):
-            raise RuntimeError('D2 already executed; no automatic quality retry')
-        history=PRIVATE/('d2-infrastructure-history-'+uuid.uuid4().hex[:8]);history.mkdir()
-        for name in ['d2-claim-review.json','d2-runtime-lock.json']:
-            shutil.copy2(PUBLIC/name,history/name)
-        for row in old['results']:
-            source=(PRIVATE/row['job_id']).resolve();target=(history/row['job_id']).resolve()
-            assert source.is_relative_to(PRIVATE.resolve()) and target.is_relative_to(PRIVATE.resolve())
-            if list((source/'requests').glob('*.attempt.json')):raise RuntimeError('Model requests cannot be erased or replayed')
-            shutil.move(source,target)
-        save(history/'reason.json',{'reason':'Missing gateway method_id before any provider request',
-             'model_calls':0,'native_state_restarted_from_original_before':True})
+        if args.continue_authorized:
+            if old['status']!='blocked' or old['results'][-1]['status']!='blocked':
+                raise RuntimeError('Continuation requires an interrupted logical job')
+            previous=old['results']
+            history=PRIVATE/('d2-continuation-history-'+uuid.uuid4().hex[:8]);history.mkdir()
+            for name in ['d2-claim-review.json','d2-runtime-lock.json','d2-continuation-runtime-lock.json']:
+                if (PUBLIC/name).exists():shutil.copy2(PUBLIC/name,history/name)
+            interrupted=PRIVATE/previous[-1]['job_id']
+            failed=read(interrupted/'failure.json')
+            if failed['type']=='TimeoutError':
+                assert (interrupted/'stopped-native-state.tar.gz').exists()
+                pending=[]
+                for path in interrupted.glob('requests/*.attempt.json'):
+                    meta=read(path)
+                    if meta['phase']=='started':
+                        shutil.copy2(path,history/path.name)
+                        meta.update(phase='failed',error='controller_wait_window_interrupted_unfinished_stream',
+                            capture_closed_at=datetime.now(timezone.utc).isoformat(),usage_status='final_provider_usage_unknown')
+                        save(path,meta);pending.append(meta['attempt_id'])
+                save(history/'interrupted-provider-streams.json',{'attempt_ids':pending,
+                    'basis':'Controller timeout, quiesced native process, stopped snapshot and terminated task-owned gateway',
+                    'provider_side_charge_and_late_completion':'unknown; neither inferred zero nor replayed as a new logical job'})
+        else:
+            if not args.recover_infrastructure or any(r.get('attempts') or r['status']!='blocked' for r in old['results']):
+                raise RuntimeError('D2 already executed; no automatic quality retry')
+            history=PRIVATE/('d2-infrastructure-history-'+uuid.uuid4().hex[:8]);history.mkdir()
+            for name in ['d2-claim-review.json','d2-runtime-lock.json']:shutil.copy2(PUBLIC/name,history/name)
+            for row in old['results']:
+                source=(PRIVATE/row['job_id']).resolve();target=(history/row['job_id']).resolve()
+                assert source.is_relative_to(PRIVATE.resolve()) and target.is_relative_to(PRIVATE.resolve())
+                if list((source/'requests').glob('*.attempt.json')):raise RuntimeError('Model requests cannot be erased or replayed')
+                shutil.move(source,target)
+            save(history/'reason.json',{'reason':'Missing gateway method_id before any provider request',
+                 'model_calls':0,'native_state_restarted_from_original_before':True})
     runtime_hash=freeze_runtime()
     lock={'schema_version':'database-followup.runtime-lock.v1','phase':'D2','at':datetime.now(timezone.utc).isoformat(),
         'authorization':'User explicitly requested completing Claude using supplied Aixoras documentation',
@@ -184,21 +226,26 @@ def main():
         'common_adaptations':['native foreground maintenance fixture, no business MCP, same tools/sources in both arms',
             'direct native Anthropic Messages endpoint accepted by user-requested actual probe; no protocol conversion'],
         'native_runtime_hash':runtime_hash,'source_files':{n:sha(ROOT/n) for n in
-            ['database_followup_claude.py','native_gateway.py','analysis_provider.py']},
+            ['database_followup_claude.py','native_gateway.py','analysis_provider.py','native_evidence.py','native_client.py']},
         'order':[[22,'W0',1],[22,'W1',1],[24,'W1',1],[24,'W0',1],
                  [22,'W1',2],[22,'W0',2],[24,'W0',2],[24,'W1',2]],
         'hidden_evaluator_mounts':False,'source_policy':'same-method legal prefix through event; before state independently restored',
         'monetary_cost':'unknown account charge, never zero'}
-    save(PUBLIC/'d2-runtime-lock.json',lock)
-    frozen=PRIVATE/'runtime-source-d2';frozen.mkdir(exist_ok=True)
+    lock_name='d2-continuation-runtime-lock.json' if args.continue_authorized else 'd2-runtime-lock.json'
+    save(PUBLIC/lock_name,lock)
+    frozen=PRIVATE/('runtime-source-d2-continuation' if args.continue_authorized else 'runtime-source-d2')
+    if frozen.exists() and args.continue_authorized:shutil.copytree(frozen,history/'runtime-source-d2-continuation')
+    frozen.mkdir(exist_ok=True)
     for name,h in lock['source_files'].items():
         assert sha(ROOT/name)==h
         (frozen/name).write_bytes((ROOT/name).read_bytes())
-    processes=[];stop=threading.Event();rows=[]
+    processes=[];stop=threading.Event();rows=[r for r in previous if r['status']=='completed']
     try:
         helpers(processes);threading.Thread(target=pump,args=(stop,),daemon=True).start()
         for index,arm,repeat in lock['order']:
-            result=job(index,arm,repeat,runtime_hash,lock);rows.append(result)
+            if any((r['index'],r['arm'],r['repeat'])==(index,arm,repeat) for r in rows):continue
+            recover=any((r['index'],r['arm'],r['repeat'])==(index,arm,repeat) and r['status']=='blocked' for r in previous)
+            result=job(index,arm,repeat,runtime_hash,lock,resume=recover);rows.append(result)
             save(PRIVATE/'d2-progress.json',{'jobs':rows})
             print(json.dumps({k:result.get(k) for k in ['job_id','status','attempt_count','tool_count','reason']}),flush=True)
             if result['status']!='completed':break
@@ -211,6 +258,9 @@ def main():
         save(PUBLIC/'d2-claim-review.json',{'phase':'D2','status':'awaiting_semantic_review' if len(rows)==8 and
             all(r['status']=='completed' for r in rows) else 'blocked','native_jobs':len(rows),'results':rows,
             'lock_sha256':sha(PUBLIC/'d2-runtime-lock.json'),'D3_gate':'closed_pending_bounded_claim_review'})
+        if args.continue_authorized:
+            value=read(PUBLIC/'d2-claim-review.json');value['continuation_lock_sha256']=sha(PUBLIC/lock_name)
+            save(PUBLIC/'d2-claim-review.json',value)
 
 
 if __name__=='__main__':main()

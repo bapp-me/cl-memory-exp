@@ -5,6 +5,7 @@ validate the quoted evidence; the semantic judgments remain explicitly authored
 by the reviewing Codex agent and are not human gold labels.
 """
 from datetime import datetime, timezone
+import hashlib
 import json
 
 from database_followup_d0 import PRIVATE, PUBLIC, ROOT, ref
@@ -39,6 +40,17 @@ def main():
     lock=read(PUBLIC/'d2-runtime-lock.json')
     assert phase['lock_sha256']==sha(PUBLIC/'d2-runtime-lock.json')
     assert all(sha(PRIVATE/'runtime-source-d2'/n)==h for n,h in lock['source_files'].items())
+    native_build=ROOT/'.local/native-runtime-builds'/lock['native_runtime_hash']
+    inventory={p.name:sha(p) for p in sorted(native_build.glob('*.py'))}
+    assert inventory and hashlib.sha256(json.dumps(inventory,sort_keys=True).encode()).hexdigest()==lock['native_runtime_hash']
+    continuation=PUBLIC/'d2-continuation-runtime-lock.json'
+    if continuation.exists():
+        assert phase['continuation_lock_sha256']==sha(continuation)
+        latest=read(continuation)
+        assert all(sha(PRIVATE/'runtime-source-d2-continuation'/n)==h for n,h in latest['source_files'].items())
+        build=ROOT/'.local/native-runtime-builds'/latest['native_runtime_hash']
+        inventory={p.name:sha(p) for p in sorted(build.glob('*.py'))}
+        assert hashlib.sha256(json.dumps(inventory,sort_keys=True).encode()).hexdigest()==latest['native_runtime_hash']
     pairs={};sessions=[];all_attempts=[]
     for job in phase['results']:
         name=job['job_id'];out=PRIVATE/name
@@ -77,7 +89,7 @@ def main():
                 assert source['index']<=job['index']
                 supports.append(evidence(source['index'],source['offset'],source['part'],source['quote']))
             claims.append({**claim,'sources':supports,'after_memory_path':path,
-                'after_memory_sha256':__import__('hashlib').sha256(files[path]).hexdigest()})
+                'after_memory_sha256':hashlib.sha256(files[path]).hexdigest()})
         assert categories==set(read(ROOT/'config/database-followup.plan.json')['D2']['claim_checks'])
         job['semantic_review']={'reviewer':annotations['reviewer'],'claims':claims,
             'bounded_gate_pass':annotation['bounded_gate_pass'],
@@ -91,7 +103,7 @@ def main():
     for (index,repeat),pair in pairs.items():
         a,b=[PRIVATE/pair[arm]['job_id'] for arm in ['W0','W1']]
         ca,cb=[read(p/'input.json') for p in [a,b]]
-        exclude={'gateway','gateway_token','session_id','prompt'}
+        exclude={'gateway','gateway_token','session_id','prompt','maintenance_transport_resume','maintenance_resume_prompt'}
         assert {k:v for k,v in ca.items() if k not in exclude}=={k:v for k,v in cb.items() if k not in exclude}
         assert cb['prompt']==ca['prompt']+'\n\n'+extra
         ma,mb=[read(p/'input-materials.json') for p in [a,b]]
@@ -101,7 +113,8 @@ def main():
         fairness.append({'index':index,'repeat':repeat,'same_original_before':True,
             'same_legal_source_projection_and_access':True,'same_native_tools_system_and_budgets':True,
             'only_prompt_difference': 'exact preregistered generic constraint',
-            'request_metadata_difference':'independent native session identifiers'})
+            'request_metadata_difference':'independent native session identifiers',
+            'same_session_infrastructure_recovered_jobs':[j['job_id'] for j in pair.values() if j.get('same_session_infrastructure_recovery')]})
     eligible=all(j['semantic_review']['bounded_gate_pass'] for j in phase['results'] if j['arm']=='W1')
     phase.update(status='completed',D3_eligible=eligible,D3_gate='open' if eligible else 'closed_failed_bounded_claim_qualification',
         reviewed_at=datetime.now(timezone.utc).isoformat(),reviewer=annotations['reviewer'],fairness=fairness,

@@ -119,8 +119,16 @@ def usage_for(out):
             finish = v.get('stop_reason') or (delta.get('stop_reason') if isinstance(delta,dict) else None) or finish
             if (v.get('incomplete_details') or {}).get('reason')=='max_output_tokens': finish='max_tokens'
             for c in v.get('choices', []): finish = c.get('finish_reason') or finish
+        partial={}
+        if meta['protocol']=='anthropic' and usage:
+            terminal_usage=any(v.get('type')=='message_delta' and 'output_tokens' in (v.get('usage') or {})
+                or v.get('type')=='message' and v.get('stop_reason') for v in values)
+            if not terminal_usage:
+                partial={'reported_partial_usage':usage,'usage_status':'incomplete_stream_final_output_usage_unknown'}
+                usage={}
         attempts.append({'attempt_id': meta['attempt_id'], 'protocol': meta['protocol'], 'http_status': meta.get('http_status'),
             'phase': meta['phase'], 'returned_model': model, 'usage': usage or None, 'finish_reason': finish})
+        attempts[-1].update(partial)
     return attempts
 
 
