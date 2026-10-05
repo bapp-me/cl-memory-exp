@@ -22,6 +22,9 @@ MODEL = 'glm-5.3-flash'
 
 
 def secret():
+    current = ROOT/'config/active-provider.json'
+    if current.exists() and read(current)['provider'] != 'zai':
+        raise RuntimeError('Historical Z.AI entry is retired for new calls; use the authorized active-provider Responses client')
     # Reuse the verified loader without importing the legacy experiment runtime.
     code = ROOT.parent / 'section7_observability_20261002/engine.py'
     tree = ast.parse(code.read_text(encoding='utf-8'))
