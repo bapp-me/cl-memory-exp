@@ -67,7 +67,8 @@ def main():
                 candidates=[x for x in records if x['attempt_id']==ident]; meta=candidates[-1] if candidates else {}
                 protocol='chat'; response=request.with_name(ident+'.response.txt')
             usage,model,finish,thinking_chars=response_usage(response)
-            row={'attempt_id':ident,'run_id':directory.name,'category':'formal' if formal else 'acceptance_or_debug',
+            category='formal' if formal else 'targeted_rerun' if manifest.get('mode')=='targeted_rerun' else 'acceptance_or_debug'
+            row={'attempt_id':ident,'run_id':directory.name,'category':category,
                  'task':out.name,'method_id':meta.get('method_id'),'role':meta.get('role','unknown_native_role'),
                  'protocol':protocol,'phase':meta.get('phase'),'status':meta.get('http_status',meta.get('status')),
                  'returned_model':model,'finish_reason':finish,'thinking_characters_observed':thinking_chars,
@@ -111,7 +112,7 @@ def main():
             estimate=((inputs-cache)*pricing['uncached_input']+cache*pricing['cached_input']+outputs*pricing['output'])/1_000_000
         attempt['published_price_estimate_usd']=estimate
     totals={}
-    for category in ['formal','acceptance_or_debug']:
+    for category in ['formal','acceptance_or_debug','targeted_rerun']:
         selected=[x for x in ledger.values() if x['category']==category]
         totals[category]={'attempts':len(selected),'unknown_usage_attempts':sum(x['usage'] is None for x in selected),
             'published_price_estimate_known_usd':round(sum(x['published_price_estimate_usd'] or 0 for x in selected),6),

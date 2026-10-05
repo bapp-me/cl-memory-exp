@@ -1,5 +1,6 @@
 """Offline paired efficiency analysis. Never edits a run or invokes a model."""
 from collections import Counter, defaultdict
+import argparse
 from datetime import datetime, timezone
 import json
 from statistics import median
@@ -67,6 +68,11 @@ def compare(baseline, target):
 
 
 def main():
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--corrected',action='store_true',help='Use all three authorized correction results, regardless of outcome.')
+    args=parser.parse_args()
+    selection=read(ROOT/'records/code-result-selection.json')['replacements'] if args.corrected else []
+    replacements={(x['parent_run_id'],x['index']):x['rerun_run_id'] for x in selection}
     ledger = {x['attempt_id']: x for x in read(ROOT / 'records/attempt-ledger.json')}
     summary = read(ROOT / 'records/progress-summary.json')
     streams, details, rows_by_run = [], [], {}
@@ -77,7 +83,10 @@ def main():
         raw = raw[:stream['completed']]
         rows = []
         for result in raw:
-            out = directory / f"task-{result['index']:03d}"
+            source_run=replacements.get((stream['run_id'],result['index']),stream['run_id'])
+            if source_run!=stream['run_id']:
+                result=next(r for r in read(ROOT/'private-runs'/source_run/'results.json') if r['index']==result['index'])
+            out = ROOT/'private-runs'/source_run/f"task-{result['index']:03d}"
             calls = [ledger[c['attempt_id']] for c in result['attempts']]
             cfg, memory = read(out / 'input.json'), read(out / 'memory-before.json')
             selected = cfg.get('sources', [])
@@ -86,6 +95,7 @@ def main():
                 explicit = len(json.dumps(memory['history'], ensure_ascii=False, separators=(',', ':')).encode('utf-8'))
             row = {k: result[k] for k in ['index', 'instance_id', 'session_id', 'project_key', 'correct', 'actions', 'reward']}
             row.update({'run_id': stream['run_id'], 'method': stream['method'], 'environment': stream['environment'],
+                        'source_run_id':source_run,'actual_output_limit':cfg.get('output_limit',16384),
                         'seconds': result.get('seconds') if not result.get('seconds_basis') else None,
                         'maintenance_seconds': result.get('maintenance_seconds'), 'calls': calls,
                         'explicit_memory_bytes_before': explicit,
@@ -107,8 +117,8 @@ def main():
             phases[phase].append(row)
         streams.append({'run_id': stream['run_id'], 'method': stream['method'], 'environment': stream['environment'],
                         'status': stream['status'], 'target': stream['target'], 'stats': aggregate(rows),
-                        'comparison_disposition':stream.get('comparison_disposition','not_assessed'),
-                        'protocol_deviation_indices':stream.get('protocol_deviation_indices',[]),
+                        'comparison_disposition':'authorized_targeted_rerun_view' if args.corrected and stream['environment']=='codebase_adaptation' else stream.get('comparison_disposition','not_assessed'),
+                        'protocol_deviation_indices':[] if args.corrected and stream['environment']=='codebase_adaptation' else stream.get('protocol_deviation_indices',[]),
                         'phases': {k: aggregate(v) for k, v in phases.items()}})
     paired = []
     for target in streams:
@@ -118,6 +128,7 @@ def main():
                        'environment': target['environment'], 'comparison_disposition':target['comparison_disposition'],
                        **compare(rows_by_run[baseline['run_id']], rows_by_run[target['run_id']])})
     output = {'as_of': summary['as_of'], 'generated_at': datetime.now(timezone.utc).isoformat(), 'model_calls': 0,
+              'result_view':'authorized_targeted_reruns' if args.corrected else 'original_recorded_results',
               'scope': 'Committed tasks only; incomplete native prefixes are not compared against full streams.',
               'streams': streams, 'paired': paired,
               'limitations': ['Both-correct subsets condition on observed outcomes; no causal efficiency claim.',
@@ -128,8 +139,9 @@ def main():
                  'Explicit memory bytes exclude native homes, raw session stores and audit files; no cross-framework size ranking.',
                  'Native role labels combine solving and maintenance; per-role causality is not observed.',
                  'Pi has no separate asynchronous maintenance_seconds field; unknown is not zero.']}
-    save(ROOT / 'records/efficiency-analysis.json', output)
-    save(ROOT / 'records/task-index.json', details)
+    prefix='corrected-' if args.corrected else ''
+    save(ROOT / f'records/{prefix}efficiency-analysis.json', output)
+    save(ROOT / f'records/{prefix}task-index.json', details)
     print(json.dumps({'committed_tasks': len(details), 'completed_streams': sum(s['status'] == 'completed' for s in streams),
                       'paired_comparisons': len(paired)}))
 

@@ -4,6 +4,8 @@
 
 **最新用户修订（优先于下文历史设置）：** 原生 Codebase 采用官方动作格式；后续所有角色的单次输出上限统一为 65,536，总窗口仍为 262,144，输入压缩触发统一为 196,608。Codex 的原生 90% 限制高于新触发值，直接通过 `config.toml` 对齐，不修改 Codex 压缩源码。新上限不自动继续提高到 131,072。已完成旧题经核对没有输出截断失败，按用户决定保留，不整批重跑；只处理 Hermes 正式流及 Codex 验收中未完成的截断维护。旧预算与历史成绩不改写。维护等待仍保留原 600 秒，延长尚未获批。见 [64k 修订](records/configuration-revision-64k.json)、[截断影响核对](records/output-cap-impact-audit.json)。
 
+**最新执行结果：** 用户随后明确要求重跑三道提示偏差题，现已各完成一次。当前选用 Codebase 结果为 No Memory **15/19、338 步**，Notepad **16/19、293 步**，Jaccard **17/19、205 步**；原始数据全部保留。Hermes 耗时已定位为服务端流内错误、工具参数重复生成和截止叠加，未凭超时直接增加到 40 分钟。见 [诊断与重跑报告](MAINTENANCE_DIAGNOSIS_AND_RERUNS.md)、[当前阶段报告](RESULTS_PARTIAL.md)。
+
 本地执行确认：用户已授权本轮 R=1 与必要验收，不额外设置金额或模型请求总数上限；保留官方业务动作限制。六种方法 × 两种环境最多 12 条独立流通过各自验收后即可运行，不再等待整个 Database 阶段结束。所有角色共享账户 50 请求并发上限，实际吞吐与限流另行记录。Database 和 Codebase 使用不同 home、会话及所有长期记忆，Codebase 从空记忆启动。Database 结束反馈移除正确答案，仅保留对错、提交内容、查询次数和超时信息。这是相对原生反馈的显式适配。授权记录见 [execution-authorization.json](records/execution-authorization.json)。
 
 验收发现并修正：Database 源码声明60秒响应超时hook，但锁定版本的官方runner未调用它。v1适配器曾误启用该限制，导致两条canary轨迹被截断；整批v1 canary只计测试成本，不进入正式结果。正式适配不添加该业务截止；HTTP传输故障单独登记并暂停流，不直接赋零分。见 [timeout-incident.json](records/timeout-incident.json)。

@@ -1,5 +1,6 @@
 """Render the completed Pi matrix from audited, committed-task aggregates."""
 import os
+import argparse
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 os.environ.setdefault('MPLCONFIGDIR', str(ROOT / '.local/matplotlib'))
@@ -10,7 +11,8 @@ import matplotlib.pyplot as plt
 
 
 def main():
-    data = json.loads((ROOT / 'records/efficiency-analysis.json').read_text(encoding='utf-8'))
+    parser=argparse.ArgumentParser();parser.add_argument('--corrected',action='store_true');args=parser.parse_args()
+    data = json.loads((ROOT / ('records/corrected-efficiency-analysis.json' if args.corrected else 'records/efficiency-analysis.json')).read_text(encoding='utf-8'))
     methods = ['pi_none', 'pi_notepad', 'pi_jaccard']
     labels = ['No Memory', 'Notepad', 'Jaccard top-3']
     colors = ['#738397', '#17817a', '#cb7640']
@@ -38,17 +40,20 @@ def main():
                 ax.text(bar.get_x() + bar.get_width()/2, value + max(values)*.025, label, ha='center', fontsize=11)
             if col == 0: ax.set_ylabel('Database' if row == 0 else 'Codebase', fontweight='bold')
     fig.suptitle('CL-Bench | Pi system comparison | GLM-5.3-Flash high | R=1', fontsize=16, y=.98)
-    fig.text(.055, .02, 'Codebase has 3 extra recovery notices; full rows are descriptive, pending the protocol decision.\n'
+    notice=('Three Codebase targets use authorized reruns with 64k output; other results retain their original budgets.\n'
+            if args.corrected else 'Codebase has 3 extra recovery notices; full rows are descriptive, pending the protocol decision.\n')
+    fig.text(.055, .02, notice+
              '* One failed No Memory Codebase HTTP attempt has unknown usage. Tokens shown are reported sums.\n'
              '177 completed tasks; fresh session per task; independent memory per environment. No causal or stable-ranking claim.', fontsize=10)
     fig.tight_layout(rect=(0, .10, 1, .95))
     target = ROOT / 'figures'; target.mkdir(exist_ok=True)
-    fig.savefig(target / 'pi-comparison.png', dpi=180)
-    svg = target / 'pi-comparison.svg'
+    stem='pi-comparison-corrected' if args.corrected else 'pi-comparison'
+    fig.savefig(target / f'{stem}.png', dpi=180)
+    svg = target / f'{stem}.svg'
     fig.savefig(svg, metadata={'Date': None})
     svg.write_text('\n'.join(line.rstrip() for line in svg.read_text(encoding='utf-8').splitlines()) + '\n', encoding='utf-8')
     plt.close(fig)
-    print(str(target / 'pi-comparison.png'))
+    print(str(target / f'{stem}.png'))
 
 
 if __name__ == '__main__': main()
