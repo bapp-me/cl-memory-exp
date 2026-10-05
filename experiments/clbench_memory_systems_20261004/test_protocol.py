@@ -5,6 +5,16 @@ from protocol import Boundary, apply_notepad, database_feedback, digest, jaccard
 
 
 class ProtocolTests(unittest.TestCase):
+    def test_explicit_skip_is_unscored_and_preserves_session_isolation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            b=Boundary(Path(tmp)/'state.json','hermes_memory_ready/r1/codebase_adaptation')
+            b.start(0,'interrupted')
+            with self.assertRaises(RuntimeError):b.skip_by_user(index=0,evidence={},memory_version='old')
+            receipt=b.skip_by_user(index=0,evidence={'user_authorized':True,'index':0,'native_state_sha256':'saved'},memory_version='old')
+            self.assertEqual((receipt['correct'],receipt['reward'],b.state['next_index']),(None,None,1))
+            self.assertNotIn('last_barrier',b.state)
+            with self.assertRaises(RuntimeError):b.start(1,'interrupted')
+            b.start(1,'new-session')
     def test_feedback_cannot_include_evaluator_only_fields(self):
         for correct, timed_out, exhausted in [(True, False, False), (False, False, False),
                                                (False, True, False), (False, False, True)]:

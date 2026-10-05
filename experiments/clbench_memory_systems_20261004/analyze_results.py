@@ -123,6 +123,8 @@ def main():
             phases[phase].append(row)
         streams.append({'run_id': stream['run_id'], 'method': stream['method'], 'environment': stream['environment'],
                         'status': stream['status'], 'target': stream['target'], 'stats': aggregate(rows),
+                        'user_skipped_unscored':stream.get('user_skipped_unscored',0),
+                        'user_skipped_indices':stream.get('user_skipped_indices',[]),
                         'codex_consolidation_policy_counts':dict(Counter(
                             (r.get('consolidation_schedule') or {}).get('policy','historical_per_task') for r in rows)) if stream['method']=='codex_memory_ready' else None,
                         'comparison_disposition':'authorized_targeted_rerun_view' if args.corrected and stream['environment']=='codebase_adaptation' else stream.get('comparison_disposition','not_assessed'),

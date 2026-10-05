@@ -111,7 +111,7 @@ def main():
         stream = CodebaseStream(directory,restore=args.resume,restore_pending_readonly=args.resume_business)
     created = broker({'op':'create','runtime_hash':native_hash}); container = created['container_id']; save(directory/'container.json',created)
     results=read(directory/'results.json') if args.resume else []
-    memory_before=read(directory/f'task-{first_index-1:03d}'/'memory-after.json') if first_index else {}
+    memory_before=read(directory/f"task-{results[-1]['index']:03d}"/'memory-after.json') if results else {}
     if args.resume and first_index+bool(pending):
         previous=directory/f'task-{first_index if pending else first_index-1:03d}'
         candidates=[previous/name for name in ['batched-resume-state.tar.gz','recovery-timeout-state.tar.gz','recovered-native-state.tar.gz','timeout-state.tar.gz','native-state.tar.gz'] if (previous/name).exists()]
@@ -296,15 +296,17 @@ def main():
             save(out/'barrier.json',receipt); memory_before=memory_after
             results.append(result); save(directory/'results.json',results)
             route['disabled']=True;save(ROOT/'.local/native-routes'/f'{route_id}.json',route)
-            print(json.dumps({'run_id':args.run_id,'completed':index+1,'correct':correct,'actions':count}),flush=True)
+            print(json.dumps({'run_id':args.run_id,'completed':len(results),'position_finished':index+1,'correct':correct,'actions':count}),flush=True)
         save(directory/'stream-status.json',{'status':'completed' if limit==total else 'prefix_completed','completed':len(results),'mode':args.mode})
     except Exception as exc:
         if 'route' in locals():
             route['disabled']=True; save(ROOT/'.local/native-routes'/f'{route_id}.json',route)
+        # Preserve the business container even if native quiesce/snapshot fails.
+        if total==19 and 'out' in locals() and not completed:
+            stream.preserve_pending(out)
         try:
             broker({'op':'quiesce','container_id':container})
             if 'out' in locals(): snapshot(container,out/('recovery-timeout-state.tar.gz' if recovering else 'timeout-state.tar.gz'))
-            if total==19 and not completed:stream.preserve_pending(out)
             broker({'op':'stop','container_id':container})
         except Exception: pass
         save(directory/'stream-status.json',{'status':'paused_error','completed':len(results),'type':type(exc).__name__,'message':str(exc)})

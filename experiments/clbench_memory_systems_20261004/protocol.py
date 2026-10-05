@@ -116,3 +116,17 @@ class Boundary:
                           pending=None, last_barrier=receipt)
         save(self.path, self.state)
         return receipt
+
+    def skip_by_user(self, *, index, evidence, memory_version):
+        """Advance an explicitly cancelled, unsubmitted instance without scoring it."""
+        pending = self.state['pending']
+        if not pending or pending['index'] != index or pending['status'] != 'running':
+            raise RuntimeError('User skip requires the exact unsubmitted instance')
+        if not evidence.get('user_authorized') or evidence.get('index') != index or not evidence.get('native_state_sha256'):
+            raise RuntimeError('Missing scoped user-skip authorization or saved native state')
+        receipt = {**pending, 'status': 'user_interrupted_unscored', 'evidence': deepcopy(evidence),
+                   'memory_version': memory_version, 'correct': None, 'reward': None}
+        self.state.setdefault('user_skips', []).append(receipt)
+        self.state.update(next_index=index + 1, pending=None, memory_version=memory_version)
+        save(self.path, self.state)
+        return receipt

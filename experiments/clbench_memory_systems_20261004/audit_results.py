@@ -14,11 +14,15 @@ def main():
         method,_,environment=run['namespace'].split('/')
         rows=read(directory/'results.json') if (directory/'results.json').exists() else []
         previous_memory=None; errors=[]; metrics=Counter(); max_prompt=0
-        for index,row in enumerate(rows):
+        boundary=read(directory/'boundary.json')
+        skipped={x['index'] for x in boundary.get('user_skips',[])}
+        expected_indices=[i for i in range(len(manifest[environment])) if i not in skipped]
+        for position,row in enumerate(rows):
+            index=row['index']
             def check(condition,message):
                 if not condition: errors.append({'index':index,'check':message})
             out=directory/f'task-{index:03d}'
-            check(row['index']==index and str(row['instance_id'])==str(manifest[environment][index]['instance_id']),'fixed official order')
+            check(index==expected_indices[position] and str(row['instance_id'])==str(manifest[environment][index]['instance_id']),'fixed official order allowing explicitly unscored user skips')
             check(row['session_id'] not in all_sessions,'fresh session across instances/methods/environments')
             all_sessions.add(row['session_id'])
             grade=read(directory/'evaluator-private'/f'result-{index:03d}.json'); record=grade['record']
@@ -78,6 +82,7 @@ def main():
             metrics['correct']+=int(row['correct']); metrics['official_actions']+=row['actions']
             metrics['unknown_task_wall_times']+=int(bool(row.get('seconds_basis')) or row.get('seconds') is None)
         summaries.append({'run_id':directory.name,'method':method,'environment':environment,
+            'user_skipped_unscored':len(skipped),'user_skipped_indices':sorted(skipped),
             'committed_tasks':len(rows),'full_schedule':len(rows)==len(manifest[environment]),'status':'passed' if not errors else 'failed',
             'metrics':dict(metrics),'maximum_reported_input_tokens':max_prompt,'errors':errors})
     output={'status':'passed' if all(s['status']=='passed' for s in summaries) else 'failed',

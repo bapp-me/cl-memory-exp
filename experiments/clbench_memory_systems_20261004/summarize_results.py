@@ -80,8 +80,10 @@ def main():
             ns=manifest['namespace']; method,_,environment=ns.split('/')
             target=40 if environment=='database_exploration' else 19
             boundary=read(directory/'boundary.json')
+            skips=boundary.get('user_skips',[])
             final=read(directory/'stream-status.json') if (directory/'stream-status.json').exists() else None
-            state='completed' if len(rows)==target else 'paused_error' if final and final.get('status')=='paused_error' else 'in_progress'
+            state=('completed' if len(rows)==target else 'completed_with_user_skip' if len(rows)+len(skips)==target and not boundary['pending']
+                   else 'paused_error' if final and final.get('status')=='paused_error' else 'in_progress')
             phases=defaultdict(list)
             for row in rows:
                 if environment=='database_exploration': phases['before_migration' if row['index']<20 else 'after_migration'].append(row)
@@ -94,6 +96,7 @@ def main():
                     'task_seconds_known_sum':round(sum(duration(x) for x in values if duration(x) is not None),3),
                     'task_seconds_unknown_count':sum(duration(x) is None for x in values)}
             streams.append({'run_id':directory.name,'method':method,'environment':environment,'status':state,'target':target,
+                'user_skipped_unscored':len(skips),'user_skipped_indices':[s['index'] for s in skips],
                 **stats(rows),'phases':{k:stats(v) for k,v in phases.items()},
                 'distinct_sessions':len({x['session_id'] for x in rows}),
                 'boundary_next_index':boundary['next_index'],'pending_index':boundary['pending']['index'] if boundary['pending'] else None,

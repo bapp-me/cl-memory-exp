@@ -28,6 +28,7 @@ class CodebaseStream:
     def __init__(self, directory, *, restore=False, restore_pending_readonly=False):
         self.directory = Path(directory); self.directory.mkdir(parents=True, exist_ok=True)
         self.private = self.directory / 'evaluator-private'; self.private.mkdir(exist_ok=True)
+        self.user_skipped_steps = 0
         tempfile.tempdir = str(self.private)
         os.chdir(UPSTREAM)
         install()
@@ -77,7 +78,8 @@ git status --short
             self.task.current_issue_idx = state['current_issue_idx']
             self.task.issue_history = state['issue_history']
             self.task.current_steps = state['current_steps']
-            self.task.total_interactions=sum(r['steps'] for r in state['issue_history'])+state['current_steps']
+            self.user_skipped_steps = state.get('user_skipped_steps', 0)
+            self.task.total_interactions=sum(r['steps'] for r in state['issue_history'])+state['current_steps']+self.user_skipped_steps
             if self.task.current_issue_idx < len(self.task.instances):
                 restore_rollout_context(self.task, self.task.current_issue_idx)
                 self.task._start_container()
@@ -113,7 +115,8 @@ git status --short
             # Official trace already freezes model_patch before grading.
             save(self.private / f'trace-{index:03d}.json', [entry for entry in self.task.interaction_trace if entry['issue_index'] == index])
         save(self.private / 'state.json', {'current_issue_idx': self.task.current_issue_idx,
-             'current_steps': self.task.current_steps, 'issue_history': self.task.issue_history})
+             'current_steps': self.task.current_steps, 'issue_history': self.task.issue_history,
+             'user_skipped_steps':self.user_skipped_steps})
         return {'observation': result.observation.content, 'instance_complete': result.observation.instance_complete,
                 'done': result.done}
 

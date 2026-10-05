@@ -24,7 +24,9 @@ def main():
         row={'run':run,'completed':len(results),'correct':sum(r['correct'] for r in results),
             'status':'paused_by_user' if run in paused else status.get('status','running'),'current_index':int(task.name[5:]) if task else None,
             'current_submitted':bool(submission and submission.exists())}
-        if row['current_submitted'] and task.name!=f'task-{len(results)-1:03d}':
+        boundary=read(directory/'boundary.json')
+        row['user_skipped_unscored']=len(boundary.get('user_skips',[]))
+        if row['current_submitted'] and (not results or task.name!=f"task-{results[-1]['index']:03d}"):
             row['seconds_since_original_submission']=round(time.time()-submission.stat().st_mtime)
         rows.append(row)
     print(json.dumps({'at':datetime.now(timezone.utc).isoformat(),'gate':gate('status',{}),'streams':rows}))
