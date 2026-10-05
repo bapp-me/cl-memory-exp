@@ -154,3 +154,13 @@ Hermes Database 已通过新配置验收并继续正式流；Codex Database 和�
 在线验证随后通过：两个环境都完成第 10 题后的原生全局整合，各覆盖 10 份非空提取源；已观察到的非批次题没有发出阶段二请求。原先 15 个完整 Codex 结果逐行等于各自持久化的 prepared-result，未重写成绩。见 [在线批次审计](records/codex-batch-online-audit.json)。后续继续遵循同一批次规则。
 
 Hermes Database 第 38 题另遇到模型工具参数重复 `content` 字段，最后值为 null，官方 `DatabaseAction` 字符串校验失败。官方数据库任务没有格式错误记零后跳题的入口，因此保留停点，没有擅自算失败。用户明确批准后，使用相同 session、原生会话历史和原数据库状态续接，保留已返回的工具错误；不替模型选择重复字段值，不重放前两条查询。该题已结束，官方判错，共 11 次 QUERY；前两条已完成查询没有在新动作中重复执行。恢复耗时单列、原端到端耗时仍未知，费用和失败输出都保留。授权仅覆盖这个停点，见 [恢复证据](records/hermes-db-invalid-tool-stop.json)。
+
+Hermes Database 随后完成全部 40 题：24 题正确、195 次 QUERY，已知 8,510,254 tokens，3 次请求 usage 未知。上述数值包含其已完成正式题中的失败尝试；不代表真实账单。完整原生流的配对统计已更新，R=1 不支持把差异全部归因于记忆。
+
+## Hermes Codebase：仅中止第 16 题，继续第 17–19 题
+
+第 16 题主会话反复通过 native terminal 等待本地 `/testbed`，而业务容器经 `CLBENCH_ACTION` 访问；后台 review 已返回，原生主循环上限为 `sys.maxsize`。未注入解题提示或环境提醒。用户先选择停止，执行者误解为停止整流；用户随即澄清只中止该题、后面三题继续，已按澄清修正。
+
+已保留 15 个完整结果，第 16 题的 native-state、14 个业务动作和两份未执行的脚本。旧的异常处理将 native quiesce 和业务容器保留放在同一个 try 中；原代理的 UID 0 没有 CAP_KILL，quiesce 异常后跳过业务容器保留，finally 清理删除了原容器。因此不声称保存了原完整文件系统：已记录的 `/testbed` 命令均为读取，另有失败的无网络 pip download；两份脚本写在仓库外，从日志原文恢复且没有执行。主流程已把业务容器保留移到 native quiesce 之前，避免后续发生同类丢失；原生代理同 UID 停止修复另已登记。
+
+单题中止采用独立 `user_interrupted_unscored` 记录，correct/reward 均为 null，不写入 scored results，也不伪造维护成功。14 个已执行业务步骤单列保留在官方状态恢复的全局计数中；下一题仍是官方索引 16（第 17 题）。现场 memory 哈希与第 15 题的已提交版本完全相同，恢复保留 native 历史并使用新 session，第 17 题实际已启动。23 项边界、恢复及记账检查通过。记录见 [授权](records/hermes-code-task16-skip-authorization.json)、[中止与续跑证据](records/hermes-code-user-skip.json)。
