@@ -23,6 +23,7 @@ def main():
     p.add_argument('--retry-native-maintenance',action='store_true')
     p.add_argument('--retry-transport-maintenance',action='store_true')
     p.add_argument('--resume-business',action='store_true')
+    p.add_argument('--resume-tool-error',action='store_true')
     args = p.parse_args(); method = args.framework + '_memory_ready'
     pause_path=ROOT/'records/native-user-pause.json'
     pause=read(pause_path) if pause_path.exists() else {}
@@ -40,7 +41,7 @@ def main():
     elif not directory.is_dir(): raise RuntimeError('No saved stream to resume')
     ns = namespace(method, 1, args.environment); boundary = Boundary(directory/'boundary.json',ns)
     first_index=boundary.state['next_index']; pending=boundary.state['pending']
-    if pending and not (directory/f'task-{first_index:03d}'/'submission.json').exists() and not args.resume_business:
+    if pending and not (directory/f'task-{first_index:03d}'/'submission.json').exists() and not (args.resume_business or args.resume_tool_error):
         raise RuntimeError('Interrupted business work needs a separate same-session recovery; no replay allowed')
     if args.resume_business:
         resource=read(ROOT/'records/provider-resource-block.json')
@@ -52,6 +53,15 @@ def main():
         if total==19 and (not proof.get('pending_code_actions_reviewed_read_only') or
             proof['actions_sha256']!=sha(directory/f'task-{first_index:03d}'/'business-actions.json')):
             raise RuntimeError('No verified unchanged code worktree recovery')
+    if args.resume_tool_error:
+        proof=read(ROOT/'records/hermes-db-invalid-tool-stop.json')
+        if not args.resume or args.resume_business or args.framework!='hermes' or total!=40 or not pending or not proof.get('additional_solver_retry_authorized'):
+            raise RuntimeError('Tool-error continuation requires explicit scoped user authorization')
+        out=directory/f'task-{first_index:03d}'
+        if proof['run_id']!=args.run_id or proof['index']!=first_index or proof['session_id']!=pending['session_id'] or (out/'submission.json').exists():
+            raise RuntimeError('Tool-error recovery scope differs from preserved native task')
+        if sha(out/'timeout-state.tar.gz')!=proof['preserved_archive_sha256'] or sha(out/'business-actions.json')!=proof['business_actions_sha256']:
+            raise RuntimeError('Tool-error recovery source or prior actions changed')
     if args.recover_format and (not pending or args.framework!='codex'):
         raise RuntimeError('Format recovery is only for a submitted Codex task')
     if args.retry_native_maintenance:
@@ -84,8 +94,9 @@ def main():
         'native_runtime_hash':native_hash,'runtime_policy':'controller modules remain loaded; each agent process mounts the immutable captured native runtime'}
     if manifest['namespace']!=ns: raise RuntimeError('Resume namespace mismatch')
     if args.resume:
-        manifest.setdefault('continuations',[]).append({'from_index':first_index,'maintenance_only_first':bool(pending) and not args.resume_business,
+        manifest.setdefault('continuations',[]).append({'from_index':first_index,'maintenance_only_first':bool(pending) and not (args.resume_business or args.resume_tool_error),
             'solver_transport_resume':args.resume_business,
+            'solver_tool_error_resume':args.resume_tool_error,
             'config_hash':config_hash,'native_runtime_hash':native_hash,'runtime_source':snapshot_dir.name,
             'at':datetime.now(timezone.utc).isoformat(),'output_limit':65536})
         if args.mode=='formal' and manifest['mode']!='formal':
@@ -122,7 +133,7 @@ def main():
         for index in range(first_index,limit):
             if config_hash != digest({f:sha(snapshot_dir/f) for f in runtime}): raise RuntimeError('Captured runtime changed at boundary')
             recovering=bool(pending and index==first_index)
-            recovering_business=recovering and args.resume_business
+            recovering_business=recovering and (args.resume_business or args.resume_tool_error)
             out=directory/f'task-{index:03d}'; out.mkdir(exist_ok=recovering); task=out.name
             if recovering:
                 original_cfg=read(out/'input.json')
@@ -205,6 +216,7 @@ def main():
                 cfg['codex_binary_sha256']=read(ROOT/'records/codex-build.json')['binary_sha256']
             if recovering:
                 cfg.update(maintenance_only=not recovering_business,solver_transport_resume=recovering_business,
+                    solver_tool_error_resume=args.resume_tool_error,
                     framing=original_cfg['framing'],recover_format_error=args.recover_format,
                     retry_native_maintenance=args.retry_native_maintenance,retry_transport_maintenance=args.retry_transport_maintenance)
                 if recovering_business:
@@ -214,7 +226,8 @@ def main():
                     'source_archive_sha256':sha(archive_path),'source_archive':archive_path.relative_to(directory).as_posix(),
                     'original_business_actions_sha256':sha(out/'business-actions.json') if (out/'business-actions.json').exists() else None,
                     'original_business_action_count':len(actions),'original_business_actions_digest':digest(actions),
-                    'business_replayed':False,'solver_transport_resume':recovering_business,
+                    'business_replayed':False,'solver_transport_resume':recovering_business and not args.resume_tool_error,
+                    'solver_tool_error_resume':recovering_business and args.resume_tool_error,
                     'recovery_started_at':datetime.now(timezone.utc).isoformat(),'config_hash':config_hash})
             else:
                 save(out/'input.json',cfg); save(out/'memory-before.json',memory_before)
@@ -265,7 +278,8 @@ def main():
                 if recovering_business:
                     if digest(actions[:proof['original_business_action_count']])!=proof['original_business_actions_digest']:
                         raise RuntimeError('Recovery changed prior business actions')
-                    result.update(seconds=None,seconds_basis='Provider-resource interruption; original end-to-end time unknown',
+                    result.update(seconds=None,seconds_basis='Interrupted native conversation; original end-to-end time unknown',
+                        solver_recovery_cause='authorized_tool_parameter_error' if args.resume_tool_error else 'provider_resource',
                         solver_recovery_seconds=round(time.monotonic()-started,3),recovered_solver=True)
                 else:
                     if proof['original_submission_sha256']!=sha(out/'submission.json') or proof['original_business_actions_sha256']!=sha(out/'business-actions.json'):

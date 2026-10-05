@@ -148,7 +148,7 @@ def run(path, cfg, out, project):
             last_business_result={'instance_complete':True}
         elif cfg.get('solver_transport_resume'):
             previous=json.loads((out/'conversations.json').read_text())
-            save('conversations-before-transport.json',previous)
+            save('conversations-before-tool-error.json' if cfg.get('solver_tool_error_resume') else 'conversations-before-transport.json',previous)
             if (out/'jobs.json').exists() and any(j['status']!='returned' or j.get('native_result') in {None,'error'} for j in json.loads((out/'jobs.json').read_text())):
                 raise RuntimeError('Pending native writer needs separate recovery before solver continuation')
             failed=previous[-1]['result']
