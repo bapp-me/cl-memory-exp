@@ -1,6 +1,8 @@
 # CL-Bench 阶段结果：已纳入三题授权重跑
 
-2026-10-05。六条 Pi 流和 Claude Database 已完整执行；Hermes Database 有 9 题完成业务与记忆屏障，第 10 题业务已固定、维护未完成。全矩阵尚未完成。用户要求重跑的三道 Codebase 题已各重跑一次，当前比较采用全部三次新结果，包括一次由通过变成未通过的结果。
+2026-10-05。六条 Pi 流和 Claude Database 已完整执行；其余原生流已通过 65,536 输出预算验收并继续，先前 Hermes 第 10 题维护停点已恢复。全矩阵尚未完成，动态进度以 [进度记录](records/progress-summary.json) 为准，下表只比较完整流。用户要求重跑的三道 Codebase 题已各重跑一次，当前比较采用全部三次新结果，包括一次由通过变成未通过的结果。
+
+用户随后批准 Codex 改为 Database 每 10 题、Codebase 每 5 题统一整合，保留逐题提取和此前结果；最后不足一批也整合。已完成前缀与新续跑段采用不同整合频率，不能将后续整条 Codex 流宣称为默认原生频率或全程统一批次配置。每题采用的规则和首次真实批次验证见 [调度授权](records/codex-batch-policy.json)、[在线核验](records/codex-batch-online-audit.json)。
 
 原始 run、旧评分和费用均保留。重跑前报告见 [历史快照](RESULTS_BEFORE_TARGETED_RERUNS.md)，本次原因排查与逐题结果见 [维护诊断和重跑报告](MAINTENANCE_DIAGNOSIS_AND_RERUNS.md)。
 
@@ -60,7 +62,7 @@ Hermes 先前 9 题维护等待中位数 32.765 秒，最长 141.374 秒。第 1
 
 No Memory Codebase 有两题原始整题耗时无法精确恢复，Jaccard 有一题；它们不填零。并发运行的任务耗时不与历史串行运行计算加速比。原生角色记录合并了求解与维护，不能把全部额外 tokens 或提交后等待都归为记忆 writer。原生压缩事件与完整存储量未统一提取的部分仍标 unknown。
 
-框架版本、原生 writer 策略和反馈规则未因本次诊断改变。Database 问题正文与隐藏评分答案跨方法一致，隐藏值不导出。新的 64k 规则已在这三次 Pi 重跑的实际请求上验证；原生新配置还需验收。其他原生流的后续执行状态见 [EXECUTION.md](EXECUTION.md)。
+维护诊断本身没有替换 writer 提示或改变反馈规则；后续 Codex 按用户授权改变整合频率，互操作修复和恢复均另行登记。Database 问题正文与隐藏评分答案跨方法一致，隐藏值不导出。新的 64k 规则已在三次 Pi 重跑和原生流实际请求中验证。原生流的后续执行状态、保留原提交的恢复和混合配置限制见 [EXECUTION.md](EXECUTION.md)。
 
 ## 离线复现
 

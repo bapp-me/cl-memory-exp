@@ -47,7 +47,10 @@ def main():
             'all_both_paths_observed':all(s['real_deferred_boundary_verified'] and s['real_batch_consolidation_verified'] for s in streams),
             'historical_rows_changed':False,'streams':streams}
     save(ROOT/'records/codex-batch-online-audit.json',report)
-    print(report)
+    print({'as_of':report['as_of'],'all_both_paths_observed':report['all_both_paths_observed'],
+           'streams':[{'run_id':s['run_id'],'completed':s['completed'],
+               'verified_positions':[x['position'] for x in s['inspected']],
+               'batch_positions':[x['position'] for x in s['inspected'] if x['schedule']['consolidation_required']]} for s in streams]})
 
 
 if __name__=='__main__':main()

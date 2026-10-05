@@ -215,7 +215,7 @@ def main():
                 cfg['consolidation_schedule']=scheduling.schedule(args.environment,index)
                 cfg['codex_binary_sha256']=read(ROOT/'records/codex-build.json')['binary_sha256']
             if recovering:
-                cfg.update(maintenance_only=not recovering_business,solver_transport_resume=recovering_business,
+                cfg.update(maintenance_only=not recovering_business,solver_transport_resume=recovering_business and not args.resume_tool_error,
                     solver_tool_error_resume=args.resume_tool_error,
                     framing=original_cfg['framing'],recover_format_error=args.recover_format,
                     retry_native_maintenance=args.retry_native_maintenance,retry_transport_maintenance=args.retry_transport_maintenance)

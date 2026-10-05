@@ -146,7 +146,7 @@ def run(path, cfg, out, project):
                 # Historical interrupted skill-only job; no completed writer is replayed.
                 agent._spawn_background_review(messages_snapshot=prior[0]['messages'],review_memory=False,review_skills=True)
             last_business_result={'instance_complete':True}
-        elif cfg.get('solver_transport_resume'):
+        elif cfg.get('solver_transport_resume') or cfg.get('solver_tool_error_resume'):
             previous=json.loads((out/'conversations.json').read_text())
             save('conversations-before-tool-error.json' if cfg.get('solver_tool_error_resume') else 'conversations-before-transport.json',previous)
             if (out/'jobs.json').exists() and any(j['status']!='returned' or j.get('native_result') in {None,'error'} for j in json.loads((out/'jobs.json').read_text())):
