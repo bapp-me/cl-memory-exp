@@ -4,7 +4,7 @@ from datetime import datetime,timezone
 import json
 from statistics import median
 from prepare import ROOT,read,save,sha
-from analysis_provider import PRIVATE
+from analysis_provider import PRIVATE,packet_path
 from judge_full_analysis import METRICS,validate
 
 
@@ -29,10 +29,13 @@ def main():
     for e in entries:
         path=PRIVATE/'judge'/(e['packet_id']+'.json')
         if not path.exists():pending.append(e['packet_id']);continue
-        record=read(path);packet=read(PRIVATE/'packets'/(e['packet_id']+'.json'))
-        if record['packet_sha256']!=sha(PRIVATE/'packets'/(e['packet_id']+'.json')):pending.append(e['packet_id']);continue
+        record=read(path);packet=read(packet_path(e['packet_id']))
+        if record['packet_sha256']!=sha(packet_path(e['packet_id'])):pending.append(e['packet_id']);continue
         if record['status']!='valid':failed.append({'packet_id':e['packet_id'],'error':record['validation_error']});continue
-        validate(record['judgement'],packet);valid[e['packet_id']]=record
+        try:validate(record['judgement'],packet)
+        except ValueError as exc:
+            failed.append({'packet_id':e['packet_id'],'error':str(exc),'previous_contract':record.get('response_contract')});continue
+        valid[e['packet_id']]=record
         normalizations+=len(record.get('citation_span_normalizations',[]))
         if e['kind']=='task_review':
             packets_by_task[e['unit_id']].append(record)
@@ -70,7 +73,7 @@ def main():
     retrieval=[]
     for unit,values in candidate_labels.items():
         e=next(e for e in entries if e['unit_id']==unit and e['kind']=='candidate_relevance')
-        packet=read(PRIVATE/'packets'/(e['packet_id']+'.json'));scope=packet['scope']
+        packet=read(packet_path(e['packet_id']));scope=packet['scope']
         expected_packets=[e for e in entries if e['unit_id']==unit and e['kind']=='candidate_relevance']
         complete_packets=all(e['packet_id'] in valid for e in expected_packets)
         selected={f'candidate:{i}' for i in scope['selected_indices']};expected={f'candidate:{i}' for i in scope['candidate_indices']}
@@ -96,11 +99,14 @@ def main():
     totals={f:sum((a.get('usage') or {}).get(f) or 0 for a in calls) for f in usage_fields}
     discrepancies=[a['attempt_id'] for a in calls if a.get('usage') and all(k in a['usage'] for k in usage_fields)
                    and a['usage']['input_tokens']+a['usage']['output_tokens']!=a['usage']['total_tokens']]
-    repeat=[]
+    repeat=[];invalid_repeats=[]
     for p in (PRIVATE/'judge-repeat').glob('*.json'):
         r=read(p);primary=valid.get(r['packet_id'])
         if not primary or r['status']!='valid':continue
-        packet=read(PRIVATE/'packets'/(r['packet_id']+'.json'));validate(r['judgement'],packet)
+        packet=read(packet_path(r['packet_id']))
+        try:validate(r['judgement'],packet)
+        except ValueError as exc:
+            invalid_repeats.append({'packet_id':r['packet_id'],'error':str(exc)});continue
         if r['kind']=='task_review':
             for m in METRICS:
                 a=primary['judgement']['metrics'][m];b=r['judgement']['metrics'][m]
@@ -133,6 +139,7 @@ def main():
             'either_assessed_status_score_agreement':sum(r['agreement'] for r in either_assessed)/len(either_assessed) if either_assessed else None,
             'neither_assessed_comparisons':len(repeat)-len(either_assessed),
             'valid_repeat_packets':len({r['packet_id'] for r in repeat}),
+            'invalid_repeat_packets':invalid_repeats,
             'note':'Same-model repeat with reversed evidence-document order, not independent human accuracy.'},
         'frozen_evidence':{'files_verified':len(source),'changed_files':changed},
         'causal_effect':'unverified_by_user_choice',

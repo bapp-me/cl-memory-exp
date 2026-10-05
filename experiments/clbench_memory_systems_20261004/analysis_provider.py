@@ -16,6 +16,16 @@ MODEL = 'glm-5.3-flash'
 PRIVATE = ROOT/'private-analysis/full_observability_20261005'
 
 
+def packet_path(ident):
+    """Read-only resolution during the audited legacy queue drain."""
+    path=PRIVATE/'packets'/(ident+'.json')
+    if path.exists():return path
+    state=ROOT/'records/judge-controller-handoff.json'
+    if state.exists() and read(state)['status']=='legacy_queue_draining':
+        return PRIVATE/'packets-concurrency-snapshot'/(ident+'.json')
+    return path
+
+
 class NoRedirect(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         raise RuntimeError('Provider redirect refused; credential destination is fixed')

@@ -5,6 +5,7 @@ from copy import deepcopy
 from datetime import datetime,timezone
 import hashlib
 import json
+from pathlib import Path
 import threading
 import time
 from prepare import ROOT,read,save,sha
@@ -12,6 +13,7 @@ from analysis_provider import PRIVATE,MODEL,call,secret,output_text
 
 METRICS=['faithfulness','relevance','applicability','organization','visible_reuse','repetition_efficiency','compression_retention']
 STOP=threading.Event()
+PACKET_ROOT=PRIVATE/'packets'
 
 
 def response_schema(packet):
@@ -45,30 +47,43 @@ For kind candidate_relevance, metrics={} and findings=[]. Judge EVERY supplied c
 """
 
 
+RUBRIC += """\nEvidence discipline: For every assessed relevance or applicability score, cite an exact span from a supplied visible_memory document. For visible_reuse=2, cite BOTH prior visible_memory content and a current trajectory/tool action that matches it. A plan newly written during the current task is not prior-task memory reuse. A memory read alone establishes access, not a specific action-content match. If a partial packet lacks the needed prior-memory span, use unknown rather than borrowing evidence from another unsupplied packet. Missing source coverage alone is NOT evidence for faithfulness=1: use unknown when missing origins prevent an assessment, or explicitly restrict the assessment to supported supplied facts; use 0/1 only with a concrete unsupported/contradictory claim or lost qualification visible in this packet. Avoid unverified counterfactual language in reasons as well as findings.\n"""
+
+
 def normalize_citations(result,packet):
     """Resolve only exact source spans and reversible JSON display formatting.
 
     Never change labels, scores, reasons or findings. Raw provider output remains
-    untouched. A paraphrase is still rejected. Cross-fragment relocation must
-    remain in the same original source document and in this supplied packet.
+    untouched. A paraphrase is still rejected. Prefer the original source; a
+    different source is allowed only when an exact span has one unique owner.
     """
     result=deepcopy(result);docs={d['id']:d['text'] for d in packet['documents']};changes=[]
     values=list(result.get('metrics',{}).values())+result.get('findings',[])+result.get('candidates',[])
     for value in values:
         for c in value.get('citations',[]):
             ident=c.get('evidence_id','');q=c.get('quote','')
-            if ident not in docs or not 8<=len(q)<=240:continue
-            if q in docs[ident]:continue
+            if not 8<=len(q)<=240:continue
+            if ident in docs and q in docs[ident]:continue
             compact=q.replace('\": ', '\":').replace('\", ', '\",')
             variants=[('exact_same_source_fragment',q),('json_separator_spacing',compact),
                       ('json_string_escaping',json.dumps(q,ensure_ascii=False)[1:-1]),
                       ('json_spacing_and_escaping',json.dumps(compact,ensure_ascii=False)[1:-1])]
+            try:
+                decoded=json.loads('"'+q+'"')
+                if isinstance(decoded,str):variants.append(('json_string_unescaping',decoded))
+            except json.JSONDecodeError:pass
             matched=None
             for kind,quote in variants:
                 for target,text in docs.items():
                     if target.split('@')[0]==ident.split('@')[0] and quote in text and 8<=len(quote)<=240:
                         matched=(kind,target,quote);break
                 if matched:break
+            if not matched:
+                for kind,quote in variants:
+                    if not 8<=len(quote)<=240:continue
+                    owners=[target for target,s in docs.items() if quote in s]
+                    if len(owners)==1:
+                        matched=('unique_exact_supplied_source:'+kind,owners[0],quote);break
             if matched:
                 kind,target,quote=matched
                 changes.append({'original':dict(c),'resolved':{'evidence_id':target,'quote':quote},'method':kind})
@@ -101,6 +116,15 @@ def validate(result,packet):
         for metric in ['relevance','applicability','visible_reuse']:
             if result['metrics'][metric]['status']=='assessed' and not packet['scope']['visible_memory_evidence']:
                 raise ValueError('Memory use assessed without recorded visibility evidence')
+            value=result['metrics'][metric]
+            if value['status']=='assessed' and (metric!='visible_reuse' or value['score']==2):
+                visible=[d['text'] for d in packet['documents'] if d.get('kind')=='visible_memory']
+                if not any(c['quote'] in s for c in value['citations'] for s in visible):
+                    raise ValueError(metric+' lacks a citation grounded in supplied prior visible memory')
+                if metric=='visible_reuse':
+                    actions={d['id'] for d in packet['documents'] if d.get('kind') in {'current_trajectory','native_tool_trace','all_role_tool_calls'}}
+                    if not any(c['evidence_id'] in actions for c in value['citations']):
+                        raise ValueError('Concrete reuse lacks current-action citation')
         if result.get('candidates'):raise ValueError('Unexpected candidate output')
         for f in result.get('findings',[]):
             if f.get('causal_verified') is not False:raise ValueError('Unsupported causal claim')
@@ -122,16 +146,20 @@ def wire_packet(packet):
 
 def run_one(entry,key,repeat=False,retry_failed=False):
     ident=entry['packet_id'];out=PRIVATE/('judge-repeat' if repeat else 'judge')/f'{ident}.json'
-    packet=read(PRIVATE/'packets'/f'{ident}.json')
-    old=None
+    packet=read(PACKET_ROOT/f'{ident}.json')
+    old=None;cached_error=None
     if out.exists():
         old=read(out)
-        if old.get('status')=='valid' and old['packet_sha256']==sha(PRIVATE/'packets'/f'{ident}.json'):return old
+        if old.get('status')=='valid' and old['packet_sha256']==sha(PACKET_ROOT/f'{ident}.json'):
+            try:
+                validate(old['judgement'],packet)
+                return old
+            except ValueError as exc:cached_error=str(exc)
         if old.get('status')=='failed' and not retry_failed:return old
         save(PRIVATE/'judge-history'/f"{ident}-{old['attempt_ids'][-1]}.json",old)
     wire=wire_packet(packet)
     if repeat:wire['documents']=list(reversed(wire['documents']))
-    attempts=[];error=(old or {}).get('validation_error');result=None;normalizations=[]
+    attempts=[];error=cached_error or (old or {}).get('validation_error');result=None;normalizations=[]
     for try_number in range(2):
         if STOP.is_set():
             return {'packet_id':ident,'status':'paused_provider_resource','validation_error':'Provider authorization/resource stop','attempt_ids':attempts}
@@ -158,9 +186,9 @@ def run_one(entry,key,repeat=False,retry_failed=False):
             if event['http_status'] in {401,402,403}:break
             if event.get('error') and not (event['http_status'] is None or event['http_status']==429 or 500<=event['http_status']<=599):break
             if try_number==0:time.sleep(2)
-    record={'packet_id':ident,'packet_sha256':sha(PRIVATE/'packets'/f'{ident}.json'),'kind':packet['kind'],
+    record={'packet_id':ident,'packet_sha256':sha(PACKET_ROOT/f'{ident}.json'),'kind':packet['kind'],
             'status':'valid' if error is None else 'failed','attempt_ids':attempts,'validation_error':error,
-            'judgement':result,'completed_at':datetime.now(timezone.utc).isoformat(),'repeat':repeat,'response_contract':'strict_schema_v3',
+            'judgement':result,'completed_at':datetime.now(timezone.utc).isoformat(),'repeat':repeat,'response_contract':'strict_schema_v4_evidence_grounding',
             'rubric_sha256':hashlib.sha256(RUBRIC.encode()).hexdigest(),
             'actual_instructions_sha256':hashlib.sha256(payload['instructions'].encode()).hexdigest(),
             'citation_span_normalizations':normalizations}
@@ -169,10 +197,15 @@ def run_one(entry,key,repeat=False,retry_failed=False):
 
 
 def main():
+    global PACKET_ROOT
     p=argparse.ArgumentParser();p.add_argument('--limit',type=int);p.add_argument('--workers',type=int,default=4)
     p.add_argument('--repeat',action='store_true');p.add_argument('--retry-failed',action='store_true')
     p.add_argument('--tail-limit',type=int,help='One disjoint late-packet load-test batch while original front-of-queue controller drains')
-    p.add_argument('--status-name',default=None);p.add_argument('--packet-list',help='JSON list of specific disjoint packet IDs');args=p.parse_args()
+    p.add_argument('--status-name',default=None);p.add_argument('--packet-list',help='JSON list of specific disjoint packet IDs')
+    p.add_argument('--packet-root',help='Verified immutable packet copy inside private analysis for a draining controller handoff');args=p.parse_args()
+    if args.packet_root:
+        PACKET_ROOT=Path(args.packet_root).resolve()
+        assert PACKET_ROOT.is_relative_to(PRIVATE.resolve()),'Packet copy must stay in the private analysis workspace'
     entries=read(ROOT/'records/full-judge-packet-index.json')
     if args.packet_list:
         requested=set(read(ROOT/args.packet_list));entries=[e for e in entries if e['packet_id'] in requested]
