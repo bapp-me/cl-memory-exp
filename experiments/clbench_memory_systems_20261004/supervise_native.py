@@ -61,6 +61,11 @@ def main():
     history=read(state_path).get('recoveries',[]) if state_path.exists() else []
     handled={(x['run_id'],x['recovery']['snapshot_sha256']) for x in history};children={};last=None
     while True:
+        resource_path=ROOT/'records/provider-resource-block.json'
+        if resource_path.exists() and read(resource_path).get('status')=='blocked_provider_resource':
+            value=read(state_path) if state_path.exists() else {}
+            value.update(status='stopped_provider_resource',as_of=datetime.now(timezone.utc).isoformat())
+            save(state_path,value);print(json.dumps({'stopped':'provider_resource_exhausted'}),flush=True);break
         attention=[];progress=[]
         for run in RUNS:
             d=ROOT/'private-runs'/run;status=read(d/'stream-status.json')
