@@ -17,8 +17,8 @@ D1 使用 GLM-5.3-Flash / Aixoras Responses，启动 8 个独立 Codex 作业，
 
 用户请求直接测试 /v1/messages 后得到 HTTP 200，返回模型为 glm-5.3-flash、标准 Anthropic message 和已报告用量。先前仅依据已验收接口记录而作出的阻断判断已撤销；本轮不使用协议转换。D2/D3 当前状态分别为 in_progress / pending_D2_qualification。
 
-原生实验共有 131 个唯一 provider attempt（D1 90、D2 41、D3 0），另有 1 次用户指定的 Messages 接口验收。HTTP 失败缺 usage 时保留 unknown。按实际协议分别汇总 input、output 和 cache：Anthropic 的 input 不含 cache 读写，Responses 的 input 已含 cache；不直接混加这两个 input 字段。原始 provider 字段及算术不一致均保留。只计算网关一次用量，不叠加原生重复记账。实际账户扣费未知。DPAPI 身份失败和 D2 缺 method_id 的首次启动均发生在提供商模型调用之前，私有区保留零调用基础设施记录。
+原生实验共有 134 个唯一 provider attempt（D1 90、D2 44、D3 0），另有 1 次用户指定的 Messages 接口验收。HTTP 失败缺 usage 时保留 unknown。按实际协议分别汇总 input、output 和 cache：Anthropic 的 input 不含 cache 读写，Responses 的 input 已含 cache；不直接混加这两个 input 字段。原始 provider 字段及算术不一致均保留。只计算网关一次用量，不叠加原生重复记账。实际账户扣费未知。DPAPI 身份失败和 D2 缺 method_id 的首次启动均发生在提供商模型调用之前，私有区保留零调用基础设施记录。
 
-33 项相关测试通过；源快照和历史评分保持原样。结果仅是目的性选择案例上的开发诊断，不能声称泛化、显著性、新算法成立；Claude 写入改善须以 D2 源证据审查为准。
+37 项相关测试通过；源快照和历史评分保持原样。结果仅是目的性选择案例上的开发诊断，不能声称泛化、显著性、新算法成立；Claude 写入改善须以 D2 源证据审查为准。
 
 详细证据：[D0](followup-records/d0-evidence.json)、[配对结果](followup-records/d1-paired-results.json)、[运行锁](followup-records/d1-runtime-lock.json)、[核验](followup-records/verification.json)、[阶段决定与成本](followup-records/conclusion.json)。原始请求、状态 DB、会话和评价材料仍在忽略目录，不发布。

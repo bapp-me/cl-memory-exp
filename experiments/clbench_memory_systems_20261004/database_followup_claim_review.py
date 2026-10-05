@@ -10,7 +10,7 @@ import json
 
 from database_followup_d0 import PRIVATE, PUBLIC, ROOT, ref
 from database_followup_claude import sources, MEMORY
-from native_evidence import archive, validate, usage_for, validate_attempt_accounting
+from native_evidence import archive, validate, usage_for, validate_attempt_accounting, memory_snapshot
 from prepare import read, save, sha
 from protocol import digest
 
@@ -81,20 +81,34 @@ def main():
         categories=set()
         claims=[]
         for claim in annotation['claims']:
-            path=MEMORY+claim['memory_file']
-            assert claim['quote'] in files[path].decode('utf8'),(name,claim['quote'])
+            path=MEMORY+claim['memory_file'] if claim['memory_file'] else None
+            if path:
+                assert claim['quote'] in files[path].decode('utf8'),(name,claim['quote'])
+            else:
+                assert claim['status']=='no_materialized_update'
+                assert read(out/'memory-diff.json')=={}
+                assert memory_snapshot(archive(ROOT/job['pre_state']['path']),'claude')==memory_snapshot(files,'claude')
             categories.add(claim['check'])
             supports=[]
             for source in claim.get('sources',[]):
                 assert source['index']<=job['index']
                 supports.append(evidence(source['index'],source['offset'],source['part'],source['quote']))
             claims.append({**claim,'sources':supports,'after_memory_path':path,
-                'after_memory_sha256':hashlib.sha256(files[path]).hexdigest()})
+                'after_memory_sha256':hashlib.sha256(files[path]).hexdigest() if path else None})
         assert categories==set(read(ROOT/'config/database-followup.plan.json')['D2']['claim_checks'])
         job['semantic_review']={'reviewer':annotations['reviewer'],'claims':claims,
             'bounded_gate_pass':annotation['bounded_gate_pass'],
             'decision_reason':annotation['decision_reason'],
             'whole_memory_score':None,'missing_sources_are_not_automatically_false':True}
+        job['cost_basis']='unique native Anthropic gateway attempts; native duplicate usage not added again'
+        job['materialized_memory_changed']=bool(read(out/'memory-diff.json'))
+        if annotation.get('output_anomaly'):
+            native=read(out/'native-completion.json')['result']['result']
+            unit=annotation['output_anomaly']['repeated_unit']
+            assert native and len(native)%len(unit)==0 and native==unit*(len(native)//len(unit))
+            job['output_anomaly']={**annotation['output_anomaly'],'repeats':len(native)//len(unit),
+                'characters':len(native),'native_completion':ref(out/'native-completion.json'),
+                'interpretation':'Native end_turn/completed is lifecycle evidence; no materialized memory update. Cause is unknown; no quality replay.'}
         pairs.setdefault((job['index'],job['repeat']),{})[job['arm']]=job
     assert len(set(sessions))==8
     assert len({a['attempt_id'] for a in all_attempts})==len(all_attempts)
