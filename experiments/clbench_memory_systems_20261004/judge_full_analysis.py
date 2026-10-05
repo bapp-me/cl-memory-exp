@@ -17,7 +17,8 @@ STOP=threading.Event()
 def response_schema(packet):
     def obj(properties):return {'type':'object','properties':properties,'required':list(properties),'additionalProperties':False}
     string={'type':'string'}
-    citation=obj({'evidence_id':string,'quote':string})
+    citation=obj({'evidence_id':{'type':'string','enum':[d['id'] for d in packet['documents']]},
+                  'quote':{'type':'string','minLength':8,'maxLength':240}})
     citations={'type':'array','items':citation}
     metric=obj({'status':{'type':'string','enum':['assessed','unknown','not_applicable']},
                 'score':{'type':['integer','null'],'enum':[0,1,2,None]},'reason':string,'citations':citations})
@@ -122,6 +123,7 @@ def wire_packet(packet):
 def run_one(entry,key,repeat=False,retry_failed=False):
     ident=entry['packet_id'];out=PRIVATE/('judge-repeat' if repeat else 'judge')/f'{ident}.json'
     packet=read(PRIVATE/'packets'/f'{ident}.json')
+    old=None
     if out.exists():
         old=read(out)
         if old.get('status')=='valid' and old['packet_sha256']==sha(PRIVATE/'packets'/f'{ident}.json'):return old
@@ -129,11 +131,15 @@ def run_one(entry,key,repeat=False,retry_failed=False):
         save(PRIVATE/'judge-history'/f"{ident}-{old['attempt_ids'][-1]}.json",old)
     wire=wire_packet(packet)
     if repeat:wire['documents']=list(reversed(wire['documents']))
-    attempts=[];error=None;result=None;normalizations=[]
+    attempts=[];error=(old or {}).get('validation_error');result=None;normalizations=[]
     for try_number in range(2):
         if STOP.is_set():
             return {'packet_id':ident,'status':'paused_provider_resource','validation_error':'Provider authorization/resource stop','attempt_ids':attempts}
-        payload={'model':MODEL,'instructions':RUBRIC,'input':json.dumps(wire,ensure_ascii=False),
+        format_feedback=('\nA previous attempt failed mechanical validation: '+error+
+                         '. Rejudge from the supplied evidence without changing criteria. Prefer SHORT literal quotes of 20-80 characters. '
+                         'Copy exact characters including JSON escaping; never paraphrase or add ellipses inside a quote. '
+                         'Use unknown if the evidence cannot be supported. This feedback is about format/provenance, not desired scores.') if error and 'Provider response' not in error else ''
+        payload={'model':MODEL,'instructions':RUBRIC+format_feedback,'input':json.dumps(wire,ensure_ascii=False),
                  'max_output_tokens':65536,'reasoning':{'effort':'high'},
                  'text':{'format':{'type':'json_schema','name':'clbench_evidence_judge','strict':True,'schema':response_schema(packet)}},
                  'stream':True,'store':False}
@@ -154,8 +160,10 @@ def run_one(entry,key,repeat=False,retry_failed=False):
             if try_number==0:time.sleep(2)
     record={'packet_id':ident,'packet_sha256':sha(PRIVATE/'packets'/f'{ident}.json'),'kind':packet['kind'],
             'status':'valid' if error is None else 'failed','attempt_ids':attempts,'validation_error':error,
-            'judgement':result,'completed_at':datetime.now(timezone.utc).isoformat(),'repeat':repeat,'response_contract':'strict_schema_v2',
-            'rubric_sha256':hashlib.sha256(RUBRIC.encode()).hexdigest(),'citation_span_normalizations':normalizations}
+            'judgement':result,'completed_at':datetime.now(timezone.utc).isoformat(),'repeat':repeat,'response_contract':'strict_schema_v3',
+            'rubric_sha256':hashlib.sha256(RUBRIC.encode()).hexdigest(),
+            'actual_instructions_sha256':hashlib.sha256(payload['instructions'].encode()).hexdigest(),
+            'citation_span_normalizations':normalizations}
     save(out,record)
     return record
 

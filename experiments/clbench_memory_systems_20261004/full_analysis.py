@@ -186,6 +186,8 @@ def packets(unit_id,kind,prompt,documents,meta):
 
 def main():
     PRIVATE.mkdir(parents=True,exist_ok=True)
+    live=[p for p in (PRIVATE/'requests').glob('*.attempt.json') if read(p)['phase']=='started']
+    assert not live, 'Do not rebuild evidence packets while any judge request is in flight'
     selected=read(ROOT/'records/corrected-task-index.json')
     ledger={a['attempt_id']:a for a in read(ROOT/'records/attempt-ledger.json')}
     # Include the explicitly interrupted task, with no invented grade or barrier.
@@ -304,6 +306,7 @@ def main():
         metrics={'unit_id':unit_id,'run_id':run,'source_run_id':row['source_run_id'],'method':method,'environment':row['environment'],
                  'index':idx,'user_interrupted':interrupted,'correct':row['correct'],
                  'before':mem_stats(before_files),'after':mem_stats(after_files) if after is not None else None,
+                 'memory_byte_basis':'native_file_payload' if native else 'canonicalized_persisted_state_payload',
                  'updates':{'added_files':len(added),'removed_files':len(removed),'changed_files':len(changed),
                             'content_changed_files':sum(memory_kind(n)!='bookkeeping' for n in added+removed+changed)},
                  'storage_categories':raw_storage,'business_actions_logged':len(actions),'exact_repeated_actions':sum(c-1 for c in counts.values()),
@@ -339,12 +342,16 @@ def main():
     save(PRIVATE/'frozen-evidence.json',frozen)
     save(ROOT/'records/full-mechanical-task-metrics.json',all_rows)
     save(ROOT/'records/full-judge-packet-index.json',all_packets)
+    # Include the same corrected Notepad context in every reproducible rebuild.
+    from repair_notepad_judge_context import main as repair_notepad_context
+    repair_notepad_context([])
+    all_packets=read(ROOT/'records/full-judge-packet-index.json')
     save(ROOT/'records/full-mechanical-summary.json',{'as_of':datetime.now(timezone.utc).isoformat(),'model_calls':0,'tasks':len(all_rows),
          'scored_tasks':sum(not r['user_interrupted'] for r in all_rows),'user_interrupted':sum(r['user_interrupted'] for r in all_rows),
          'judge_packets':len(all_packets),'packet_types':dict(Counter(p['kind'] for p in all_packets)),
          'frozen_files':len(frozen),'frozen_manifest_sha256':sha(PRIVATE/'frozen-evidence.json'),
          'source_data_written':False,'causal_effect':'not_tested',
-         'limitations':['Size categories are physical bytes with differing framework semantics, not a memory-efficiency ranking.',
+         'limitations':['Native sizes are file payload bytes; Pi sizes are canonicalized persisted-state payload bytes. They are not comparable physical storage or memory-efficiency rankings.',
              'Exact action or text repetition is not necessarily waste; semantic interpretation is delegated to the judge.',
              'Unattributed native pre/post-submission requests are not assumed to be solver/writer respectively.',
              'Observed compaction markers are not proof of complete event capture; missing content cannot be judged.',

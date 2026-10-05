@@ -55,6 +55,7 @@ def main():
         for r in rows:
             for role,value in r['cost_roles'].items():roles[role].update(value)
         summary.append({'method':method,'environment':env,'tasks':len(rows),
+            'memory_byte_basis':'canonicalized_persisted_state_payload' if method.startswith('pi_') else 'native_file_payload',
             'before_memory_bytes_max':max(r['before']['physical_bytes'] for r in rows),
             'before_memory_bytes_median':median(r['before']['physical_bytes'] for r in rows),
             'last_after_memory_categories':next((r['after']['categories'] for r in reversed(rows) if r['after'] is not None),None),
@@ -115,6 +116,8 @@ def main():
     source=read(PRIVATE/'frozen-evidence.json')
     changed=[s['path'] for s in source if sha(ROOT/s['path'])!=s['sha256']]
     assert not changed,'Analysis modified a frozen source'
+    both_assessed=[r for r in repeat if r['first_status']==r['repeat_status']=='assessed']
+    either_assessed=[r for r in repeat if 'assessed' in (r['first_status'],r['repeat_status'])]
     report={'as_of':datetime.now(timezone.utc).isoformat(),'status':'complete' if not pending and not failed else 'in_progress',
         'expected_packets':len(entries),'valid_packets':len(valid),'failed_packets':failed,'pending_packets':pending,
         'citation_span_normalizations':normalizations,'groups':summary,'finding_category_packet_counts':dict(finding_counts),
@@ -124,6 +127,12 @@ def main():
             'note':'Aixoras usage fields preserved independently; old Z.AI prices not applied.'},
         'reliability':{'comparisons':len(repeat),'exact_agreements':sum(r['agreement'] for r in repeat),
             'exact_agreement_rate':sum(r['agreement'] for r in repeat)/len(repeat) if repeat else None,
+            'both_assessed_comparisons':len(both_assessed),
+            'both_assessed_score_agreement':sum(r['agreement'] for r in both_assessed)/len(both_assessed) if both_assessed else None,
+            'either_assessed_comparisons':len(either_assessed),
+            'either_assessed_status_score_agreement':sum(r['agreement'] for r in either_assessed)/len(either_assessed) if either_assessed else None,
+            'neither_assessed_comparisons':len(repeat)-len(either_assessed),
+            'valid_repeat_packets':len({r['packet_id'] for r in repeat}),
             'note':'Same-model repeat with reversed evidence-document order, not independent human accuracy.'},
         'frozen_evidence':{'files_verified':len(source),'changed_files':changed},
         'causal_effect':'unverified_by_user_choice',

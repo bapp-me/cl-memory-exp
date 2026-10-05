@@ -8,8 +8,8 @@ from analysis_provider import PRIVATE
 from full_analysis import packets,canonical
 
 
-def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--defer-loadtest-tail',action='store_true');args=parser.parse_args()
+def main(argv=None):
+    parser=argparse.ArgumentParser();parser.add_argument('--defer-loadtest-tail',action='store_true');args=parser.parse_args(argv)
     index=read(ROOT/'records/full-judge-packet-index.json')
     rows={f"{r['run_id']}-{r['index']:03d}":r for r in read(ROOT/'records/corrected-task-index.json') if r['method']=='pi_notepad'}
     live={read(p)['unit_id'] for p in (PRIVATE/'requests').glob('*.attempt.json') if read(p)['phase']=='started'}
