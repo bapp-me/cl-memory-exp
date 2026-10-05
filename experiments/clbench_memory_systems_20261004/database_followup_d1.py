@@ -134,19 +134,20 @@ def infra(processes, existing_broker=False):
     raise RuntimeError('Task gateway did not start')
 
 
-def job(index, arm, repeat, runtime_hash, lock, resume=False):
+def job(index, arm, repeat, runtime_hash, lock, resume=False, framework='codex',phase='D1',candidate=None):
     from database_adapter import DatabaseStream
-    ident = f'd1-q{index+1}-{arm.lower()}-{repeat}'
+    ident = f'{phase.lower()}-q{index+1}-{arm.lower()}-{repeat}'
     out = PRIVATE / ident
     out.mkdir(exist_ok=resume)
-    state_ref = restored_prefix('codex',index)
+    state_ref = restored_prefix('codex',index) if candidate is None else {**ref(candidate),'target_index':index,'kind':'D2_candidate_after_writer'}
     initial = ROOT/state_ref['path']
     recovered_session=None
     if resume:
+        if not(out/'business-actions.json').exists():save(out/'business-actions.json',[])
         if (out/'submission.json').exists():
             raise RuntimeError('Submitted work cannot be replayed')
         failed=usage_for(out)
-        if not failed or not any((a['http_status'] or 0)>=500 for a in failed):
+        if not failed or not (any((a['http_status'] or 0)>=500 for a in failed) or (out/'no-progress-interruption.json').exists()):
             raise RuntimeError('No captured transport failure to recover')
         history=out/('recovery-history-'+uuid.uuid4().hex[:8]);history.mkdir()
         for name in ['input.json','process.json','failure.json','attempts.json']:
@@ -155,21 +156,24 @@ def job(index, arm, repeat, runtime_hash, lock, resume=False):
         initial=recovery_archive(out,history,recovered_session)
         save(out/'transport-recovery.json',{'authorization':'User explicitly requested restoring Codex HTTP 520 interruption',
             'initial_snapshot':ref(initial),'session_id':recovered_session,
-            'business_state_before':ref(out/'evaluator-private/state.json'),
+            'business_state_before':ref(out/'evaluator-private/state.json') if (out/'evaluator-private/state.json').exists() else {'status':'zero_actions_no_checkpoint','target_database':ref(out/'evaluator-private/target.db')},
             'actions_before':ref(out/'business-actions.json'),'existing_failed_attempts':failed})
-    historical = ROOT / 'private-runs/formal-db-codex-r1' / f'task-{index:03d}'
+    historical = ROOT / ('private-runs/formal-db-codex-r1' if framework=='codex' else 'private-runs/formal-db-claude-r1') / f'task-{index:03d}'
+    instance_id={33:'107',27:'110',24:'101',26:'105'}[index]
     cfg0 = read(historical/'input.json')
     prompt = cfg0.get('benchmark_prompt',cfg0['prompt'])
-    extra = sidebar(index) if arm=='R1' else ''
+    extra = sidebar(index) if phase=='D1' and arm=='R1' else ''
     if extra:
         prompt += '\n\nRecent completed same-method task evidence (chronological, original records):\n' + extra
     if not resume:save(out/'inputs-public-fields.json', {'index':index,'arm':arm,'repeat':repeat,
         'prompt_sha256':digest(prompt),'sidebar_sha256':digest(extra) if extra else None,
         'sidebar_bytes':len(extra.encode()),'pre_state':state_ref})
-    stream = DatabaseStream(out,restore=resume)
+    restore_business=resume and (out/'evaluator-private/state.json').exists()
+    stream = DatabaseStream(out,restore=restore_business)
     # Correct post-drift environment, isolated from every other target/arm.
     # No prior business task is executed to reach the selected target.
-    if not resume:
+    if not resume or not restore_business:
+        if resume and read(out/'business-actions.json'):raise RuntimeError('Cannot reconstruct business state after executed actions')
         stream.task._conn.close()
         db = out/'evaluator-private/target.db'
         shutil.copy2(UPSTREAM/'data/database_exploration/products_drifted.db',db)
@@ -183,11 +187,12 @@ def job(index, arm, repeat, runtime_hash, lock, resume=False):
         stream.task._question_history=[]
         stream.task._awaiting_action=True
         stream.query=stream.task.build_current_query()
-    assert stream.public_query()['instance_id']=={33:'107',27:'110'}[index]
+        stream.checkpoint()
+    assert stream.public_query()['instance_id']==instance_id
     if not resume:assert stream.query.prompt==cfg0.get('benchmark_prompt',cfg0['prompt'])
     complete=False
     actions=read(out/'business-actions.json') if resume else []
-    session=recovered_session
+    session=recovered_session or (str(uuid.uuid4()) if framework=='claude' else None)
     tool_token=uuid.uuid4().hex
     class Handler(BaseHTTPRequestHandler):
         def log_message(self,*args): pass
@@ -228,19 +233,20 @@ def job(index, arm, repeat, runtime_hash, lock, resume=False):
     server=HTTPServer(('127.0.0.1',0),Handler);server.timeout=.2
     route_id=uuid.uuid4().hex;route_token=uuid.uuid4().hex
     route_path=ROOT/'.local/native-routes'/f'{route_id}.json'
-    route={'token':route_token,'run_id':'database-followup-d1','method_id':'codex_memory_ready',
+    route={'token':route_token,'run_id':'database-followup-'+phase.lower(),'method_id':framework+'_memory_ready',
         'instance_id':stream.query.instance_id,'project_key':'database','session_id':session,
-        'phase':'solver','config_hash':digest(lock),'audit_relative_path':out.relative_to(ROOT).as_posix(),
+        'phase':'solver' if framework=='codex' else 'native_solver_and_any_maintenance','config_hash':digest(lock),'audit_relative_path':out.relative_to(ROOT).as_posix(),
         'tool_url':f'http://127.0.0.1:{server.server_port}/tool','tool_token':tool_token,
         'output_limit':65536,'output_ceiling':65536,'automatic_output_growth':False,'uniform_output_limit':True}
     save(route_path,route)
     cfg={**cfg0,'session_id':str(uuid.uuid4()),'output_limit':65536,'output_ceiling':65536,
         'automatic_output_growth':False,'gateway':f'http://172.30.0.1:{PORT}/r/{route_id}',
         'gateway_token':route_token,'prompt':prompt,'followup_solver_only':True}
+    if framework=='claude':cfg['session_id']=session
     cfg.pop('consolidation_schedule',None)
     if resume:
         cfg.update(session_id=recovered_session,solver_transport_resume=True,
-            transport_resume_prompt='Continue the same interrupted instance from its saved conversation and business state. The provider HTTP 520 was a transport failure. Do not repeat already completed queries or change the query budget; finish this same instance.')
+            transport_resume_prompt='Continue the same interrupted instance from its saved conversation and business state. Use CLBENCH_ACTION for the required business actions and final submission. Do not issue no-op shell commands, repeat already completed queries or change the query budget; finish this same instance.')
     save(out/'input.json',cfg)
     container=None;restored=False
     started=time.monotonic()
@@ -268,32 +274,36 @@ def job(index, arm, repeat, runtime_hash, lock, resume=False):
         if state['exit_code'] or not complete:
             raise RuntimeError('Native process/instance incomplete; no quality retry')
         validate_attempt_accounting(out,attempts)
-        receipt=json.loads(files[f'tasks/{ident}/followup-solver-receipt.json'])
-        assert receipt['session_id']==session and not receipt['source_selector_present']
-        assert receipt['startup_memory_jobs_disabled'] and not receipt['post_task_maintenance_started']
+        if framework=='codex':
+            receipt=json.loads(files[f'tasks/{ident}/followup-solver-receipt.json'])
+            assert receipt['session_id']==session and not receipt['source_selector_present']
+            assert receipt['startup_memory_jobs_disabled'] and not receipt['post_task_maintenance_started']
+        else:
+            from native_evidence import validate
+            receipt=validate(files,ident,'claude',session)
         # Verify intervention exposure in actual provider inputs, every role.
         exposure=[]
         for path in out.glob('requests/*.native-request.json'):
             payload=read(path)
             cm=payload.get('client_metadata',{})
             turn=json.loads(cm.get('x-codex-turn-metadata','{}'))
-            assert turn.get('request_kind')=='turn' and cm.get('thread_id')==session
-            raw=json.dumps(payload.get('input'),ensure_ascii=False)
+            if framework=='codex':assert turn.get('request_kind')=='turn' and cm.get('thread_id')==session
+            raw=json.dumps(payload.get('input',payload.get('messages')),ensure_ascii=False)
             marker='Recent completed same-method task evidence'
             assert (marker in raw)==bool(extra)
             exposure.append({**ref(path),'sidebar_present':marker in raw})
-        before=read(historical/'memory-before.json')
-        after=memory_snapshot(files,'codex')
+        before=read(historical/'memory-before.json') if candidate is None else memory_snapshot(archive(candidate),framework)
+        after=memory_snapshot(files,framework)
         save(out/'memory-diff.json',{'before':before,'after':after})
         graded=read(out/'evaluator-private'/f'result-{index:03d}.json')
         grade=graded['record']
-        episode=project_episode(namespace='database-followup/D1/'+ident,index=index,
-            instance_id=stream.query.instance_id if stream.query else {33:'107',27:'110'}[index],
+        episode=project_episode(namespace='database-followup/'+phase+'/'+ident,index=index,
+            instance_id=instance_id,
             prompt=prompt,assistant_text=[],tools=actions,feedback=actions[-1]['observation'])
         save(out/'legal-episode.json',episode)
         answer=read(out/'submission.json')['action']['content']
-        return {'job_id':ident,'phase':'D1','method':'codex','arm':arm,'repeat':repeat,
-            'index':index,'instance_id':{33:'107',27:'110'}[index],'session_id':session,
+        return {'job_id':ident,'phase':phase,'method':framework,'arm':arm,'repeat':repeat,
+            'index':index,'instance_id':instance_id,'session_id':session,
             'status':'completed','official_correct':grade['correct'],'reward':graded['outcome']['reward'],
             'queries':grade['num_queries'],'answer':answer,'seconds':round(time.monotonic()-started,3),
             'sidebar_bytes':len(extra.encode()),'pre_state':state_ref,'actual_inputs':exposure,
@@ -309,7 +319,7 @@ def job(index, arm, repeat, runtime_hash, lock, resume=False):
         if container:
             broker({'op':'quiesce','container_id':container})
             snapshot(container,out/('stopped-native-state.tar.gz' if restored else 'failed-restore-container.tar.gz'))
-        return {'job_id':ident,'phase':'D1','arm':arm,'repeat':repeat,'index':index,
+        return {'job_id':ident,'phase':phase,'arm':arm,'repeat':repeat,'index':index,
             'status':'blocked','reason':str(exc),'failure_type':type(exc).__name__,
             'attempts':usage_for(out),'score':None}
     finally:
@@ -327,11 +337,12 @@ def main():
     previous_rows=[]
     if args.continue_authorized:
         previous=read(PUBLIC/'d1-paired-results.json')
-        if previous['status']!='blocked' or len(previous['results'])!=4:
-            raise RuntimeError('Continuation must match the saved four-job interruption')
+        if previous['status']!='blocked' or not 4<=len(previous['results'])<=8:
+            raise RuntimeError('Continuation must match the saved interrupted prefix')
         previous_rows=previous['results']
         history=PRIVATE/('continuation-history-'+uuid.uuid4().hex[:8]);history.mkdir()
-        for name in ['d1-paired-results.json','d1-runtime-lock.json','conclusion.json','verification.json']:
+        for name in ['d1-paired-results.json','d1-runtime-lock.json','d1-continuation-runtime-lock.json','conclusion.json','verification.json']:
+            if not(PUBLIC/name).exists():continue
             shutil.copy2(PUBLIC/name,history/name)
     elif (PUBLIC/'d1-paired-results.json').exists():
         old=read(PUBLIC/'d1-paired-results.json')
@@ -375,6 +386,8 @@ def main():
     save(PUBLIC/lock_name,lock)
     save(PRIVATE/lock_name,lock)
     frozen=PRIVATE/('runtime-source-continuation' if args.continue_authorized else 'runtime-source')
+    if frozen.exists() and args.continue_authorized:
+        shutil.copytree(frozen,history/'runtime-source-continuation')
     frozen.mkdir(exist_ok=True)
     for name,value in lock['source_files'].items():
         assert sha(ROOT/name)==value

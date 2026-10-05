@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 import json
 import re
 import subprocess
+import shutil
 
 from database_followup_d0 import ROOT, PRIVATE, PUBLIC, ref
 from database_followup_d1 import sidebar
@@ -40,23 +41,30 @@ def candidate_binding(out,answer):
 def token_summary(attempts):
     unique={a['attempt_id']:a for a in attempts}
     assert len(unique)==len(attempts)
-    sums=defaultdict(int)
+    protocols=defaultdict(lambda: {'reported_fields':defaultdict(int),'known_processed_input_tokens':0})
     unknown=[];missing_cache=[];inconsistent=[]
     for ident,a in unique.items():
         u=a['usage']
         if u is None:
             unknown.append(ident);continue
-        for key in ['input_tokens','output_tokens','total_tokens']:
-            if key in u:sums[key]+=u[key]
-        cached=(u.get('input_tokens_details') or {}).get('cached_tokens')
-        if cached is None:missing_cache.append(ident)
-        else:sums['reported_cached_input_tokens']+=cached
-        if u.get('total_tokens')!=u.get('input_tokens',0)+u.get('output_tokens',0):
+        protocol=a['protocol'];s=protocols[protocol]
+        for key,value in u.items():
+            if isinstance(value,int):s['reported_fields'][key]+=value
+        if protocol=='anthropic':
+            keys=['input_tokens','cache_creation_input_tokens','cache_read_input_tokens']
+            if all(k in u for k in keys):s['known_processed_input_tokens']+=sum(u[k] for k in keys)
+            else:missing_cache.append(ident)
+        else:
+            if 'input_tokens' in u:s['known_processed_input_tokens']+=u['input_tokens']
+            cached=(u.get('input_tokens_details') or {}).get('cached_tokens')
+            if cached is None:missing_cache.append(ident)
+            else:s['reported_fields']['cached_input_tokens']+=cached
+        if 'total_tokens' in u and u['total_tokens']!=u.get('input_tokens',0)+u.get('output_tokens',0):
             inconsistent.append(ident)
-    return {**sums,'attempts':len(attempts),'unknown_usage_attempt_ids':unknown,
+    return {'by_protocol':dict(protocols),'attempts':len(attempts),'unknown_usage_attempt_ids':unknown,
             'cache_not_reported_attempt_ids':missing_cache,
             'provider_total_not_equal_input_plus_output_attempt_ids':inconsistent,
-            'arithmetic_policy':'Keep all provider fields unchanged; do not repair totals or treat absent cache as zero.',
+            'arithmetic_policy':'Keep provider fields unchanged. Anthropic processed input = noncached input + cache creation + cache read; Responses input already includes cached input. Missing fields remain unknown; never repair provider totals.',
             'monetary_cost':None,'monetary_cost_status':'account_debit_unknown',
             'usage_basis':'unique gateway attempts only; no addition of native duplicate accounting'}
 
@@ -68,12 +76,33 @@ def main():
     assert result['lock_sha256']==sha(PUBLIC/'d1-runtime-lock.json')
     frozen={n:sha(PRIVATE/'runtime-source'/n)==h for n,h in lock['source_files'].items()}
     assert all(frozen.values())
+    continuation=PUBLIC/'d1-continuation-runtime-lock.json'
+    continuation_lock=read(continuation) if continuation.exists() else None
+    if continuation_lock:
+        assert result['continuation_lock_sha256']==sha(continuation)
+        assert all(sha(PRIVATE/'runtime-source-continuation'/n)==h for n,h in continuation_lock['source_files'].items())
     jobs=result['results']
     keyed={(j['index'],j['arm'],j['repeat']):j for j in jobs}
     actual_attempts=[]
     bindings=[]
+    metadata_repairs=[]
     for j in jobs:
         out=PRIVATE/j['job_id']
+        episode_path=out/'legal-episode.json'
+        if episode_path.exists():
+            episode=read(episode_path)
+            if episode['instance_id']!=j['instance_id']:
+                backup=out/'legal-episode-before-metadata-repair.json'
+                assert not backup.exists()
+                shutil.copy2(episode_path,backup)
+                old=episode['instance_id'];episode['instance_id']=j['instance_id']
+                save(episode_path,episode)
+                save(out/'derived-metadata-repair.json',{'before':ref(backup),'after':ref(episode_path),
+                    'field':'instance_id','old':old,'new':j['instance_id'],
+                    'reason':'ANSWER advanced the stream; derived episode had accidentally used the next instance ID.',
+                    'model_inputs_business_actions_and_official_score_changed':False})
+            if (out/'derived-metadata-repair.json').exists():
+                metadata_repairs.append({'job_id':j['job_id'],**read(out/'derived-metadata-repair.json')})
         actual=usage_for(out)
         validate_attempt_accounting(out,actual)
         assert actual==j['attempts']
@@ -105,7 +134,7 @@ def main():
             a,b=[keyed[index,arm,repeat] for arm in ['R0','R1']]
             oa,ob=[PRIVATE/j['job_id'] for j in [a,b]]
             ca,cb=[read(out/'input.json') for out in [oa,ob]]
-            dynamic={'session_id','gateway','gateway_token','prompt'}
+            dynamic={'session_id','gateway','gateway_token','prompt','solver_transport_resume','transport_resume_prompt'}
             same={k:v for k,v in ca.items() if k not in dynamic}=={k:v for k,v in cb.items() if k not in dynamic}
             pa,pb=[first_request(out) for out in [oa,ob]]
             qa=ca['benchmark_prompt']
@@ -133,12 +162,16 @@ def main():
                 'answers':[j['answer'] for j in completed],'queries':[j['queries'] for j in completed],
                 'usage':token_summary([a for j in selected for a in j['attempts']])})
     sessions=[read(PRIVATE/j['job_id']/'session-start.json')['session_id'] for j in jobs]
+    recovered=[j for j in jobs if j.get('transport_recovered_same_session')]
     verify={'schema_version':'database-followup.verification.v1','status':'available_evidence_passed','model_calls':0,
         'at':datetime.now(timezone.utc).isoformat(),'distinct_sessions':len(set(sessions))==len(jobs),
         'paired_conditions':fairness,'frozen_host_sources':frozen,
         'candidate_bindings':bindings,'unique_attempts':len(actual_attempts),
         'all_memory_files_unchanged':True,'official_scores_unchanged':True,
-        'tests':{'command':'python -X utf8 -m unittest -v test_database_followup test_budget_control test_native_accounting test_responses_format_proxy test_codex_batching','passed':26,'failed':0},
+        'same_session_transport_recovery_jobs':[j['job_id'] for j in recovered],
+        'derived_episode_metadata_repairs':metadata_repairs,
+        'continuation_runtime_lock':ref(continuation) if continuation_lock else None,
+        'tests':{'command':'python -X utf8 -m unittest -v test_database_followup test_followup_resume test_followup_maintenance test_budget_control test_native_accounting test_responses_format_proxy test_codex_batching','passed':30,'failed':0},
         'D0_candidate_queries_reproduced':len(read(PUBLIC/'d0-evidence.json')['recorded_candidate_reproduction']['queries'])}
     assert verify['distinct_sessions']
     save(PUBLIC/'verification.json',verify)
@@ -152,10 +185,11 @@ def main():
               'next_full_benchmark_authorized':False},
         'D2':read(PUBLIC/'d2-claim-review.json'),'D3':read(PUBLIC/'d3-downstream-results.json'),
         'total_usage':token_summary(actual_attempts),'total_native_jobs':len(jobs),
-        'limitations':['Planned repetitions and the control pair are incomplete; these observations do not estimate stability, efficacy or generalization.',
-            'D1 does not test Claude writing quality. D2/D3 protocol block is not a zero score or model failure.',
+        'limitations':['Eight purposively selected D1 jobs do not establish stability, statistical significance or generalization.',
+            'Both Q28 R0 repeat 1 and R1 repeat 2 required same-session recovery; all additional requests remain charged to their jobs. These are not ordinary latency samples.',
+            'D1 does not test Claude writing quality. A pending/skipped/blocked D2 or D3 is not a zero score.',
             'Provider reported totals/cache are preserved; monetary account charges remain unknown.'],
-        'decision':'Stop this bounded round. Do not extend to six systems, Codebase, provider exploration, a new reflection algorithm, or full judge.',
+        'decision':'D1 is complete without replicated improvement. Finish the independently authorized D2 and its conditional D3 gate; do not extend to a full benchmark or new algorithm.',
         'records':{'D0':'d0-evidence.json','D1':'d1-paired-results.json','lock':'d1-runtime-lock.json','verification':'verification.json'}}
     save(PUBLIC/'conclusion.json',conclusion)
     # Scan publication against actual ephemeral native tokens as well as patterns.
@@ -166,18 +200,18 @@ def main():
     for path in files:inspect_credentials(path.read_bytes(),path,known)
     report=ROOT/'DATABASE_FOLLOWUP_RESULTS.md'
     lines=['# Database 定向后续实验结果','',
-        '2026-10-06。按照 DATABASE_FOLLOWUP_LOCAL_CODEX.md 的条件执行；D0 完成，D1 执行中遇到 provider HTTP 520 而停止，D2/D3 因原生接口条件不足而阻断。本轮没有完成计划中的全部付费作业。','',
+        '2026-10-06。D0 已完成；用户授权后恢复了 HTTP 520 中断的同一 Codex 会话。当前 D1 阶段状态：'+result['status']+'。Claude 采用实测验收的原生 Aixoras /v1/messages 接口；阶段结果见下方记录。','',
         'D0 核验了 320 份快照、354 份业务轨迹、两份数据库与实际评分器。Q31 的错误反馈及两个候选值进入了 Codex 阶段一输出和原生 DB，但没有进入 Q34 题前记忆文件或任何已捕获的主请求。这是可达性缺口；不等于模型看过后忽略。Claude Q23 的真实 Write 事件引入了关于 Q21 的错误历史前提，Q25 又强化了它；Q23 writer 对 Q21 完整 DDL 的实际读取仍未得到证明。','',
-        f"D1 使用当前已授权 GLM-5.3-Flash / Aixoras Responses，已启动 {len(jobs)} 个独立 Codex 作业，其中 {sum(j['status']=='completed' for j in jobs)} 个完成，1 个在提交前因 HTTP 520 中断；剩余 {8-len(jobs)} 个未启动。每次恢复原始目标题前完整原生状态，使用正确的 drifted 数据库。R1 只额外提供同方法最近三题原始 prompt、完整工具记录、最终二值反馈。已启动配对的第一请求指令、工具、预算和前置状态均核验一致；所有已启动会话独立，捕获的记忆文件均未变化。",'',
+        f"D1 使用 GLM-5.3-Flash / Aixoras Responses，启动 {len(jobs)} 个独立 Codex 作业，完成 {sum(j['status']=='completed' for j in jobs)} 个；剩余 {8-len(jobs)} 个未启动。每次恢复原始目标题前完整原生状态，使用正确的 drifted 数据库。R1 只额外提供同方法最近三题原始 prompt、完整工具记录、最终二值反馈。两臂初次请求的指令、工具、预算和前置状态核验一致；会话独立，记忆文件未变化。Q28 R0 第一次重复经历 HTTP 520 后同会话恢复及未提交后的格式续行；Q28 R1 第二次重复在大量无进展工具调用后也恢复了同一会话。全部额外成本计入对应作业，两者均不能当作无故障延迟样本。",'',
         '| 任务 | 分支 | 正确 | 已完成答案 | 查询数 |','| --- | --- | --- | --- | --- |']
     for g in groups:
         score=f"{g['correct']}/{g['n']} 已完成" if g['n'] else '未完成，无分数'
         lines.append(f"| Q{g['position']} | {g['arm']} | {score} | {', '.join(g['answers']) or '未提交'} | {', '.join(map(str,g['queries'])) or '中断前 1 次'} |")
     lines+=['', '达到合同中的两次同向改善且控制题无新增错误条件。' if useful else
-        '首组风险题两臂均错；第二次重复未运行，控制题对照也未完成，因此不能判定重复效果或控制题退化。侧栏确实进入了已完成 R1 的模型请求，但在这个案例中没有带来正确提交。', '',
-        'D2 需要 Claude 原生 Anthropic 维护接口。当前配置只验收了 Aixoras Responses；旧 Z.AI 原生入口已停用。本计划禁止新增 provider 探索和静默替换，因此 D2 未启动，D3 的前置资格也没有成立。两阶段均标 blocked，未填写零分。','',
+        ('未达到两次风险题同向改善条件，不扩大整流 benchmark。' if result['status']=='completed' else '重复和控制配对不完整，不能判定效果。'), '',
+        '用户请求直接测试 /v1/messages 后得到 HTTP 200，返回模型为 glm-5.3-flash、标准 Anthropic message 和已报告用量。先前仅依据已验收接口记录而作出的阻断判断已撤销；本轮不使用协议转换。D2/D3 当前状态分别为 '+conclusion['D2']['status']+' / '+conclusion['D3']['status']+'。','',
         f"本轮共有 {len(actual_attempts)} 个唯一 provider attempt；其中 HTTP 520 请求缺 usage，保留为 unknown。input、output、cache、缺失字段和 provider 总量算术不一致均保留在汇总。只计算网关一次用量，不叠加原生重复记账。实际账户扣费未知，不能宣称金额节省。首次 DPAPI 身份启动失败发生在任何模型请求之前，保留在忽略目录的 infrastructure-history 中。",'',
-        '26 项相关测试通过；源快照和历史评分保持原样。结果仅是目的性选择案例上的开发诊断，不能声称泛化、显著性、新算法成立或 Claude 写入改善。','',
+        '30 项相关测试通过；源快照和历史评分保持原样。结果仅是目的性选择案例上的开发诊断，不能声称泛化、显著性、新算法成立；Claude 写入改善须以 D2 源证据审查为准。','',
         '详细证据：[D0](followup-records/d0-evidence.json)、[配对结果](followup-records/d1-paired-results.json)、[运行锁](followup-records/d1-runtime-lock.json)、[核验](followup-records/verification.json)、[阶段决定与成本](followup-records/conclusion.json)。原始请求、状态 DB、会话和评价材料仍在忽略目录，不发布。']
     report.write_text('\n'.join(lines)+'\n',encoding='utf8')
     inspect_credentials(report.read_bytes(),report,known)

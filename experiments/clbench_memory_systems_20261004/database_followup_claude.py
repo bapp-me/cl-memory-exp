@@ -1,10 +1,12 @@
 """Eight isolated native Claude D2 maintenance fixtures, then a review gate."""
 from datetime import datetime,timezone
+import argparse
 import difflib
 import json
 import os
 from pathlib import Path
 import subprocess
+import shutil
 import sys
 import threading
 import time
@@ -16,7 +18,7 @@ from database_followup_d0 import PRIVATE,PUBLIC,ref,restored_prefix
 from database_followup_d1 import pump,PORT
 import native_client
 from native_client import broker,restore,put,snapshot,freeze_runtime
-from native_evidence import archive,memory_snapshot,usage_for,validate,validate_attempt_accounting
+from native_evidence import archive,memory_snapshot,usage_for,validate,validate_attempt_accounting,wait_for_settled_attempts
 
 MEMORY='home/.claude/projects/-state-work-database/memory/'
 
@@ -56,6 +58,7 @@ def job(index,arm,repeat,runtime_hash,lock):
     session=str(uuid.uuid4());route_id=uuid.uuid4().hex;token=uuid.uuid4().hex
     route_path=ROOT/'.local/native-routes'/f'{route_id}.json'
     route={'token':token,'run_id':'database-followup-d2','phase':'native_maintenance_and_any_auxiliary',
+        'method_id':'claude_memory_ready',
         'session_id':session,'instance_id':{22:'103',24:'101'}[index],'project_key':'database',
         'config_hash':digest(lock),'audit_relative_path':out.relative_to(ROOT).as_posix(),
         'output_limit':65536,'output_ceiling':65536,'automatic_output_growth':False,'uniform_output_limit':True}
@@ -101,6 +104,7 @@ def job(index,arm,repeat,runtime_hash,lock):
             if not state['running']:break
             if time.monotonic()-started>1800:raise TimeoutError('D2 maintenance job window exhausted')
         save(out/'process.json',state)
+        wait_for_settled_attempts(out,time.monotonic()+600)
         snapshot(container,out/'native-state.tar.gz')
         files=archive(out/'native-state.tar.gz')
         if state['exit_code']:raise RuntimeError('Native maintenance did not complete')
@@ -120,15 +124,20 @@ def job(index,arm,repeat,runtime_hash,lock):
         save(out/'memory-diff.json',changes)
         events=[json.loads(l) for l in files[f'tasks/{ident}/events.jsonl'].decode().splitlines()]
         calls=[b for e in events if e.get('type')=='assistant' for b in e['message'].get('content',[]) if b.get('type')=='tool_use']
+        results={b['tool_use_id']:b for e in events if e.get('type')=='user' for b in e.get('message',{}).get('content',[]) if isinstance(b,dict) and b.get('type')=='tool_result'}
         assert all(c['name'] in {'Read','Write','Edit','Glob','Grep'} for c in calls)
+        rejected=[]
         for c in calls:
             if c['name'] in {'Write','Edit'}:
-                assert Path(c['input']['file_path']).as_posix().startswith('/state/'+MEMORY)
+                if not Path(c['input']['file_path']).as_posix().startswith('/state/'+MEMORY):
+                    assert results.get(c['id'],{}).get('is_error'), 'Out-of-scope write was not rejected'
+                    rejected.append(c['id'])
         result={'job_id':ident,'phase':'D2','method':'claude_code','arm':arm,'repeat':repeat,
             'index':index,'instance_id':route['instance_id'],'session_id':session,'status':'completed',
             'seconds':round(time.monotonic()-started,3),'pre_state':pre,'inputs':ref(out/'input-materials.json'),
             'attempts':attempts,'attempt_count':len(attempts),'tool_count':len(calls),
             'writes':[{'id':c['id'],'name':c['name'],'path':c['input']['file_path']} for c in calls if c['name'] in {'Write','Edit'}],
+            'rejected_write_attempts':rejected,
             'memory_diff':ref(out/'memory-diff.json'),'native_state':ref(out/'native-state.tar.gz'),
             'common_source_cutoff':index,'semantic_review':'pending_source_based_review_not_human_gold',
             'cost_basis':'unique Responses gateway attempts; native compatibility usage not added again','monetary_cost':None}
@@ -145,9 +154,23 @@ def job(index,arm,repeat,runtime_hash,lock):
 
 
 def main():
+    parser=argparse.ArgumentParser();parser.add_argument('--recover-infrastructure',action='store_true')
+    args=parser.parse_args()
     native_client.BROKER_KIND='default'
     old=read(PUBLIC/'d2-claim-review.json')
-    if old.get('native_jobs',0):raise RuntimeError('D2 already executed; no automatic quality retry')
+    if old.get('native_jobs',0):
+        if not args.recover_infrastructure or any(r.get('attempts') or r['status']!='blocked' for r in old['results']):
+            raise RuntimeError('D2 already executed; no automatic quality retry')
+        history=PRIVATE/('d2-infrastructure-history-'+uuid.uuid4().hex[:8]);history.mkdir()
+        for name in ['d2-claim-review.json','d2-runtime-lock.json']:
+            shutil.copy2(PUBLIC/name,history/name)
+        for row in old['results']:
+            source=(PRIVATE/row['job_id']).resolve();target=(history/row['job_id']).resolve()
+            assert source.is_relative_to(PRIVATE.resolve()) and target.is_relative_to(PRIVATE.resolve())
+            if list((source/'requests').glob('*.attempt.json')):raise RuntimeError('Model requests cannot be erased or replayed')
+            shutil.move(source,target)
+        save(history/'reason.json',{'reason':'Missing gateway method_id before any provider request',
+             'model_calls':0,'native_state_restarted_from_original_before':True})
     runtime_hash=freeze_runtime()
     lock={'schema_version':'database-followup.runtime-lock.v1','phase':'D2','at':datetime.now(timezone.utc).isoformat(),
         'authorization':'User explicitly requested completing Claude using supplied Aixoras documentation',
