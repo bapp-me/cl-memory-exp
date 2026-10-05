@@ -123,6 +123,8 @@ def main():
             phases[phase].append(row)
         streams.append({'run_id': stream['run_id'], 'method': stream['method'], 'environment': stream['environment'],
                         'status': stream['status'], 'target': stream['target'], 'stats': aggregate(rows),
+                        'codex_consolidation_policy_counts':dict(Counter(
+                            (r.get('consolidation_schedule') or {}).get('policy','historical_per_task') for r in rows)) if stream['method']=='codex_memory_ready' else None,
                         'comparison_disposition':'authorized_targeted_rerun_view' if args.corrected and stream['environment']=='codebase_adaptation' else stream.get('comparison_disposition','not_assessed'),
                         'protocol_deviation_indices':[] if args.corrected and stream['environment']=='codebase_adaptation' else stream.get('protocol_deviation_indices',[]),
                         'phases': {k: aggregate(v) for k, v in phases.items()}})
@@ -138,6 +140,7 @@ def main():
               'scope': 'Committed tasks only; incomplete native prefixes are not compared against full streams.',
               'streams': streams, 'paired': paired,
               'limitations': ['Both-correct subsets condition on observed outcomes; no causal efficiency claim.',
+                 'Codex retains its completed per-task-consolidation prefix and uses user-authorized batches afterward; aggregate results mix scheduling regimes.',
                  'R=1 complete-system comparison, no per-framework stateless controls or significance claim.',
                  'Known token differences with an unknown-usage attempt are differences of partial sums, not exact savings.',
                  'Local cold memory does not imply cold provider prompt cache.',
