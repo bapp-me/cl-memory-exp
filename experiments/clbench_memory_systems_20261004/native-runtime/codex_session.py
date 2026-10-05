@@ -106,6 +106,16 @@ args = ["/runtime/business_mcp.py", {json.dumps(str(path))}]
         'EXPERIMENT_API_KEY':cfg['gateway_token'],'CLBENCH_MEMORY_BOUNDARY_MODE':'1'}
     env.pop('CLBENCH_MEMORY_SOURCE_THREAD',None)
     session=cfg['session_id'] if cfg.get('maintenance_only') else run_solver(cfg,out,project,home,env)
+    if cfg.get('followup_solver_only'):
+        # Matched D1 branches freeze the original prefix throughout solving.
+        # The existing boundary patch already disables startup jobs without an
+        # exact source selector. Do not run a post-task extraction/sync turn.
+        (out/'followup-solver-receipt.json').write_text(json.dumps({
+            'session_id':session, 'startup_memory_jobs_disabled':True,
+            'post_task_maintenance_started':False,
+            'boundary_mode':env['CLBENCH_MEMORY_BOUNDARY_MODE'],
+            'source_selector_present':'CLBENCH_MEMORY_SOURCE_THREAD' in env}))
+        return 0
     plan=cfg.get('consolidation_schedule')
     before_db=read_databases(home,session)
     before_phase2=phase2_jobs(before_db)

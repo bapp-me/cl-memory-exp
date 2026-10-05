@@ -45,7 +45,17 @@ def main():
     parser = argparse.ArgumentParser(); parser.add_argument('--bind', required=True); parser.add_argument('--port', type=int, default=43191)
     parser.add_argument('--kind',choices=['default','codex'],default='default')
     args = parser.parse_args()
-    key = secret()
+    provider = read(ROOT/'config/active-provider.json')
+    if provider['provider'] == 'aixoras':
+        from analysis_provider import secret as active_secret
+        key = active_secret()
+        # Only the existing accepted Responses route is authorized. Native
+        # Anthropic/chat availability is unknown; fail before a provider call.
+        DESTINATIONS['responses'] = provider['responses_endpoint']
+    elif provider['provider'] == 'zai':
+        key = secret()
+    else:
+        raise RuntimeError('No accepted native provider route')
     lock = threading.Lock()
     class Handler(BaseHTTPRequestHandler):
         protocol_version = 'HTTP/1.0'
@@ -93,8 +103,10 @@ def main():
                 self.send_header('Content-Length', str(len(data))); self.end_headers(); self.wfile.write(data)
                 return
             protocol = {'chat/completions': 'chat', 'responses': 'responses', 'v1/messages': 'anthropic'}[operation]
+            if provider['provider']=='aixoras' and protocol!='responses':
+                self.send_error(503,'Active provider has no accepted native route for this protocol');return
             resource_state=ROOT/'records/provider-resource-block.json'
-            if resource_state.exists() and read(resource_state).get('status')=='blocked_provider_resource':
+            if provider['provider']=='zai' and resource_state.exists() and read(resource_state).get('status')=='blocked_provider_resource':
                 self.send_error(503,'Provider resource exhausted; waiting for user-confirmed account recovery');return
             payload = json.loads(raw)
             if payload.get('model') != 'glm-5.3-flash': self.send_error(422, 'Undeclared model route'); return
@@ -117,6 +129,7 @@ def main():
                 'project_key': route.get('project_key'), 'session_id': route.get('session_id'),
                 'agent_id': None, 'parent_agent_id': None, 'role': route.get('phase', 'unknown_native_role'),
                 'config_hash': route.get('config_hash'), 'protocol': protocol,
+                'provider':provider['provider'], 'endpoint':DESTINATIONS[protocol],
                 'timestamp': datetime.now(timezone.utc).isoformat(),
                 'request_correlation_headers': {h: self.headers[h] for h in ['session_id', 'x-session-id', 'x-client-request-id'] if self.headers.get(h)}}
             permit = gate('acquire', meta)
@@ -148,7 +161,7 @@ def main():
             finally:
                 response_file=out/f'{attempt}.response.bin'
                 quota=resource_error(response_file.read_text(encoding='utf8',errors='replace')) if response_file.exists() else None
-                if quota:
+                if quota and provider['provider']=='zai':
                     state={'status':'blocked_provider_resource','as_of':datetime.now(timezone.utc).isoformat(),
                         'account':'existing_ZAI_GLM_identity','provider_code':quota['code'],
                         'provider_message':quota['message'],'trigger_attempt_id':attempt,'run_id':route['run_id']}
@@ -163,7 +176,7 @@ def main():
     suffix='' if args.kind=='default' else '-codex'
     save(ROOT / f'.local/native-gateway{suffix}.json', {'bind': args.bind, 'port': server.server_port,
                                              'source_hashes':{f:sha(ROOT/f) for f in ['native_gateway.py','budget_control.py','native_evidence.py']},
-                                             'account': 'existing_zai', 'credential_value_logged': False})
+                                             'account': provider['provider'], 'credential_value_logged': False})
     print('Native protocol gateway ready on the WSL host interface; credentials remain host-only.', flush=True)
     server.serve_forever()
 

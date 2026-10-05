@@ -1,6 +1,7 @@
 """One shared all-role HTTP request semaphore for the study; no model keys."""
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+import argparse
 import secrets
 import threading
 import time
@@ -8,7 +9,13 @@ from prepare import ROOT, read, save
 
 
 def main():
-    ceiling = read(ROOT / 'records/execution-authorization.json')['global_request_ceiling']
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--ceiling',type=int)
+    args=parser.parse_args()
+    historical_ceiling = read(ROOT / 'records/execution-authorization.json')['global_request_ceiling']
+    ceiling = args.ceiling or historical_ceiling
+    if not 1 <= ceiling <= historical_ceiling:
+        raise ValueError('Request ceiling must stay within the existing maximum')
     semaphore = threading.BoundedSemaphore(ceiling)
     token = secrets.token_hex(32)
     leases = {}; lock = threading.Lock(); peak = 0
