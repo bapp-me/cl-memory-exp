@@ -18,6 +18,9 @@ def main():
         from hermes_session import run
         return run(path, cfg, out, project)
     if cfg['framework'] == 'claude':
+        if cfg.get('followup_maintenance'):
+            from claude_followup import run
+            return run(path,cfg,out,project)
         claude_home = home / '.claude'; claude_home.mkdir(exist_ok=True)
         env.update(CLAUDE_CONFIG_DIR=str(claude_home), ANTHROPIC_BASE_URL=cfg['gateway'],
             ANTHROPIC_AUTH_TOKEN=cfg['gateway_token'], ANTHROPIC_MODEL='glm-5.3-flash',

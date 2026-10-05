@@ -52,6 +52,9 @@ def main():
         # Only the existing accepted Responses route is authorized. Native
         # Anthropic/chat availability is unknown; fail before a provider call.
         DESTINATIONS['responses'] = provider['responses_endpoint']
+        acceptance=ROOT/'followup-records/aixoras-native-anthropic-acceptance.json'
+        if acceptance.exists() and read(acceptance).get('accepted'):
+            DESTINATIONS['anthropic']='https://api.aixoras.com/v1/messages'
     elif provider['provider'] == 'zai':
         key = secret()
     else:
@@ -103,7 +106,7 @@ def main():
                 self.send_header('Content-Length', str(len(data))); self.end_headers(); self.wfile.write(data)
                 return
             protocol = {'chat/completions': 'chat', 'responses': 'responses', 'v1/messages': 'anthropic'}[operation]
-            if provider['provider']=='aixoras' and protocol!='responses':
+            if provider['provider']=='aixoras' and protocol not in ({'responses','anthropic'} if acceptance.exists() and read(acceptance).get('accepted') else {'responses'}):
                 self.send_error(503,'Active provider has no accepted native route for this protocol');return
             resource_state=ROOT/'records/provider-resource-block.json'
             if provider['provider']=='zai' and resource_state.exists() and read(resource_state).get('status')=='blocked_provider_resource':

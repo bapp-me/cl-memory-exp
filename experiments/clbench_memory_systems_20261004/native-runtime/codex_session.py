@@ -15,8 +15,20 @@ def run_solver(cfg,out,project,home,env):
     from native_budget import grow
     base=['/native/codex','exec','--json','--skip-git-repo-check','--dangerously-bypass-approvals-and-sandbox',
         '-C',str(project),'--output-last-message',str(out/'final.txt')]
-    session=None; output_limit=cfg.get('output_limit',65536); prompt=cfg['prompt']; continuations=[]
-    with (out/'events.jsonl').open('w') as events,(out/'stderr.txt').open('w') as stderr:
+    recovering=cfg.get('solver_transport_resume',False)
+    session=cfg['session_id'] if recovering else None
+    output_limit=cfg.get('output_limit',65536)
+    prompt=cfg['transport_resume_prompt'] if recovering else cfg['prompt']
+    continuations=[]
+    if recovering:
+        prior=[json.loads(line) for line in (out/'events.jsonl').read_text().splitlines()]
+        if not any(e.get('type')=='turn.failed' for e in prior):
+            raise RuntimeError('No failed native turn to resume')
+        (out/'transport-resume-receipt.json').write_text(json.dumps({
+            'session_id':session,'prompt':prompt,'new_thread':False,
+            'reason':'User explicitly requested restoring the HTTP 520 interruption'}))
+    mode='a' if recovering else 'w'
+    with (out/'events.jsonl').open(mode) as events,(out/'stderr.txt').open(mode) as stderr:
         while True:
             command=base+([prompt] if session is None else ['resume',session,prompt])
             proc=subprocess.Popen(command,env=env,cwd=project,stdout=subprocess.PIPE,stderr=stderr,text=True)
@@ -37,8 +49,17 @@ def run_solver(cfg,out,project,home,env):
             if not code and session and observed.get('instance_complete'): return session
             if not session: raise RuntimeError('Native Codex did not produce a session')
             if not code:
+                final_text=(out/'final.txt').read_text()
+                if cfg.get('followup_solver_only') and not final_text.strip():
+                    if sum(c['kind']=='empty_final_continuation' for c in continuations)>=2:
+                        raise RuntimeError('Repeated empty final response; no submission available')
+                    continuations.append({'kind':'empty_final_continuation','session_id':session,
+                        'business_already_complete':False,'benchmark_answer_attempted':False})
+                    (out/'solver-continuations.json').write_text(json.dumps(continuations))
+                    prompt='The last turn ended without a benchmark submission. Continue this same instance and submit the final action through CLBENCH_ACTION. Keep the existing query count and do not repeat completed queries.'
+                    continue
                 from business_mcp import final_action
-                observed=final_action((out/'final.txt').read_text(),'final-json-'+str(len(continuations)))
+                observed=final_action(final_text,'final-json-'+str(len(continuations)))
                 continuations.append({'kind':'official_final_json_action','session_id':session,'observation':observed})
                 (out/'solver-continuations.json').write_text(json.dumps(continuations))
                 prompt=json.dumps(observed)
