@@ -66,12 +66,24 @@ def main():
     if args.recover_format and (not pending or args.framework!='codex'):
         raise RuntimeError('Format recovery is only for a submitted Codex task')
     if args.resume_maintenance_timeout:
-        approval=read(ROOT/'records/codex-batch-policy.json').get('timeout_recovery_authorization',{})
-        if args.framework!='codex' or not pending or not approval.get('approved') or approval.get('run_id')!=args.run_id or approval.get('index')!=first_index:
+        policy=read(ROOT/'records/codex-batch-policy.json')
+        approval=policy.get('timeout_recovery_authorization',{})
+        if args.framework!='codex' or not pending or not approval.get('approved'):
             raise RuntimeError('This interrupted consolidation lacks scoped user authorization')
         out=directory/f'task-{first_index:03d}'
-        if sha(out/'submission.json')!=approval['submission_sha256'] or sha(out/'recovery-timeout-state.tar.gz')!=approval['snapshot_sha256']:
-            raise RuntimeError('Authorized timeout recovery evidence changed')
+        exact_case=approval.get('run_id')==args.run_id and approval.get('index')==first_index
+        if exact_case:
+            if sha(out/'submission.json')!=approval['submission_sha256'] or sha(out/'recovery-timeout-state.tar.gz')!=approval['snapshot_sha256']:
+                raise RuntimeError('Authorized timeout recovery evidence changed')
+        else:
+            status=read(directory/'stream-status.json')
+            original=read(out/'input.json')
+            if not approval.get('migrate_existing_600_second_codex_batch_windows') or policy['maintenance_wait_seconds']!=1800 or status.get('type')!='TimeoutError' or status.get('message')!='Completion barrier exceeded 600 seconds' or not original.get('consolidation_schedule',{}).get('consolidation_required'):
+                raise RuntimeError('Only a pre-existing 600-second Codex batch window can migrate under this authorization')
+            if any(read(p)['phase']=='started' for p in out.glob('requests/*.attempt.json')):
+                raise RuntimeError('Old maintenance requests are still settling')
+            save(out/'wait-policy-migration.json',{'policy':'Codex batches 600 to 1800 seconds, approved by user',
+                'submission_sha256':sha(out/'submission.json'),'business_replayed':False})
     if args.retry_native_maintenance:
         authorization=read(ROOT/'records/execution-authorization.json').get('native_maintenance_invalid_json_retry',{})
         if not pending or args.framework!='codex' or not authorization.get('approved'):
