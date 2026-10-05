@@ -1,6 +1,6 @@
 # CL-Bench：同一 GLM 下的跨会话记忆系统比较
 
-**版本：1.1｜日期：2026-10-05｜状态：六条 Pi 流共 177 题和 Claude Database 40 题已完成；Codebase 三处恢复提示偏差待决定接纳口径，Hermes 暂停于未完成维护，原生 Codebase 与 Codex 尚待验收及口径决定。当前无模型请求运行。**
+**版本：1.1｜日期：2026-10-05｜状态：用户已要求继续完成剩余实验。六条 Pi 流及 Claude Database 已完成，三题提示偏差重跑已纳入选用结果；Hermes Database 已恢复正式运行，Codex Database 与三个原生 Codebase 组正在完成新配置验收。以带时间戳的进度记录为准。**
 
 **最新用户修订（优先于下文历史设置）：** 原生 Codebase 采用官方动作格式；后续所有角色的单次输出上限统一为 65,536，总窗口仍为 262,144，输入压缩触发统一为 196,608。Codex 的原生 90% 限制高于新触发值，直接通过 `config.toml` 对齐，不修改 Codex 压缩源码。新上限不自动继续提高到 131,072。已完成旧题经核对没有输出截断失败，按用户决定保留，不整批重跑；只处理 Hermes 正式流及 Codex 验收中未完成的截断维护。旧预算与历史成绩不改写。维护等待仍保留原 600 秒，延长尚未获批。见 [64k 修订](records/configuration-revision-64k.json)、[截断影响核对](records/output-cap-impact-audit.json)。
 

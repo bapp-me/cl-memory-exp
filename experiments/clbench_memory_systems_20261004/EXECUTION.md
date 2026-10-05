@@ -124,3 +124,13 @@ Claude Database 已完整完成并通过当前机械审计：**32/40，187 QUERY
 三道重跑均从原本的题前记忆和官方 base commit 开始，未带入该题旧答案/反馈，使用 high 与 65,536 实际输出上限：No Memory 第 14 题通过/9 步，第 17 题未通过/5 步，Jaccard 第 19 题通过/4 步。第 17 题由原先通过变为未通过，照实采用新结果，不挑选高分、不继续重采样。三次合计 23 个请求、162,573 tokens，全部 usage 完整；单列 targeted_rerun 费用类别。
 
 原始 full-run JSON 未改写，3 条新结果通过 [选择清单](records/code-result-selection.json) 纳入当前比较。修正视图的 Codebase 结果是 No Memory 15/19、338 步，Notepad 16/19、293 步，Jaccard 17/19、205 步。原历史审计仍保留三处提示偏差；针对重跑的独立校验已验证提示修正、题前记忆、新 session、实际参数、评分、屏障和原始文件哈希不变。统计见 [corrected-efficiency-analysis.json](records/corrected-efficiency-analysis.json)，当前主报告已更新。
+
+## 继续执行：原生恢复和 64k 验收
+
+用户要求“那就继续吧，有问题就修”。已补齐原生流的持久化边界续跑、保留业务提交的维护恢复，以及最终 JSON 动作经锁定官方 parser 进入同一计数控制器的路径。Codebase 最终回复不合法时使用官方失败入口，不从自然语言补造提交，不增加语义修复模型调用。新 Codebase 原生提示附带官方 schema 指令；仍保留原生工具循环、writer 和评分器。
+
+14 项离线测试及两个实际隔离容器的快照恢复测试通过。第一次恢复遇到根目录由 broker 拥有、普通 uid 无法恢复目录元数据的问题；在模型调用前失败，已改为保留普通文件及其内容、由容器重建目录，并以含根目录项的真实快照复测。旧原始快照不覆盖。网关已在空闲时重载，实际新请求统一 65,536 输出。
+
+Hermes 正式 Database 第 10 题的原生技能维护已恢复并持久化，原业务提交及查询记录哈希不变，恢复约 111 秒。Codex 验收第 2 题的原生两阶段记忆流水线也已恢复。两处都没有重做业务，没有修改 writer 提示或重复检测策略，也没有延长 600 秒等待。恢复证据见 [native-maintenance-recovery.json](records/native-maintenance-recovery.json)。
+
+Hermes Database 已通过新配置验收并继续正式流；Codex Database 和三个原生 Codebase 组分别验收，各自通过即可继续。Codebase 验收从空记忆开始，两个环境不共享状态。当前仍是原先 R=1 矩阵，旧的已完成结果保留；新配置的模型、窗口、输出和屏障逐真实请求核对，验收记录见 `records/*-64k-acceptance.json`。
