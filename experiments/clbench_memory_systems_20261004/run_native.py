@@ -43,7 +43,7 @@ def main():
             raise RuntimeError('Native failed-maintenance retry requires explicit authorization and a frozen submission')
     runtime = ['run_native.py','native_evidence.py','native_gateway.py','budget_control.py','native_client.py',
         'native-runtime/native_entry.py','native-runtime/business_mcp.py','native-runtime/native_budget.py']
-    if args.framework == 'hermes': runtime += ['native-runtime/hermes_session.py']
+    if args.framework == 'hermes': runtime += ['native-runtime/hermes_session.py','native-runtime/hermes_completion.py']
     if args.framework == 'codex': runtime += ['native-runtime/codex_session.py','native-runtime/codex_catalog.py','native-runtime/responses_format_proxy.py']
     runtime += ['database_adapter.py'] if total == 40 else ['codebase_adapter.py','docker_dispatch.py']
     config_hash = digest({f:sha(ROOT/f) for f in runtime})

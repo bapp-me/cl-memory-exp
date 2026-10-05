@@ -136,13 +136,15 @@ def run(path, cfg, out, project):
             result=json.loads((out/'main-result.json').read_text())
             prior=json.loads((out/'jobs.json').read_text())
             save('jobs-before-recovery.json',prior)
-            if any(j.get('native_result') not in {None,'error'} for j in prior):
-                raise RuntimeError('Recovery must not repeat already completed review jobs')
-            if len(prior)!=1 or prior[0]['source_hash']!=digest(result['messages']):
-                raise RuntimeError('Unfinished review does not cover the frozen final source')
-            # The preserved request proves this historical job used the native
-            # skill-only prompt. Reuse the same source and native writer scope.
-            agent._spawn_background_review(messages_snapshot=prior[0]['messages'],review_memory=False,review_skills=True)
+            if all(j['status']=='returned' and j.get('native_result') not in {None,'error'} for j in prior):
+                saved_calls=json.loads((out/'conversations.json').read_text())
+                save('conversations-before-recovery.json',saved_calls)
+                jobs.extend(prior);calls.extend(saved_calls)
+            else:
+                if len(prior)!=1 or prior[0]['source_hash']!=digest(result['messages']) or prior[0].get('native_result') not in {None,'error'}:
+                    raise RuntimeError('Unfinished review needs a separately verified recovery scope')
+                # Historical interrupted skill-only job; no completed writer is replayed.
+                agent._spawn_background_review(messages_snapshot=prior[0]['messages'],review_memory=False,review_skills=True)
             last_business_result={'instance_complete':True}
         else:
             result = agent.run_conversation(cfg['prompt'], system_message=cfg['framing'])
@@ -176,11 +178,18 @@ def run(path, cfg, out, project):
             while any(j['status']!='returned' for j in jobs) or any(c['status']=='running' for c in calls):
                 if time.monotonic()>deadline: raise TimeoutError('Native boundary review did not drain')
                 time.sleep(.1)
+        from hermes_completion import validate_calls
+        _,missing_scopes=validate_calls(jobs,calls,final_hash,allow_missing=True)
+        for memory,skills in missing_scopes:
+            agent._spawn_background_review(messages_snapshot=list(result['messages']),review_memory=memory,review_skills=skills)
+            while any(j['status']!='returned' for j in jobs) or any(c['status']=='running' for c in calls):
+                if time.monotonic()>deadline:raise TimeoutError('Final-source superseding review did not drain')
+                time.sleep(.1)
+        supersession,_=validate_calls(jobs,calls,final_hash)
         if failures or any(j.get('error') or j.get('native_result') in {None, 'error'} for j in jobs):
             raise RuntimeError('Native review failed or lacks completion evidence')
-        if any(c.get('error') or c.get('result', {}).get('failed') or not c.get('result', {}).get('completed') for c in calls):
-            raise RuntimeError('Native child returned incomplete')
         save('barrier-candidate.json', {'jobs': jobs, 'calls': calls, 'final_messages_hash': final_hash, 'main_turns':main_turns,
+            'supersession_evidence':supersession,
             'status': 'native_jobs_returned_requires_external_audit'})
         return 0
     finally:

@@ -51,14 +51,18 @@ def validate(files, task, framework, session):
         return {'kind': 'native_auto_memory_foreground_turn', 'result': result, 'assistant_text': text,
                 'observability': 'all requests captured; child content and IDs in native transcripts when emitted'}
     value = json.loads(files[prefix + 'barrier-candidate.json'])
+    import importlib.util
+    from prepare import ROOT
+    spec=importlib.util.spec_from_file_location('hermes_completion_audit',ROOT/'native-runtime/hermes_completion.py')
+    completion=importlib.util.module_from_spec(spec);spec.loader.exec_module(completion)
+    supersession,_=completion.validate_calls(value['jobs'],value['calls'],value['final_messages_hash'])
+    if supersession!=value.get('supersession_evidence',[]):raise RuntimeError('Supersession receipt differs from native evidence')
     if not value['jobs']: raise RuntimeError('Hermes review absent')
     if not any(j['source_hash'] == value['final_messages_hash'] for j in value['jobs']):
         raise RuntimeError('Hermes review misses final source watermark')
     for job in value['jobs']:
         if job['status'] != 'returned' or job.get('native_result') in {None, 'error'}: raise RuntimeError('Hermes review failed')
     for call in value['calls']:
-        if call['status'] != 'returned' or call['result'].get('failed') or not call['result'].get('completed'):
-            raise RuntimeError('Hermes child incomplete')
         if call['context_length'] != 262144: raise RuntimeError('Child context differs')
         if call.get('compression_threshold_tokens') not in {245760,229376,196608,131072}:
             raise RuntimeError('Child compression trigger differs')
