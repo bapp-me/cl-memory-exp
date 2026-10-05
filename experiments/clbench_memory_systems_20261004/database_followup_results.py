@@ -163,6 +163,17 @@ def main():
                 'usage':token_summary([a for j in selected for a in j['attempts']])})
     sessions=[read(PRIVATE/j['job_id']/'session-start.json')['session_id'] for j in jobs]
     recovered=[j for j in jobs if j.get('transport_recovered_same_session')]
+    d2=read(PUBLIC/'d2-claim-review.json');d3=read(PUBLIC/'d3-downstream-results.json')
+    stage_attempts={'D1':actual_attempts,'D2':[],'D3':[]}
+    for phase,record in [('D2',d2),('D3',d3)]:
+        for j in record.get('results',[]):
+            attempts=usage_for(PRIVATE/j['job_id'])
+            assert attempts==j['attempts']
+            validate_attempt_accounting(PRIVATE/j['job_id'],attempts)
+            stage_attempts[phase].extend(attempts)
+    all_attempts=[a for values in stage_attempts.values() for a in values]
+    probe=read(PUBLIC/'aixoras-native-anthropic-acceptance.json')
+    probe_attempt={'attempt_id':probe['attempt_id'],'protocol':'anthropic','usage':probe['usage']}
     verify={'schema_version':'database-followup.verification.v1','status':'available_evidence_passed','model_calls':0,
         'at':datetime.now(timezone.utc).isoformat(),'distinct_sessions':len(set(sessions))==len(jobs),
         'paired_conditions':fairness,'frozen_host_sources':frozen,
@@ -171,7 +182,11 @@ def main():
         'same_session_transport_recovery_jobs':[j['job_id'] for j in recovered],
         'derived_episode_metadata_repairs':metadata_repairs,
         'continuation_runtime_lock':ref(continuation) if continuation_lock else None,
-        'tests':{'command':'python -X utf8 -m unittest -v test_database_followup test_followup_resume test_followup_maintenance test_budget_control test_native_accounting test_responses_format_proxy test_codex_batching','passed':30,'failed':0},
+        'D2_source_fairness':d2.get('fairness'),'D2_reviewer':d2.get('reviewer'),
+        'stage_unique_provider_attempts':{k:len(v) for k,v in stage_attempts.items()},
+        'provenance_limitations':['Original D1 and latest continuation controller sources/locks verified; some earlier continuation controller locks were overwritten before preservation was added. Request/response and native evidence remain available.',
+            'First recovery rejected four generated Codex launcher symlinks and captured an empty failed-restore container. Recovery used the independent full settled snapshot and omitted only those launcher links; the normalization receipts are retained.'],
+        'tests':{'command':'python -X utf8 -m unittest -v test_database_followup test_followup_resume test_followup_maintenance test_followup_results test_budget_control test_native_accounting test_responses_format_proxy test_codex_batching','passed':33,'failed':0},
         'D0_candidate_queries_reproduced':len(read(PUBLIC/'d0-evidence.json')['recorded_candidate_reproduction']['queries'])}
     assert verify['distinct_sessions']
     save(PUBLIC/'verification.json',verify)
@@ -183,18 +198,21 @@ def main():
               'simple_engineering_signal_criterion_met':useful if result['status']=='completed' else None,
               'decision':'stop_provider_520_no_effect_claim' if result['status']=='blocked' else 'retain_simple_sidebar_for_separate_engineering_review' if useful else 'stop_no_replicated_paired_improvement',
               'next_full_benchmark_authorized':False},
-        'D2':read(PUBLIC/'d2-claim-review.json'),'D3':read(PUBLIC/'d3-downstream-results.json'),
-        'total_usage':token_summary(actual_attempts),'total_native_jobs':len(jobs),
+        'D2':d2,'D3':d3,
+        'usage_by_stage':{k:token_summary(v) for k,v in stage_attempts.items()},
+        'total_native_usage':token_summary(all_attempts),'compatibility_probe_usage':token_summary([probe_attempt]),
+        'total_usage_including_probe':token_summary(all_attempts+[probe_attempt]),
+        'total_native_jobs':len(jobs)+d2.get('native_jobs',0)+d3.get('native_jobs',0),
         'limitations':['Eight purposively selected D1 jobs do not establish stability, statistical significance or generalization.',
             'Both Q28 R0 repeat 1 and R1 repeat 2 required same-session recovery; all additional requests remain charged to their jobs. These are not ordinary latency samples.',
             'D1 does not test Claude writing quality. A pending/skipped/blocked D2 or D3 is not a zero score.',
             'Provider reported totals/cache are preserved; monetary account charges remain unknown.'],
-        'decision':'D1 is complete without replicated improvement. Finish the independently authorized D2 and its conditional D3 gate; do not extend to a full benchmark or new algorithm.',
+        'decision':'D1 is complete without replicated improvement. '+('D2 source review did not qualify all W1 outputs; skip D3 and close this bounded experiment.' if d2.get('status')=='completed' and not d2.get('D3_eligible') else 'Finish the independently authorized D2 and its conditional D3 gate.')+' Do not extend to a full benchmark or new algorithm.',
         'records':{'D0':'d0-evidence.json','D1':'d1-paired-results.json','lock':'d1-runtime-lock.json','verification':'verification.json'}}
     save(PUBLIC/'conclusion.json',conclusion)
     # Scan publication against actual ephemeral native tokens as well as patterns.
     known=set()
-    for job in PRIVATE.glob('d1-*/input.json'):
+    for job in [*PRIVATE.glob('d1-*/input.json'),*PRIVATE.glob('d2-*/input.json'),*PRIVATE.glob('d3-*/input.json')]:
         known.add(read(job)['gateway_token'])
     files=list(PUBLIC.glob('*.json'))
     for path in files:inspect_credentials(path.read_bytes(),path,known)
@@ -210,9 +228,17 @@ def main():
     lines+=['', '达到合同中的两次同向改善且控制题无新增错误条件。' if useful else
         ('未达到两次风险题同向改善条件，不扩大整流 benchmark。' if result['status']=='completed' else '重复和控制配对不完整，不能判定效果。'), '',
         '用户请求直接测试 /v1/messages 后得到 HTTP 200，返回模型为 glm-5.3-flash、标准 Anthropic message 和已报告用量。先前仅依据已验收接口记录而作出的阻断判断已撤销；本轮不使用协议转换。D2/D3 当前状态分别为 '+conclusion['D2']['status']+' / '+conclusion['D3']['status']+'。','',
-        f"本轮共有 {len(actual_attempts)} 个唯一 provider attempt；其中 HTTP 520 请求缺 usage，保留为 unknown。input、output、cache、缺失字段和 provider 总量算术不一致均保留在汇总。只计算网关一次用量，不叠加原生重复记账。实际账户扣费未知，不能宣称金额节省。首次 DPAPI 身份启动失败发生在任何模型请求之前，保留在忽略目录的 infrastructure-history 中。",'',
-        '30 项相关测试通过；源快照和历史评分保持原样。结果仅是目的性选择案例上的开发诊断，不能声称泛化、显著性、新算法成立；Claude 写入改善须以 D2 源证据审查为准。','',
+        f"原生实验共有 {len(all_attempts)} 个唯一 provider attempt（D1 {len(stage_attempts['D1'])}、D2 {len(stage_attempts['D2'])}、D3 {len(stage_attempts['D3'])}），另有 1 次用户指定的 Messages 接口验收。HTTP 失败缺 usage 时保留 unknown。按实际协议分别汇总 input、output 和 cache：Anthropic 的 input 不含 cache 读写，Responses 的 input 已含 cache；不直接混加这两个 input 字段。原始 provider 字段及算术不一致均保留。只计算网关一次用量，不叠加原生重复记账。实际账户扣费未知。DPAPI 身份失败和 D2 缺 method_id 的首次启动均发生在提供商模型调用之前，私有区保留零调用基础设施记录。",'',
+        '33 项相关测试通过；源快照和历史评分保持原样。结果仅是目的性选择案例上的开发诊断，不能声称泛化、显著性、新算法成立；Claude 写入改善须以 D2 源证据审查为准。','',
         '详细证据：[D0](followup-records/d0-evidence.json)、[配对结果](followup-records/d1-paired-results.json)、[运行锁](followup-records/d1-runtime-lock.json)、[核验](followup-records/verification.json)、[阶段决定与成本](followup-records/conclusion.json)。原始请求、状态 DB、会话和评价材料仍在忽略目录，不发布。']
+    if d2.get('status')=='completed':
+        lines[-1:-1]=['D2 完成 8 个独立原生维护作业，没有新业务查询。W0/W1 每组恢复同一原始 before 状态，提供相同的同方法合法历史、工具和预算；实际首请求与挂载来源核验通过。W1 只附加合同中的通用证据约束。此阶段是受控维护 fixture，不能冒称原内部请求的逐字重放。','',
+            '| 写入事件 | 分支/重复 | 有界主张审查 |','| --- | --- | --- |']
+        for j in d2['results']:
+            review=j['semantic_review']
+            lines.insert(-1,f"| Q{j['index']+1} | {j['arm']} / {j['repeat']} | {review['decision_reason']} |")
+        lines[-1:-1]=['','审查由当前 Codex 执行代理对照具体源轨迹完成，没有额外 LLM judge，也不是人类金标或整份记忆总分。W1 的部分产物修正了历史 schema 和候选区分，但仍有新历史误记或把单次接受升级为已排除替代解释的主张。未达到所有 W1 产物均消除已知缺陷且无新增缺陷的条件，D3 按计划 skipped、0 调用、无分数；不能声称下游行为或成本收益。' if not d2.get('D3_eligible') else 'D2 通过来源资格检查；D3 下游结果单独登记。','',
+            '复现限制：原始 D1 和最后一次续行的控制器源码锁可核对，但早期续行的独立锁未全部保留；各次实际请求/响应和原生状态仍留存。首次恢复曾因四个生成的启动器链接被拒绝，随后使用同一已结算任务的独立完整快照，规范化记录保留。派生 legal-episode 曾误记为流中下一题 ID，现已修正元数据；模型输入、SQL 动作、提交及官方分数没有改变。','']
     report.write_text('\n'.join(lines)+'\n',encoding='utf8')
     inspect_credentials(report.read_bytes(),report,known)
     save(PUBLIC/'publication-audit.json',{'status':'passed','files':len(files)+1,

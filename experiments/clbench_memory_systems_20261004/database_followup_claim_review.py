@@ -1,0 +1,120 @@
+"""Check traceability of the root reviewer's bounded semantic annotations.
+
+No model judge, whole-memory score or keyword-based semantic pass. Assertions
+validate the quoted evidence; the semantic judgments remain explicitly authored
+by the reviewing Codex agent and are not human gold labels.
+"""
+from datetime import datetime, timezone
+import json
+
+from database_followup_d0 import PRIVATE, PUBLIC, ROOT, ref
+from database_followup_claude import sources, MEMORY
+from native_evidence import archive, validate, usage_for, validate_attempt_accounting
+from prepare import read, save, sha
+from protocol import digest
+
+
+def first_request(out):
+    meta=min(out.glob('requests/*.attempt.json'),key=lambda p:read(p)['timestamp'])
+    return read(meta.with_name(meta.name.replace('.attempt.json','.request.json')))
+
+
+def evidence(index, offset, part, needle):
+    path=ROOT/'trajectories/claude_code/database'/f'task-{index:03d}.json'
+    value=read(path)
+    item=value['tools'][offset]
+    text=item['action']['content'] if part=='action' else item['observation']
+    assert needle in text,(index,offset,part,needle)
+    return {**ref(path),'task_index':index,'tool_offset':offset,'part':part,'quote':needle}
+
+
+def main():
+    phase=read(PUBLIC/'d2-claim-review.json')
+    assert phase['status'] in {'awaiting_semantic_review','completed'}
+    assert len(phase['results'])==8 and all(j['status']=='completed' for j in phase['results'])
+    annotations=read(PUBLIC/'d2-claim-annotations.json')
+    assert annotations['reviewer']['human_gold'] is False
+    keyed={j['job_id']:j for j in phase['results']}
+    assert set(keyed)==set(annotations['jobs'])
+    lock=read(PUBLIC/'d2-runtime-lock.json')
+    assert phase['lock_sha256']==sha(PUBLIC/'d2-runtime-lock.json')
+    assert all(sha(PRIVATE/'runtime-source-d2'/n)==h for n,h in lock['source_files'].items())
+    pairs={};sessions=[];all_attempts=[]
+    for job in phase['results']:
+        name=job['job_id'];out=PRIVATE/name
+        assert sha(ROOT/job['native_state']['path'])==job['native_state']['sha256']
+        files=archive(out/'native-state.tar.gz')
+        validate(files,name,'claude',job['session_id'])
+        attempts=usage_for(out);validate_attempt_accounting(out,attempts)
+        assert attempts==job['attempts'];all_attempts.extend(attempts)
+        sessions.append(job['session_id'])
+        material=read(out/'input-materials.json')
+        legal=sources(job['index'])
+        for index,projection in legal.items():
+            mounted=json.loads(files[f'work/database/followup-sources/task-{index:03d}.json'])
+            assert mounted==projection
+            source=material['sources'][index]
+            assert source['legal_projection_sha256']==digest(projection)
+            assert source['sha256']==sha(ROOT/source['path'])
+        mounted_sources=[p for p in files if p.startswith('work/database/followup-sources/task-')]
+        assert len(mounted_sources)==job['index']+1
+        for p in out.glob('requests/*.request.json'):
+            request=read(p)
+            assert request['model']=='glm-5.3-flash' and request['max_tokens']==65536
+            assert request['output_config']['effort']=='high'
+        for p in out.glob('requests/*.attempt.json'):
+            meta=read(p)
+            assert meta['provider']=='aixoras' and meta['endpoint']=='https://api.aixoras.com/v1/messages'
+        annotation=annotations['jobs'][name]
+        categories=set()
+        claims=[]
+        for claim in annotation['claims']:
+            path=MEMORY+claim['memory_file']
+            assert claim['quote'] in files[path].decode('utf8'),(name,claim['quote'])
+            categories.add(claim['check'])
+            supports=[]
+            for source in claim.get('sources',[]):
+                assert source['index']<=job['index']
+                supports.append(evidence(source['index'],source['offset'],source['part'],source['quote']))
+            claims.append({**claim,'sources':supports,'after_memory_path':path,
+                'after_memory_sha256':__import__('hashlib').sha256(files[path]).hexdigest()})
+        assert categories==set(read(ROOT/'config/database-followup.plan.json')['D2']['claim_checks'])
+        job['semantic_review']={'reviewer':annotations['reviewer'],'claims':claims,
+            'bounded_gate_pass':annotation['bounded_gate_pass'],
+            'decision_reason':annotation['decision_reason'],
+            'whole_memory_score':None,'missing_sources_are_not_automatically_false':True}
+        pairs.setdefault((job['index'],job['repeat']),{})[job['arm']]=job
+    assert len(set(sessions))==8
+    assert len({a['attempt_id'] for a in all_attempts})==len(all_attempts)
+    fairness=[]
+    extra=read(ROOT/'config/database-followup.plan.json')['D2']['extra_instruction']
+    for (index,repeat),pair in pairs.items():
+        a,b=[PRIVATE/pair[arm]['job_id'] for arm in ['W0','W1']]
+        ca,cb=[read(p/'input.json') for p in [a,b]]
+        exclude={'gateway','gateway_token','session_id','prompt'}
+        assert {k:v for k,v in ca.items() if k not in exclude}=={k:v for k,v in cb.items() if k not in exclude}
+        assert cb['prompt']==ca['prompt']+'\n\n'+extra
+        ma,mb=[read(p/'input-materials.json') for p in [a,b]]
+        assert all(ma[k]==mb[k] for k in ['pre_state','sources','current_record_sha256','common_prompt_sha256','source_cutoff'])
+        pa,pb=[first_request(p) for p in [a,b]]
+        assert all(pa[k]==pb[k] for k in ['system','tools','model','max_tokens','thinking','context_management','output_config','stream'])
+        fairness.append({'index':index,'repeat':repeat,'same_original_before':True,
+            'same_legal_source_projection_and_access':True,'same_native_tools_system_and_budgets':True,
+            'only_prompt_difference': 'exact preregistered generic constraint',
+            'request_metadata_difference':'independent native session identifiers'})
+    eligible=all(j['semantic_review']['bounded_gate_pass'] for j in phase['results'] if j['arm']=='W1')
+    phase.update(status='completed',D3_eligible=eligible,D3_gate='open' if eligible else 'closed_failed_bounded_claim_qualification',
+        reviewed_at=datetime.now(timezone.utc).isoformat(),reviewer=annotations['reviewer'],fairness=fairness,
+        unique_provider_attempts=len(all_attempts),same_method_price_family_count=1,
+        decision='run_preregistered_D3' if eligible else 'stop_D3_no_all_repeat_qualified_writer_signal',
+        no_new_business_queries=True)
+    save(PUBLIC/'d2-claim-review.json',phase)
+    if not eligible:
+        save(PUBLIC/'d3-downstream-results.json',{'phase':'D3','status':'skipped','native_jobs':0,'results':[],
+            'official_scores':None,'reason':'At least one W1 artifact failed a preregistered bounded claim check.',
+            'failed_W1_jobs':[j['job_id'] for j in phase['results'] if j['arm']=='W1' and not j['semantic_review']['bounded_gate_pass']],
+            'model_calls':0,'skipped_is_not_zero_score':True})
+    print(json.dumps({'D2':'completed','attempts':len(all_attempts),'D3_eligible':eligible}))
+
+
+if __name__=='__main__':main()

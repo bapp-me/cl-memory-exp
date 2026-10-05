@@ -1,0 +1,343 @@
+{
+  "reviewer": {
+    "identity": "root Codex agent, source-based semantic review",
+    "human_gold": false,
+    "additional_model_judge_calls": 0,
+    "scope": "new or modified claims and retention of registered useful facts; no whole-memory score"
+  },
+  "jobs": {
+    "d2-q23-w0-1": {
+      "bounded_gate_pass": false,
+      "decision_reason": "Introduced uncomputed precise candidate numbers and a mathematically invalid universal unit rule.",
+      "claims": [
+        {
+          "check": "historical_schema_fidelity",
+          "memory_file": "clbench-schema-conventions.md",
+          "quote": "Q21+ instance only",
+          "status": "supported",
+          "reason": "Correctly places prc_v2 in the Q21+ schema; no new historical absence claim.",
+          "sources": [
+            {
+              "index": 20,
+              "offset": 0,
+              "part": "observation",
+              "quote": "prc_v2 INTEGER"
+            }
+          ]
+        },
+        {
+          "check": "tested_vs_untested_candidates",
+          "memory_file": "clbench-q23-pct-above-mean-count.md",
+          "quote": "| `prc_v2` (INTEGER, 1.0102×prc) | 9721.66 | 1120 |",
+          "status": "unsupported_fact",
+          "reason": "Neither this v2 mean nor this v2 count was computed in Q23. The only observed 1120 is the g1 count, which cannot support a g2 v2 count. The actual v2 count remains unknown.",
+          "sources": [
+            {
+              "index": 22,
+              "offset": 2,
+              "part": "observation",
+              "quote": "g1  | 7867  | 47.6404   | 1120"
+            },
+            {
+              "index": 22,
+              "offset": 4,
+              "part": "observation",
+              "quote": "1.0101914290001015"
+            }
+          ]
+        },
+        {
+          "check": "feedback_strength_and_scope",
+          "memory_file": "clbench-schema-conventions.md",
+          "quote": "COUNTS are NOT unit-free for g2",
+          "status": "verified_logical_error",
+          "reason": "A uniform positive rescaling leaves x >= 1.15*mean(x) invariant on the same population. Q23 rejection does not imply a conversion-specific count or establish GT pipeline for all questions.",
+          "sources": [
+            {
+              "index": 22,
+              "offset": 2,
+              "part": "observation",
+              "quote": "g2  | 6570  | 9623.3449 | 1035"
+            },
+            {
+              "index": 22,
+              "offset": 3,
+              "part": "observation",
+              "quote": "11091           | 11049"
+            }
+          ]
+        },
+        {
+          "check": "retention_of_supported_useful_facts",
+          "memory_file": "clbench-q23-pct-above-mean-count.md",
+          "quote": "Answer 1035 → **INCORRECT**",
+          "status": "supported_retained",
+          "reason": "Retains the actual rejected submission and useful coverage/boundary facts despite introducing other defects.",
+          "sources": [
+            {
+              "index": 22,
+              "offset": 5,
+              "part": "observation",
+              "quote": "INCORRECT"
+            }
+          ]
+        }
+      ]
+    },
+    "d2-q23-w1-1": {
+      "bounded_gate_pass": false,
+      "decision_reason": "Primary Q23 candidate/feedback boundaries improve, but the newly written historical example misattributes the accepted 17.27 result to Q7 instead of Q8; strict no-new-history-error gate fails.",
+      "claims": [
+        {
+          "check": "historical_schema_fidelity",
+          "memory_file": "clbench-price-column-threshold-count.md",
+          "quote": "5259",
+          "status": "supported",
+          "reason": "Q21 directly observed 5259 rowwise equal values. This number is sourced, not a fabrication.",
+          "sources": [
+            {
+              "index": 20,
+              "offset": 2,
+              "part": "action",
+              "quote": "AS v2_eq_prc"
+            },
+            {
+              "index": 20,
+              "offset": 2,
+              "part": "observation",
+              "quote": "5259"
+            }
+          ]
+        },
+        {
+          "check": "tested_vs_untested_candidates",
+          "memory_file": "clbench-price-column-threshold-count.md",
+          "quote": "1370",
+          "status": "supported",
+          "reason": "USD count was computed but never submitted; v2 count is explicitly left untested. Full after file preserves this distinction.",
+          "sources": [
+            {
+              "index": 22,
+              "offset": 3,
+              "part": "observation",
+              "quote": "1035 | 1035 | 1370"
+            },
+            {
+              "index": 22,
+              "offset": 5,
+              "part": "observation",
+              "quote": "1035"
+            }
+          ]
+        },
+        {
+          "check": "feedback_strength_and_scope",
+          "memory_file": "clbench-price-column-threshold-count.md",
+          "quote": "no reading has been confirmed as the GT",
+          "status": "bounded",
+          "reason": "Does not upgrade a single rejection to a proven mechanism; preserves unresolved interpretation.",
+          "sources": [
+            {
+              "index": 22,
+              "offset": 5,
+              "part": "observation",
+              "quote": "INCORRECT"
+            }
+          ]
+        },
+        {
+          "check": "retention_of_supported_useful_facts",
+          "memory_file": "clbench-price-column-threshold-count.md",
+          "quote": "6346",
+          "status": "supported_retained",
+          "reason": "Retains coverage and accepted/rejected historical facts rather than deleting all useful knowledge.",
+          "sources": [
+            {
+              "index": 22,
+              "offset": 4,
+              "part": "observation",
+              "quote": "6346"
+            }
+          ]
+        },
+        {
+          "check": "historical_schema_fidelity",
+          "memory_file": "clbench-price-column-threshold-count.md",
+          "quote": "Q7 \"% above category average\" → 17.27",
+          "status": "contradicts_source",
+          "reason": "New note assigns the percentage win to Q7. Same-method Q7 accepted 101.8; the 17.27 percentage win is Q8. Minor provenance error, separate from the correctly recorded Q21 schema.",
+          "sources": [
+            {
+              "index": 6,
+              "offset": 4,
+              "part": "observation",
+              "quote": "Question 7: CORRECT."
+            },
+            {
+              "index": 7,
+              "offset": 14,
+              "part": "observation",
+              "quote": "Question 8: CORRECT."
+            }
+          ]
+        }
+      ]
+    },
+    "d2-q25-w1-1": {
+      "bounded_gate_pass": false,
+      "decision_reason": "Repairs Q21 schema history but falsely marks the computed USD count as uncomputed and claims an unsubmitted Q25 candidate would be rejected.",
+      "claims": [
+        {
+          "check": "historical_schema_fidelity",
+          "memory_file": "clbench-list-price-column-ambiguity.md",
+          "quote": "this instance's items_g2 DID have `prc_v2`",
+          "status": "corrected_historical_error",
+          "reason": "Explicitly retracts the original false absence premise using Q21 DDL.",
+          "sources": [
+            {
+              "index": 20,
+              "offset": 0,
+              "part": "observation",
+              "quote": "prc_v2 INTEGER"
+            }
+          ]
+        },
+        {
+          "check": "tested_vs_untested_candidates",
+          "memory_file": "clbench-list-price-column-ambiguity.md",
+          "quote": "the `prc_usd` count (1370) were never computed",
+          "status": "contradicts_source",
+          "reason": "Q23 fourth QUERY directly computed 1370. It was unsubmitted, not uncomputed.",
+          "sources": [
+            {
+              "index": 22,
+              "offset": 3,
+              "part": "observation",
+              "quote": "1035 | 1035 | 1370"
+            }
+          ]
+        },
+        {
+          "check": "feedback_strength_and_scope",
+          "memory_file": "clbench-list-price-column-ambiguity.md",
+          "quote": "the prc reading would have been WRONG",
+          "status": "overstrong_feedback_inference",
+          "reason": "Only 101.80 was submitted. A single CORRECT does not establish rejection of the computed but unsubmitted 100.85 alternative or unique hidden GT binding. No knowledge of hidden tolerance is required to avoid this inference.",
+          "sources": [
+            {
+              "index": 24,
+              "offset": 1,
+              "part": "observation",
+              "quote": "100.85"
+            },
+            {
+              "index": 24,
+              "offset": 2,
+              "part": "observation",
+              "quote": "CORRECT"
+            }
+          ]
+        },
+        {
+          "check": "retention_of_supported_useful_facts",
+          "memory_file": "clbench-list-price-column-ambiguity.md",
+          "quote": "101.80 → CORRECT (2 queries)",
+          "status": "supported_retained",
+          "reason": "Correctly retains direct Q25 outcome, candidate values and coverage differences.",
+          "sources": [
+            {
+              "index": 24,
+              "offset": 2,
+              "part": "observation",
+              "quote": "CORRECT"
+            },
+            {
+              "index": 24,
+              "offset": 1,
+              "part": "observation",
+              "quote": "5074  | 5074 | 4886"
+            }
+          ]
+        }
+      ]
+    },
+    "d2-q25-w0-1": {
+      "bounded_gate_pass": false,
+      "decision_reason": "Preserves false Q21 schema premise and promotes one acceptance into a universal prc_v2 binding and an untested Q23 explanation.",
+      "claims": [
+        {
+          "check": "historical_schema_fidelity",
+          "memory_file": "clbench-list-price-column-ambiguity.md",
+          "quote": "no prc_v2 recorded there",
+          "status": "contradicts_source",
+          "reason": "Q21 DDL records prc_v2; the false premise is repeated in a modified explanatory paragraph.",
+          "sources": [
+            {
+              "index": 20,
+              "offset": 0,
+              "part": "observation",
+              "quote": "prc_v2 INTEGER"
+            }
+          ]
+        },
+        {
+          "check": "tested_vs_untested_candidates",
+          "memory_file": "clbench-list-price-column-ambiguity.md",
+          "quote": "across both a relative-threshold count (Q23) and a filtered dollar average (Q25)",
+          "status": "overstrong_uncomputed_candidate_claim",
+          "reason": "Q23 v2 count was never calculated/submitted; Q25 cannot retrospectively verify it.",
+          "sources": [
+            {
+              "index": 22,
+              "offset": 2,
+              "part": "observation",
+              "quote": "g2  | 6570  | 9623.3449 | 1035"
+            },
+            {
+              "index": 22,
+              "offset": 5,
+              "part": "observation",
+              "quote": "INCORRECT"
+            }
+          ]
+        },
+        {
+          "check": "feedback_strength_and_scope",
+          "memory_file": "clbench-list-price-column-ambiguity.md",
+          "quote": "whenever the column exists",
+          "status": "overstrong_feedback_inference",
+          "reason": "Universal binding is not identified by a single accepted value; the Q25 unsubmitted prc candidate is also asserted WRONG.",
+          "sources": [
+            {
+              "index": 24,
+              "offset": 1,
+              "part": "observation",
+              "quote": "100.85"
+            },
+            {
+              "index": 24,
+              "offset": 2,
+              "part": "observation",
+              "quote": "CORRECT"
+            }
+          ]
+        },
+        {
+          "check": "retention_of_supported_useful_facts",
+          "memory_file": "clbench-list-price-column-ambiguity.md",
+          "quote": "101.80 submitted → CORRECT",
+          "status": "supported_retained",
+          "reason": "Preserves observed acceptance and multiple candidate values, although the explanation overreaches.",
+          "sources": [
+            {
+              "index": 24,
+              "offset": 2,
+              "part": "observation",
+              "quote": "CORRECT"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
