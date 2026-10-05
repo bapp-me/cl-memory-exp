@@ -44,7 +44,8 @@ def main():
     server=ThreadingHTTPServer(('127.0.0.1',0),Handler)
     threading.Thread(target=server.serve_forever,daemon=True).start()
     out=Path('/state/tasks/task-007');path=out/'input.json';cfg=json.loads(path.read_text())
-    cfg.update(maintenance_only=True,gateway=f'http://127.0.0.1:{server.server_port}',gateway_token='offline-fixture',
+    cfg.update(session_id=json.loads((out/'session-start.json').read_text())['session_id'],
+               maintenance_only=True,gateway=f'http://127.0.0.1:{server.server_port}',gateway_token='offline-fixture',
                recover_format_error=False,retry_native_maintenance=False,retry_transport_maintenance=False,
                consolidation_schedule=schedule('codebase_adaptation',7))
     project=Path('/state/work');home=Path('/state/home/.codex')

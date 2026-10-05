@@ -31,6 +31,8 @@ def validate(files, task, framework, session):
             cfg=json.loads(files[prefix+'input.json'])
             if cfg.get('consolidation_schedule')!=barrier['schedule']:
                 raise RuntimeError('Native consolidation schedule differs from controller input')
+            if barrier['schedule']!=completion.schedule(cfg['environment'],int(task.removeprefix('task-'))):
+                raise RuntimeError('Consolidation schedule does not match the instance position')
         elif barrier['status']!='native_pipeline_verified':
             raise RuntimeError('Wrong legacy Codex barrier')
         if len(barrier['stage1'])!=1 or barrier['stage1'][0]['status']!='done': raise RuntimeError('Extraction incomplete')
