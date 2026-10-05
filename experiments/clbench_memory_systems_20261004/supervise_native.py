@@ -30,6 +30,7 @@ def classify(directory):
         if len(jobs)!=1 or jobs[0].get('retry_remaining',0)<=0:return None,'Native retry count exhausted or ambiguous failed jobs'
         job=jobs[0]
         metas=[read(p) for p in (out/'requests').glob('*.attempt.json')]
+        if any(m['phase']=='started' for m in metas):return None,'Provider attempts still settling'
         latest=max(metas,key=lambda m:m['timestamp'])
         if latest.get('error') in {'TimeoutError','ConnectionResetError','RemoteDisconnected','URLError','ConnectionAbortedError'} or (latest.get('http_status') or 0)>=500:
             return '--retry-transport-maintenance',{'kind':'verified_transport','job_kind':job['kind'],'remaining':job['retry_remaining'],'attempt_id':latest['attempt_id'],'snapshot_sha256':sha(source)}
@@ -57,7 +58,8 @@ def classify(directory):
 def main():
     logdir=ROOT/'.local/native-supervisor';logdir.mkdir(exist_ok=True)
     state_path=ROOT/'records/native-supervisor-status.json'
-    handled=set();children={};last=None;history=[]
+    history=read(state_path).get('recoveries',[]) if state_path.exists() else []
+    handled={(x['run_id'],x['recovery']['snapshot_sha256']) for x in history};children={};last=None
     while True:
         attention=[];progress=[]
         for run in RUNS:
@@ -67,7 +69,9 @@ def main():
             if status['status']!='paused_error' or run in children and children[run].poll() is None:continue
             signature=(run,(d/'stream-status.json').stat().st_mtime_ns)
             if signature in handled:continue
-            flag,evidence=classify(d);handled.add(signature)
+            flag,evidence=classify(d)
+            if evidence=='Provider attempts still settling':continue
+            handled.add(signature)
             if flag is None:
                 attention.append({'run_id':run,'reason':evidence});continue
             # A repeated identical snapshot has not made native retry progress.
