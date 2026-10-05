@@ -41,7 +41,7 @@ def candidate_binding(out,answer):
 def token_summary(attempts):
     unique={a['attempt_id']:a for a in attempts}
     assert len(unique)==len(attempts)
-    protocols=defaultdict(lambda: {'reported_fields':defaultdict(int),'known_processed_input_tokens':0})
+    protocols=defaultdict(lambda: {'reported_fields':defaultdict(int),'derived_processed_input_assuming_standard_semantics':0})
     unknown=[];missing_cache=[];inconsistent=[]
     for ident,a in unique.items():
         u=a['usage']
@@ -52,10 +52,10 @@ def token_summary(attempts):
             if isinstance(value,int):s['reported_fields'][key]+=value
         if protocol=='anthropic':
             keys=['input_tokens','cache_creation_input_tokens','cache_read_input_tokens']
-            if all(k in u for k in keys):s['known_processed_input_tokens']+=sum(u[k] for k in keys)
+            if all(k in u for k in keys):s['derived_processed_input_assuming_standard_semantics']+=sum(u[k] for k in keys)
             else:missing_cache.append(ident)
         else:
-            if 'input_tokens' in u:s['known_processed_input_tokens']+=u['input_tokens']
+            if 'input_tokens' in u:s['derived_processed_input_assuming_standard_semantics']+=u['input_tokens']
             cached=(u.get('input_tokens_details') or {}).get('cached_tokens')
             if cached is None:missing_cache.append(ident)
             else:s['reported_fields']['cached_input_tokens']+=cached
@@ -65,6 +65,9 @@ def token_summary(attempts):
             'cache_not_reported_attempt_ids':missing_cache,
             'provider_total_not_equal_input_plus_output_attempt_ids':inconsistent,
             'arithmetic_policy':'Keep provider fields unchanged. Anthropic processed input = noncached input + cache creation + cache read; Responses input already includes cached input. Missing fields remain unknown; never repair provider totals.',
+            'provider_semantics_verified':False,
+            'standard_anthropic_reference':'https://platform.claude.com/docs/en/build-with-claude/prompt-caching',
+            'interpretation':'Derived input assumes standard protocol field semantics; Aixoras native-field fidelity and actual account billing are not independently verified.',
             'monetary_cost':None,'monetary_cost_status':'account_debit_unknown',
             'usage_basis':'unique gateway attempts only; no addition of native duplicate accounting'}
 
@@ -228,7 +231,7 @@ def main():
     lines+=['', '达到合同中的两次同向改善且控制题无新增错误条件。' if useful else
         ('未达到两次风险题同向改善条件，不扩大整流 benchmark。' if result['status']=='completed' else '重复和控制配对不完整，不能判定效果。'), '',
         '用户请求直接测试 /v1/messages 后得到 HTTP 200，返回模型为 glm-5.3-flash、标准 Anthropic message 和已报告用量。先前仅依据已验收接口记录而作出的阻断判断已撤销；本轮不使用协议转换。D2/D3 当前状态分别为 '+conclusion['D2']['status']+' / '+conclusion['D3']['status']+'。','',
-        f"原生实验共有 {len(all_attempts)} 个唯一 provider attempt（D1 {len(stage_attempts['D1'])}、D2 {len(stage_attempts['D2'])}、D3 {len(stage_attempts['D3'])}），另有 1 次用户指定的 Messages 接口验收。HTTP 失败缺 usage 时保留 unknown。按实际协议分别汇总 input、output 和 cache：Anthropic 的 input 不含 cache 读写，Responses 的 input 已含 cache；不直接混加这两个 input 字段。原始 provider 字段及算术不一致均保留。只计算网关一次用量，不叠加原生重复记账。实际账户扣费未知。DPAPI 身份失败和 D2 缺 method_id 的首次启动均发生在提供商模型调用之前，私有区保留零调用基础设施记录。",'',
+        f"原生实验共有 {len(all_attempts)} 个唯一 provider attempt（D1 {len(stage_attempts['D1'])}、D2 {len(stage_attempts['D2'])}、D3 {len(stage_attempts['D3'])}），另有 1 次用户指定的 Messages 接口验收。HTTP 失败缺 usage 时保留 unknown。按协议分别保留 input、output 和 cache 原字段；处理输入的派生合计采用标准字段语义，不作为实际扣费核验。Anthropic 标准总输入是 input＋cache creation＋cache read（[官方说明](https://platform.claude.com/docs/en/build-with-claude/prompt-caching)）；Aixoras 对该原生接口计数字段的遵循程度未独立验证。原始 provider 字段及算术不一致均保留。只计算网关一次用量，不叠加原生重复记账。实际账户扣费未知。DPAPI 身份失败和 D2 缺 method_id 的首次启动均发生在提供商模型调用之前，私有区保留零调用基础设施记录。",'',
         '37 项相关测试通过；源快照和历史评分保持原样。结果仅是目的性选择案例上的开发诊断，不能声称泛化、显著性、新算法成立；Claude 写入改善须以 D2 源证据审查为准。','',
         '详细证据：[D0](followup-records/d0-evidence.json)、[配对结果](followup-records/d1-paired-results.json)、[运行锁](followup-records/d1-runtime-lock.json)、[核验](followup-records/verification.json)、[阶段决定与成本](followup-records/conclusion.json)。原始请求、状态 DB、会话和评价材料仍在忽略目录，不发布。']
     if d2.get('status')=='completed':

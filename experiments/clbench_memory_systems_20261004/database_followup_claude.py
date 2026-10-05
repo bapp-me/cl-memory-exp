@@ -102,10 +102,11 @@ def job(index,arm,repeat,runtime_hash,lock,resume=False):
         'extra_instruction':extra,'source_cutoff':index,'future_sources':False})
     before_files=archive(original)
     before={n:d for n,d in before_files.items() if n.startswith(MEMORY)}
-    container=None;started=time.monotonic()
+    container=None;restored=False;started=time.monotonic()
     try:
         container=broker({'op':'create','runtime_hash':runtime_hash})['container_id']
         restore(container,initial)
+        restored=True
         catalog=[]
         for i,value in values.items():
             rel=f'/state/work/database/followup-sources/task-{i:03d}.json'
@@ -163,7 +164,8 @@ def job(index,arm,repeat,runtime_hash,lock,resume=False):
     except Exception as exc:
         save(out/'failure.json',{'type':type(exc).__name__,'message':str(exc)})
         if container:
-            broker({'op':'quiesce','container_id':container});snapshot(container,out/'stopped-native-state.tar.gz')
+            broker({'op':'quiesce','container_id':container})
+            snapshot(container,out/('stopped-native-state.tar.gz' if restored else 'failed-restore-container.tar.gz'))
         return {'job_id':ident,'phase':'D2','arm':arm,'repeat':repeat,'index':index,'status':'blocked',
                 'reason':str(exc),'attempts':usage_for(out),'claim_scores':None}
     finally:

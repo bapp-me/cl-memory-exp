@@ -17,8 +17,9 @@ class ProtocolAccountingTests(unittest.TestCase):
                 'input_tokens_details':{'cached_tokens':70}}),
             self.attempt('a','anthropic',{'input_tokens':30,'cache_read_input_tokens':70,
                 'cache_creation_input_tokens':5,'output_tokens':10})])
-        self.assertEqual(summary['by_protocol']['responses']['known_processed_input_tokens'],100)
-        self.assertEqual(summary['by_protocol']['anthropic']['known_processed_input_tokens'],105)
+        self.assertEqual(summary['by_protocol']['responses']['derived_processed_input_assuming_standard_semantics'],100)
+        self.assertEqual(summary['by_protocol']['anthropic']['derived_processed_input_assuming_standard_semantics'],105)
+        self.assertFalse(summary['provider_semantics_verified'])
         self.assertEqual(summary['provider_total_not_equal_input_plus_output_attempt_ids'],[])
 
     def test_unknown_failed_usage_and_missing_cache_are_not_zero(self):
