@@ -2,11 +2,16 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from full_analysis import wire_tool_calls,packets,memory_kind
+from full_analysis import wire_tool_calls,packets,memory_kind,business_signature
 from judge_full_analysis import validate,METRICS,normalize_citations
 
 
 class EvidenceTests(unittest.TestCase):
+    def test_thought_wording_does_not_hide_repeated_command(self):
+        self.assertEqual(business_signature({'command':'pytest -q','thought':'first run'}),
+                         business_signature({'command':'pytest -q','thought':'verify again'}))
+        self.assertNotEqual(business_signature({'action':'QUERY','content':'SELECT a'}),
+                            business_signature({'action':'QUERY','content':'SELECT b'}))
     def test_chat_tool_argument_reassembly(self):
         events=[{'choices':[{'delta':{'tool_calls':[{'index':0,'id':'x','function':{'name':'read','arguments':'{"path":'}}]}}]},
                 {'choices':[{'delta':{'tool_calls':[{'index':0,'function':{'arguments':'"a"}'}}]}}]}]

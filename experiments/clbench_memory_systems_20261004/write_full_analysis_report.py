@@ -58,6 +58,7 @@ def main():
               '; '.join(f"{k}: {v['bytes']:,} B" for k,v in (g['last_after_memory_categories'] or {}).items())] for g in s['groups']]),
         '![记忆负载轨迹](figures/full-memory-payload.png)',
         'Notepad 的对错反馈是独立的 previous_feedback 字段，不含在 notepad 文本字节数中；其交接已单独核对。Jaccard 原始历史、Codex 提取源/摘要、Hermes skills 与 notes 的用途不同，不应凭总字节数断言谁更有效。相同段落可来自有意的多层索引，语义冗余必须另看。',
+        '曝光最初按提交前所有可取 provider 输入匹配；对原生系统仍需区分主会话与后台角色。Hermes 58 道已评分题的 1,790 条曝光长行中，1,724 条可由响应工具调用 ID 与主会话记录对应；剩余 66 条分布在 Codebase 第 11、19 题，角色未确认。两题的 judge 材料已把这些行从主求解者可见记忆中分离，只允许已确认子集用于当前任务的相关性/适用性/复用判断。中止题不在这项主会话佐证内。详见[角色核对](records/long-line-exposure-role-audit.json)。',
         table(['环境','方法','最终屏障状态','已知维护秒数','维护时长未知题'],
             [[ENVS[g['environment']],METHODS[g['method']],str(g['barrier_statuses']),f"{g['maintenance_seconds_known_sum']:.1f}" if not g['method'].startswith('pi_') else '不适用',g['maintenance_seconds_unknown_count'] if not g['method'].startswith('pi_') else '无独立异步维护'] for g in life['groups']]),
         '这些时间之和不是批次墙钟时间。恢复题缺失的原耗时保留未知，恢复片段另列。Claude 原生统计报告两种环境均 0 个 spawned 子 agent；Codex 59 题均有非空阶段一输出；Hermes 最终作业记录在 Codebase 为 25 个、Database 为 40 个，其中 Database 9 个旧作业没有完整 review_scope 字段。作业数、调用数、写文件次数是不同量，不能相加。',
@@ -68,7 +69,7 @@ def main():
         '原实验全部 5,642 个 attempts 的已知总量为 99,325,232 tokens，31 个 usage 未知，包含中止题、被替代旧题和验收成本。本报告新增 judge 成本另列，绝不混入原系统效率比较。',
         '## 七项语义评审',
         '评分标准为 0/1/2，另有 unknown 和 not_applicable。任务可能拆成多个包；下表只是该任务的已评片段中出现何种标签：任一 0 → I，否则任一 1 → M，否则出现 2 → P，随后为 U 或 N。P 不代表整题所有记忆都好，I/M 也不自动等于造成业务失败。长记忆被切包后，部分来源不在同包会增加 unknown，不能把各框架的标签直接当公平完整的标量排名。',
-        '表内顺序为 **P/M/I/U/N/未评**：正面证据、混合/限定、问题证据、未知、不适用、无有效评审。']
+        '表内顺序为 **P/M/I/U/N/未评**：出现 2 分、出现 1 分、出现 0 分、未知、不适用、无有效评审。各指标的 0 分含义不同；例如可观察复用的 0 仅表示未找到显式联系，不等于坏记忆或负迁移。']
     label_order=['positive_evidence_observed','observed_mixed','observed_issue','unknown','not_applicable','not_judged']
     lines.append(table(['环境','方法','完整包覆盖任务']+list(METRICS.values()),
         [[ENVS[g['environment']],METHODS[g['method']],f"{g['all_task_packets_valid']}/{g['tasks']}"]+
@@ -91,6 +92,7 @@ def main():
         f"Aixoras glm-5.3-flash 已记录 {cost['attempts']:,} 个实际请求，终态分布 {cost['phase_counts']}；无 usage 的 {cost['unknown_usage_attempts']} 个请求保留未知（包含仍在途者）。原始 usage 字段各自求和：输入 {cost['raw_reported_usage_totals']['input_tokens']:,}，输出 {cost['raw_reported_usage_totals']['output_tokens']:,}，provider total {cost['raw_reported_usage_totals']['total_tokens']:,}。有 {len(cost['usage_arithmetic_discrepancies'])} 次返回不满足 input+output=total，保留原值，不强行修平。实际金额未知，不套旧 Z.AI 价目。",
         '75 并发试跑实际峰值为 75，没有观察到 429。该 25 包试跑共 40 次请求，35 次 HTTP 200、5 次 HTTP 524；终态耗时中位数 81.7 秒。包大小和组成不同，不能把此数与先前 50 并发批次直接解释为加速比，也不能当作服务商最大容量。按用户要求，5xx 留痕并重试，不作为自动降低并发的理由。后续目标总并发保持 75，实际在途量随尾批完成而下降。',
         f"关键原始证据的 {s['frozen_evidence']['files_verified']} 个文件哈希核对未变。新 key 只保存在忽略追踪的加密本地文件；请求、响应、完整轨迹和衍生证据包留在私有分析区，报告不回写被测 memory。",
+        '逐请求的无正文用量记录见 [新增 attempt 台账](records/analysis-attempt-ledger.json)，HTTP、耗时、重叠与原始 usage 核对见[调用审计](records/analysis-call-audit.json)。返回 model 字段作为接口身份记录，不能证明服务商未公开的内部实现。',
         '## 复算与解释边界',
         '所有指标的机器可读索引见 [覆盖清单](records/full-metric-coverage.json)。原始分数与因果范围不因 judge 判断而改变。跨框架比较仍受不同执行器、混合输出预算、Codex 混合整合节奏、R=1 和一个中止题限制。',
         '离线复算（不会调用模型）：',

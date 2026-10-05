@@ -15,6 +15,7 @@ def main():
     at = datetime.fromisoformat(closure['as_of']).astimezone(timezone(timedelta(hours=8))).strftime('%Y-%m-%d %H:%M HKT')
     lines = [
         '# CL-Bench 跨会话记忆实验：本轮最终结果', '',
+        '后续获批的全量观测分析与 LLM judge 见[独立分析报告](FULL_ANALYSIS.md)。本文保留原执行结果与成本口径；新增分析不改业务成绩。', '',
         f'数据核验时间：{at}。本轮 R=1 已结束，353 道任务已完成评分和规定的记忆屏障，另有 1 道按用户要求中止、未评分。12 条流均已结束，当前共享请求门 active=0。没有待执行任务。', '',
         '**完成进度与正确数是两件事。** 例如 Codex Database 已完成 40 道，其中 20 道正确、20 道错误；“20/40”表示正确数，不表示只跑了 20 道。Hermes Codebase 完成评分 18 道，第 16 题中止；第 17–19 题均已执行完。', '',
         '在本次观察中，Database 的最高正确数是 Claude Code 的 32 道；Codebase 的最高正确数是 Codex 的 19 道。两者是不同 agent 完整系统的单次结果，不能据此认定其 memory 机制具有稳定或因果优势。Pi 三组底座更接近：Notepad 的 Codebase 已知用量最低，Jaccard 在 Pi 三组中业务动作最少。', '',

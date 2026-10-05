@@ -21,6 +21,13 @@ def canonical(v):
     return json.dumps(v,ensure_ascii=False,sort_keys=True,separators=(',',':'))
 
 
+def business_signature(action):
+    # Thought text is not part of the executed command/query.
+    if 'command' in action:return canonical({'command':action['command']})
+    if action.get('action') in {'QUERY','ANSWER'}:return canonical({k:action.get(k) for k in ['action','content']})
+    return canonical(action)
+
+
 def texts(value):
     if isinstance(value,str): yield value
     elif isinstance(value,list):
@@ -292,7 +299,7 @@ def main():
             last_consolidation[run]=idx
         for i,e in enumerate(compactions):docs.append({'id':f'compaction:{i}','kind':'observed_compaction_event','path':'native/Pi event','text':canonical(e)})
         if wire_calls:docs.append({'id':'all_role_tool_calls','kind':'all_role_tool_calls','path':'provider response tool calls; no fabricated results','text':canonical(wire_calls)})
-        actions=[canonical(x['action']) for x in episode['tools']]
+        actions=[business_signature(x['action']) for x in episode['tools']]
         counts=Counter(actions)
         op_strings=([canonical({'name':x['name'],'arguments':x['arguments']}) for x in wire_calls]
                     if native else [canonical(x.get('action')) for x in operations])
@@ -310,12 +317,13 @@ def main():
                  'updates':{'added_files':len(added),'removed_files':len(removed),'changed_files':len(changed),
                             'content_changed_files':sum(memory_kind(n)!='bookkeeping' for n in added+removed+changed)},
                  'storage_categories':raw_storage,'business_actions_logged':len(actions),'exact_repeated_actions':sum(c-1 for c in counts.values()),
+                 'business_repetition_definition':'Identical executable command or action/content, excluding thought text; not automatically waste',
                  'native_or_pi_tool_records':len(operations),'tool_lexical_counts':dict(lex),
                  'exact_repeated_whole_tool_records':sum(c-1 for c in Counter(op_strings).values()),
                  'tool_repetition_definition':'Repeated name plus arguments, ignoring IDs and output; not automatically waste',
                  'all_role_provider_tool_calls':len(wire_calls) if native else None,
                  'long_memory_lines_eligible':len(eligible),'long_memory_lines_exposed':len(exposed),
-                 'exposure_definition':'Exact pre-task lines >=60 characters found in pre-submission provider input; lower-bound evidence, not semantic use',
+                 'exposure_definition':'Exact pre-task lines >=60 characters found in pre-submission provider input; Hermes actor corroboration is separately audited, not semantic use',
                  'compaction_events_observed':len(compactions),'compaction_coverage':'Pi public events' if not native else 'Native captured events/session markers only; unexposed internal compaction is unknown',
                  'native_thread_ids_observed':len(native_ids),'native_subagent_thread_ids_observed':len(subagent_ids),
                  'cost_roles':{k:{'attempts':len(v),'known_tokens':sum(c['total_tokens'] or 0 for c in v),
@@ -345,6 +353,10 @@ def main():
     # Include the same corrected Notepad context in every reproducible rebuild.
     from repair_notepad_judge_context import main as repair_notepad_context
     repair_notepad_context([])
+    from audit_exposure_roles import main as audit_main_exposure
+    from repair_exposure_actor_context import main as repair_actor_context
+    audit_main_exposure()
+    repair_actor_context()
     all_packets=read(ROOT/'records/full-judge-packet-index.json')
     save(ROOT/'records/full-mechanical-summary.json',{'as_of':datetime.now(timezone.utc).isoformat(),'model_calls':0,'tasks':len(all_rows),
          'scored_tasks':sum(not r['user_interrupted'] for r in all_rows),'user_interrupted':sum(r['user_interrupted'] for r in all_rows),
