@@ -8,7 +8,7 @@ import time
 import uuid
 from prepare import ROOT, read, save, sha
 from protocol import Boundary, digest, namespace, project_episode
-from native_client import broker, put, snapshot, freeze_runtime
+from native_client import broker, put, snapshot, restore, freeze_runtime
 from native_evidence import archive, memory_snapshot, validate, usage_for, validate_attempt_accounting
 
 
@@ -69,8 +69,10 @@ def main():
         previous=directory/f'task-{first_index if pending else first_index-1:03d}'
         archive_path=next((previous/name for name in ['recovered-native-state.tar.gz','timeout-state.tar.gz','native-state.tar.gz'] if (previous/name).exists()),None)
         if archive_path is None: raise RuntimeError('Missing preserved native state')
-        restored=broker({'op':'restore','container_id':container,'data':base64.b64encode(archive_path.read_bytes()).decode()})
-        if restored['archive_sha256']!=sha(archive_path): raise RuntimeError('Restored archive hash mismatch')
+        try: restore(container,archive_path)
+        except Exception:
+            stream.close();broker({'op':'remove','container_id':container})
+            raise
     try:
         for index in range(first_index,limit):
             if config_hash != digest({f:sha(snapshot_dir/f) for f in runtime}): raise RuntimeError('Captured runtime changed at boundary')

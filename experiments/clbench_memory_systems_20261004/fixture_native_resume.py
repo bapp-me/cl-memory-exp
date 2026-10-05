@@ -27,6 +27,8 @@ def main():
             path=ROOT/'.local'/f'restore-fixture-{kind}.tar.gz'
             native_client.snapshot(c,path)
             assert archive(path)['home/restored-marker.txt']==b'fixture-only'
+            # Includes root-owned directory entries from the real snapshot.
+            native_client.restore(c,path)
             try:native_client.broker({'op':'restore','container_id':c,'data':base64.b64encode(blob('../escape')).decode()})
             except RuntimeError as exc:assert 'Unsafe state archive' in str(exc)
             else:raise AssertionError('Traversal archive admitted')
