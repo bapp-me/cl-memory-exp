@@ -40,23 +40,39 @@ def call(payload, *, role, unit_id, key=None):
     event = {'attempt_id':ident,'unit_id':unit_id,'role':role,'provider':'aixoras','endpoint':ENDPOINT,
              'requested_model':MODEL,'timestamp':datetime.now(timezone.utc).isoformat(),'phase':'started'}
     save(out/f'{ident}.attempt.json',event)
-    raw = b''; started=time.monotonic(); status=None; error=None
+    raw = b''; chunks=[]; started=time.monotonic(); status=None; error=None;first_byte=None
     try:
         request=Request(ENDPOINT,data=json.dumps(payload,ensure_ascii=False).encode(),
                         headers={'Content-Type':'application/json','Authorization':'Bearer '+key})
         with build_opener(NoRedirect).open(request, timeout=600) as response:
-            status=response.status; raw=response.read()
+            status=response.status
+            if payload.get('stream'):
+                with (out/f'{ident}.response.txt').open('w',encoding='utf8') as captured:
+                    while chunk:=response.readline():
+                        if first_byte is None:first_byte=time.monotonic()-started
+                        chunks.append(chunk)
+                        captured.write(chunk.decode('utf8',errors='replace').replace(key,'[REDACTED]'));captured.flush()
+                raw=b''.join(chunks)
+            else:raw=response.read()
     except HTTPError as exc:
         status=exc.code; raw=exc.read(); error=type(exc).__name__
     except Exception as exc:
-        error=type(exc).__name__
+        error=type(exc).__name__;raw=b''.join(chunks)
     text=raw.decode('utf8',errors='replace').replace(key,'[REDACTED]')
     (out/f'{ident}.response.txt').write_text(text,encoding='utf8')
     try: data=json.loads(text)
     except json.JSONDecodeError: data={}
+    if not data and payload.get('stream'):
+        for line in text.splitlines():
+            if not line.startswith('data: ') or line[6:]=='[DONE]':continue
+            try:event_data=json.loads(line[6:])
+            except json.JSONDecodeError:continue
+            if isinstance(event_data.get('response'),dict):data=event_data['response']
     event.update(http_status=status,seconds=round(time.monotonic()-started,3),
                  phase='failed' if error or data.get('error') else 'finished',error=error or data.get('error'),
-                 returned_model=data.get('model'),response_status=data.get('status'),usage=data.get('usage'))
+                 returned_model=data.get('model'),response_status=data.get('status'),usage=data.get('usage'),
+                 first_byte_seconds=round(first_byte,3) if first_byte is not None else None,
+                 usage_arithmetic_consistent=(data['usage'].get('total_tokens')==data['usage'].get('input_tokens',0)+data['usage'].get('output_tokens',0)) if data.get('usage') else None)
     save(out/f'{ident}.attempt.json',event)
     return data,event
 

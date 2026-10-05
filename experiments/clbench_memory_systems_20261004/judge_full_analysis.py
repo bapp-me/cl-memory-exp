@@ -44,6 +44,37 @@ For kind candidate_relevance, metrics={} and findings=[]. Judge EVERY supplied c
 """
 
 
+def normalize_citations(result,packet):
+    """Resolve only exact source spans and reversible JSON display formatting.
+
+    Never change labels, scores, reasons or findings. Raw provider output remains
+    untouched. A paraphrase is still rejected. Cross-fragment relocation must
+    remain in the same original source document and in this supplied packet.
+    """
+    result=deepcopy(result);docs={d['id']:d['text'] for d in packet['documents']};changes=[]
+    values=list(result.get('metrics',{}).values())+result.get('findings',[])+result.get('candidates',[])
+    for value in values:
+        for c in value.get('citations',[]):
+            ident=c.get('evidence_id','');q=c.get('quote','')
+            if ident not in docs or not 8<=len(q)<=240:continue
+            if q in docs[ident]:continue
+            compact=q.replace('\": ', '\":').replace('\", ', '\",')
+            variants=[('exact_same_source_fragment',q),('json_separator_spacing',compact),
+                      ('json_string_escaping',json.dumps(q,ensure_ascii=False)[1:-1]),
+                      ('json_spacing_and_escaping',json.dumps(compact,ensure_ascii=False)[1:-1])]
+            matched=None
+            for kind,quote in variants:
+                for target,text in docs.items():
+                    if target.split('@')[0]==ident.split('@')[0] and quote in text and 8<=len(quote)<=240:
+                        matched=(kind,target,quote);break
+                if matched:break
+            if matched:
+                kind,target,quote=matched
+                changes.append({'original':dict(c),'resolved':{'evidence_id':target,'quote':quote},'method':kind})
+                c.update(evidence_id=target,quote=quote)
+    return result,changes
+
+
 def validate(result,packet):
     if result.get('packet_id')!=packet['packet_id']:raise ValueError('packet_id mismatch')
     docs={d['id']:d['text'] for d in packet['documents']}
@@ -98,14 +129,14 @@ def run_one(entry,key,repeat=False,retry_failed=False):
         save(PRIVATE/'judge-history'/f"{ident}-{old['attempt_ids'][-1]}.json",old)
     wire=wire_packet(packet)
     if repeat:wire['documents']=list(reversed(wire['documents']))
-    attempts=[];error=None;result=None
+    attempts=[];error=None;result=None;normalizations=[]
     for try_number in range(2):
         if STOP.is_set():
             return {'packet_id':ident,'status':'paused_provider_resource','validation_error':'Provider authorization/resource stop','attempt_ids':attempts}
         payload={'model':MODEL,'instructions':RUBRIC,'input':json.dumps(wire,ensure_ascii=False),
                  'max_output_tokens':65536,'reasoning':{'effort':'high'},
                  'text':{'format':{'type':'json_schema','name':'clbench_evidence_judge','strict':True,'schema':response_schema(packet)}},
-                 'stream':False,'store':False}
+                 'stream':True,'store':False}
         assert len(payload['input'].encode())+len(RUBRIC.encode())<=196608
         data,event=call(payload,role='judge_reliability_repeat' if repeat else 'llm_judge',unit_id=ident,key=key)
         attempts.append(event['attempt_id'])
@@ -114,24 +145,39 @@ def run_one(entry,key,repeat=False,retry_failed=False):
             STOP.set()
         try:
             if event['http_status']!=200 or event['returned_model']!=MODEL or data.get('status')!='completed':raise ValueError('Provider response not a completed requested-model result')
-            result=json.loads(output_text(data));validate(result,packet);error=None;break
+            result,normalizations=normalize_citations(json.loads(output_text(data)),packet)
+            validate(result,packet);error=None;break
         except (ValueError,TypeError,KeyError) as exc:
             error=str(exc)
             if event['http_status'] in {401,402,403}:break
-            if event.get('error') and event['http_status'] not in {None,429,500,502,503,504}:break
+            if event.get('error') and not (event['http_status'] is None or event['http_status']==429 or 500<=event['http_status']<=599):break
             if try_number==0:time.sleep(2)
     record={'packet_id':ident,'packet_sha256':sha(PRIVATE/'packets'/f'{ident}.json'),'kind':packet['kind'],
             'status':'valid' if error is None else 'failed','attempt_ids':attempts,'validation_error':error,
             'judgement':result,'completed_at':datetime.now(timezone.utc).isoformat(),'repeat':repeat,'response_contract':'strict_schema_v2',
-            'rubric_sha256':hashlib.sha256(RUBRIC.encode()).hexdigest()}
+            'rubric_sha256':hashlib.sha256(RUBRIC.encode()).hexdigest(),'citation_span_normalizations':normalizations}
     save(out,record)
     return record
 
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--limit',type=int);p.add_argument('--workers',type=int,default=4)
-    p.add_argument('--repeat',action='store_true');p.add_argument('--retry-failed',action='store_true');args=p.parse_args()
+    p.add_argument('--repeat',action='store_true');p.add_argument('--retry-failed',action='store_true')
+    p.add_argument('--tail-limit',type=int,help='One disjoint late-packet load-test batch while original front-of-queue controller drains')
+    p.add_argument('--status-name',default=None);p.add_argument('--packet-list',help='JSON list of specific disjoint packet IDs');args=p.parse_args()
     entries=read(ROOT/'records/full-judge-packet-index.json')
+    if args.packet_list:
+        requested=set(read(ROOT/args.packet_list));entries=[e for e in entries if e['packet_id'] in requested]
+        assert len(entries)==len(requested),'Unknown or duplicate packet ID'
+    if args.tail_limit:
+        available=[]
+        live={read(p)['unit_id'] for p in (PRIVATE/'requests').glob('*.attempt.json') if read(p)['phase']=='started'}
+        for e in entries:
+            path=PRIVATE/'judge'/(e['packet_id']+'.json')
+            if e['packet_id'] in live:continue
+            if path.exists() and read(path).get('status')=='valid' and read(path).get('packet_sha256')==sha(PRIVATE/'packets'/(e['packet_id']+'.json')):continue
+            available.append(e)
+        entries=available[-args.tail_limit:]
     if args.repeat:
         # Fixed deterministic reliability sample, independent of judge outcomes.
         groups={}
@@ -141,7 +187,8 @@ def main():
             groups.setdefault(kind,[]).append(e)
         entries=[e for g in groups.values() for e in sorted(g,key=lambda e:hashlib.sha256(e['packet_id'].encode()).hexdigest())[:2]]
     if args.limit:entries=entries[:args.limit]
-    key=secret();counts=Counter();status_path=ROOT/'records'/('full-judge-repeat-progress.json' if args.repeat else 'full-judge-progress.json')
+    key=secret();counts=Counter();status_path=ROOT/'records'/(args.status_name or ('full-judge-repeat-progress.json' if args.repeat else 'full-judge-progress.json'))
+    save(status_path.with_name(status_path.stem+'-dispatch.json'),{'at':datetime.now(timezone.utc).isoformat(),'workers':args.workers,'packets':[e['packet_id'] for e in entries]})
     save(status_path,{'status':'running','total_packets':len(entries),'workers':args.workers,'model':MODEL,'provider':'aixoras'})
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
         jobs={pool.submit(run_one,e,key,args.repeat,args.retry_failed):e for e in entries}
