@@ -109,6 +109,22 @@ args = ["/runtime/business_mcp.py", {json.dumps(str(path))}]
     plan=cfg.get('consolidation_schedule')
     before_db=read_databases(home,session)
     before_phase2=phase2_jobs(before_db)
+    if cfg.get('resume_maintenance_timeout'):
+        receipts=[]
+        for dbpath in home.glob('memories_*.sqlite'):
+            with sqlite3.connect(dbpath) as db:
+                db.row_factory=sqlite3.Row
+                for row in db.execute("SELECT * FROM jobs WHERE kind='memory_consolidate_global'"):
+                    prior=dict(row)
+                    if prior['status'] not in {'running','error'} or prior['retry_remaining']<=0:
+                        raise RuntimeError('No reclaimable interrupted native consolidation')
+                    # The old actor was stopped and its immutable state restored in
+                    # a new container. Expire only its lease/cooldown, not retries.
+                    db.execute("UPDATE jobs SET lease_until=0,retry_at=NULL WHERE kind='memory_consolidate_global' AND job_key=?",(prior['job_key'],))
+                    receipts.append({'before':prior,'lease_until_after':0,'retry_at_after':None,
+                        'retry_remaining_after':prior['retry_remaining'],'reason':'User-authorized recovery of quiesced consolidation after maintenance deadline'})
+        if len(receipts)!=1:raise RuntimeError('Expected one interrupted native consolidation')
+        (out/'timeout-recovery-scheduling.json').write_text(json.dumps(receipts))
     if plan and not plan['consolidation_required']:
         current=[j for v in before_db.values() for j in v.get('jobs',[]) if j['kind']=='memory_stage1' and j['job_key']==session]
         sources=[s for v in before_db.values() for s in v.get('source_thread',[])]
@@ -171,7 +187,7 @@ args = ["/runtime/business_mcp.py", {json.dumps(str(path))}]
             send({'id':3,'method':'turn/start','params':{'threadId':started['thread']['id'],
                 'input':[{'type':'text','text':'This is a maintenance synchronization turn. Reply ACK only. Do not use tools, read files, edit memory, or perform benchmark actions. The native background memory pipeline is handled independently.'}]}})
             response(3)
-            deadline=time.monotonic()+600
+            deadline=time.monotonic()+int(cfg.get('maintenance_wait_seconds',600))
             while not receipt.exists():
                 if maint.poll() is not None: raise RuntimeError('Maintenance process ended before pipeline return')
                 if time.monotonic()>deadline: raise TimeoutError('Native memory pipeline did not return')

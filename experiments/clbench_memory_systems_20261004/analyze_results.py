@@ -100,6 +100,7 @@ def main():
                         'recovered_maintenance':result.get('recovered_maintenance',False),
                         'recovered_solver':result.get('recovered_solver',False),
                         'consolidation_schedule':result.get('consolidation_schedule'),
+                        'maintenance_wait_seconds':result.get('maintenance_wait_seconds',600) if stream['method']=='codex_memory_ready' else None,
                         'maintenance_recovery_seconds':result.get('maintenance_recovery_seconds'),
                         'solver_recovery_seconds':result.get('solver_recovery_seconds'),
                         'seconds': result.get('seconds') if not result.get('seconds_basis') else None,

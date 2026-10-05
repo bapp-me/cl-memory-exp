@@ -24,6 +24,7 @@ def main():
     p.add_argument('--retry-transport-maintenance',action='store_true')
     p.add_argument('--resume-business',action='store_true')
     p.add_argument('--resume-tool-error',action='store_true')
+    p.add_argument('--resume-maintenance-timeout',action='store_true')
     args = p.parse_args(); method = args.framework + '_memory_ready'
     pause_path=ROOT/'records/native-user-pause.json'
     pause=read(pause_path) if pause_path.exists() else {}
@@ -64,6 +65,13 @@ def main():
             raise RuntimeError('Tool-error recovery source or prior actions changed')
     if args.recover_format and (not pending or args.framework!='codex'):
         raise RuntimeError('Format recovery is only for a submitted Codex task')
+    if args.resume_maintenance_timeout:
+        approval=read(ROOT/'records/codex-batch-policy.json').get('timeout_recovery_authorization',{})
+        if args.framework!='codex' or not pending or not approval.get('approved') or approval.get('run_id')!=args.run_id or approval.get('index')!=first_index:
+            raise RuntimeError('This interrupted consolidation lacks scoped user authorization')
+        out=directory/f'task-{first_index:03d}'
+        if sha(out/'submission.json')!=approval['submission_sha256'] or sha(out/'recovery-timeout-state.tar.gz')!=approval['snapshot_sha256']:
+            raise RuntimeError('Authorized timeout recovery evidence changed')
     if args.retry_native_maintenance:
         authorization=read(ROOT/'records/execution-authorization.json').get('native_maintenance_invalid_json_retry',{})
         if not pending or args.framework!='codex' or not authorization.get('approved'):
@@ -214,10 +222,12 @@ def main():
                 if policy.get('status')!='approved':raise RuntimeError('Batched consolidation requires user authorization')
                 cfg['consolidation_schedule']=scheduling.schedule(args.environment,index)
                 cfg['codex_binary_sha256']=read(ROOT/'records/codex-build.json')['binary_sha256']
+                cfg['maintenance_wait_seconds']=policy['maintenance_wait_seconds'] if cfg['consolidation_schedule']['consolidation_required'] else 600
             if recovering:
                 cfg.update(maintenance_only=not recovering_business,solver_transport_resume=recovering_business and not args.resume_tool_error,
                     solver_tool_error_resume=args.resume_tool_error,
                     framing=original_cfg['framing'],recover_format_error=args.recover_format,
+                    resume_maintenance_timeout=args.resume_maintenance_timeout,
                     retry_native_maintenance=args.retry_native_maintenance,retry_transport_maintenance=args.retry_transport_maintenance)
                 if recovering_business:
                     cfg['transport_resume_prompt']='Continue the same unfinished benchmark instance from the saved conversation and business state. Do not repeat completed actions.'
@@ -239,7 +249,8 @@ def main():
             while True:
                 server.handle_request()
                 if failed: raise RuntimeError('Controller failure; native stream stopped')
-                if submitted_at and time.monotonic()-submitted_at>600: raise TimeoutError('Completion barrier exceeded 600 seconds')
+                if submitted_at and time.monotonic()-submitted_at>cfg.get('maintenance_wait_seconds',600):
+                    raise TimeoutError(f"Completion barrier exceeded {cfg.get('maintenance_wait_seconds',600)} seconds")
                 if time.monotonic()>=poll_at:
                     state=broker({'op':'poll','container_id':container,'job_id':job}); poll_at=time.monotonic()+2
                     if not state['running']: break
@@ -272,6 +283,7 @@ def main():
                 'maintenance_seconds':round(time.monotonic()-submitted_at,3),'attempts':attempts,'source_watermark':watermark}
             if args.framework=='codex':
                 result['consolidation_schedule']=cfg['consolidation_schedule']
+                result['maintenance_wait_seconds']=cfg['maintenance_wait_seconds']
                 result['codex_binary_sha256']=cfg['codex_binary_sha256']
             if recovering:
                 proof=read(out/'recovery-provenance.json')
