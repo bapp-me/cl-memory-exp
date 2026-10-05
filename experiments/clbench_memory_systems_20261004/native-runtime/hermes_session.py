@@ -1,5 +1,6 @@
 """Native Hermes AIAgent with transparent job/result instrumentation only."""
 import hashlib
+import inspect
 import json
 import os
 from pathlib import Path
@@ -10,6 +11,7 @@ import uuid
 
 
 def run(path, cfg, out, project):
+    output_limit=int(cfg.get('output_limit',65536))
     home = Path('/state/home/.hermes'); home.mkdir(exist_ok=True)
     os.environ.update(HERMES_HOME=str(home), HOME='/state/home',
         OPENAI_API_KEY=cfg['gateway_token'], OPENAI_BASE_URL=cfg['gateway'])
@@ -32,8 +34,8 @@ def run(path, cfg, out, project):
     def truncation(agent,response,*args,**kwargs):
         usage=getattr(response,'usage',None)
         output=getattr(usage,'completion_tokens',0) or 0
-        old=int(agent.max_tokens or 16384)
-        if output>=old and old<131072:
+        old=int(agent.max_tokens or output_limit)
+        if cfg.get('automatic_output_growth',False) and output>=old and old<cfg.get('output_ceiling',65536):
             receipt=grow(cfg,old)
             agent.max_tokens=receipt['output_limit']
             agent.context_compressor.max_tokens=receipt['output_limit']
@@ -101,14 +103,17 @@ def run(path, cfg, out, project):
     AIAgent.run_conversation = conversation
     original_init = AIAgent.__init__
     def initialize(self, *args, **kwargs):
-        original_init(self, *args, **kwargs)
+        bound=inspect.signature(original_init).bind_partial(self,*args,**kwargs)
+        bound.arguments['max_tokens']=output_limit
+        original_init(*bound.args,**bound.kwargs)
         # Current Hermes computes its percentage after reserving output tokens.
         # Use its public token-threshold setter to map the agreed exact trigger.
-        self.context_compressor.threshold_tokens = 262144 - int(self.max_tokens or 16384)
+        self.context_compressor.max_tokens=output_limit
+        self.context_compressor.threshold_tokens = 262144 - output_limit
     AIAgent.__init__ = initialize
     db = SessionDB()
     agent = AIAgent(model='glm-5.3-flash', provider='custom', api_mode='chat_completions',
-        base_url=cfg['gateway'], api_key=cfg['gateway_token'], max_tokens=16384,
+        base_url=cfg['gateway'], api_key=cfg['gateway_token'], max_tokens=output_limit,
         reasoning_config={'enabled': True, 'effort': 'high'},
         request_overrides={'reasoning_effort': 'high', 'extra_body': {'thinking': {'type': 'enabled'}}},
         session_id=cfg['session_id'], session_db=db, cwd=str(project), platform='cli',

@@ -15,7 +15,7 @@ def run_solver(cfg,out,project,home,env):
     from native_budget import grow
     base=['/native/codex','exec','--json','--skip-git-repo-check','--dangerously-bypass-approvals-and-sandbox',
         '-C',str(project),'--output-last-message',str(out/'final.txt')]
-    session=None; output_limit=16384; prompt=cfg['prompt']; continuations=[]
+    session=None; output_limit=cfg.get('output_limit',65536); prompt=cfg['prompt']; continuations=[]
     with (out/'events.jsonl').open('w') as events,(out/'stderr.txt').open('w') as stderr:
         while True:
             command=base+([prompt] if session is None else ['resume',session,prompt])
@@ -38,6 +38,8 @@ def run_solver(cfg,out,project,home,env):
             if not session: raise RuntimeError('Native Codex did not produce a session')
             # /budget rejects normal stop, network errors, input exhaustion,
             # reused evidence and growth beyond the provider output maximum.
+            if not cfg.get('automatic_output_growth',False):
+                raise RuntimeError('Native Codex incomplete under fixed common output budget')
             decision=grow(cfg,output_limit)
             output_limit=decision['output_limit']
             config_path=home/'config.toml'; config=config_path.read_text()
@@ -63,7 +65,7 @@ def run(path,cfg,out,project):
 model_provider = "glm_experiment"
 model_reasoning_effort = "high"
 model_context_window = 262144
-model_auto_compact_token_limit = 245760
+model_auto_compact_token_limit = {262144-int(cfg.get('output_limit',65536))}
 model_catalog_json = "{home}/models.json"
 approval_policy = "never"
 sandbox_mode = "danger-full-access"

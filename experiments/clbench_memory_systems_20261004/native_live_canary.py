@@ -42,9 +42,11 @@ def main():
                 'instance_id': f'capability-{index}', 'project_key': 'database', 'session_id': session,
                 'phase': 'native_capability', 'config_hash': sha(ROOT / 'native-runtime/native_entry.py'),
                 'audit_relative_path': out.relative_to(ROOT).as_posix(),
-                'tool_url': f'http://127.0.0.1:{server.server_port}/tool', 'tool_token': token, 'output_limit': 16384}
+                'tool_url': f'http://127.0.0.1:{server.server_port}/tool', 'tool_token': token, 'output_limit': 65536,
+                'output_ceiling':65536,'automatic_output_growth':False,'uniform_output_limit':True}
             save(ROOT / '.local/native-routes' / f'{route_id}.json', route)
             cfg = {'framework': args.framework, 'session_id': session, 'project_key': 'database',
+                'output_limit':65536,'output_ceiling':65536,'automatic_output_growth':False,
                 'gateway': f'http://172.30.0.1:{43193 if args.framework=="codex" else 43191}/r/{route_id}', 'gateway_token': route_token,
                 'environment': 'database_exploration', 'tool_description': 'Submit the requested probe answer using action ANSWER and content.',
                 'framing': 'This is an isolated capability probe. Use your native memory mechanism when asked. Submit the answer via CLBENCH_ACTION, then end your turn.',

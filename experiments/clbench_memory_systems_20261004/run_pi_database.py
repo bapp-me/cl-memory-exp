@@ -143,6 +143,7 @@ def main():
             cfg = {'out': str(out), 'workspace': str(workspace), 'run_id': args.run_id,
                 'method_id': args.method, 'instance_id': query['instance_id'], 'project_key': project_key,
                 'environment': args.environment, 'config_hash': config_hash,
+                'output_limit': 65536, 'output_ceiling': 65536, 'automatic_output_growth': False,
                 'base_url': 'https://api.z.ai/api/paas/v4', 'tool_url': f'http://127.0.0.1:{server.server_port}/tool',
                 'tool_token': token, 'tool_description': tool_description,
                 'system_append': framing,

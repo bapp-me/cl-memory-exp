@@ -18,7 +18,9 @@ let role = 'solver';
 let notepad = cfg.notepad || '';
 let terminal = false;
 let callCounter = 0;
-let outputLimit = 16384;
+let outputLimit = cfg.output_limit ?? 65536;
+const outputCeiling = cfg.output_ceiling ?? 65536;
+const automaticOutputGrowth = cfg.automatic_output_growth ?? false;
 let lastFinalAssistant = null;
 let fatalToolError = false;
 const rawCaptures = [];
@@ -83,7 +85,7 @@ const runtime = await ModelRuntime.create({authPath: path.join(agentDir, 'auth.j
   allowModelNetwork: false});
 runtime.registerProvider('glm_experiment', {baseUrl: cfg.base_url, api: 'openai-completions',
   models: [{id: 'glm-5.3-flash', name: 'GLM 5.3 Flash',
-    reasoning: true, input: ['text'], contextWindow: 262144, maxTokens: 131072,
+    reasoning: true, input: ['text'], contextWindow: 262144, maxTokens: outputCeiling,
     compat: {thinkingFormat: 'zai', supportsReasoningEffort: true},
     thinkingLevelMap: {low: 'low', medium: 'high', high: 'high', xhigh: 'max', max: 'max'},
     cost: {input: 0, output: 0, cacheRead: 0, cacheWrite: 0}}]});
@@ -97,14 +99,14 @@ for (const name of ['stream', 'streamSimple', 'complete', 'completeSimple']) {
     append('contexts.jsonl', {...identity, session_id: cfg.session_id, role,
       sequence: callCounter, model: model.id, contextWindow: model.contextWindow,
       context, timestamp: new Date().toISOString()});
-    const maxTokens = role === 'solver' ? outputLimit : Math.min(options.maxTokens ?? 16384, 16384);
+    const maxTokens = outputLimit;
     return original(model, context, {...options, fetch: recordedFetch, maxTokens,
       maxRetries: 0, timeoutMs: 300000, transport: 'sse'});
   };
 }
 const model = runtime.getModel('glm_experiment', 'glm-5.3-flash');
 if (!model) throw new Error('Registered GLM model missing');
-const settings = SettingsManager.inMemory({compaction: {enabled: true, reserveTokens: 16384, keepRecentTokens: 20000},
+const settings = SettingsManager.inMemory({compaction: {enabled: true, reserveTokens: outputLimit, keepRecentTokens: 20000},
   retry: {enabled: false, provider: {maxRetries: 0, timeoutMs: 300000}},
   cacheWarming: 'off', enableAnalytics: false, enableInstallTelemetry: false});
 const toolName = 'CLBENCH_ACTION';
@@ -209,9 +211,9 @@ try {
     // Pi can remove a truncated assistant from projected context during native
     // recovery. Use its authoritative completion event, retained in the audit.
     const last = lastFinalAssistant;
-    if (last?.stopReason !== 'length' || outputLimit >= 131072) break;
+    if (!automaticOutputGrowth || last?.stopReason !== 'length' || outputLimit >= outputCeiling) break;
     const previous = outputLimit;
-    outputLimit = Math.min(outputLimit * 2, 131072);
+    outputLimit = Math.min(outputLimit * 2, outputCeiling);
     // User authorized automatic output expansion. All methods retain the 256k
     // window and reserve enough room before their next request; no silent overflow.
     settings.applyOverrides({compaction: {enabled: true, reserveTokens: outputLimit, keepRecentTokens: 20000}});

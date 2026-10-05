@@ -35,7 +35,8 @@ class ContinuationTests(unittest.TestCase):
                 def read(self): return b'{}'
             def register(request,**kwargs):
                 registrations.append(json.loads(request.data));return Response()
-            cfg={'prompt':'current task','gateway':'http://127.0.0.1/fixture','gateway_token':'fixture-only'}
+            cfg={'prompt':'current task','gateway':'http://127.0.0.1/fixture','gateway_token':'fixture-only',
+                 'output_limit':16384,'automatic_output_growth':True}
             with patch.object(actor.subprocess,'Popen',Process),patch.object(actor,'urlopen',register),patch('native_budget.grow',grow):
                 sid=actor.run_solver(cfg,out,root,home,{})
             return sid,commands,registrations,(home/'config.toml').read_text(),json.loads((out/'solver-continuations.json').read_text())

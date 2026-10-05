@@ -1,6 +1,6 @@
 {
-  "schema_version": "clbench-memory-study.plan.v1",
-  "status": "ADAPTATION_AND_ACCEPTANCE_IN_PROGRESS",
+  "schema_version": "clbench-memory-study.plan.v2",
+  "status": "CONFIGURED_PENDING_NATIVE_REACCEPTANCE",
   "created_date": "2026-10-04",
   "execution_owner": "local_codex",
   "research_branch": "clbench_memory_systems_20261004",
@@ -15,7 +15,8 @@
     "initial_repetitions": 1,
     "auto_add_repetitions": false,
     "expected_task_executions_if_all_six_eligible": 354,
-    "environment_execution_order": "independent_after_per_stream_acceptance"
+    "environment_execution_order": "independent_after_per_stream_acceptance",
+    "new_configuration_execution_scope": "retain_existing_completed_R1_results_apply_64k_to_future_requests_only_recover_verified_cap_failures"
   },
   "version_policy": {
     "resolve": "latest_official_non_prerelease_at_local_bootstrap",
@@ -31,31 +32,33 @@
     "all_roles_same_actual_model": true,
     "different_model_fallback_allowed": false,
     "same_account_backend_preferred": true,
-    "solver_output_tokens_target": 16384,
+    "solver_output_tokens_target": 65536,
     "credential_env": "EXPERIMENT_API_KEY",
     "responses_base_url": "https://api.z.ai/api/v1",
     "anthropic_base_url": "https://api.z.ai/api/anthropic",
     "chat_completions_base_url": "https://api.z.ai/api/paas/v4",
     "route_status": "THREE_PROTOCOL_IDENTITY_CANARIES_PASSED_CONTEXT_AND_FRAMEWORK_PENDING",
     "automatic_output_budget_growth": {
-      "initial_tokens": 16384,
-      "on": "verified_output_length_exhaustion",
+      "initial_tokens": 65536,
+      "on": "disabled_fixed_user_limit",
       "growth_factor": 2,
-      "max_tokens": 131072,
-      "ceiling_source": "ZAI GLM-5.3-Flash documented 128K maximum output",
+      "max_tokens": 65536,
+      "ceiling_source": "direct user 2026-10-05 unified limit",
       "same_rule_for_all_methods": true,
       "continue_same_instance": true,
       "count_all_prior_calls": true,
       "fixed_context_window": 262144,
       "larger_output_requires_reserved_space_or_native_compaction": true,
-      "authorized_by": "direct user 2026-10-05"
-    }
+      "authorized_by": "direct user 2026-10-05",
+      "enabled": false
+    },
+    "all_roles_output_tokens_limit": 65536
   },
   "context": {
     "definition_of_256k": "256 * 1024",
     "window_tokens": 262144,
-    "reserve_tokens": 16384,
-    "auto_compact_trigger_target_tokens": 245760,
+    "reserve_tokens": 65536,
+    "auto_compact_trigger_target_tokens": 196608,
     "enabled": true,
     "algorithm": "native_per_framework",
     "applies_to_subagents_and_maintenance": true,
@@ -217,5 +220,12 @@
     "LIMITED_OBSERVABILITY",
     "BLOCKED"
   ],
-  "unsupported_configuration_policy": "document_tradeoff_keep_other_eligible_arms_do_not_silently_downgrade"
+  "unsupported_configuration_policy": "document_tradeoff_keep_other_eligible_arms_do_not_silently_downgrade",
+  "configuration_revision": "20261005-uniform-64k",
+  "native_final_action_policy": {
+    "schema": "locked_official_schema_and_parser",
+    "dispatch": "same_counted_business_controller",
+    "invent_missing_submission": false,
+    "semantic_format_retry": false
+  }
 }

@@ -25,6 +25,14 @@ DESTINATIONS = {'chat': 'https://api.z.ai/api/paas/v4/chat/completions',
                 'anthropic': 'https://api.z.ai/api/anthropic/v1/messages'}
 
 
+def apply_output_policy(payload,protocol,route):
+    key='max_output_tokens' if protocol=='responses' else 'max_tokens'
+    limit=int(route.get('output_limit',16384))
+    # Old routes retain their historical minimum mapping. New 64k routes use
+    # the user's common request cap across solver, child and maintenance roles.
+    payload[key]=limit if route.get('uniform_output_limit') else min(int(payload.get(key) or limit),limit)
+
+
 def gate(operation, payload):
     settings = read(ROOT / '.local/request-gate.json')
     req = Request(settings['url'] + '/' + operation, data=json.dumps(payload).encode(),
@@ -99,11 +107,7 @@ def main():
             out = ROOT / route['audit_relative_path'] / 'requests'
             if not out.resolve().is_relative_to((ROOT / 'private-runs').resolve()): self.send_error(403); return
             out.mkdir(parents=True, exist_ok=True)
-            output_key = 'max_output_tokens' if protocol == 'responses' else 'max_tokens'
-            # An explicit integration setting, captured before and after mapping.
-            # Preserve a tighter native auxiliary budget rather than inflating it.
-            configured_limit = int(route.get('output_limit', 16384))
-            payload[output_key] = min(int(payload.get(output_key) or configured_limit), configured_limit)
+            apply_output_policy(payload,protocol,route)
             meta = {'attempt_id': attempt, 'call_id': attempt, 'run_id': route['run_id'],
                 'method_id': route['method_id'], 'instance_id': route.get('instance_id'),
                 'project_key': route.get('project_key'), 'session_id': route.get('session_id'),

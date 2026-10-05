@@ -87,9 +87,11 @@ def main():
             route={'token':route_token,'run_id':args.run_id,'method_id':method,'instance_id':query['instance_id'],
                 'project_key':query.get('project_key','database'),'session_id':session,'phase':'native_task_and_maintenance',
                 'config_hash':config_hash,'audit_relative_path':out.relative_to(ROOT).as_posix(),
-                'tool_url':f'http://127.0.0.1:{server.server_port}/tool','tool_token':token,'output_limit':16384}
+                'tool_url':f'http://127.0.0.1:{server.server_port}/tool','tool_token':token,'output_limit':65536,
+                'output_ceiling':65536,'automatic_output_growth':False,'uniform_output_limit':True}
             save(ROOT/'.local/native-routes'/f'{route_id}.json',route)
             cfg={'framework':args.framework,'session_id':session,'project_key':route['project_key'],
+                'output_limit':65536,'output_ceiling':65536,'automatic_output_growth':False,
                 'gateway':f'http://172.30.0.1:{43193 if args.framework=="codex" else 43191}/r/{route_id}','gateway_token':route_token,'environment':args.environment,
                 'tool_description':('Execute an official database QUERY or submit ANSWER; every QUERY consumes the official budget.' if total==40
                     else 'Execute one official benchmark Bash command. All commands consume the official issue action budget; use its submission sentinel to finish.'),

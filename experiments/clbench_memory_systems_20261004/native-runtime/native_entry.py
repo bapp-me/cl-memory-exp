@@ -23,8 +23,8 @@ def main():
             ANTHROPIC_AUTH_TOKEN=cfg['gateway_token'], ANTHROPIC_MODEL='glm-5.3-flash',
             ANTHROPIC_DEFAULT_OPUS_MODEL='glm-5.3-flash', ANTHROPIC_DEFAULT_SONNET_MODEL='glm-5.3-flash',
             ANTHROPIC_DEFAULT_HAIKU_MODEL='glm-5.3-flash', CLAUDE_CODE_SUBAGENT_MODEL='glm-5.3-flash',
-            CLAUDE_CODE_MAX_CONTEXT_TOKENS='262144', CLAUDE_CODE_AUTO_COMPACT_WINDOW='245760',
-            CLAUDE_CODE_MAX_OUTPUT_TOKENS=str(cfg.get('output_limit', 16384)),
+            CLAUDE_CODE_MAX_CONTEXT_TOKENS='262144', CLAUDE_CODE_AUTO_COMPACT_WINDOW=str(262144-cfg.get('output_limit',65536)),
+            CLAUDE_CODE_MAX_OUTPUT_TOKENS=str(cfg.get('output_limit', 65536)),
             CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC='1', CLAUDE_CODE_EFFORT_LEVEL='high')
         settings = {'autoMemoryEnabled': True, 'model': 'glm-5.3-flash'}
         (out / 'settings.json').write_text(json.dumps(settings))
@@ -37,7 +37,7 @@ def main():
         if cfg.get('enforce_action_schema'):
             from business_mcp import SCHEMA
             command[-1:-1]=['--json-schema',json.dumps(SCHEMA)]
-        budget=cfg.get('output_limit',16384)
+        budget=cfg.get('output_limit',65536)
         continuations=[]
         while True:
             with (out / 'events.jsonl').open('a') as stdout, (out / 'stderr.txt').open('a') as stderr:
@@ -47,7 +47,8 @@ def main():
             if not results: break
             latest=results[-1]
             if latest.get('stop_reason') in {'max_tokens','length'}:
-                if budget>=131072: raise RuntimeError('Provider maximum output exhausted')
+                if not cfg.get('automatic_output_growth',False) or budget>=cfg.get('output_ceiling',65536):
+                    raise RuntimeError('Fixed common output limit exhausted; no automatic increase authorized for this configuration')
                 from native_budget import grow
                 receipt=grow(cfg,budget); budget=receipt['output_limit']
                 env['CLAUDE_CODE_MAX_OUTPUT_TOKENS']=str(budget)

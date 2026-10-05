@@ -1,5 +1,7 @@
 # CL-Bench 跨会话记忆实验：已完成流的阶段结果
 
+后续配置修订：用户选择保留没有输出截断失败的旧题，后续调用统一使用 65,536 输出上限与 262,144 总窗口。下文已完成结果仍明确对应其实际旧预算，未被改写为“全程 64k”。核对 226 个已提交结果未发现输出截断；待处理的是 Hermes 正式流与 Codex 验收的未完成维护。原始准入证据见 [历史准入](records/compatibility-v1-16k.json)，新配置正在重新验收。
+
 2026-10-05。这是本轮 **R=1 的阶段报告**，六条 Pi 流已全部完成，共 177 个任务；Claude Database 也已完成 40 题。完整流共 217 题，Hermes 另有 9 题完成业务与维护屏障；全矩阵仍未完成，不能据此排六组名次。当前无模型请求运行。执行状态见 [EXECUTION.md](EXECUTION.md)，带时间戳的统计见 [progress-summary.json](records/progress-summary.json)。
 
 **扩展审计发现 Codebase 恢复偏差，结果接纳口径待用户决定。** No Memory 第 14、17 题及 Jaccard 第 19 题，在恢复后多收到一次“切换新仓库”提示。原始问题正文、base commit 与 grader 未变，但不能排除该提示影响当前行为及后续记忆。因此，下列 Codebase 全量数字保留为实际运行记录，暂不作为严格同提示比较。Database 没有这项偏差。已修复未来恢复逻辑，未改写或重跑既有结果；详情及共同未受影响前缀统计见 [protocol-deviations.json](records/protocol-deviations.json)。
