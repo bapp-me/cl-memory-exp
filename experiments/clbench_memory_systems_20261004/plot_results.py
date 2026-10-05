@@ -1,4 +1,4 @@
-"""Render the completed Pi matrix from audited, committed-task aggregates."""
+"""Render audited, committed-task comparisons; keep missing scores explicit."""
 import os
 import argparse
 from pathlib import Path
@@ -11,15 +11,20 @@ import matplotlib.pyplot as plt
 
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--corrected',action='store_true');args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('--corrected',action='store_true')
+    parser.add_argument('--all-methods',action='store_true');args=parser.parse_args()
     data = json.loads((ROOT / ('records/corrected-efficiency-analysis.json' if args.corrected else 'records/efficiency-analysis.json')).read_text(encoding='utf-8'))
     methods = ['pi_none', 'pi_notepad', 'pi_jaccard']
     labels = ['No Memory', 'Notepad', 'Jaccard top-3']
     colors = ['#738397', '#17817a', '#cb7640']
+    if args.all_methods:
+        methods += ['claude_memory_ready', 'codex_memory_ready', 'hermes_memory_ready']
+        labels += ['Claude Code', 'Codex', 'Hermes']
+        colors += ['#8769ac', '#3477b0', '#ad6580']
     plt.rcParams.update({'font.family': 'DejaVu Sans', 'font.size': 11, 'axes.spines.top': False,
                         'axes.spines.right': False, 'axes.titleweight': 'bold',
                         'svg.fonttype': 'none', 'svg.hashsalt': 'clbench-pi-r1'})
-    fig, axes = plt.subplots(2, 3, figsize=(13, 8))
+    fig, axes = plt.subplots(2, 3, figsize=(16, 9) if args.all_methods else (13, 8))
     for row, env in enumerate(['database_exploration', 'codebase_adaptation']):
         stats = [next(s['stats'] for s in data['streams'] if s['method'] == m and s['environment'] == env) for m in methods]
         for col, (metric, title, scale) in enumerate([
@@ -29,25 +34,35 @@ def main():
             ax = axes[row, col]
             values = [s[metric] / scale for s in stats]
             bars = ax.bar(labels, values, color=colors, width=.63)
+            if args.all_methods:
+                ax.tick_params(axis='x', labelrotation=30, labelsize=9)
+                if row == 1:
+                    bars[-1].set_hatch('//')
             ax.set_ylim(0, max(values) * 1.24)
             ax.set_title(title)
             ax.grid(axis='y', alpha=.15)
             ax.set_axisbelow(True)
             for i, (bar, value) in enumerate(zip(bars, values)):
                 label = f'{value:.3f}' if scale > 1 else str(int(value))
-                if metric == 'correct': label += '/40' if row == 0 else '/19'
+                if metric == 'correct': label += f"/{stats[i]['tasks']}"
                 if metric == 'total_tokens_known' and stats[i]['total_tokens_unknown_attempts']: label += '*'
-                ax.text(bar.get_x() + bar.get_width()/2, value + max(values)*.025, label, ha='center', fontsize=11)
+                ax.text(bar.get_x() + bar.get_width()/2, value + max(values)*.025, label, ha='center', fontsize=9 if args.all_methods else 11)
             if col == 0: ax.set_ylabel('Database' if row == 0 else 'Codebase', fontweight='bold')
-    fig.suptitle('CL-Bench | Pi system comparison | GLM-5.3-Flash high | R=1', fontsize=16, y=.98)
+    fig.suptitle('CL-Bench | '+('Complete systems' if args.all_methods else 'Pi system comparison')+' | GLM-5.3-Flash high | R=1', fontsize=16, y=.98)
     notice=('Three Codebase targets use authorized reruns with 64k output; other results retain their original budgets.\n'
             if args.corrected else 'Codebase has 3 extra recovery notices; full rows are descriptive, pending the protocol decision.\n')
-    fig.text(.055, .02, notice+
+    if args.all_methods:
+        notice = ('353 scored tasks + 1 user-interrupted unscored task. Hatched Hermes Codebase bars cover 18 tasks, not 19.\n'
+                  '* Missing request usage: reported token sums are incomplete. Selected scored tasks only; full campaign costs are separate.\n'
+                  'Mixed output budgets and Codex consolidation schedules; different complete systems. No causal memory or stable-ranking claim.')
+    else:
+        notice += (
              '* One failed No Memory Codebase HTTP attempt has unknown usage. Tokens shown are reported sums.\n'
-             '177 completed tasks; fresh session per task; independent memory per environment. No causal or stable-ranking claim.', fontsize=10)
+             '177 completed tasks; fresh session per task; independent memory per environment. No causal or stable-ranking claim.')
+    fig.text(.055, .02, notice, fontsize=10)
     fig.tight_layout(rect=(0, .10, 1, .95))
     target = ROOT / 'figures'; target.mkdir(exist_ok=True)
-    stem='pi-comparison-corrected' if args.corrected else 'pi-comparison'
+    stem=('systems-comparison' if args.all_methods else 'pi-comparison')+('-corrected' if args.corrected else '')
     fig.savefig(target / f'{stem}.png', dpi=180)
     svg = target / f'{stem}.svg'
     fig.savefig(svg, metadata={'Date': None})

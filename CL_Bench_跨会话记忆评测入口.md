@@ -1,6 +1,6 @@
 # CL-Bench 跨会话记忆系统比较：执行入口
 
-2026-10-05。状态：本轮实验已执行，尚未完成全部矩阵。阶段结果、恢复偏差及待决定的口径见 [阶段报告](experiments/clbench_memory_systems_20261004/RESULTS_PARTIAL.md) 和 [执行记录](experiments/clbench_memory_systems_20261004/EXECUTION.md)；不要把已完成的部分结果当作六组最终结论。
+2026-10-05。状态：本轮 R=1 已结束，353 道任务已评分并完成规定的记忆屏障，Hermes Codebase 第 16 题按用户要求中止、未评分，后续第 17–19 题已完成。没有待执行任务。见 [最终报告](experiments/clbench_memory_systems_20261004/RESULTS_FINAL.md)、[收尾审计](experiments/clbench_memory_systems_20261004/records/final-closure-audit.json) 和 [执行记录](experiments/clbench_memory_systems_20261004/EXECUTION.md)。正确数不等于完成进度，例如 Codex Database 已完成 40 题，其中 20 题正确。
 
 请从 [实验方案](experiments/clbench_memory_systems_20261004/README.md) 和 [本地 Codex 执行交接](experiments/clbench_memory_systems_20261004/LOCAL_CODEX_TASK.md) 开始。
 

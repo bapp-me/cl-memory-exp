@@ -43,7 +43,8 @@ def main():
         streams.append({'run_id':run,'completed':len(results),'inspected':inspected,
             'real_deferred_boundary_verified':any(not x['schedule']['consolidation_required'] for x in inspected),
             'real_batch_consolidation_verified':any(x['schedule']['consolidation_required'] for x in inspected)})
-    report={'as_of':datetime.now(timezone.utc).isoformat(),'status':'observed_prefix_passed','model_calls':0,
+    complete=all(s['completed']==(40 if s['run_id'].startswith('formal-db-') else 19) for s in streams)
+    report={'as_of':datetime.now(timezone.utc).isoformat(),'status':'completed_streams_passed' if complete else 'observed_prefix_passed','model_calls':0,
             'all_both_paths_observed':all(s['real_deferred_boundary_verified'] and s['real_batch_consolidation_verified'] for s in streams),
             'historical_rows_changed':False,'streams':streams}
     save(ROOT/'records/codex-batch-online-audit.json',report)

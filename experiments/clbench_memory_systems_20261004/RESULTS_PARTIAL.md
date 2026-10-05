@@ -1,5 +1,7 @@
 # CL-Bench 阶段结果：已纳入三题授权重跑
 
+> 本文件保留为历史阶段快照。2026-10-05 本轮已结束，最新的 353 道已评分结果、1 道中止题和全部成本见 [最终报告](RESULTS_FINAL.md)。下文“继续”“尚未完成”描述的是当时状态。
+
 2026-10-05。六条 Pi 流、Claude Database 和 Hermes Database 已完整执行；其余原生流已通过 65,536 输出预算验收并继续，先前 Hermes 第 10 题维护停点已恢复。全矩阵尚未完成，动态进度以 [进度记录](records/progress-summary.json) 为准，下表只比较完整流。用户要求重跑的三道 Codebase 题已各重跑一次，当前比较采用全部三次新结果，包括一次由通过变成未通过的结果。Hermes Codebase 第 16 题另按用户要求中止且不评分，第 17–19 题继续；该流最终也不会被表述为完整的 19 题评分对照。
 
 用户随后批准 Codex 改为 Database 每 10 题、Codebase 每 5 题统一整合，保留逐题提取和此前结果；最后不足一批也整合。已完成前缀与新续跑段采用不同整合频率，不能将后续整条 Codex 流宣称为默认原生频率或全程统一批次配置。每题采用的规则和首次真实批次验证见 [调度授权](records/codex-batch-policy.json)、[在线核验](records/codex-batch-online-audit.json)。
