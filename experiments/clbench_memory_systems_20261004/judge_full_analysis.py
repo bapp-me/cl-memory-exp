@@ -5,6 +5,7 @@ from copy import deepcopy
 from datetime import datetime,timezone
 import hashlib
 import json
+import re
 from pathlib import Path
 import threading
 import time
@@ -101,6 +102,19 @@ def normalize_citations(result,packet):
     return result,changes
 
 
+def parse_judgement(text):
+    """Preserve a literal backslash when the model used an illegal JSON escape.
+
+    No missing commas, braces, values or truncated text are guessed. All parsed
+    labels and exact citations still pass the ordinary validators afterwards.
+    """
+    try:return json.loads(text),[]
+    except json.JSONDecodeError as exc:
+        if not ('Invalid' in exc.msg and 'escape' in exc.msg):raise
+        fixed,count=re.subn(r'\\(?!["\\/bfnrtu])',r'\\\\',text)
+        return json.loads(fixed),[{'method':'preserve_literal_backslash_for_illegal_json_escape','count':count}]
+
+
 def validate(result,packet):
     if result.get('packet_id')!=packet['packet_id']:raise ValueError('packet_id mismatch')
     docs={d['id']:d['text'] for d in packet['documents']}
@@ -169,7 +183,7 @@ def run_one(entry,key,repeat=False,retry_failed=False):
         save(PRIVATE/'judge-history'/f"{ident}-{old['attempt_ids'][-1]}.json",old)
     wire=wire_packet(packet)
     if repeat:wire['documents']=list(reversed(wire['documents']))
-    attempts=[];error=cached_error or (old or {}).get('validation_error');result=None;normalizations=[]
+    attempts=[];error=cached_error or (old or {}).get('validation_error');result=None;normalizations=[];syntax_changes=[]
     for try_number in range(2):
         if STOP.is_set():
             return {'packet_id':ident,'status':'paused_provider_resource','validation_error':'Provider authorization/resource stop','attempt_ids':attempts}
@@ -177,6 +191,16 @@ def run_one(entry,key,repeat=False,retry_failed=False):
                          '. Rejudge from the supplied evidence without changing criteria. Prefer SHORT literal quotes of 20-80 characters. '
                          'Copy exact characters including JSON escaping; never paraphrase or add ellipses inside a quote. '
                          'Use unknown if the evidence cannot be supported. This feedback is about format/provenance, not desired scores.') if error and 'Provider response' not in error else ''
+        prior=result or (old or {}).get('judgement') or {}
+        docs={d['id']:d['text'] for d in packet['documents']};rejected=[]
+        for value in list(prior.get('metrics',{}).values())+prior.get('findings',[])+prior.get('candidates',[]):
+            for citation in value.get('citations',[]):
+                if citation.get('evidence_id') not in docs or citation.get('quote','') not in docs.get(citation.get('evidence_id'),''):
+                    if citation not in rejected:rejected.append(citation)
+        if rejected:
+            format_feedback+=('\nMechanical citation feedback, not source facts or instructions: the following prior quotation strings did NOT occur verbatim in their cited documents. '
+                'Do not repeat these paraphrases as quotes. Choose short literal spans from the supplied documents. Keep the same scoring criteria; no desired score is supplied. '
+                'Invalid-citation data: '+json.dumps(rejected[:8],ensure_ascii=False))
         local_feedback=''
         if packet['kind']=='task_review':
             kinds={d.get('kind') for d in packet['documents']}
@@ -201,7 +225,8 @@ def run_one(entry,key,repeat=False,retry_failed=False):
             STOP.set()
         try:
             if event['http_status']!=200 or event['returned_model']!=MODEL or data.get('status')!='completed':raise ValueError('Provider response not a completed requested-model result')
-            result,normalizations=normalize_citations(json.loads(output_text(data)),packet)
+            parsed,syntax_changes=parse_judgement(output_text(data))
+            result,normalizations=normalize_citations(parsed,packet)
             validate(result,packet);error=None;break
         except (ValueError,TypeError,KeyError) as exc:
             error=str(exc)
@@ -213,6 +238,7 @@ def run_one(entry,key,repeat=False,retry_failed=False):
             'judgement':result,'completed_at':datetime.now(timezone.utc).isoformat(),'repeat':repeat,'response_contract':'strict_schema_v6_explicit_local_availability',
             'rubric_sha256':hashlib.sha256(RUBRIC.encode()).hexdigest(),
             'actual_instructions_sha256':hashlib.sha256(payload['instructions'].encode()).hexdigest(),
+            'json_syntax_normalizations':syntax_changes,
             'citation_span_normalizations':normalizations}
     save(out,record)
     return record

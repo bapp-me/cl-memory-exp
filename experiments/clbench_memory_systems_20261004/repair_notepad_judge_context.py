@@ -61,7 +61,9 @@ def main(argv=None):
                            "You may flag post-hoc inconsistency or stale assertions, but distinguish this from knowingly ignoring available feedback and from causal harm."))
         for e in entries:
             original=PRIVATE/'packets'/(e['packet_id']+'.json')
-            save(PRIVATE/'packet-history/notepad-v1'/(e['packet_id']+'.json'),read(original))
+            archived=PRIVATE/'packet-history/notepad-v1'/(e['packet_id']+'.json')
+            if archived.exists():assert read(archived)==read(original),'Preserve the original packet history'
+            else:save(archived,read(original))
         new=packets(unit,'task_review',old[0]['task_prompt'],docs,scope)
         index=[e for e in index if not(e['unit_id']==unit and e['kind']=='task_review')]+new
         revised.append({'unit_id':unit,'old_packets':len(entries),'new_packets':len(new),'previous_feedback_visible':bool(cfg.get('previous_feedback'))})

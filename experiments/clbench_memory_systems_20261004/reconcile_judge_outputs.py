@@ -9,7 +9,7 @@ from datetime import datetime,timezone
 import json
 from prepare import ROOT,read,save,sha
 from analysis_provider import PRIVATE,MODEL,output_text,packet_path
-from judge_full_analysis import normalize_citations,validate,wire_packet
+from judge_full_analysis import normalize_citations,validate,wire_packet,parse_judgement
 
 
 def response_data(path):
@@ -55,13 +55,15 @@ def main():
             if not matching:continue
             checked+=1;data=response_data(PRIVATE/'requests'/(attempt+'.response.txt'))
             try:
-                judgement,changes=normalize_citations(json.loads(output_text(data)),packet);validate(judgement,packet)
+                parsed,syntax_changes=parse_judgement(output_text(data))
+                judgement,changes=normalize_citations(parsed,packet);validate(judgement,packet)
             except (ValueError,TypeError,KeyError):continue
             if old:save(PRIVATE/'judge-history'/(ident+'-before-offline-reconcile-'+old['attempt_ids'][-1]+'.json'),old)
             record={'packet_id':ident,'packet_sha256':sha(packet_path(ident)),'kind':packet['kind'],'status':'valid',
                     'attempt_ids':[m['attempt_id'] for m in sorted(grouped[ident],key=lambda m:m['timestamp'])],
                     'selected_attempt_id':attempt,'validation_error':None,'judgement':judgement,
                     'citation_span_normalizations':changes,'completed_at':datetime.now(timezone.utc).isoformat(),
+                    'json_syntax_normalizations':syntax_changes,
                     'repeat':args.repeat,'offline_reconciled':True,'selection':'First valid response whose actual submitted input exactly matches the current evidence packet'}
             save(out,record);recovered.append({'packet_id':ident,'selected_attempt_id':attempt,'span_normalizations':len(changes)});break
     path=ROOT/'records'/('judge-repeat-offline-reconciliation.json' if args.repeat else 'judge-offline-reconciliation.json');prior=read(path) if path.exists() else {'recovered':[]}

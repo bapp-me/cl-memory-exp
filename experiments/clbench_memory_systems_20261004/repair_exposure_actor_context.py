@@ -17,7 +17,9 @@ def main():
         for entry in entries:
             path=PRIVATE/'packets'/(entry['packet_id']+'.json');packet=read(path)
             if packet['scope'].get('exposure_actor_contract')=='main_call_id_corroboration_v1':continue
-            old_sha=sha(path);save(PRIVATE/'packet-history/actor-attribution'/(entry['packet_id']+'.json'),packet)
+            old_sha=sha(path);archived=PRIVATE/'packet-history/actor-attribution'/(entry['packet_id']+'.json')
+            if archived.exists():assert read(archived)==packet,'Preserve the original packet history'
+            else:save(archived,packet)
             for doc in list(packet['documents']):
                 if doc['id'].startswith('exposed_memory_lines@'):
                     doc['kind']='provider_exposure_actor_unconfirmed'

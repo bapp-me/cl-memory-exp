@@ -3,10 +3,14 @@ from pathlib import Path
 import tempfile
 import unittest
 from full_analysis import wire_tool_calls,packets,memory_kind,business_signature
-from judge_full_analysis import validate,METRICS,normalize_citations
+from judge_full_analysis import validate,METRICS,normalize_citations,parse_judgement
 
 
 class EvidenceTests(unittest.TestCase):
+    def test_illegal_json_escape_preserves_literal_backslash_only(self):
+        parsed,changes=parse_judgement(r'{"quote":"a\|b"}')
+        self.assertEqual(parsed['quote'],r'a\|b');self.assertEqual(changes[0]['count'],1)
+        with self.assertRaises(json.JSONDecodeError):parse_judgement('{"quote":"truncated')
     def test_thought_wording_does_not_hide_repeated_command(self):
         self.assertEqual(business_signature({'command':'pytest -q','thought':'first run'}),
                          business_signature({'command':'pytest -q','thought':'verify again'}))

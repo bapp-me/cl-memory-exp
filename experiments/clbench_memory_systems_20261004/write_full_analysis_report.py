@@ -21,7 +21,9 @@ def main():
     s=read(ROOT/'records/full-analysis-summary.json');life=read(ROOT/'records/full-lifecycle-metrics.json')
     retrieval=read(ROOT/'records/full-retrieval-details.json');quality=read(ROOT/'records/judge-quality-spotcheck.json')
     mechanical=read(ROOT/'records/full-mechanical-task-metrics.json');rel=s['reliability'];cost=s['new_provider_calls']
-    finished=s['status']=='complete' and rel.get('valid_repeat_packets')==26 and not cost['phase_counts'].get('started',0)
+    closure_path=ROOT/'records/full-analysis-closure-audit.json';repro_path=ROOT/'records/analysis-reproduction.json'
+    closure=read(closure_path) if closure_path.exists() else {};reproduction=read(repro_path) if repro_path.exists() else {}
+    finished=s['status']=='complete' and rel.get('valid_repeat_packets')==26 and not cost['phase_counts'].get('started',0) and closure.get('status')=='complete' and reproduction.get('status')=='pass'
     coverage=[
         ('官方评分、动作、reward、迁移前后/仓库分段、同题配对','代码','已完成，353 题有分数；1 题中止不补零','RESULTS_FINAL.md'),
         ('原实验全批次 attempts、缓存、未知 usage、旧题/恢复/中止成本','代码','已完成；按唯一 attempt，不将原生计数重复相加','records/final-closure-audit.json'),
@@ -44,11 +46,12 @@ def main():
     lines=['# CL-Bench：全量观测与记忆语义分析',
         f"更新：{datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d %H:%M HKT')}。状态：{'已完成本轮可观测分析' if finished else '分析进行中，以下汇总随有效结果更新'}。",
         '本实验让六套 agent 系统依次处理数据库或代码任务，每题使用新会话，允许读取各自前题形成的记忆。两种环境彼此隔离。本报告分析既有记录：记忆写了什么、被看到了什么、行为是否与之对应，以及相关成本。原业务评分保持不变，见[执行结果](RESULTS_FINAL.md)。',
+        'Pi No Memory 不向下一题提供前题记忆；Notepad 维护短笔记并独立携带上一题反馈；Jaccard 按词集合交并比选取最多三条历史 episode。Codex、Claude Code、Hermes 使用各自原生记忆流程，具体调度与恢复约束延续原报告。',
         f"共分析 354 个任务单元（353 已评分＋1 中止），拆为 426 个任务证据包和 84 个候选相关性包。当前通过验收 **{s['valid_packets']}/510**，失败待处理 {len(s['failed_packets'])}，尚无当前有效结果 {len(s['pending_packets'])}；逆序复核有效 **{rel.get('valid_repeat_packets',0)}/26**。每个 unknown 都表示证据不足，不能换算为 0 分。",
         '## 直接观察到的结果',
         '- **Claude Code 的 Codebase 没有形成持久记忆文件。** 19 题均为 completed_noop；其 17/19 业务成绩不能作为“该流跨会话记忆带来提升”的证据。Database 则有 31 个 changed、9 个 noop，说明同一框架在两个环境的写入行为不同。',
         '- **Codex 的主要可辨记忆成本来自整合。** 提取与整合均有原生记录；输出上限不等于实际生成量。实验取消原生等待并保留前期逐题、后期批次混合节奏，这些成本不代表日常默认 Codex。',
-        '- **Jaccard 会带入条件不匹配的历史。** Codebase 51 次历史选择中 19 次来自另一仓库；Database 迁移后的 60 次选择中 37 次来自迁移前。它们是曝光组成，不自动等于错误或负迁移。',
+        '- **Jaccard 会带入不同条件下的历史。** Codebase 51 次历史选择中 19 次来自另一仓库；Database 迁移后的 60 次选择中 37 次来自迁移前。它们是曝光组成，不自动等于错误或负迁移。',
         '- **语义审查发现具体的边界问题。** 例如 Hermes Database 第 9 题前的技能把时间戳统一描述为毫秒，当前 g3 样本却是 TEXT 日期；本题随后更新了分组条件。Claude Database 第 1 题则从一次判错推导出广泛的时间戳处理规则，其隐藏评分机制并未被证实。这些是可复核案例，不是机制的因果排名。',
         '## 指标覆盖与无法回答的部分',table(['指标','计算方式','覆盖/边界','证据'],[(a,b,c,f'[{d}]({d})') for a,b,c,d in coverage]),
         '## 记忆规模与维护行为',
@@ -62,6 +65,14 @@ def main():
         table(['环境','方法','最终屏障状态','已知维护秒数','维护时长未知题'],
             [[ENVS[g['environment']],METHODS[g['method']],str(g['barrier_statuses']),f"{g['maintenance_seconds_known_sum']:.1f}" if not g['method'].startswith('pi_') else '不适用',g['maintenance_seconds_unknown_count'] if not g['method'].startswith('pi_') else '无独立异步维护'] for g in life['groups']]),
         '这些时间之和不是批次墙钟时间。恢复题缺失的原耗时保留未知，恢复片段另列。Claude 原生统计报告两种环境均 0 个 spawned 子 agent；Codex 59 题均有非空阶段一输出；Hermes 最终作业记录在 Codebase 为 25 个、Database 为 40 个，其中 Database 9 个旧作业没有完整 review_scope 字段。作业数、调用数、写文件次数是不同量，不能相加。',
+        '## 工具与可见存储的补充统计',
+        table(['环境','方法','精确重复业务动作','精确重复工具参数','末快照相同内容文件 / 重复段落'],
+            [[ENVS[g['environment']],METHODS[g['method']],g['exact_repeated_business_actions'],g['exact_repeated_tool_argument_calls'],
+              str(next(r['after'] for r in reversed(mechanical) if r['method']==g['method'] and r['environment']==g['environment'] and r['after'])['exact_duplicate_nonempty_files'])+' / '+str(next(r['after'] for r in reversed(mechanical) if r['method']==g['method'] and r['environment']==g['environment'] and r['after'])['exact_repeated_paragraph_occurrences'])] for g in s['groups']]),
+        '业务重复只比较实际执行的 command 或 action/content，排除 thought 文案；工具重复比较名称与完整参数。它们都不判定是否浪费：相同测试可能是修改后的必要验证，同参数查询也可能针对已改变的状态。重复段落定义为去首尾空白后完全相同、至少 80 字符；分层摘要中的重复不自动视为坏组织。',
+        table(['环境','方法','末原生快照中的原始会话日志 B','混合内容 SQLite/DB 文件 B','Git 内部文件 B'],
+            [[ENVS[g['environment']],METHODS[g['method']]]+[number(next(r for r in reversed(mechanical) if r['method']==g['method'] and r['environment']==g['environment'])['storage_categories'].get(k,0)) for k in ['raw_session_logs','native_databases_mixed_content','git_internal']] for g in s['groups'] if not g['method'].startswith('pi_')]),
+        '这三类只统计已捕获快照中相应文件的字节数，不是整个安装目录的物理磁盘占用，也不能把会话归档或 SQLite 文件当成全部已注入模型的记忆。',
         '## 各角色的原实验用量',
         '这里只展示能够可靠辨识的 Codex 提取与整合角色。其他角色详见逐题记录中的 cost_roles；原生提交前/后未归因项不能直接改名为 solver/writer。',
         table(['环境','角色','attempts','已知 tokens','usage 未知'],
@@ -86,8 +97,10 @@ def main():
         f"已核对 {quality['case_count']} 个有意选取的案例，覆盖六种方法、两类环境、候选检索和写入/使用判断。核对者是本聊天助手，不能称为独立人工金标或据此估计总体准确率。完整记录见[内容抽查](records/judge-quality-spotcheck.json)。",
         '发现并处理的问题包括：空 JSON；字段/候选覆盖错误；引用不在原文；把当前新计划当作跨题记忆；把来源缺失当作差质量；解释中带未经证实的因果措辞。原响应和全部费用保留，不手改分数。引用校正仅允许可逆 JSON 显示变换、同源片段定位，或在所给材料中唯一命中的逐字原文定位；不把改写句变成证据。',
         'Notepad 的输入证据曾遗漏独立反馈及写入时序，已对 59 个单元补全并作废旧包对应判断。引用当前记忆与动作的验收要求也已统一补查；不能因 HTTP 200 就认为内容合格。自由解释仍可能有过度措辞，报告仅采用经核对的有界事实，不原样传播因果断言。',
+        '内容验收仍有限制：例如 Hermes Codebase 第 11 题的重评仍把未提供终端返回的 EMPTY 断言评成混合支持。这是“缺少来源”与“确有不支持事实”之间的判据漂移，保留原 judge 标签并在抽查记录中标出；不能凭这个 1 分认定记忆虚构事实。格式/引用验证通过不等于每条语义结论已经被人类证明。',
         f"逆序复核覆盖 {rel.get('valid_repeat_packets',0)}/26 个有效包，共 {rel['comparisons']} 个可比较条目。包含 N/A 的状态＋分数一致率为 {pct(rel['exact_agreement_rate'])}；双方均可评分的 {rel.get('both_assessed_comparisons',0)} 项分数一致率为 {pct(rel.get('both_assessed_score_agreement'))}；至少一方可评分的 {rel.get('either_assessed_comparisons',0)} 项状态＋分数一致率为 {pct(rel.get('either_assessed_status_score_agreement'))}。",
         '复核使用同一模型，并逆转证据文档顺序；实际执行跨越了格式/证据要求澄清版本及重试反馈，属于运行条件敏感性检查，不能当成控制变量完备的纯随机复测，更不是正确率。N/A 很多会抬高总体一致率，因此另报可评分子集。',
+        '执行与 judge 使用相同模型名，评审也未完全隐藏框架身份，因此可能存在共同模型偏差和身份提示偏差。候选检索选择已隐藏，不等于整个评审是双盲。接口请求中的 strict schema 仍需本地逐项验收；实际观察到服务端返回过违反所请求 schema 的内容，不能仅凭参数声明认定约束已执行。',
         '## 新增分析成本与并发',
         f"Aixoras glm-5.3-flash 已记录 {cost['attempts']:,} 个实际请求，终态分布 {cost['phase_counts']}；无 usage 的 {cost['unknown_usage_attempts']} 个请求保留未知（包含仍在途者）。原始 usage 字段各自求和：输入 {cost['raw_reported_usage_totals']['input_tokens']:,}，输出 {cost['raw_reported_usage_totals']['output_tokens']:,}，provider total {cost['raw_reported_usage_totals']['total_tokens']:,}。有 {len(cost['usage_arithmetic_discrepancies'])} 次返回不满足 input+output=total，保留原值，不强行修平。实际金额未知，不套旧 Z.AI 价目。",
         '75 并发试跑实际峰值为 75，没有观察到 429。该 25 包试跑共 40 次请求，35 次 HTTP 200、5 次 HTTP 524；终态耗时中位数 81.7 秒。包大小和组成不同，不能把此数与先前 50 并发批次直接解释为加速比，也不能当作服务商最大容量。按用户要求，5xx 留痕并重试，不作为自动降低并发的理由。后续目标总并发保持 75，实际在途量随尾批完成而下降。',
@@ -95,6 +108,7 @@ def main():
         '逐请求的无正文用量记录见 [新增 attempt 台账](records/analysis-attempt-ledger.json)，HTTP、耗时、重叠与原始 usage 核对见[调用审计](records/analysis-call-audit.json)。返回 model 字段作为接口身份记录，不能证明服务商未公开的内部实现。',
         '## 复算与解释边界',
         '所有指标的机器可读索引见 [覆盖清单](records/full-metric-coverage.json)。原始分数与因果范围不因 judge 判断而改变。跨框架比较仍受不同执行器、混合输出预算、Codex 混合整合节奏、R=1 和一个中止题限制。',
+        f"[输入与结算收尾审计](records/full-analysis-closure-audit.json)逐包核对实际发送的请求、选用响应及当前证据哈希。[独立目录复算](records/analysis-reproduction.json)状态为 {reproduction.get('status','尚未执行')}：510 个证据包重建后逐字节一致、冻结清单一致；复算未调用模型、未写原始实验文件。",
         '离线复算（不会调用模型）：',
         '```powershell\n.local/clbench-venv/Scripts/python.exe -X utf8 summarize_full_analysis.py\n.local/clbench-venv/Scripts/python.exe -X utf8 analyze_native_lifecycle.py\n.local/clbench-venv/Scripts/python.exe -X utf8 analyze_retrieval_details.py\nD:/anaconda3/python.exe plot_full_analysis.py\n.local/clbench-venv/Scripts/python.exe -X utf8 write_full_analysis_report.py\n```',
         'full_analysis.py 可重新提取全部证据并自动补入 Notepad 时序；有 judge 请求在途时禁止重建。judge_full_analysis.py 是付费入口，本报告复算不需要运行它。'])
