@@ -1,6 +1,6 @@
 # CL-Bench 阶段结果：已纳入三题授权重跑
 
-2026-10-05。六条 Pi 流和 Claude Database 已完整执行；其余原生流已通过 65,536 输出预算验收并继续，先前 Hermes 第 10 题维护停点已恢复。全矩阵尚未完成，动态进度以 [进度记录](records/progress-summary.json) 为准，下表只比较完整流。用户要求重跑的三道 Codebase 题已各重跑一次，当前比较采用全部三次新结果，包括一次由通过变成未通过的结果。
+2026-10-05。六条 Pi 流、Claude Database 和 Hermes Database 已完整执行；其余原生流已通过 65,536 输出预算验收并继续，先前 Hermes 第 10 题维护停点已恢复。全矩阵尚未完成，动态进度以 [进度记录](records/progress-summary.json) 为准，下表只比较完整流。用户要求重跑的三道 Codebase 题已各重跑一次，当前比较采用全部三次新结果，包括一次由通过变成未通过的结果。Hermes Codebase 第 16 题另按用户要求中止且不评分，第 17–19 题继续；该流最终也不会被表述为完整的 19 题评分对照。
 
 用户随后批准 Codex 改为 Database 每 10 题、Codebase 每 5 题统一整合，保留逐题提取和此前结果；最后不足一批也整合。已完成前缀与新续跑段采用不同整合频率，不能将后续整条 Codex 流宣称为默认原生频率或全程统一批次配置。每题采用的规则和首次真实批次验证见 [调度授权](records/codex-batch-policy.json)、[在线核验](records/codex-batch-online-audit.json)。
 
@@ -16,11 +16,12 @@
 | Database | Pi Notepad | 24/40 | 283 | 1,003,361 |
 | Database | Pi Jaccard | 26/40 | 174 | 1,015,966 |
 | Database | Claude Code | 32/40 | 187 | 8,838,994 |
+| Database | Hermes | 24/40 | 195 | 8,510,254 |
 | Codebase | Pi No Memory | **15/19** | **338** | **3,954,899** |
 | Codebase | Pi Notepad | 16/19 | 293 | 2,712,959 |
 | Codebase | Pi Jaccard | 17/19 | 205 | 5,205,805 |
 
-Database 的动作是 QUERY 次数；Codebase 的动作是官方步骤数。No Memory Codebase 保留的一次 HTTP 500 没有 usage，上表该组 token 是已知部分。其他完整流的选用结果用量完整。未完成的 Hermes 前缀不与完整流直接排名。
+Database 的动作是 QUERY 次数；Codebase 的动作是官方步骤数。No Memory Codebase 保留的一次 HTTP 500 没有 usage，Hermes Database 有 3 次请求 usage 未知，上表两组 token 都是已知部分。未完整评分的原生 Codebase 流不与完整流直接排名。
 
 ![采用三题重跑后的 Pi 比较](figures/pi-comparison-corrected.png)
 
@@ -35,10 +36,13 @@ Database 的动作是 QUERY 次数；Codebase 的动作是官方步骤数。No M
 | Database / Notepad | 20 | −46 | −142,980 |
 | Database / Jaccard | 21 | −93 | −88,787 |
 | Database / Claude Code | 24 | −94 | +4,127,974 |
+| Database / Hermes | 20 | −85 | +3,046,146 |
 | Codebase / Notepad | 13 | −60 | −1,048,641 |
 | Codebase / Jaccard | 14 | −83 | +1,362,465 |
 
 Codebase 配对中去除用量缺失的任务后，Notepad 的 12 题少 648,655 tokens，Jaccard 的 13 题多 1,355,289 tokens。全部差值、正确性互换及来源索引见 [修正后的统计](records/corrected-efficiency-analysis.json) 和 [修正后的逐题索引](records/corrected-task-index.json)。
+
+Hermes Database 双方正确的 20 题中，完整用量可比的 18 题多 2,614,987 tokens；包含未知用量的已知部分差值不能当作精确成本增幅。该流迁移前 15/20 正确、迁移后 9/20 正确，数据分段变化不证明记忆造成了改善或退化。
 
 这次结果表现出明确取舍：Jaccard 的业务动作更少，Codebase 输入开销却更大；Claude Database 多答对 6 题、QUERY 减半，但总 token 约为 No Memory 的 6.41 倍。原生提示、工具组织、辅助调用和记忆都不同，这些差异不能全部归因于 memory。R=1 与三次指定纠正也不支持稳定排名、统计非劣或纯提示效应结论。
 
