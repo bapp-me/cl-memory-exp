@@ -1,0 +1,118 @@
+{
+  "schema_version": "database-feedback-followup.plan.v1",
+  "status": "DESIGN_ONLY_NOT_A_NATIVE_RUNTIME_CONFIG",
+  "created_date": "2026-10-05",
+  "evidence_commit": "ef79ae2e40dddbec3bbfcd27576b72da48ca6473",
+  "execution_owner": "local_codex",
+  "guide": "../DATABASE_FOLLOWUP.md",
+  "scope": {
+    "environment": "database_exploration",
+    "purpose": "separate_correction_visibility_from_evidence_grounded_memory_update",
+    "run_new_models_in_this_document_commit": false,
+    "default_first_stage": "D0",
+    "reopen_original_six_system_runs": false,
+    "reopen_closed_precondition_candidates": false,
+    "codebase_status": "deferred",
+    "future_codebase_candidate": "same_pi_and_history_semantic_keyword_backend_plus_agentic_search",
+    "novelty_or_generalization_established": false
+  },
+  "runtime_policy": {
+    "framework_versions": "reuse_verified_experiment_versions_and_record_exact_commits",
+    "upgrade_during_comparison": false,
+    "actual_model": "glm-5.3-flash",
+    "provider": "resolve_existing_authorized_solver_route_locally_and_freeze",
+    "same_route_all_arms": true,
+    "silent_model_or_provider_fallback": false,
+    "solver_reasoning_effort": "high",
+    "auxiliary_effort": "same_native_setting_in_matched_arms_logged",
+    "context_window_tokens": 262144,
+    "max_output_tokens": 65536,
+    "compaction_trigger_target_tokens": 196608,
+    "database_query_budget": 15,
+    "inherit_actual_task_and_transport_limits": true,
+    "quality_retry": false,
+    "old_historical_result_as_only_control": false
+  },
+  "D0": {
+    "model_calls": 0,
+    "codex_source_index": 30,
+    "codex_target_index": 33,
+    "compare_memory_tree_boundaries": ["codex/task-029/after", "codex/task-033/before"],
+    "observed_memories_git_tree_sha": "dc2c365993a9d53376f4626d4b26507a38ee0273",
+    "observed_payload_files": 36,
+    "observed_payload_bytes": 263444,
+    "separate_watermarks": ["extracted", "materialized", "solver_visible"],
+    "claude_chain_indices": [20, 22, 24],
+    "requires_private_stage1_outputs_and_real_main_payloads": true,
+    "output": "followup-records/d0-evidence.json"
+  },
+  "D1": {
+    "condition": "D0_confirms_Q31_counterevidence_not_visible_in_Q34_main_input",
+    "skip_when": "already_visible_or_required_private_evidence_unavailable",
+    "framework": "codex",
+    "targets": [
+      {"index": 33, "position": 34, "instance_id": "107", "role": "risk", "recent_source_indices": [30, 31, 32]},
+      {"index": 27, "position": 28, "instance_id": "110", "role": "different_topic_control", "recent_source_indices": [24, 25, 26]}
+    ],
+    "arms": ["R0_original_pre_target_memory", "R1_plus_last_three_raw_evidence_records"],
+    "recent_evidence_fields": ["prompt", "tools", "feedback"],
+    "include_assistant_posthoc_explanations": false,
+    "select_by_hidden_correctness_or_relevance": false,
+    "repeats_per_target_arm": 2,
+    "max_solver_jobs": 8,
+    "memory_refresh_during_target": "prevent_equally_in_both_arms",
+    "cross_target_writeback": false,
+    "output": "followup-records/d1-paired-results.json"
+  },
+  "D2": {
+    "condition": "D0_source_visibility_and_fair_fixture_inputs_resolved",
+    "framework": "claude_code",
+    "mode": "controlled_native_maintenance_fixture_not_original_request_replay",
+    "event_indices": [22, 24],
+    "event_instance_ids": ["103", "101"],
+    "event_initial_state": "each_original_before_state_independently",
+    "legal_history_cutoff": "same_method_index_lte_event_index",
+    "source_access_equal_across_arms": true,
+    "new_business_queries_allowed": false,
+    "arms": ["W0_native_maintenance_fixture", "W1_same_fixture_plus_evidence_constraint"],
+    "extra_instruction": "区分直接观察、候选解释与任务反馈。写入历史事实前核对可用来源；未记录不等于不存在，不得为了让新旧反馈一致而补造历史条件。一次 CORRECT/INCORRECT 可以改变解释的相对可信度，但不能在替代解释尚未被区分时，直接升级为普遍规则或已证实根因。记录本次实际测试了什么、未测试什么及适用范围；未知就保留未知，同时保留仍有来源支持的有用知识。",
+    "repeats_per_event_arm": 2,
+    "max_maintenance_jobs": 8,
+    "independent_mechanism_families": 1,
+    "claim_checks": ["historical_schema_fidelity", "tested_vs_untested_candidates", "feedback_strength_and_scope", "retention_of_supported_useful_facts"],
+    "output": "followup-records/d2-claim-review.json"
+  },
+  "D3": {
+    "condition": "D2_W1_both_replicates_remove_verified_defects_without_new_defects_or_loss_of_key_supported_facts",
+    "transitions": [
+      {"writer_event_index": 22, "solver_target_index": 24, "target_instance_id": "101"},
+      {"writer_event_index": 24, "solver_target_index": 26, "target_instance_id": "105"}
+    ],
+    "use_every_D2_output_once": true,
+    "intermediate_task_execution_and_memory": "omitted_equally_for_both_arms",
+    "interpretation": "local_branch_not_full_online_sequence",
+    "max_solver_jobs": 8,
+    "output": "followup-records/d3-downstream-results.json"
+  },
+  "evaluation": {
+    "official_scores_unchanged": true,
+    "feedback_to_agents": "original_legal_binary_feedback_only",
+    "reference_sql_answers_tolerance": "isolated_evaluator_only",
+    "diagnostic_semantic_checks": "preregistered_local_reference_semantics_not_universal_business_truth",
+    "write_quality_alone_is_not_task_success": true,
+    "report_queries_tokens_cache_unknown_and_maintenance_separately": true,
+    "claim_causality_only_with_matched_intervention_and_stated_limits": true,
+    "selection": "purposive_development_diagnostic_not_unseen_test"
+  },
+  "limits": {
+    "max_solver_jobs_total": 16,
+    "max_maintenance_jobs_total": 8,
+    "max_native_jobs_total": 24,
+    "native_job_is_not_single_api_call": true,
+    "automatic_extra_runs": false,
+    "paid_execution_scope_must_be_locked_locally": true,
+    "no_global_judge_relabeling": true,
+    "credentials_and_private_sources_not_committed": true,
+    "blocked_or_skipped_is_not_zero_score": true
+  }
+}

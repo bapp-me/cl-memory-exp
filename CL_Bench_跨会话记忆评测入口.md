@@ -1,21 +1,30 @@
 # CL-Bench 跨会话记忆系统比较：执行入口
 
-2026-10-05。状态：本轮 R=1 已结束，353 道任务已评分并完成规定的记忆屏障，Hermes Codebase 第 16 题按用户要求中止、未评分，后续第 17–19 题已完成。没有待执行任务。见 [最终报告](experiments/clbench_memory_systems_20261004/RESULTS_FINAL.md)、[收尾审计](experiments/clbench_memory_systems_20261004/records/final-closure-audit.json) 和 [执行记录](experiments/clbench_memory_systems_20261004/EXECUTION.md)。正确数不等于完成进度，例如 Codex Database 已完成 40 题，其中 20 题正确。
+更新：2026-10-05。
 
-请从 [实验方案](experiments/clbench_memory_systems_20261004/README.md) 和 [本地 Codex 执行交接](experiments/clbench_memory_systems_20261004/LOCAL_CODEX_TASK.md) 开始。
+## 当前下一步：只做 Database 定向后续
 
-用户随后授权对既有记录进行全量指标分析与 LLM judge，见[全量观测分析及最新进度](experiments/clbench_memory_systems_20261004/FULL_ANALYSIS.md)和[指标覆盖清单](experiments/clbench_memory_systems_20261004/records/full-metric-coverage.json)。这一阶段使用新授权的 Aixoras `glm-5.3-flash` 入口，不新增业务任务，不改原评分，因果项按用户选择标为未验证。
+已根据新上传的记忆快照确定 [Database 后续指导](experiments/clbench_memory_systems_20261004/DATABASE_FOLLOWUP.md)，对应 [本地 Codex 交接](experiments/clbench_memory_systems_20261004/DATABASE_FOLLOWUP_LOCAL_CODEX.md)、[快照复核与证据](experiments/clbench_memory_systems_20261004/DATABASE_SNAPSHOT_REVIEW.md) 和 [机器可读计划](experiments/clbench_memory_systems_20261004/config/database-followup.plan.json)。
 
-用户另行授权提交并推送的[纯业务轨迹](experiments/clbench_memory_systems_20261004/trajectories/README.md)包含 353 份已评分题轨迹及 1 份中止题动作记录，共 7,864,387 字节；各文件来源和哈希见目录内索引。
+先零调用核对 Codex 提取/文件/实际读取三个水位，再视证据做有限纠错可达性对照；随后检查 Claude 纠错写入的证据一致性。最多 16 个 solver 与 8 个维护作业，均有进入和停止条件，不默认跑满。本次只提交方案，没有启动新模型实验。
 
-用户另行授权上传的 [Database 记忆快照](experiments/clbench_memory_systems_20261004/database-memory-snapshots/README.md)包含 Notepad、Codex、Claude Code、Hermes 各 40 题的题前与题后状态，共 320 份；记忆文件内容合计 15,709,620 字节，包含 Hermes 管理文件，保留原始内容及来源哈希。
+**Codebase 暂缓；六系统原矩阵、全量 judge 与已关闭的操作前提案例不自动重开。** 未来 Codebase 可考虑同一 Pi 底座、同一合法历史上的语义/关键词检索＋agentic search，现在不接入。涉及新阶段的下一步，以这份 Database 指导为准；下列旧方案与 LOCAL_CODEX_TASK.md 保留为历史执行依据。
 
-本轮取消完整历史 ICL；保留 Pi 无记忆、Pi Notepad、Pi Jaccard、Codex、Claude Code、Hermes 六组候选。统一 256k 上下文，每个 benchmark instance 新会话，同一流保留许可的长期状态。原生异步记忆采用任务边界加速及完成屏障，完成后才允许下一任务。
+## 已完成实验与原始证据
 
-这是新的系统评测分支，不续跑已关闭的 agentic-search 优化，也不重新开启已在 Q1 停止的操作前提案例。旧研究计划和历史报告不删除；涉及本轮的下一步、配置、放行规则，以本目录为准。
+R=1 已结束：353 道任务已评分并完成当时规定的记忆屏障；Hermes Codebase 第 16 题按用户要求中止、未评分，第 17–19 题已完成。正确数不是完成进度。见 [最终报告](experiments/clbench_memory_systems_20261004/RESULTS_FINAL.md)、[收尾审计](experiments/clbench_memory_systems_20261004/records/final-closure-audit.json) 和 [执行记录](experiments/clbench_memory_systems_20261004/EXECUTION.md)。
 
-- [配置映射与兼容性取舍](experiments/clbench_memory_systems_20261004/CONFIGURATION.md)
-- [运行采集与离线分析要求](experiments/clbench_memory_systems_20261004/OBSERVABILITY.md)
-- [机器可读实验合同](experiments/clbench_memory_systems_20261004/config/experiment.json)
-- [版本与接入锁定模板](experiments/clbench_memory_systems_20261004/config/runtime-lock.template.json)
-- [调研来源及证据边界](experiments/clbench_memory_systems_20261004/SOURCES.md)
+后续全量观测与 LLM judge 已完成，见 [FULL_ANALYSIS.md](experiments/clbench_memory_systems_20261004/FULL_ANALYSIS.md) 和 [指标覆盖清单](experiments/clbench_memory_systems_20261004/records/full-metric-coverage.json)。分析阶段使用 Aixoras `glm-5.3-flash`，不新增业务任务、不改原评分；其账本与原 Z.AI 求解账本分别保留，不自动继承为新阶段 provider。
+
+- [纯业务轨迹](experiments/clbench_memory_systems_20261004/trajectories/README.md)：353 份已评分轨迹、1 份中止动作记录，共 7,864,387 字节；文件来源与哈希见索引。
+- [Database 记忆快照](experiments/clbench_memory_systems_20261004/database-memory-snapshots/README.md)：四种记忆配置各 40 题题前/题后，共 320 份；文件内容 15,709,620 字节，含 Hermes 管理文件。它们不是完整原生状态包。
+
+## 历史方案导航
+
+[实验方案](experiments/clbench_memory_systems_20261004/README.md)与[旧本地交接](experiments/clbench_memory_systems_20261004/LOCAL_CODEX_TASK.md)记录了 Pi 无记忆、Pi Notepad、Pi Jaccard、Codex、Claude Code、Hermes 六组设计。完整历史 ICL 已取消。实际输出预算、Codex 批次整合和恢复差异以最终报告为准，不能只从初稿推断所有题的实际配置。
+
+- [配置映射](experiments/clbench_memory_systems_20261004/CONFIGURATION.md)
+- [观测合同](experiments/clbench_memory_systems_20261004/OBSERVABILITY.md)
+- [原实验配置](experiments/clbench_memory_systems_20261004/config/experiment.json)
+- [原版本锁模板](experiments/clbench_memory_systems_20261004/config/runtime-lock.template.json)
+- [原调研来源](experiments/clbench_memory_systems_20261004/SOURCES.md)
