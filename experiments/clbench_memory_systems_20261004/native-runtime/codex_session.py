@@ -105,20 +105,21 @@ args = ["/runtime/business_mcp.py", {json.dumps(str(path))}]
         'EXPERIMENT_API_KEY':cfg['gateway_token'],'CLBENCH_MEMORY_BOUNDARY_MODE':'1'}
     env.pop('CLBENCH_MEMORY_SOURCE_THREAD',None)
     session=cfg['session_id'] if cfg.get('maintenance_only') else run_solver(cfg,out,project,home,env)
-    if cfg.get('recover_format_error') or cfg.get('retry_native_maintenance'):
+    if cfg.get('recover_format_error') or cfg.get('retry_native_maintenance') or cfg.get('retry_transport_maintenance'):
         receipts=[]
         for dbpath in home.glob('memories_*.sqlite'):
             with sqlite3.connect(dbpath) as db:
                 db.row_factory=sqlite3.Row
-                for row in db.execute("SELECT * FROM jobs WHERE kind='memory_stage1' AND job_key=? AND status='error'",(session,)):
+                for row in db.execute("SELECT * FROM jobs WHERE status='error' AND ((kind='memory_stage1' AND job_key=?) OR kind='memory_consolidate_global')",(session,)):
                     old=dict(row)
                     parsing_error=any(x in (old['last_error'] or '') for x in ['expected value','expected `,` or `}`','expected `:`','EOF while parsing','invalid escape','control character'])
-                    allowed=parsing_error if cfg.get('retry_native_maintenance') else old['last_error']=='expected value at line 1 column 1'
+                    allowed=(cfg.get('retry_transport_maintenance') or
+                        (old['kind']=='memory_stage1' and (parsing_error if cfg.get('retry_native_maintenance') else old['last_error']=='expected value at line 1 column 1')))
                     if not allowed or old['retry_remaining']<=0:
                         raise RuntimeError('Not the verified recoverable JSON-envelope failure')
-                    db.execute("UPDATE jobs SET retry_at=NULL WHERE kind='memory_stage1' AND job_key=? AND status='error'",(session,))
-                    receipts.append({'before':old,'retry_at_after':None,'reason':'User-authorized native JSON-format maintenance retry; preserve native retry count, writer prompt and source watermark'})
-        if len(receipts)!=1:raise RuntimeError('Expected one pending extraction format error')
+                    db.execute("UPDATE jobs SET retry_at=NULL WHERE kind=? AND job_key=? AND status='error'",(old['kind'],old['job_key']))
+                    receipts.append({'before':old,'retry_at_after':None,'reason':'Authorized native maintenance retry after verified format or transport failure; preserve native retry count, writer prompt and source watermark'})
+        if len(receipts)!=1:raise RuntimeError('Expected one verified failed native maintenance job')
         (out/'format-recovery-scheduling.json').write_text(json.dumps(receipts))
     # No future question and no user turn are sent to this maintenance process.
     receipt=home/'clbench-memory-pipeline.json'

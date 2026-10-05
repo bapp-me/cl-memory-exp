@@ -3,6 +3,7 @@ import argparse
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
+import shutil
 import time
 import uuid
 from prepare import ROOT, read, save, sha
@@ -20,6 +21,7 @@ def main():
     p.add_argument('--resume',action='store_true')
     p.add_argument('--recover-format',action='store_true')
     p.add_argument('--retry-native-maintenance',action='store_true')
+    p.add_argument('--retry-transport-maintenance',action='store_true')
     args = p.parse_args(); method = args.framework + '_memory_ready'
     if args.framework=='codex':
         import native_client
@@ -41,6 +43,12 @@ def main():
         authorization=read(ROOT/'records/execution-authorization.json').get('native_maintenance_invalid_json_retry',{})
         if not pending or args.framework!='codex' or not authorization.get('approved'):
             raise RuntimeError('Native failed-maintenance retry requires explicit authorization and a frozen submission')
+    if args.retry_transport_maintenance:
+        if not pending or args.framework!='codex':raise RuntimeError('Transport maintenance recovery requires a frozen Codex submission')
+        metas=[read(p) for p in (directory/f'task-{first_index:03d}'/'requests').glob('*.attempt.json')]
+        latest=max(metas,key=lambda m:m['timestamp'])
+        if latest.get('error') not in {'TimeoutError','ConnectionResetError','RemoteDisconnected','URLError','ConnectionAbortedError'} and (latest.get('http_status') or 0)<500:
+            raise RuntimeError('Latest request does not establish a transport failure')
     runtime = ['run_native.py','native_evidence.py','native_gateway.py','budget_control.py','native_client.py',
         'native-runtime/native_entry.py','native-runtime/business_mcp.py','native-runtime/native_budget.py']
     if args.framework == 'hermes': runtime += ['native-runtime/hermes_session.py','native-runtime/hermes_completion.py']
@@ -75,8 +83,15 @@ def main():
     memory_before=read(directory/f'task-{first_index-1:03d}'/'memory-after.json') if first_index else {}
     if args.resume and first_index+bool(pending):
         previous=directory/f'task-{first_index if pending else first_index-1:03d}'
-        archive_path=next((previous/name for name in ['recovered-native-state.tar.gz','timeout-state.tar.gz','native-state.tar.gz'] if (previous/name).exists()),None)
+        candidates=[previous/name for name in ['recovery-timeout-state.tar.gz','recovered-native-state.tar.gz','timeout-state.tar.gz','native-state.tar.gz'] if (previous/name).exists()]
+        archive_path=max(candidates,key=lambda p:p.stat().st_mtime_ns) if candidates else None
         if archive_path is None: raise RuntimeError('Missing preserved native state')
+        if pending:
+            prior_files=[p for p in previous.iterdir() if p.is_file() and (p.name.startswith('recovery-') or p.name=='recovered-native-state.tar.gz')]
+            if prior_files:
+                history=previous/'recovery-history'/uuid.uuid4().hex;history.mkdir(parents=True)
+                for file in prior_files:shutil.copy2(file,history/file.name)
+                if archive_path in prior_files:archive_path=history/archive_path.name
         try: restore(container,archive_path)
         except Exception:
             stream.close();broker({'op':'remove','container_id':container})
@@ -160,10 +175,10 @@ def main():
                 cfg['prompt']+=schema_to_prompt_instruction(stream.query.response_schema)
             if recovering:
                 cfg.update(maintenance_only=True,framing=original_cfg['framing'],recover_format_error=args.recover_format,
-                    retry_native_maintenance=args.retry_native_maintenance)
+                    retry_native_maintenance=args.retry_native_maintenance,retry_transport_maintenance=args.retry_transport_maintenance)
                 save(out/'recovery-input.json',cfg)
                 save(out/'recovery-provenance.json',{'original_submission_sha256':sha(out/'submission.json'),
-                    'source_archive_sha256':sha(archive_path),'source_archive':archive_path.name,
+                    'source_archive_sha256':sha(archive_path),'source_archive':archive_path.relative_to(directory).as_posix(),
                     'original_business_actions_sha256':sha(out/'business-actions.json'),'business_replayed':False,
                     'recovery_started_at':datetime.now(timezone.utc).isoformat(),'config_hash':config_hash})
             else:
