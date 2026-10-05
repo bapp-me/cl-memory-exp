@@ -105,17 +105,19 @@ args = ["/runtime/business_mcp.py", {json.dumps(str(path))}]
         'EXPERIMENT_API_KEY':cfg['gateway_token'],'CLBENCH_MEMORY_BOUNDARY_MODE':'1'}
     env.pop('CLBENCH_MEMORY_SOURCE_THREAD',None)
     session=cfg['session_id'] if cfg.get('maintenance_only') else run_solver(cfg,out,project,home,env)
-    if cfg.get('recover_format_error'):
+    if cfg.get('recover_format_error') or cfg.get('retry_native_maintenance'):
         receipts=[]
         for dbpath in home.glob('memories_*.sqlite'):
             with sqlite3.connect(dbpath) as db:
                 db.row_factory=sqlite3.Row
                 for row in db.execute("SELECT * FROM jobs WHERE kind='memory_stage1' AND job_key=? AND status='error'",(session,)):
                     old=dict(row)
-                    if old['last_error']!='expected value at line 1 column 1' or old['retry_remaining']<=0:
+                    parsing_error=any(x in (old['last_error'] or '') for x in ['expected value','expected `,` or `}`','expected `:`','EOF while parsing','invalid escape','control character'])
+                    allowed=parsing_error if cfg.get('retry_native_maintenance') else old['last_error']=='expected value at line 1 column 1'
+                    if not allowed or old['retry_remaining']<=0:
                         raise RuntimeError('Not the verified recoverable JSON-envelope failure')
                     db.execute("UPDATE jobs SET retry_at=NULL WHERE kind='memory_stage1' AND job_key=? AND status='error'",(session,))
-                    receipts.append({'before':old,'retry_at_after':None,'reason':'Verified literal JSON-fence interoperability fix; preserve native retry count and source watermark'})
+                    receipts.append({'before':old,'retry_at_after':None,'reason':'User-authorized native JSON-format maintenance retry; preserve native retry count, writer prompt and source watermark'})
         if len(receipts)!=1:raise RuntimeError('Expected one pending extraction format error')
         (out/'format-recovery-scheduling.json').write_text(json.dumps(receipts))
     # No future question and no user turn are sent to this maintenance process.

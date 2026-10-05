@@ -19,6 +19,7 @@ def main():
     p.add_argument('--run-id', required=True); p.add_argument('--limit', type=int)
     p.add_argument('--resume',action='store_true')
     p.add_argument('--recover-format',action='store_true')
+    p.add_argument('--retry-native-maintenance',action='store_true')
     args = p.parse_args(); method = args.framework + '_memory_ready'
     if args.framework=='codex':
         import native_client
@@ -36,6 +37,10 @@ def main():
         raise RuntimeError('Interrupted business work needs a separate same-session recovery; no replay allowed')
     if args.recover_format and (not pending or args.framework!='codex'):
         raise RuntimeError('Format recovery is only for a submitted Codex task')
+    if args.retry_native_maintenance:
+        authorization=read(ROOT/'records/execution-authorization.json').get('native_maintenance_invalid_json_retry',{})
+        if not pending or args.framework!='codex' or not authorization.get('approved'):
+            raise RuntimeError('Native failed-maintenance retry requires explicit authorization and a frozen submission')
     runtime = ['run_native.py','native_evidence.py','native_gateway.py','budget_control.py','native_client.py',
         'native-runtime/native_entry.py','native-runtime/business_mcp.py','native-runtime/native_budget.py']
     if args.framework == 'hermes': runtime += ['native-runtime/hermes_session.py']
@@ -154,7 +159,8 @@ def main():
                 from src.systems.utils.structured_output import schema_to_prompt_instruction
                 cfg['prompt']+=schema_to_prompt_instruction(stream.query.response_schema)
             if recovering:
-                cfg.update(maintenance_only=True,framing=original_cfg['framing'],recover_format_error=args.recover_format)
+                cfg.update(maintenance_only=True,framing=original_cfg['framing'],recover_format_error=args.recover_format,
+                    retry_native_maintenance=args.retry_native_maintenance)
                 save(out/'recovery-input.json',cfg)
                 save(out/'recovery-provenance.json',{'original_submission_sha256':sha(out/'submission.json'),
                     'source_archive_sha256':sha(archive_path),'source_archive':archive_path.name,
