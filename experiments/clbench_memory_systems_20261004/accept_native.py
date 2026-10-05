@@ -25,7 +25,14 @@ def main():
         files=archive(snapshot)
         validate(files,out.name,args.framework,row['session_id'])
         assert read(out/'barrier.json')['durable']
-        validate_attempt_accounting(out,usage_for(out))
+        attempts=usage_for(out)
+        validate_attempt_accounting(out,attempts)
+        for attempt in attempts:
+            usage=attempt['usage']
+            if not usage:continue
+            input_tokens=usage.get('prompt_tokens',usage.get('input_tokens',0)+usage.get('cache_read_input_tokens',0)+usage.get('cache_creation_input_tokens',0))
+            request=read(out/'requests'/f"{attempt['attempt_id']}.request.json")
+            assert input_tokens+request.get('max_output_tokens',request.get('max_tokens'))<=262144
         since=read(out/'recovery-provenance.json')['recovery_started_at'] if recovered else None
         wire=[]
         for request_path in (out/'requests').glob('*.request.json'):

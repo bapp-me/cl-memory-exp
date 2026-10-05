@@ -82,7 +82,12 @@ def main():
             out=directory/f'task-{index:03d}'; out.mkdir(exist_ok=recovering); task=out.name
             if recovering:
                 original_cfg=read(out/'input.json')
-                query={'prompt':original_cfg['prompt'],'project_key':original_cfg['project_key'],
+                original_prompt=original_cfg.get('benchmark_prompt',original_cfg['prompt'])
+                if total==19 and 'benchmark_prompt' not in original_cfg:
+                    from src.systems.utils.structured_output import schema_to_prompt_instruction
+                    from src.tasks.codebase_adaptation.task import BashCommandResponse
+                    original_prompt=original_prompt.removesuffix(schema_to_prompt_instruction(BashCommandResponse))
+                query={'prompt':original_prompt,'project_key':original_cfg['project_key'],
                     'instance_id':read(ROOT/'records/task-manifest.json')[args.environment][index]['instance_id']}
             else: query=stream.public_query()
             actions=read(out/'business-actions.json') if recovering else []
@@ -141,7 +146,7 @@ def main():
                 'tool_description':('Execute an official database QUERY or submit ANSWER; every QUERY consumes the official budget.' if total==40
                     else 'Execute one official benchmark Bash command. All commands consume the official issue action budget; use its submission sentinel to finish.'),
                 'framing':query.get('brief','')+'\nUse CLBENCH_ACTION (discover it if needed) for all benchmark business actions. Local files and shell are only for native memory and bookkeeping. The benchmark workspace is accessible only through CLBENCH_ACTION. After instance_complete, end your turn.',
-                'prompt':query['prompt']}
+                'prompt':query['prompt'],'benchmark_prompt':query['prompt']}
             if total==19 and not recovering:
                 from src.systems.utils.structured_output import schema_to_prompt_instruction
                 cfg['prompt']+=schema_to_prompt_instruction(stream.query.response_schema)
