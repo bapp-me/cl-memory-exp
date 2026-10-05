@@ -1,0 +1,28 @@
+{
+  "namespace": "codex_memory_ready/r1/database_exploration",
+  "index": 34,
+  "instance_id": "120",
+  "prompt": "Question 35/40\n\nTake the ten instrument brands with the most total customer reviews in the catalog. Among those ten, what is the difference between the highest and lowest brand-level average star rating? Round to 2 decimal places.\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "I’ll use the saved benchmark playbook, then run one consolidated schema/probe query.",
+    "Memory identifies the musical dataset and brand tables. I’m probing current and legacy brand mappings together to compare plausible interpretations.",
+    "**Answer:** `0.58`\n\n"
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH attrs AS (\n  SELECT 'current' AS source, ref_id, attr_val AS brand FROM product_attributes_g3 WHERE lower(trim(attr_key))='brand' AND trim(attr_val)<>''\n  UNION ALL\n  SELECT 'legacy', ref_id, attr_val FROM attrs_g3_legacy WHERE lower(trim(attr_key))='brand' AND trim(attr_val)<>''\n), ratings AS (\n  SELECT a.source, trim(a.brand) AS brand, f.rtg\n  FROM attrs a JOIN fdbk_g3 f ON f.ref_id=a.ref_id\n  WHERE f.rtg IS NOT NULL\n), ranked AS (\n  SELECT source, brand, COUNT(*) AS review_ct, AVG(rtg) AS avg_rtg,\n         ROW_NUMBER() OVER (PARTITION BY source ORDER BY COUNT(*) DESC, brand ASC) AS rk\n  FROM ratings GROUP BY source, brand\n)\nSELECT source, rk, brand, review_ct, avg_rtg\nFROM ranked\nWHERE rk <= 10\nORDER BY source, rk"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\nsource  | rk | brand      | review_ct | avg_rtg           \n--------+----+------------+-----------+-------------------\ncurrent | 1  | Pyle       | 9475      | 4.057730870712401 \ncurrent | 2  | D'Addario  | 5526      | 4.520810712993123 \ncurrent | 3  | Yamaha     | 5199      | 4.470090402000385 \ncurrent | 4  | OnStage    | 5140      | 4.4542801556420235\ncurrent | 5  | JIM DUNLOP | 4835      | 4.637849017580145 \ncurrent | 6  | Donner     | 3880      | 4.417010309278351 \ncurrent | 7  | Fender     | 3018      | 4.373426110006627 \ncurrent | 8  | PreSonus   | 2717      | 4.335296282664704 \ncurrent | 9  | Behringer  | 2574      | 4.217560217560218 \ncurrent | 10 | Elixir     | 2549      | 4.570419772459788 \nlegacy  | 1  | Pyle       | 7592      | 4.071522655426765 \nlegacy  | 2  | OnStage    | 5100      | 4.456470588235294 \nlegacy  | 3  | Yamaha     | 4754      | 4.461926798485486 \nlegacy  | 4  | JIM DUNLOP | 3943      | 4.637331980725336 \nlegacy  | 5  | Donner     | 3454      | 4.385350318471337 \nlegacy  | 6  | Fender     | 2692      | 4.422734026745914 \nlegacy  | 7  | Elixir     | 2549      | 4.570419772459788 \nlegacy  | 8  | Gator      | 2291      | 4.445656918376255 \nlegacy  | 9  | Behringer  | 2284      | 4.258756567425569 \nlegacy  | 10 | Rockville  | 2030      | 4.271428571428571 "
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "0.58"
+      },
+      "observation": "Question 35: CORRECT.\nYour answer: 0.58\nExploratory queries used: 1"
+    }
+  ],
+  "feedback": "Question 35: CORRECT.\nYour answer: 0.58\nExploratory queries used: 1"
+}

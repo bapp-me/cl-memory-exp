@@ -1,0 +1,79 @@
+{
+  "namespace": "hermes_memory_ready/r1/database_exploration",
+  "index": 34,
+  "instance_id": "120",
+  "prompt": "Question 35/40\n\nTake the ten instrument brands with the most total customer reviews in the catalog. Among those ten, what is the difference between the highest and lowest brand-level average star rating? Round to 2 decimal places.\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "Correct — 0.58 (7 queries). Top-10 instrument brands by review count (Pyle, D'Addario, Yamaha, OnStage, JIM DUNLOP, Donner, Audio-Technica, Fender, PreSonus, Behringer), review-level brand ratings: max 4.6378 (JIM DUNLOP) − min 4.0577 (Pyle) = 0.58."
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT name FROM sqlite_master WHERE type='table'"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\nname                 \n---------------------\nitems_g1             \nfdbk_g1              \nsqlite_sequence      \ntaxn_g1              \nattrs_g1             \nitems_g2             \nfdbk_g2              \ntaxn_g2              \nitems_g3             \nfdbk_g3              \nattrs_g3_legacy      \nfdbk_stats_g1        \nproduct_attributes_g3"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT sql FROM sqlite_master WHERE name IN ('items_g3','fdbk_g3','product_attributes_g3','attrs_g3_legacy','taxn_g3')"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\nsql                                                                                                                                                                                                                                                                                           \n----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\nCREATE TABLE items_g3 (     ref_id TEXT PRIMARY KEY,     ttl TEXT,     avg_rtg REAL,     rtg_ct INTEGER,     prc REAL,     str_nm TEXT,     main_cat TEXT,     desc_txt TEXT )                                                                                                                \nCREATE TABLE fdbk_g3 (     id INTEGER PRIMARY KEY AUTOINCREMENT,     ref_id TEXT,     uid TEXT,     rtg REAL,     ttl TEXT,     body TEXT,     ts TEXT,     hlp_ct INTEGER,     vrf INTEGER, review_year INTEGER, review_month INTEGER,     FOREIGN KEY (ref_id) REFERENCES items_g3(ref_id) )\nCREATE TABLE \"attrs_g3_legacy\" (     ref_id TEXT,     attr_key TEXT,     attr_val TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g3(ref_id) )                                                                                                                                                \nCREATE TABLE product_attributes_g3(   ref_id TEXT,   attr_key TEXT,   attr_val TEXT )                                                                                                                                                                                                         "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT src, attr_key, COUNT(*) cnt FROM (SELECT 'cur' src, attr_key FROM product_attributes_g3 UNION ALL SELECT 'leg', attr_key FROM attrs_g3_legacy) WHERE LOWER(attr_key) LIKE '%brand%' OR LOWER(attr_key) LIKE '%manufact%' GROUP BY src, attr_key"
+      },
+      "observation": "Query result (3/15 queries used, 12 remaining):\n\nsrc | attr_key                        | cnt  \n----+---------------------------------+------\ncur | Brand                           | 11643\ncur | Brand Name                      | 144  \ncur | Is Discontinued By Manufacturer | 9486 \ncur | Is Discontinued by Manufacturer | 4    \ncur | Manufacturer                    | 2481 \ncur | Manufacturer Grade              | 3    \ncur | Manufacturer Part Number        | 82   \ncur | Manufacturer recommended age    | 59   \ncur | Processor Brand                 | 2    \nleg | Brand                           | 10498\nleg | Brand Name                      | 130  \nleg | Is Discontinued By Manufacturer | 8542 \nleg | Is Discontinued by Manufacturer | 2    \nleg | Manufacturer                    | 2241 \nleg | Manufacturer Grade              | 2    \nleg | Manufacturer Part Number        | 75   \nleg | Manufacturer recommended age    | 54   \nleg | Processor Brand                 | 2    "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT * FROM (\nSELECT 'A_merged' v, b.brand, SUM(f.cnt) total_reviews, ROUND(1.0*SUM(f.rtg_sum)/SUM(f.cnt),4) avg_rating\nFROM (SELECT ref_id, COUNT(*) cnt, SUM(rtg) rtg_sum FROM fdbk_g3 GROUP BY ref_id) f\nJOIN (SELECT ref_id, COALESCE(\n  MAX(CASE WHEN src='cur' AND k='Brand' THEN v END),\n  MAX(CASE WHEN src='cur' AND k='Brand Name' THEN v END),\n  MAX(CASE WHEN src='cur' AND k='Manufacturer' THEN v END),\n  MAX(CASE WHEN src='leg' AND k='Brand' THEN v END),\n  MAX(CASE WHEN src='leg' AND k='Brand Name' THEN v END),\n  MAX(CASE WHEN src='leg' AND k='Manufacturer' THEN v END)) brand\n  FROM (SELECT ref_id,'cur' src, attr_key k, attr_val v FROM product_attributes_g3\n        UNION ALL SELECT ref_id,'leg',attr_key,attr_val FROM attrs_g3_legacy)\n  WHERE k IN ('Brand','Brand Name','Manufacturer') GROUP BY ref_id) b ON b.ref_id=f.ref_id\nGROUP BY b.brand ORDER BY SUM(f.cnt) DESC LIMIT 10)\nUNION ALL\nSELECT * FROM (\nSELECT 'B_curo' v, b.brand, SUM(f.cnt) total_reviews, ROUND(1.0*SUM(f.rtg_sum)/SUM(f.cnt),4) avg_rating\nFROM (SELECT ref_id, COUNT(*) cnt, SUM(rtg) rtg_sum FROM fdbk_g3 GROUP BY ref_id) f\nJOIN (SELECT ref_id, COALESCE(\n  MAX(CASE WHEN k='Brand' THEN v END),\n  MAX(CASE WHEN k='Brand Name' THEN v END),\n  MAX(CASE WHEN k='Manufacturer' THEN v END)) brand\n  FROM product_attributes_g3 WHERE k IN ('Brand','Brand Name','Manufacturer') GROUP BY ref_id) b ON b.ref_id=f.ref_id\nGROUP BY b.brand ORDER BY SUM(f.cnt) DESC LIMIT 10)\nORDER BY v, total_reviews DESC"
+      },
+      "observation": "Query result (4/15 queries used, 11 remaining):\n\nERROR: no such column: k"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT * FROM (\nSELECT 'A_merged' v, b.brand, SUM(f.cnt) total_reviews, ROUND(1.0*SUM(f.rtg_sum)/SUM(f.cnt),4) avg_rating\nFROM (SELECT ref_id, COUNT(*) cnt, SUM(rtg) rtg_sum FROM fdbk_g3 GROUP BY ref_id) f\nJOIN (SELECT ref_id, COALESCE(\n  MAX(CASE WHEN src='cur' AND ak='Brand' THEN av END),\n  MAX(CASE WHEN src='cur' AND ak='Brand Name' THEN av END),\n  MAX(CASE WHEN src='cur' AND ak='Manufacturer' THEN av END),\n  MAX(CASE WHEN src='leg' AND ak='Brand' THEN av END),\n  MAX(CASE WHEN src='leg' AND ak='Brand Name' THEN av END),\n  MAX(CASE WHEN src='leg' AND ak='Manufacturer' THEN av END)) brand\n  FROM (SELECT ref_id,'cur' src, attr_key ak, attr_val av FROM product_attributes_g3\n        UNION ALL SELECT ref_id,'leg',attr_key,attr_val FROM attrs_g3_legacy)\n  WHERE ak IN ('Brand','Brand Name','Manufacturer') GROUP BY ref_id) b ON b.ref_id=f.ref_id\nGROUP BY b.brand ORDER BY SUM(f.cnt) DESC LIMIT 10)\nUNION ALL\nSELECT * FROM (\nSELECT 'B_curo' v, b.brand, SUM(f.cnt) total_reviews, ROUND(1.0*SUM(f.rtg_sum)/SUM(f.cnt),4) avg_rating\nFROM (SELECT ref_id, COUNT(*) cnt, SUM(rtg) rtg_sum FROM fdbk_g3 GROUP BY ref_id) f\nJOIN (SELECT ref_id, COALESCE(\n  MAX(CASE WHEN ak='Brand' THEN av END),\n  MAX(CASE WHEN ak='Brand Name' THEN av END),\n  MAX(CASE WHEN ak='Manufacturer' THEN av END)) brand\n  FROM product_attributes_g3 WHERE ak IN ('Brand','Brand Name','Manufacturer') GROUP BY ref_id) b ON b.ref_id=f.ref_id\nGROUP BY b.brand ORDER BY SUM(f.cnt) DESC LIMIT 10)\nORDER BY v, total_reviews DESC"
+      },
+      "observation": "Query result (5/15 queries used, 10 remaining):\n\nERROR: no such column: ak"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT * FROM (\nSELECT 'A_merged' v, b.brand, SUM(f.cnt) total_reviews, ROUND(1.0*SUM(f.rtg_sum)/SUM(f.cnt),4) avg_rating\nFROM (SELECT ref_id, COUNT(*) cnt, SUM(rtg) rtg_sum FROM fdbk_g3 GROUP BY ref_id) f\nJOIN (SELECT ref_id, COALESCE(\n  MAX(CASE WHEN src='cur' AND attr_key='Brand' THEN attr_val END),\n  MAX(CASE WHEN src='cur' AND attr_key='Brand Name' THEN attr_val END),\n  MAX(CASE WHEN src='cur' AND attr_key='Manufacturer' THEN attr_val END),\n  MAX(CASE WHEN src='leg' AND attr_key='Brand' THEN attr_val END),\n  MAX(CASE WHEN src='leg' AND attr_key='Brand Name' THEN attr_val END),\n  MAX(CASE WHEN src='leg' AND attr_key='Manufacturer' THEN attr_val END)) brand\n  FROM (SELECT ref_id,'cur' src, attr_key, attr_val FROM product_attributes_g3\n        UNION ALL SELECT ref_id,'leg',attr_key,attr_val FROM attrs_g3_legacy)\n  WHERE attr_key IN ('Brand','Brand Name','Manufacturer') GROUP BY ref_id) b ON b.ref_id=f.ref_id\nGROUP BY b.brand ORDER BY SUM(f.cnt) DESC LIMIT 10)\nUNION ALL\nSELECT * FROM (\nSELECT 'B_curo' v, b.brand, SUM(f.cnt) total_reviews, ROUND(1.0*SUM(f.rtg_sum)/SUM(f.cnt),4) avg_rating\nFROM (SELECT ref_id, COUNT(*) cnt, SUM(rtg) rtg_sum FROM fdbk_g3 GROUP BY ref_id) f\nJOIN (SELECT ref_id, COALESCE(\n  MAX(CASE WHEN attr_key='Brand' THEN attr_val END),\n  MAX(CASE WHEN attr_key='Brand Name' THEN attr_val END),\n  MAX(CASE WHEN attr_key='Manufacturer' THEN attr_val END)) brand\n  FROM product_attributes_g3 WHERE attr_key IN ('Brand','Brand Name','Manufacturer') GROUP BY ref_id) b ON b.ref_id=f.ref_id\nGROUP BY b.brand ORDER BY SUM(f.cnt) DESC LIMIT 10)\nORDER BY v, total_reviews DESC"
+      },
+      "observation": "Query result (6/15 queries used, 9 remaining):\n\nv        | brand          | total_reviews | avg_rating\n---------+----------------+---------------+-----------\nA_merged | Pyle           | 9475          | 4.0577    \nA_merged | D'Addario      | 5526          | 4.5208    \nA_merged | Yamaha         | 5202          | 4.4702    \nA_merged | OnStage        | 5140          | 4.4543    \nA_merged | JIM DUNLOP     | 4835          | 4.6378    \nA_merged | Donner         | 3880          | 4.417     \nA_merged | Audio-Technica | 3118          | 4.4179    \nA_merged | Fender         | 3020          | 4.3725    \nA_merged | PreSonus       | 2718          | 4.3355    \nA_merged | Behringer      | 2575          | 4.2179    \nB_curo   | Pyle           | 9475          | 4.0577    \nB_curo   | D'Addario      | 5526          | 4.5208    \nB_curo   | Yamaha         | 5202          | 4.4702    \nB_curo   | OnStage        | 5140          | 4.4543    \nB_curo   | JIM DUNLOP     | 4835          | 4.6378    \nB_curo   | Donner         | 3880          | 4.417     \nB_curo   | Audio-Technica | 3118          | 4.4179    \nB_curo   | Fender         | 3020          | 4.3725    \nB_curo   | PreSonus       | 2718          | 4.3355    \nB_curo   | Behringer      | 2575          | 4.2179    "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH f AS (SELECT ref_id, COUNT(*) cnt, SUM(rtg) rtg_sum FROM fdbk_g3 GROUP BY ref_id),\nattrs AS (SELECT ref_id,'cur' src, attr_key, attr_val FROM product_attributes_g3\n          UNION ALL SELECT ref_id,'leg',attr_key,attr_val FROM attrs_g3_legacy),\nb AS (SELECT ref_id, COALESCE(\n  MAX(CASE WHEN src='cur' AND attr_key='Brand' THEN attr_val END),\n  MAX(CASE WHEN src='cur' AND attr_key='Brand Name' THEN attr_val END),\n  MAX(CASE WHEN src='cur' AND attr_key='Manufacturer' THEN attr_val END),\n  MAX(CASE WHEN src='leg' AND attr_key='Brand' THEN attr_val END),\n  MAX(CASE WHEN src='leg' AND attr_key='Brand Name' THEN attr_val END),\n  MAX(CASE WHEN src='leg' AND attr_key='Manufacturer' THEN attr_val END)) brand\n  FROM attrs WHERE attr_key IN ('Brand','Brand Name','Manufacturer') GROUP BY ref_id),\ntop10 AS (SELECT b.brand, SUM(f.cnt) tr, 1.0*SUM(f.rtg_sum)/SUM(f.cnt) ar\n  FROM f JOIN b ON b.ref_id=f.ref_id GROUP BY b.brand ORDER BY tr DESC LIMIT 10)\nSELECT (SELECT COUNT(*) FROM top10) n,\n  (SELECT MAX(ar) FROM top10) mx,\n  (SELECT MIN(ar) FROM top10) mn,\n  ROUND((SELECT MAX(ar) FROM top10)-(SELECT MIN(ar) FROM top10),2) diff_full,\n  ROUND((SELECT ROUND(MAX(ar),2) FROM top10)-(SELECT ROUND(MIN(ar),2) FROM top10),2) diff_rnd"
+      },
+      "observation": "Query result (7/15 queries used, 8 remaining):\n\nn  | mx                | mn                | diff_full | diff_rnd\n---+-------------------+-------------------+-----------+---------\n10 | 4.637849017580145 | 4.057730870712401 | 0.58      | 0.58    "
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "0.58"
+      },
+      "observation": "Question 35: CORRECT.\nYour answer: 0.58\nExploratory queries used: 7"
+    }
+  ],
+  "feedback": "Question 35: CORRECT.\nYour answer: 0.58\nExploratory queries used: 7"
+}

@@ -1,0 +1,50 @@
+{
+  "namespace": "claude_memory_ready/r1/database_exploration",
+  "index": 12,
+  "instance_id": "13",
+  "prompt": "Question 13/40\n\nAmong electronics products that have zero reviews, what percentage have a price listed (non-NULL, non-zero)? Round to 2 decimal places.\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "Schema is clear: g1/g2/g3 groups. Per my memory notes, I need to verify the g2=electronics mapping, and items_g2 has both `prc` (INTEGER) and `prc_usd`. Let me verify the group mapping and run the main computation in parallel.",
+    "g2 confirmed as **Electronics** (root cat_nm = \"Electronics\"). The main computation: 11,345 electronics products have zero fdbk_g2 rows; 3,395 have `prc` non-NULL/non-zero; 3,253 via `prc_usd`. Let me sanity-check the join key and rounding.",
+    "All checks pass: 20,000 electronics items − 8,655 with reviews = 11,345 with zero reviews (exact match), all feedback rows have ratings, and the ref_id join is correct. Using the canonical `prc` column: 3,395 / 11,345 = 29.9251…% → **29.93**.",
+    "**Correct — 29.93%** (4 queries used).\n\nApproach:\n1. **Schema dump** (1 query): three groups; `items_g2` (with `prc` INTEGER + derived `prc_usd`) and `fdbk_g2` = reviews.\n2. **Group verification** per my memory notes (1 query): `taxn_g2` root cat_nm = \"Electronics\" ✓ (g1 = Office Products, g3 = Musical Instruments).\n3. **Main computation** (1 query): `items_g2` LEFT-anti-join `fdbk_g2` → 11,345 zero-review products; 3,395 with `prc` non-NULL and non-zero.\n4. **Sanity checks** (1 query): all fdbk rows have ratings; 20,000 items − 8,655 reviewed = 11,345 exactly; `prc_usd` was less complete (3,253) so I used the canonical `prc` column.\n\n3,395 / 11,345 = 29.9251…% → **29.93%**"
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT name, sql FROM sqlite_master WHERE type='table' ORDER BY name"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\nname            | sql                                                                                                                                                                                                                                                                     \n----------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\nattrs_g1        | CREATE TABLE attrs_g1 (     ref_id TEXT,     attr_key TEXT,     attr_val TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g1(ref_id) )                                                                                                                                   \nattrs_g3        | CREATE TABLE attrs_g3 (     ref_id TEXT,     attr_key TEXT,     attr_val TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g3(ref_id) )                                                                                                                                   \nfdbk_g1         | CREATE TABLE fdbk_g1 (     id INTEGER PRIMARY KEY AUTOINCREMENT,     item_id TEXT,     ref_id TEXT,     uid TEXT,     rtg REAL,     ttl TEXT,     body TEXT,     ts INTEGER,     hlp_ct INTEGER,     vrf INTEGER,     FOREIGN KEY (ref_id) REFERENCES items_g1(ref_id) )\nfdbk_g2         | CREATE TABLE fdbk_g2 (     id INTEGER PRIMARY KEY AUTOINCREMENT,     item_id TEXT,     ref_id TEXT,     uid TEXT,     rtg REAL,     ttl TEXT,     body TEXT,     ts INTEGER,     hlp_ct INTEGER,     vrf TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g2(ref_id) )   \nfdbk_g3         | CREATE TABLE fdbk_g3 (     id INTEGER PRIMARY KEY AUTOINCREMENT,     ref_id TEXT,     uid TEXT,     rtg REAL,     ttl TEXT,     body TEXT,     ts TEXT,     hlp_ct INTEGER,     vrf INTEGER,     FOREIGN KEY (ref_id) REFERENCES items_g3(ref_id) )                     \nfdbk_stats_g1   | CREATE TABLE fdbk_stats_g1 (     ref_id TEXT PRIMARY KEY,     avg_rtg REAL,     review_ct INTEGER,     pct_5star REAL,     avg_hlp REAL,     FOREIGN KEY (ref_id) REFERENCES items_g1(ref_id) )                                                                         \nitems_g1        | CREATE TABLE items_g1 (     ref_id TEXT PRIMARY KEY,     ttl TEXT,     avg_rtg REAL,     avg_rtg_30d REAL,     rtg_ct INTEGER,     prc REAL,     str_nm TEXT,     main_cat TEXT,     desc_txt TEXT,     feat_lst TEXT )                                                 \nitems_g2        | CREATE TABLE items_g2 (     ref_id TEXT PRIMARY KEY,     ttl TEXT,     avg_rtg REAL,     prc INTEGER,     prc_usd REAL,     str_nm TEXT,     main_cat TEXT,     feat_lst TEXT,     img_ct INTEGER )                                                                     \nitems_g3        | CREATE TABLE items_g3 (     ref_id TEXT PRIMARY KEY,     ttl TEXT,     avg_rtg REAL,     rtg_ct INTEGER,     prc REAL,     str_nm TEXT,     main_cat TEXT,     desc_txt TEXT )                                                                                          \nsqlite_sequence | CREATE TABLE sqlite_sequence(name,seq)                                                                                                                                                                                                                                  \ntaxn_g1         | CREATE TABLE taxn_g1 (     ref_id TEXT,     cat_lvl INTEGER,     cat_nm TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g1(ref_id) )                                                                                                                                    \ntaxn_g2         | CREATE TABLE taxn_g2 (     ref_id TEXT,     cat_lvl INTEGER,     cat_nm TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g2(ref_id) )                                                                                                                                    "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT 'g1' g, (SELECT cat_nm FROM taxn_g1 WHERE cat_lvl=0 GROUP BY cat_nm ORDER BY COUNT(*) DESC LIMIT 1) root, (SELECT MIN(ts) FROM fdbk_g1) mints, (SELECT MAX(ts) FROM fdbk_g1) maxts\nUNION ALL\nSELECT 'g2', (SELECT cat_nm FROM taxn_g2 WHERE cat_lvl=0 GROUP BY cat_nm ORDER BY COUNT(*) DESC LIMIT 1), (SELECT MIN(ts) FROM fdbk_g2), (SELECT MAX(ts) FROM fdbk_g2)\nUNION ALL\nSELECT 'g3', (SELECT main_cat FROM items_g3 GROUP BY main_cat ORDER BY COUNT(*) DESC LIMIT 1), (SELECT MIN(ts) FROM fdbk_g3), (SELECT MAX(ts) FROM fdbk_g3)"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\ng  | root                | mints         | maxts          \n---+---------------------+---------------+----------------\ng1 | Office Products     | 1001508857000 | 999499485000000\ng2 | Electronics         | 1008272539    | 999482389000   \ng3 | Musical Instruments | 2001-12-04    | 2023-09-08     "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT COUNT(*) AS zero_rev,\n       SUM(CASE WHEN prc IS NOT NULL AND prc <> 0 THEN 1 ELSE 0 END) AS prc_ok,\n       SUM(CASE WHEN prc_usd IS NOT NULL AND prc_usd <> 0 THEN 1 ELSE 0 END) AS prc_usd_ok,\n       SUM(CASE WHEN (prc IS NOT NULL AND prc<>0) OR (prc_usd IS NOT NULL AND prc_usd<>0) THEN 1 ELSE 0 END) AS either_ok,\n       SUM(CASE WHEN avg_rtg IS NULL THEN 1 ELSE 0 END) AS avg_rtg_null\nFROM items_g2 i\nWHERE NOT EXISTS (SELECT 1 FROM fdbk_g2 f WHERE f.ref_id = i.ref_id)"
+      },
+      "observation": "Query result (3/15 queries used, 12 remaining):\n\nzero_rev | prc_ok | prc_usd_ok | either_ok | avg_rtg_null\n---------+--------+------------+-----------+-------------\n11345    | 3395   | 3253       | 3395      | 0           "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT (SELECT SUM(rtg IS NULL) FROM fdbk_g2) AS rtg_null,\n       (SELECT COUNT(DISTINCT ref_id) FROM fdbk_g2) AS n_refs,\n       (SELECT COUNT(DISTINCT f.ref_id) FROM fdbk_g2 f JOIN items_g2 i ON i.ref_id=f.ref_id) AS matched_refs,\n       (SELECT COUNT(*) FROM items_g2) AS n_items,\n       (SELECT SUM(CASE WHEN prc IS NULL THEN 1 ELSE 0 END) FROM items_g2) AS prc_null_all,\n       ROUND(3395*100.0/11345, 2) AS pct_prc,\n       ROUND(3253*100.0/11345, 2) AS pct_usd"
+      },
+      "observation": "Query result (4/15 queries used, 11 remaining):\n\nrtg_null | n_refs | matched_refs | n_items | prc_null_all | pct_prc | pct_usd\n---------+--------+--------------+---------+--------------+---------+--------\n0        | 8655   | 8655         | 20000   | 13430        | 29.93   | 28.67  "
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "29.93%"
+      },
+      "observation": "Question 13: CORRECT.\nYour answer: 29.93%\nExploratory queries used: 4"
+    }
+  ],
+  "feedback": "Question 13: CORRECT.\nYour answer: 29.93%\nExploratory queries used: 4"
+}

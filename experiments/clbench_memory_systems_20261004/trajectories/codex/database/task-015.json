@@ -1,0 +1,27 @@
+{
+  "namespace": "codex_memory_ready/r1/database_exploration",
+  "index": 15,
+  "instance_id": "11",
+  "prompt": "Question 16/40\n\nAmong electronics reviews with a review body longer than 500 characters, considering only products whose list price is at most $40, what percentage are 1-star? Round to 2 decimal places.\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "I’ll check the saved SQL playbook, then run one consolidated query.",
+    "`10.22`\n\n"
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT COUNT(*) AS total_reviews,\n       SUM(CASE WHEN rtg = 1.0 THEN 1 ELSE 0 END) AS one_star_reviews,\n       ROUND(100.0 * SUM(CASE WHEN rtg = 1.0 THEN 1 ELSE 0 END) / COUNT(*), 2) AS pct_one_star\nFROM fdbk_g2 f\nJOIN items_g2 i ON i.ref_id = f.ref_id\nWHERE LENGTH(f.body) > 500\n  AND i.prc_usd <= 40;"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\ntotal_reviews | one_star_reviews | pct_one_star\n--------------+------------------+-------------\n2172          | 222              | 10.22       "
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "10.22"
+      },
+      "observation": "Question 16: CORRECT.\nYour answer: 10.22\nExploratory queries used: 1"
+    }
+  ],
+  "feedback": "Question 16: CORRECT.\nYour answer: 10.22\nExploratory queries used: 1"
+}

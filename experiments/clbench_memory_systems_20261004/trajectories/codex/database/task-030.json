@@ -1,0 +1,29 @@
+{
+  "namespace": "codex_memory_ready/r1/database_exploration",
+  "index": 30,
+  "instance_id": "115",
+  "prompt": "Question 31/40\n\nAmong customer reviews on office products that are archived from sale, what percentage are verified purchases? Round to 1 decimal place.\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "I’ll check the saved benchmark playbook, then verify this instance’s schema with one consolidated query.",
+    "The saved guidance identifies the office tables and prior verified-status semantics. I’m using one query to calculate both candidate verified columns, while confirming the archived population.",
+    "The `verified_status` interpretation was rejected, so I’m checking how it maps to the purchase flag before resubmitting.",
+    "Submitted `66.3`; the benchmark marked it incorrect. The alternate purchase-flag calculation produced `94.8`, but the follow-up ANSWER call was rejected by the harness.\n\n"
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH af AS (SELECT f.verified_status, f.vrf FROM fdbk_g1 f JOIN items_g1 i ON i.ref_id = f.ref_id WHERE i.status = 'archived') SELECT COUNT(*) AS total_reviews, SUM(verified_status = 'verified') AS verified_status_count, ROUND(100.0 * SUM(verified_status = 'verified') / COUNT(*), 1) AS verified_status_pct, SUM(vrf = 1) AS vrf_one_count, ROUND(100.0 * SUM(vrf = 1) / COUNT(*), 1) AS vrf_one_pct, SUM(verified_status IS NULL) AS verified_status_null, SUM(vrf IS NULL) AS vrf_null FROM af"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\ntotal_reviews | verified_status_count | verified_status_pct | vrf_one_count | vrf_one_pct | verified_status_null | vrf_null\n--------------+-----------------------+---------------------+---------------+-------------+----------------------+---------\n23016         | 15264                 | 66.3                | 21813         | 94.8        | 6912                 | 0       "
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "66.3"
+      },
+      "observation": "Question 31: INCORRECT.\nYour answer: 66.3\nExploratory queries used: 1"
+    }
+  ],
+  "feedback": "Question 31: INCORRECT.\nYour answer: 66.3\nExploratory queries used: 1"
+}

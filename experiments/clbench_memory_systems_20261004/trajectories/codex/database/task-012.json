@@ -1,0 +1,27 @@
+{
+  "namespace": "codex_memory_ready/r1/database_exploration",
+  "index": 12,
+  "instance_id": "13",
+  "prompt": "Question 13/40\n\nAmong electronics products that have zero reviews, what percentage have a price listed (non-NULL, non-zero)? Round to 2 decimal places.\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "I’ll reuse the verified electronics schema from memory, then run one consolidated count.",
+    "Submitted `28.67`, but the benchmark marked it incorrect. The instance is complete with 1/15 exploratory queries used.\n\n"
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT COUNT(*) AS zero_review_products, SUM(CASE WHEN i.prc_usd IS NOT NULL AND i.prc_usd <> 0 THEN 1 ELSE 0 END) AS priced_products, ROUND(100.0 * SUM(CASE WHEN i.prc_usd IS NOT NULL AND i.prc_usd <> 0 THEN 1 ELSE 0 END) / COUNT(*), 2) AS pct FROM items_g2 AS i WHERE NOT EXISTS (SELECT 1 FROM fdbk_g2 AS f WHERE f.ref_id = i.ref_id);"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\nzero_review_products | priced_products | pct  \n---------------------+-----------------+------\n11345                | 3253            | 28.67"
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "28.67"
+      },
+      "observation": "Question 13: INCORRECT.\nYour answer: 28.67\nExploratory queries used: 1"
+    }
+  ],
+  "feedback": "Question 13: INCORRECT.\nYour answer: 28.67\nExploratory queries used: 1"
+}

@@ -1,0 +1,68 @@
+{
+  "namespace": "pi_notepad/r1/database_exploration",
+  "index": 28,
+  "instance_id": "108",
+  "prompt": "Question 29/40\n\nWhat percentage of office-product reviews that are missing a text verification label belong to products that are no longer offered (archived from sale)? Round to 1 decimal place.\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "Question 29 answered correctly: **6.1%** (7 queries used).\n\n- Office category = `g1` tables; reviews in `fdbk_g1` with `verified_status IS NULL` (113,242 rows) are the missing text verification label group.\n- Joining to `items_g1` (status: 19,000 active / 1,000 archived), 6.1% of those reviews belong to archived products."
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '%g1%'"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\nname         \n-------------\nitems_g1     \nfdbk_g1      \ntaxn_g1      \nattrs_g1     \nfdbk_stats_g1"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "PRAGMA table_info(fdbk_g1); PRAGMA table_info(items_g1)"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\nERROR: You can only execute one statement at a time."
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT p.name, p.\"table\" FROM pragma_table_info('fdbk_g1') p UNION ALL SELECT 'ITEMS.'||p.name, p.\"table\" FROM pragma_table_info('items_g1') p"
+      },
+      "observation": "Query result (3/15 queries used, 12 remaining):\n\nERROR: no such column: p.table"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT * FROM pragma_table_info('fdbk_g1') UNION ALL SELECT * FROM pragma_table_info('items_g1')"
+      },
+      "observation": "Query result (4/15 queries used, 11 remaining):\n\ncid | name            | type    | notnull | dflt_value | pk\n----+-----------------+---------+---------+------------+---\n0   | id              | INTEGER | 0       | NULL       | 1 \n1   | item_id         | TEXT    | 0       | NULL       | 0 \n2   | ref_id          | TEXT    | 0       | NULL       | 0 \n3   | uid             | TEXT    | 0       | NULL       | 0 \n4   | rtg             | REAL    | 0       | NULL       | 0 \n5   | ttl             | TEXT    | 0       | NULL       | 0 \n6   | body            | TEXT    | 0       | NULL       | 0 \n7   | ts              | INTEGER | 0       | NULL       | 0 \n8   | hlp_ct          | INTEGER | 0       | NULL       | 0 \n9   | vrf             | INTEGER | 0       | NULL       | 0 \n10  | verified_status | TEXT    | 0       | NULL       | 0 \n0   | ref_id          | TEXT    | 0       | NULL       | 1 \n1   | ttl             | TEXT    | 0       | NULL       | 0 \n2   | avg_rtg         | REAL    | 0       | NULL       | 0 \n3   | avg_rtg_30d     | REAL    | 0       | NULL       | 0 \n4   | rtg_ct          | INTEGER | 0       | NULL       | 0 \n5   | prc             | REAL    | 0       | NULL       | 0 \n6   | str_nm          | TEXT    | 0       | NULL       | 0 \n7   | main_cat        | TEXT    | 0       | NULL       | 0 \n8   | desc_txt        | TEXT    | 0       | NULL       | 0 \n9   | feat_lst        | TEXT    | 0       | NULL       | 0 \n10  | status          | TEXT    | 0       | 'active'   | 0 "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT verified_status, COUNT(*) c FROM fdbk_g1 GROUP BY 1 UNION ALL SELECT 'STATUS:'||status, COUNT(*) FROM items_g1 GROUP BY status"
+      },
+      "observation": "Query result (5/15 queries used, 10 remaining):\n\nverified_status | c     \n----------------+-------\nNULL            | 113242\nunverified      | 17963 \nverified        | 246267\nSTATUS:active   | 19000 \nSTATUS:archived | 1000  "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT ROUND(100.0*SUM(CASE WHEN i.status='archived' THEN 1 ELSE 0 END)/COUNT(*),1) FROM fdbk_g1 f JOIN items_g1 i ON f.ref_id=i.ref_id WHERE f.verified_status IS NULL"
+      },
+      "observation": "Query result (6/15 queries used, 9 remaining):\n\nROUND(100.0*SUM(CASE WHEN i.status='archived' THEN 1 ELSE 0 END)/COUNT(*),1)\n----------------------------------------------------------------------------\n6.1                                                                         "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT COUNT(*) FROM fdbk_g1 f LEFT JOIN items_g1 i ON f.ref_id=i.ref_id WHERE f.verified_status IS NULL AND i.ref_id IS NULL"
+      },
+      "observation": "Query result (7/15 queries used, 8 remaining):\n\nCOUNT(*)\n--------\n0       "
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "6.1"
+      },
+      "observation": "Question 29: CORRECT.\nYour answer: 6.1\nExploratory queries used: 7"
+    }
+  ],
+  "feedback": "Question 29: CORRECT.\nYour answer: 6.1\nExploratory queries used: 7"
+}

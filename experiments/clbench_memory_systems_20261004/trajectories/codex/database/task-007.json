@@ -1,0 +1,43 @@
+{
+  "namespace": "codex_memory_ready/r1/database_exploration",
+  "index": 7,
+  "instance_id": "15",
+  "prompt": "Question 8/40\n\nAmong electronics products in the 'Computers & Accessories' top-level category, what percentage are priced above the category-wide average? Round to 2 decimal places. Only consider products with a non-zero price.\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "I’ll check the stored benchmark playbook, then target one or two schema-aware queries.",
+    "Memory confirms `items_g2` as electronics with dollar column `prc_usd`; now I’ll locate how top-level categories are represented.",
+    "The target top level is `cat_lvl=1`; I’m computing the percentage from distinct non-zero-priced products.",
+    "Submitted `24.44`; the benchmark marked it incorrect after 3 exploratory queries.\n\n"
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT name, sql FROM sqlite_master WHERE type='table' AND (name LIKE '%g2%' OR name LIKE 'sqlite%') ORDER BY name;"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\nname            | sql                                                                                                                                                                                                                                                                  \n----------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\nfdbk_g2         | CREATE TABLE fdbk_g2 (     id INTEGER PRIMARY KEY AUTOINCREMENT,     item_id TEXT,     ref_id TEXT,     uid TEXT,     rtg REAL,     ttl TEXT,     body TEXT,     ts INTEGER,     hlp_ct INTEGER,     vrf TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g2(ref_id) )\nitems_g2        | CREATE TABLE items_g2 (     ref_id TEXT PRIMARY KEY,     ttl TEXT,     avg_rtg REAL,     prc INTEGER,     prc_usd REAL,     str_nm TEXT,     main_cat TEXT,     feat_lst TEXT,     img_ct INTEGER )                                                                  \nsqlite_sequence | CREATE TABLE sqlite_sequence(name,seq)                                                                                                                                                                                                                               \ntaxn_g2         | CREATE TABLE taxn_g2 (     ref_id TEXT,     cat_lvl INTEGER,     cat_nm TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g2(ref_id) )                                                                                                                                 "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH target AS (\n  SELECT t.cat_lvl, COUNT(DISTINCT t.ref_id) AS n_all,\n         COUNT(DISTINCT CASE WHEN i.prc_usd IS NOT NULL AND i.prc_usd <> 0 THEN t.ref_id END) AS n_nonzero,\n         AVG(CASE WHEN i.prc_usd IS NOT NULL AND i.prc_usd <> 0 THEN i.prc_usd END) AS avg_price\n  FROM taxn_g2 t JOIN items_g2 i ON i.ref_id = t.ref_id\n  WHERE t.cat_nm = 'Computers & Accessories'\n  GROUP BY t.cat_lvl\n)\nSELECT cat_lvl, n_all, n_nonzero, avg_price FROM target\nUNION ALL\nSELECT -1, COUNT(DISTINCT ref_id), 0, NULL FROM taxn_g2;"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\ncat_lvl | n_all | n_nonzero | avg_price         \n--------+-------+-----------+-------------------\n1       | 8089  | 2447      | 54.925925623212095\n-1      | 18421 | 0         | NULL              "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH cat_items AS (\n  SELECT DISTINCT i.ref_id, i.prc_usd\n  FROM taxn_g2 t\n  JOIN items_g2 i ON i.ref_id = t.ref_id\n  WHERE t.cat_lvl = 1 AND t.cat_nm = 'Computers & Accessories'\n    AND i.prc_usd IS NOT NULL AND i.prc_usd <> 0\n), stats AS (\n  SELECT AVG(prc_usd) AS avg_price FROM cat_items\n)\nSELECT ROUND(100.0 * SUM(c.prc_usd > s.avg_price) / COUNT(*), 2) AS pct_above,\n       SUM(c.prc_usd > s.avg_price) AS n_above,\n       COUNT(*) AS n_total,\n       s.avg_price\nFROM cat_items c CROSS JOIN stats s;"
+      },
+      "observation": "Query result (3/15 queries used, 12 remaining):\n\npct_above | n_above | n_total | avg_price         \n----------+---------+---------+-------------------\n24.44     | 598     | 2447    | 54.925925623212095"
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "24.44"
+      },
+      "observation": "Question 8: INCORRECT.\nYour answer: 24.44\nExploratory queries used: 3"
+    }
+  ],
+  "feedback": "Question 8: INCORRECT.\nYour answer: 24.44\nExploratory queries used: 3"
+}

@@ -1,0 +1,55 @@
+{
+  "namespace": "pi_jaccard/r1/database_exploration",
+  "index": 12,
+  "instance_id": "13",
+  "prompt": "Question 13/40\n\nAmong electronics products that have zero reviews, what percentage have a price listed (non-NULL, non-zero)? Round to 2 decimal places.\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "The analysis is complete: among the 11,345 electronics products with zero reviews, 3,395 have a non-NULL, non-zero `prc` value, giving 3395/11345 = 29.93%.",
+    "**Correct: 29.93** (5 queries used)\n\n- `items_g2` = electronics products (`ref_id` PK); `fdbk_g2` reviews link via `ref_id`.\n- 11,345 products have zero reviews; of those, 3,395 have a non-NULL, non-zero `prc` → 3395/11345 = **29.93%**."
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "PRAGMA table_info(items_g2)"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\ncid | name     | type    | notnull | dflt_value | pk\n----+----------+---------+---------+------------+---\n0   | ref_id   | TEXT    | 0       | NULL       | 1 \n1   | ttl      | TEXT    | 0       | NULL       | 0 \n2   | avg_rtg  | REAL    | 0       | NULL       | 0 \n3   | prc      | INTEGER | 0       | NULL       | 0 \n4   | prc_usd  | REAL    | 0       | NULL       | 0 \n5   | str_nm   | TEXT    | 0       | NULL       | 0 \n6   | main_cat | TEXT    | 0       | NULL       | 0 \n7   | feat_lst | TEXT    | 0       | NULL       | 0 \n8   | img_ct   | INTEGER | 0       | NULL       | 0 "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT COUNT(*) AS total,\n SUM(CASE WHEN prc_usd IS NOT NULL AND prc_usd != 0 THEN 1 ELSE 0 END) AS has_prc_usd,\n SUM(CASE WHEN prc IS NOT NULL AND prc != 0 THEN 1 ELSE 0 END) AS has_prc\nFROM items_g2 WHERE ref_id NOT IN (SELECT ref_id FROM fdbk_g2)"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\ntotal | has_prc_usd | has_prc\n------+-------------+--------\n11345 | 3253        | 3395   "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT prc, prc_usd FROM items_g2 WHERE prc IS NOT NULL AND prc_usd IS NOT NULL AND prc != 0 AND prc_usd != 0 LIMIT 10"
+      },
+      "observation": "Query result (3/15 queries used, 12 remaining):\n\nprc   | prc_usd\n------+--------\n7499  | 74.99  \n2349  | 23.49  \n20999 | 209.99 \n8360  | 83.6   \n799   | 7.99   \n794   | 7.94   \n10000 | 100.0  \n1299  | 12.99  \n392   | 3.92   \n599   | 5.99   "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT\n SUM(CASE WHEN prc IS NOT NULL AND prc!=0 AND (prc_usd IS NULL OR prc_usd=0) THEN 1 ELSE 0 END) AS prc_only,\n SUM(CASE WHEN prc_usd IS NOT NULL AND prc_usd!=0 AND (prc IS NULL OR prc=0) THEN 1 ELSE 0 END) AS usd_only\nFROM items_g2 WHERE ref_id NOT IN (SELECT ref_id FROM fdbk_g2)"
+      },
+      "observation": "Query result (4/15 queries used, 11 remaining):\n\nprc_only | usd_only\n---------+---------\n142      | 0       "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT prc, prc_usd FROM items_g2 WHERE ref_id NOT IN (SELECT ref_id FROM fdbk_g2) AND prc IS NOT NULL AND prc!=0 AND (prc_usd IS NULL OR prc_usd=0) LIMIT 15"
+      },
+      "observation": "Query result (5/15 queries used, 10 remaining):\n\nprc    | prc_usd\n-------+--------\n169999 | NULL   \n64900  | NULL   \n58488  | NULL   \n89999  | NULL   \n80807  | NULL   \n78900  | NULL   \n59999  | NULL   \n120000 | NULL   \n59900  | NULL   \n67900  | NULL   \n269999 | NULL   \n54900  | NULL   \n141995 | NULL   \n212458 | NULL   \n84379  | NULL   "
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "29.93"
+      },
+      "observation": "Question 13: CORRECT.\nYour answer: 29.93\nExploratory queries used: 5"
+    }
+  ],
+  "feedback": "Question 13: CORRECT.\nYour answer: 29.93\nExploratory queries used: 5"
+}

@@ -1,0 +1,65 @@
+{
+  "namespace": "codex_memory_ready/r1/database_exploration",
+  "index": 19,
+  "instance_id": "8",
+  "prompt": "Question 20/40\n\nHow many office products have a listing date before 2015?\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "I’ll check the benchmark playbook first, then verify the office timestamp semantics with a single consolidated query.",
+    "The office item schema in memory lacks an obvious date column, so I’ll dump the relevant table definitions before touching the data.",
+    "No date field exists in `items_g1`; I’m checking attributes, titles, and descriptions for the benchmark’s intended listing-date representation.",
+    "`Date First Available` is the listing-date field. I’ll profile its formats and parsed years in one consolidated query before counting.",
+    "Correct: **5254** office products.\n\n"
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT name, sql FROM sqlite_master WHERE type='table' AND (name LIKE '%g1%' OR name LIKE '%item%' OR name LIKE '%date%' OR name LIKE '%time%') ORDER BY name;"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\nname          | sql                                                                                                                                                                                                                                                                     \n--------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\nattrs_g1      | CREATE TABLE attrs_g1 (     ref_id TEXT,     attr_key TEXT,     attr_val TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g1(ref_id) )                                                                                                                                   \nfdbk_g1       | CREATE TABLE fdbk_g1 (     id INTEGER PRIMARY KEY AUTOINCREMENT,     item_id TEXT,     ref_id TEXT,     uid TEXT,     rtg REAL,     ttl TEXT,     body TEXT,     ts INTEGER,     hlp_ct INTEGER,     vrf INTEGER,     FOREIGN KEY (ref_id) REFERENCES items_g1(ref_id) )\nfdbk_stats_g1 | CREATE TABLE fdbk_stats_g1 (     ref_id TEXT PRIMARY KEY,     avg_rtg REAL,     review_ct INTEGER,     pct_5star REAL,     avg_hlp REAL,     FOREIGN KEY (ref_id) REFERENCES items_g1(ref_id) )                                                                         \nitems_g1      | CREATE TABLE items_g1 (     ref_id TEXT PRIMARY KEY,     ttl TEXT,     avg_rtg REAL,     avg_rtg_30d REAL,     rtg_ct INTEGER,     prc REAL,     str_nm TEXT,     main_cat TEXT,     desc_txt TEXT,     feat_lst TEXT )                                                 \nitems_g2      | CREATE TABLE items_g2 (     ref_id TEXT PRIMARY KEY,     ttl TEXT,     avg_rtg REAL,     prc INTEGER,     prc_usd REAL,     str_nm TEXT,     main_cat TEXT,     feat_lst TEXT,     img_ct INTEGER )                                                                     \nitems_g3      | CREATE TABLE items_g3 (     ref_id TEXT PRIMARY KEY,     ttl TEXT,     avg_rtg REAL,     rtg_ct INTEGER,     prc REAL,     str_nm TEXT,     main_cat TEXT,     desc_txt TEXT )                                                                                          \ntaxn_g1       | CREATE TABLE taxn_g1 (     ref_id TEXT,     cat_lvl INTEGER,     cat_nm TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g1(ref_id) )                                                                                                                                    "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH keys AS (SELECT attr_key, COUNT(*) n, MIN(attr_val) mn, MAX(attr_val) mx FROM attrs_g1 GROUP BY attr_key), hits AS (SELECT * FROM keys WHERE LOWER(attr_key) LIKE '%date%' OR LOWER(attr_key) LIKE '%year%' OR LOWER(attr_key) LIKE '%time%' OR LOWER(attr_key) LIKE '%list%') SELECT 'attr_hit' src, attr_key AS a, CAST(n AS TEXT) b, mn AS c, mx AS d FROM hits UNION ALL SELECT 'attr_total','',COUNT(*),'','' FROM attrs_g1 UNION ALL SELECT 'item_sample', ref_id, substr(ttl,1,80), substr(coalesce(desc_txt,''),1,80) FROM items_g1 LIMIT 5;"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\nERROR: SELECTs to the left and right of UNION ALL do not have the same number of result columns"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH keys AS (SELECT attr_key, COUNT(*) n, MIN(attr_val) mn, MAX(attr_val) mx FROM attrs_g1 GROUP BY attr_key), hits AS (SELECT * FROM keys WHERE LOWER(attr_key) LIKE '%date%' OR LOWER(attr_key) LIKE '%year%' OR LOWER(attr_key) LIKE '%time%' OR LOWER(attr_key) LIKE '%list%') SELECT 'attr_hit' src, attr_key AS a, CAST(n AS TEXT) b, mn AS c, mx AS d FROM hits UNION ALL SELECT 'attr_total','',CAST(COUNT(*) AS TEXT),'','' FROM attrs_g1 UNION ALL SELECT 'item_sample', ref_id, substr(ttl,1,80), substr(coalesce(desc_txt,''),1,80), '' FROM items_g1 LIMIT 5;"
+      },
+      "observation": "Query result (3/15 queries used, 12 remaining):\n\nsrc      | a                       | b     | c            | d                \n---------+-------------------------+-------+--------------+------------------\nattr_hit | Date First Available    | 18198 | 01M 10, 2009 | September 9, 2022\nattr_hit | Full Cure Time          | 1     | 24 Hours     | 24 Hours         \nattr_hit | Initial page print time | 1     | 0.7 seconds  | 0.7 seconds      \nattr_hit | Model Year              | 5     | 1995         | 2022             \nattr_hit | Original Release Date   | 2     | 2011         | 2012             "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH d AS (SELECT ref_id, attr_val v FROM attrs_g1 WHERE attr_key='Date First Available'), y AS (SELECT v, length(v) len, CASE WHEN v GLOB '*[1-2][0-9][0-9][0-9]*' THEN substr(v, instr(v, substr('2015',1,0)) + 0) ELSE '' END dummy, CAST(CASE WHEN v LIKE '% 19__' OR v LIKE '% 20__' THEN substr(v,length(v)-3) ELSE NULL END AS INTEGER) yr FROM d) SELECT len, COUNT(*) n, COUNT(DISTINCT ref_id) refs, MIN(yr) min_year, MAX(yr) max_year, COUNT(yr) years_parsed, MIN(v) min_v, MAX(v) max_v FROM y GROUP BY len ORDER BY n DESC;"
+      },
+      "observation": "Query result (4/15 queries used, 11 remaining):\n\nERROR: no such column: ref_id"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH d AS (SELECT a.ref_id rid, a.attr_val v FROM attrs_g1 a WHERE a.attr_key='Date First Available'), y AS (SELECT rid, v, length(v) len, CASE WHEN (v LIKE '% 19__' OR v LIKE '% 20__') THEN CAST(substr(v,length(v)-3) AS INTEGER) ELSE NULL END yr FROM d) SELECT len, COUNT(*) n, COUNT(DISTINCT rid) refs, COUNT(yr) years_parsed, MIN(yr) min_year, MAX(yr) max_year, MIN(v) min_v, MAX(v) max_v FROM y GROUP BY len ORDER BY n DESC;"
+      },
+      "observation": "Query result (5/15 queries used, 10 remaining):\n\nlen | n    | refs | years_parsed | min_year | max_year | min_v              | max_v             \n----+------+------+--------------+----------+----------+--------------------+-------------------\n16  | 3342 | 3342 | 3342         | 1999     | 2023     | December 1, 2005   | October 31, 2022  \n17  | 3298 | 3298 | 3298         | 1973     | 2023     | December 10, 2006  | September 9, 2022 \n13  | 3167 | 3167 | 3167         | 1999     | 2023     | April 1, 2009      | March 9, 2023     \n14  | 2735 | 2735 | 2735         | 2000     | 2023     | April 10, 2006     | March 31, 2023    \n15  | 2092 | 2092 | 2092         | 1999     | 2023     | August 10, 2003    | October 9, 2022   \n12  | 2041 | 2041 | 2041         | 1999     | 2023     | 01M 10, 2009       | May 31, 2022      \n18  | 1071 | 1071 | 1071         | 2000     | 2023     | September 10, 2006 | September 30, 2022\n11  | 452  | 452  | 452          | 2000     | 2023     | 08M 9, 2016        | May 9, 2023       "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH d AS (SELECT a.ref_id rid, a.attr_val v FROM attrs_g1 a WHERE a.attr_key='Date First Available'), y AS (SELECT rid, v, CASE WHEN (v LIKE '% 19__' OR v LIKE '% 20__') THEN CAST(substr(v,length(v)-3) AS INTEGER) ELSE NULL END yr FROM d) SELECT (SELECT COUNT(*) FROM items_g1) total_items, (SELECT COUNT(DISTINCT rid) FROM y) dated_refs, (SELECT COUNT(*) FROM y) dated_rows, (SELECT COUNT(DISTINCT rid) FROM y WHERE yr IS NULL) null_years, (SELECT COUNT(DISTINCT rid) FROM y WHERE yr<2015) before_2015, (SELECT COUNT(DISTINCT rid) FROM y WHERE yr>=2015) on_or_after_2015, MIN(yr) min_year, MAX(yr) max_year FROM y;"
+      },
+      "observation": "Query result (6/15 queries used, 9 remaining):\n\ntotal_items | dated_refs | dated_rows | null_years | before_2015 | on_or_after_2015 | min_year | max_year\n------------+------------+------------+------------+-------------+------------------+----------+---------\n20000       | 18198      | 18198      | 0          | 5254        | 12944            | 1973     | 2023    "
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "5254"
+      },
+      "observation": "Question 20: CORRECT.\nYour answer: 5254\nExploratory queries used: 6"
+    }
+  ],
+  "feedback": "Question 20: CORRECT.\nYour answer: 5254\nExploratory queries used: 6"
+}

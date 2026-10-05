@@ -1,0 +1,54 @@
+{
+  "namespace": "pi_jaccard/r1/database_exploration",
+  "index": 30,
+  "instance_id": "115",
+  "prompt": "Question 31/40\n\nAmong customer reviews on office products that are archived from sale, what percentage are verified purchases? Round to 1 decimal place.\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "**Correct: 94.8%** (5 queries used)\n\n- Office products = `g1` tables; `items_g1.status = 'archived'` identifies products archived from sale.\n- Reviews on archived products: 23,016 total, of which 21,813 have `vrf = 1` → **94.8%** verified purchases."
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "PRAGMA table_info(items_g1)"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\ncid | name        | type    | notnull | dflt_value | pk\n----+-------------+---------+---------+------------+---\n0   | ref_id      | TEXT    | 0       | NULL       | 1 \n1   | ttl         | TEXT    | 0       | NULL       | 0 \n2   | avg_rtg     | REAL    | 0       | NULL       | 0 \n3   | avg_rtg_30d | REAL    | 0       | NULL       | 0 \n4   | rtg_ct      | INTEGER | 0       | NULL       | 0 \n5   | prc         | REAL    | 0       | NULL       | 0 \n6   | str_nm      | TEXT    | 0       | NULL       | 0 \n7   | main_cat    | TEXT    | 0       | NULL       | 0 \n8   | desc_txt    | TEXT    | 0       | NULL       | 0 \n9   | feat_lst    | TEXT    | 0       | NULL       | 0 \n10  | status      | TEXT    | 0       | 'active'   | 0 "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "PRAGMA table_info(fdbk_g1)"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\ncid | name            | type    | notnull | dflt_value | pk\n----+-----------------+---------+---------+------------+---\n0   | id              | INTEGER | 0       | NULL       | 1 \n1   | item_id         | TEXT    | 0       | NULL       | 0 \n2   | ref_id          | TEXT    | 0       | NULL       | 0 \n3   | uid             | TEXT    | 0       | NULL       | 0 \n4   | rtg             | REAL    | 0       | NULL       | 0 \n5   | ttl             | TEXT    | 0       | NULL       | 0 \n6   | body            | TEXT    | 0       | NULL       | 0 \n7   | ts              | INTEGER | 0       | NULL       | 0 \n8   | hlp_ct          | INTEGER | 0       | NULL       | 0 \n9   | vrf             | INTEGER | 0       | NULL       | 0 \n10  | verified_status | TEXT    | 0       | NULL       | 0 "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT status, COUNT(*) FROM items_g1 GROUP BY status"
+      },
+      "observation": "Query result (3/15 queries used, 12 remaining):\n\nstatus   | COUNT(*)\n---------+---------\nactive   | 19000   \narchived | 1000    "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT f.vrf, f.verified_status, COUNT(*) FROM fdbk_g1 f JOIN items_g1 i ON f.ref_id = i.ref_id WHERE i.status='archived' GROUP BY f.vrf, f.verified_status"
+      },
+      "observation": "Query result (4/15 queries used, 11 remaining):\n\nvrf | verified_status | COUNT(*)\n----+-----------------+---------\n0   | NULL            | 363     \n0   | unverified      | 840     \n1   | NULL            | 6549    \n1   | verified        | 15264   "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT ROUND(100.0 * SUM(CASE WHEN f.vrf=1 THEN 1 ELSE 0 END) / COUNT(*), 1) AS pct, COUNT(*) AS total FROM fdbk_g1 f JOIN items_g1 i ON f.ref_id = i.ref_id WHERE i.status='archived'"
+      },
+      "observation": "Query result (5/15 queries used, 10 remaining):\n\npct  | total\n-----+------\n94.8 | 23016"
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "94.8"
+      },
+      "observation": "Question 31: CORRECT.\nYour answer: 94.8\nExploratory queries used: 5"
+    }
+  ],
+  "feedback": "Question 31: CORRECT.\nYour answer: 94.8\nExploratory queries used: 5"
+}

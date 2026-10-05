@@ -1,0 +1,40 @@
+{
+  "namespace": "hermes_memory_ready/r1/database_exploration",
+  "index": 27,
+  "instance_id": "110",
+  "prompt": "Question 28/40\n\nFor musical instruments, what is the ratio of how many lines of product attribute data exist in the current feed to how many exist in the older attribute export? Round to 2 decimal places.\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "Correct — 1.11 (product_attributes_g3: 202,543 rows vs attrs_g3_legacy: 182,566). Solved in 2 queries. Let me record the pattern for future runs:",
+    "",
+    "Answered correctly: **1.11** (202,543 rows in product_attributes_g3 ÷ 182,566 rows in attrs_g3_legacy). Used 2 of 15 queries; pattern saved to the skill's question-patterns reference for future runs."
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\nname                 \n---------------------\nattrs_g1             \nattrs_g3_legacy      \nfdbk_g1              \nfdbk_g2              \nfdbk_g3              \nfdbk_stats_g1        \nitems_g1             \nitems_g2             \nitems_g3             \nproduct_attributes_g3\nsqlite_sequence      \ntaxn_g1              \ntaxn_g2              "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT (SELECT COUNT(*) FROM product_attributes_g3) AS cur, (SELECT COUNT(*) FROM attrs_g3_legacy) AS old, ROUND(1.0*(SELECT COUNT(*) FROM product_attributes_g3)/(SELECT COUNT(*) FROM attrs_g3_legacy),2) AS ratio"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\ncur    | old    | ratio\n-------+--------+------\n202543 | 182566 | 1.11 "
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "1.11"
+      },
+      "observation": "Question 28: CORRECT.\nYour answer: 1.11\nExploratory queries used: 2"
+    }
+  ],
+  "feedback": "Question 28: CORRECT.\nYour answer: 1.11\nExploratory queries used: 2"
+}

@@ -1,0 +1,51 @@
+{
+  "namespace": "codex_memory_ready/r1/database_exploration",
+  "index": 28,
+  "instance_id": "108",
+  "prompt": "Question 29/40\n\nWhat percentage of office-product reviews that are missing a text verification label belong to products that are no longer offered (archived from sale)? Round to 1 decimal place.\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "I’ll check the saved benchmark playbook, then run one consolidated query.",
+    "I found the relevant tables; now I’m checking flag/attribute domains and candidate counts together.",
+    "The attribute value column differs from memory’s generic pattern. I’m pulling only the relevant schema, then I’ll recompute.",
+    "The domains align cleanly: missing `verified_status`, archived item status. Submitting the rounded percentage.",
+    "**6.1**"
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH f AS (SELECT ref_id, vrf FROM fdbk_g1 WHERE ref_id IS NOT NULL), d AS (SELECT ref_id, lower(v) AS dv, count(*) AS n FROM attrs_g1 WHERE lower(attr_key) IN ('is discontinued by manufacturer','discontinued','archived from sale','no longer offered') GROUP BY ref_id, lower(v)), stats AS (SELECT 'feedback_vrf' AS metric, COALESCE(CAST(vrf AS TEXT),'__NULL__') AS detail, COUNT(*) AS value FROM f GROUP BY 1,2 UNION ALL SELECT 'discontinued_value', COALESCE(dv,'__NULL__'), COUNT(*) FROM d GROUP BY 1,2 UNION ALL SELECT 'missing_vrf_discontinued', COALESCE(SUM(CASE WHEN dv IN ('yes','true') THEN 1 ELSE 0 END),0), COUNT(*) FROM f LEFT JOIN (SELECT ref_id, max(dv) AS dv FROM d GROUP BY ref_id) a USING(ref_id) WHERE vrf IS NULL) SELECT * FROM stats ORDER BY metric, detail;"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\nERROR: no such column: v"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT name, sql FROM sqlite_master WHERE type='table' AND (name IN ('attrs_g1','fdbk_g1','items_g1') OR name LIKE '%archiv%') ORDER BY name;"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\nname     | sql                                                                                                                                                                                                                                                                                           \n---------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\nattrs_g1 | CREATE TABLE attrs_g1 (     ref_id TEXT,     attr_key TEXT,     attr_val TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g1(ref_id) )                                                                                                                                                         \nfdbk_g1  | CREATE TABLE fdbk_g1 (     id INTEGER PRIMARY KEY AUTOINCREMENT,     item_id TEXT,     ref_id TEXT,     uid TEXT,     rtg REAL,     ttl TEXT,     body TEXT,     ts INTEGER,     hlp_ct INTEGER,     vrf INTEGER, verified_status TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g1(ref_id) )\nitems_g1 | CREATE TABLE items_g1 (     ref_id TEXT PRIMARY KEY,     ttl TEXT,     avg_rtg REAL,     avg_rtg_30d REAL,     rtg_ct INTEGER,     prc REAL,     str_nm TEXT,     main_cat TEXT,     desc_txt TEXT,     feat_lst TEXT , status TEXT DEFAULT 'active')                                         "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH m AS (SELECT f.ref_id, f.vrf, i.status, EXISTS (SELECT 1 FROM attrs_g1 a WHERE a.ref_id=f.ref_id AND lower(a.attr_key) LIKE '%discontinu%' AND lower(a.attr_val) IN ('yes','true')) AS disc FROM fdbk_g1 f LEFT JOIN items_g1 i ON i.ref_id=f.ref_id WHERE f.verified_status IS NULL), t AS (SELECT 'status' AS metric, COALESCE(status,'__NULL__') AS detail, COUNT(*) AS n FROM m GROUP BY 1,2 UNION ALL SELECT 'discontinued', CASE disc WHEN 1 THEN 'yes' ELSE 'no' END, COUNT(*) FROM m GROUP BY 1,2 UNION ALL SELECT 'vrf', COALESCE(CAST(vrf AS TEXT),'__NULL__'), COUNT(*) FROM m GROUP BY 1,2 UNION ALL SELECT 'candidate_pct', CASE WHEN status='archived' THEN 'archived_status_pct' WHEN disc=1 THEN 'attr_disc_pct' END, ROUND(100.0*COUNT(*)/(SELECT COUNT(*) FROM m),1) FROM m WHERE status='archived' OR disc=1 GROUP BY 1,2) SELECT * FROM t ORDER BY metric, detail;"
+      },
+      "observation": "Query result (3/15 queries used, 12 remaining):\n\nERROR: query exceeded 10s timeout"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH d AS (SELECT ref_id FROM attrs_g1 WHERE lower(attr_key) LIKE '%discontinu%' AND lower(attr_val) IN ('yes','true') GROUP BY ref_id), m AS (SELECT f.ref_id, f.vrf, i.status, CASE WHEN d.ref_id IS NULL THEN 0 ELSE 1 END AS disc FROM fdbk_g1 f LEFT JOIN items_g1 i ON i.ref_id=f.ref_id LEFT JOIN d ON d.ref_id=f.ref_id WHERE f.verified_status IS NULL), t AS (SELECT 'status' AS metric, COALESCE(status,'__NULL__') AS detail, COUNT(*) AS n FROM m GROUP BY 1,2 UNION ALL SELECT 'discontinued', CASE disc WHEN 1 THEN 'yes' ELSE 'no' END, COUNT(*) FROM m GROUP BY 1,2 UNION ALL SELECT 'vrf', COALESCE(CAST(vrf AS TEXT),'__NULL__'), COUNT(*) FROM m GROUP BY 1,2 UNION ALL SELECT 'candidate_pct', CASE WHEN status='archived' THEN 'archived_status_pct' WHEN disc=1 THEN 'attr_disc_pct' END, ROUND(100.0*COUNT(*)/(SELECT COUNT(*) FROM m),1) FROM m WHERE status='archived' OR disc=1 GROUP BY 1,2) SELECT * FROM t ORDER BY metric, detail;"
+      },
+      "observation": "Query result (4/15 queries used, 11 remaining):\n\nmetric        | detail              | n     \n--------------+---------------------+-------\ncandidate_pct | archived_status_pct | 6.1   \ncandidate_pct | attr_disc_pct       | 1.9   \ndiscontinued  | no                  | 111029\ndiscontinued  | yes                 | 2213  \nstatus        | active              | 106330\nstatus        | archived            | 6912  \nvrf           | 0                   | 7764  \nvrf           | 1                   | 105478"
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "6.1"
+      },
+      "observation": "Question 29: CORRECT.\nYour answer: 6.1\nExploratory queries used: 4"
+    }
+  ],
+  "feedback": "Question 29: CORRECT.\nYour answer: 6.1\nExploratory queries used: 4"
+}

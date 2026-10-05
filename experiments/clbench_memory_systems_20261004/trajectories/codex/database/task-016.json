@@ -1,0 +1,27 @@
+{
+  "namespace": "codex_memory_ready/r1/database_exploration",
+  "index": 16,
+  "instance_id": "18",
+  "prompt": "Question 17/40\n\nFor musical instruments, how much higher (in star rating) is the average review rating for products with a listed price compared to products without a price? Round to 2 decimal places.\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "I'll check prior musical-instrument lessons, then run one consolidated SQL query.",
+    "Correct. Submitted `0.12`; used 1 exploratory query.\n\n"
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH joined AS (\n  SELECT i.ref_id, i.prc, i.avg_rtg AS stored_rtg, f.rtg\n  FROM items_g3 i\n  LEFT JOIN fdbk_g3 f ON f.ref_id = i.ref_id\n), stats AS (\n  SELECT\n    CASE WHEN prc IS NOT NULL AND prc != 0 THEN 'priced_nonzero'\n         WHEN prc IS NOT NULL THEN 'priced_zero'\n         ELSE 'null_price' END AS grp,\n    COUNT(DISTINCT ref_id) AS items,\n    COUNT(rtg) AS reviews,\n    AVG(rtg) AS review_avg,\n    SUM(rtg) AS review_sum,\n    AVG(stored_rtg) AS stored_avg\n  FROM joined\n  GROUP BY 1\n)\nSELECT * FROM stats ORDER BY grp;"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\ngrp            | items | reviews | review_avg         | review_sum | stored_avg       \n---------------+-------+---------+--------------------+------------+------------------\nnull_price     | 12051 | 84190   | 4.166955695450766  | 350816.0   | 4.19692726149753 \npriced_nonzero | 7949  | 202436  | 4.2857199312375265 | 867584.0   | 4.456478096781205"
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "0.12"
+      },
+      "observation": "Question 17: CORRECT.\nYour answer: 0.12\nExploratory queries used: 1"
+    }
+  ],
+  "feedback": "Question 17: CORRECT.\nYour answer: 0.12\nExploratory queries used: 1"
+}

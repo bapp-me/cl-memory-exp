@@ -1,0 +1,76 @@
+{
+  "namespace": "pi_notepad/r1/database_exploration",
+  "index": 34,
+  "instance_id": "120",
+  "prompt": "Question 35/40\n\nTake the ten instrument brands with the most total customer reviews in the catalog. Among those ten, what is the difference between the highest and lowest brand-level average star rating? Round to 2 decimal places.\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "Top 10 brands by review count: Pyle, D'Addario, Yamaha, OnStage, JIM DUNLOP, Donner, Fender, PreSonus, Behringer, Elixir. Highest avg rating: JIM DUNLOP (4.6378); lowest: Pyle (4.0577). Diff = 0.5801 → **0.58**.",
+    "Question 35 answered correctly: **0.58** (difference between JIM DUNLOP's 4.6378 and Pyle's 4.0577 average star rating, using 8 exploratory queries)."
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT name FROM sqlite_master WHERE type='table'"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\nname                 \n---------------------\nitems_g1             \nfdbk_g1              \nsqlite_sequence      \ntaxn_g1              \nattrs_g1             \nitems_g2             \nfdbk_g2              \ntaxn_g2              \nitems_g3             \nfdbk_g3              \nattrs_g3_legacy      \nfdbk_stats_g1        \nproduct_attributes_g3"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "PRAGMA table_info(items_g3)"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\ncid | name     | type    | notnull | dflt_value | pk\n----+----------+---------+---------+------------+---\n0   | ref_id   | TEXT    | 0       | NULL       | 1 \n1   | ttl      | TEXT    | 0       | NULL       | 0 \n2   | avg_rtg  | REAL    | 0       | NULL       | 0 \n3   | rtg_ct   | INTEGER | 0       | NULL       | 0 \n4   | prc      | REAL    | 0       | NULL       | 0 \n5   | str_nm   | TEXT    | 0       | NULL       | 0 \n6   | main_cat | TEXT    | 0       | NULL       | 0 \n7   | desc_txt | TEXT    | 0       | NULL       | 0 "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "PRAGMA table_info(fdbk_g3)"
+      },
+      "observation": "Query result (3/15 queries used, 12 remaining):\n\ncid | name         | type    | notnull | dflt_value | pk\n----+--------------+---------+---------+------------+---\n0   | id           | INTEGER | 0       | NULL       | 1 \n1   | ref_id       | TEXT    | 0       | NULL       | 0 \n2   | uid          | TEXT    | 0       | NULL       | 0 \n3   | rtg          | REAL    | 0       | NULL       | 0 \n4   | ttl          | TEXT    | 0       | NULL       | 0 \n5   | body         | TEXT    | 0       | NULL       | 0 \n6   | ts           | TEXT    | 0       | NULL       | 0 \n7   | hlp_ct       | INTEGER | 0       | NULL       | 0 \n8   | vrf          | INTEGER | 0       | NULL       | 0 \n9   | review_year  | INTEGER | 0       | NULL       | 0 \n10  | review_month | INTEGER | 0       | NULL       | 0 "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "PRAGMA table_info(product_attributes_g3)"
+      },
+      "observation": "Query result (4/15 queries used, 11 remaining):\n\ncid | name     | type | notnull | dflt_value | pk\n----+----------+------+---------+------------+---\n0   | ref_id   | TEXT | 0       | NULL       | 0 \n1   | attr_key | TEXT | 0       | NULL       | 0 \n2   | attr_val | TEXT | 0       | NULL       | 0 "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT attr_key, COUNT(*) FROM product_attributes_g3 WHERE LOWER(attr_key) LIKE '%brand%' OR LOWER(attr_key) LIKE '%manufact%' GROUP BY attr_key"
+      },
+      "observation": "Query result (5/15 queries used, 10 remaining):\n\nattr_key                        | COUNT(*)\n--------------------------------+---------\nBrand                           | 11643   \nBrand Name                      | 144     \nIs Discontinued By Manufacturer | 9486    \nIs Discontinued by Manufacturer | 4       \nManufacturer                    | 2481    \nManufacturer Grade              | 3       \nManufacturer Part Number        | 82      \nManufacturer recommended age    | 59      \nProcessor Brand                 | 2       "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH b AS (\n  SELECT p.ref_id,\n         COALESCE(MAX(CASE WHEN p.attr_key='Brand' THEN p.attr_val END),\n                  MAX(CASE WHEN p.attr_key='Brand Name' THEN p.attr_val END)) AS brand\n  FROM product_attributes_g3 p\n  WHERE p.attr_key IN ('Brand','Brand Name')\n  GROUP BY p.ref_id\n)\nSELECT b.brand, COUNT(f.id) AS n_rev, ROUND(AVG(f.rtg),4) AS avg_rtg\nFROM fdbk_g3 f JOIN b ON b.ref_id=f.ref_id\nGROUP BY b.brand\nORDER BY n_rev DESC\nLIMIT 12"
+      },
+      "observation": "Query result (6/15 queries used, 9 remaining):\n\nbrand      | n_rev | avg_rtg\n-----------+-------+--------\nPyle       | 9475  | 4.0577 \nD'Addario  | 5526  | 4.5208 \nYamaha     | 5199  | 4.4701 \nOnStage    | 5140  | 4.4543 \nJIM DUNLOP | 4835  | 4.6378 \nDonner     | 3880  | 4.417  \nFender     | 3018  | 4.3734 \nPreSonus   | 2717  | 4.3353 \nBehringer  | 2574  | 4.2176 \nElixir     | 2549  | 4.5704 \nGator      | 2345  | 4.4482 \nZINGYOU    | 2303  | 3.228  "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH b AS (\n  SELECT p.ref_id,\n         COALESCE(MAX(CASE WHEN p.attr_key='Brand' THEN p.attr_val END),\n                  MAX(CASE WHEN p.attr_key='Brand Name' THEN p.attr_val END)) AS brand\n  FROM product_attributes_g3 p\n  WHERE p.attr_key IN ('Brand','Brand Name')\n  GROUP BY p.ref_id\n),\ntop10 AS (\n  SELECT b.brand, COUNT(f.id) AS n_rev, AVG(f.rtg) AS avg_rtg\n  FROM fdbk_g3 f JOIN b ON b.ref_id=f.ref_id\n  GROUP BY b.brand ORDER BY n_rev DESC LIMIT 10\n)\nSELECT ROUND(MAX(avg_rtg)-MIN(avg_rtg),4) AS diff FROM top10"
+      },
+      "observation": "Query result (7/15 queries used, 8 remaining):\n\ndiff  \n------\n0.5801"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH b AS (\n  SELECT p.ref_id,\n         COALESCE(MAX(CASE WHEN p.attr_key='Brand' THEN p.attr_val END),\n                  MAX(CASE WHEN p.attr_key='Brand Name' THEN p.attr_val END)) AS brand\n  FROM product_attributes_g3 p\n  WHERE p.attr_key IN ('Brand','Brand Name')\n  GROUP BY p.ref_id\n)\nSELECT b.brand, COUNT(f.id) AS n_rev, AVG(f.rtg) AS avg_rtg\nFROM fdbk_g3 f JOIN b ON b.ref_id=f.ref_id\nGROUP BY b.brand\nORDER BY n_rev DESC\nLIMIT 10"
+      },
+      "observation": "Query result (8/15 queries used, 7 remaining):\n\nbrand      | n_rev | avg_rtg           \n-----------+-------+-------------------\nPyle       | 9475  | 4.057730870712401 \nD'Addario  | 5526  | 4.520810712993123 \nYamaha     | 5199  | 4.470090402000385 \nOnStage    | 5140  | 4.4542801556420235\nJIM DUNLOP | 4835  | 4.637849017580145 \nDonner     | 3880  | 4.417010309278351 \nFender     | 3018  | 4.373426110006627 \nPreSonus   | 2717  | 4.335296282664704 \nBehringer  | 2574  | 4.217560217560218 \nElixir     | 2549  | 4.570419772459788 "
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "0.58"
+      },
+      "observation": "Question 35: CORRECT.\nYour answer: 0.58\nExploratory queries used: 8"
+    }
+  ],
+  "feedback": "Question 35: CORRECT.\nYour answer: 0.58\nExploratory queries used: 8"
+}

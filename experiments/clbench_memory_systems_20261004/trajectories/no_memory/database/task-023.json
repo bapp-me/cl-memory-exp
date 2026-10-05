@@ -1,0 +1,75 @@
+{
+  "namespace": "pi_none/r1/database_exploration",
+  "index": 23,
+  "instance_id": "112",
+  "prompt": "Question 24/40\n\nAmong musical-instrument brands that sell at least fifty different products in the catalog, which brand has the highest average list price in dollars? If two brands tie, choose the one whose name sorts first alphabetically.\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "The instance is complete — my answer \"Yamaha\" was submitted and judged incorrect, so the question closed with the full regret applied. No further queries can be run for this question."
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT name FROM sqlite_master WHERE type='table'"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\nname                 \n---------------------\nitems_g1             \nfdbk_g1              \nsqlite_sequence      \ntaxn_g1              \nattrs_g1             \nitems_g2             \nfdbk_g2              \ntaxn_g2              \nitems_g3             \nfdbk_g3              \nattrs_g3_legacy      \nfdbk_stats_g1        \nproduct_attributes_g3"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT 'g1' t, COUNT(*) n FROM items_g1 UNION ALL SELECT 'g2', COUNT(*) FROM items_g2 UNION ALL SELECT 'g3', COUNT(*) FROM items_g3"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\nt  | n    \n---+------\ng1 | 20000\ng2 | 20000\ng3 | 20000"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "PRAGMA table_info(items_g1)"
+      },
+      "observation": "Query result (3/15 queries used, 12 remaining):\n\ncid | name        | type    | notnull | dflt_value | pk\n----+-------------+---------+---------+------------+---\n0   | ref_id      | TEXT    | 0       | NULL       | 1 \n1   | ttl         | TEXT    | 0       | NULL       | 0 \n2   | avg_rtg     | REAL    | 0       | NULL       | 0 \n3   | avg_rtg_30d | REAL    | 0       | NULL       | 0 \n4   | rtg_ct      | INTEGER | 0       | NULL       | 0 \n5   | prc         | REAL    | 0       | NULL       | 0 \n6   | str_nm      | TEXT    | 0       | NULL       | 0 \n7   | main_cat    | TEXT    | 0       | NULL       | 0 \n8   | desc_txt    | TEXT    | 0       | NULL       | 0 \n9   | feat_lst    | TEXT    | 0       | NULL       | 0 \n10  | status      | TEXT    | 0       | 'active'   | 0 "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT 'g1' t, main_cat, COUNT(*) c FROM items_g1 GROUP BY main_cat UNION ALL SELECT 'g2', main_cat, COUNT(*) FROM items_g2 GROUP BY main_cat UNION ALL SELECT 'g3', main_cat, COUNT(*) FROM items_g3 GROUP BY main_cat"
+      },
+      "observation": "Query result (4/15 queries used, 11 remaining):\n\nt  | main_cat                     | c    \n---+------------------------------+------\ng1 | NULL                         | 741  \ng1 | AMAZON FASHION               | 224  \ng1 | All Beauty                   | 25   \ng1 | All Electronics              | 1308 \ng1 | Amazon Fire TV               | 1    \ng1 | Amazon Home                  | 1355 \ng1 | Appliances                   | 1    \ng1 | Arts, Crafts & Sewing        | 174  \ng1 | Automotive                   | 20   \ng1 | Baby                         | 15   \ng1 | Books                        | 248  \ng1 | Buy a Kindle                 | 4    \ng1 | Camera & Photo               | 21   \ng1 | Car Electronics              | 1    \ng1 | Cell Phones & Accessories    | 57   \ng1 | Collectible Coins            | 4    \ng1 | Computers                    | 340  \ng1 | Digital Music                | 5    \ng1 | Grocery                      | 6    \ng1 | Handmade                     | 4    \ng1 | Health & Personal Care       | 128  \ng1 | Home Audio & Theater         | 12   \ng1 | Industrial & Scientific      | 529  \ng1 | Movies & TV                  | 2    \ng1 | Musical Instruments          | 19   \ng1 | Office Products              | 13933\ng1 | Pet Supplies                 | 9    \ng1 | Portable Audio & Accessories | 4    \ng1 | Software                     | 6    \ng1 | Sports & Outdoors            | 69   \ng1 | Tools & Home Improvement     | 532  \ng1 | Toys & Games                 | 201  \ng1 | Video Games                  | 2    \ng2 | NULL                         | 1304 \ng2 | AMAZON FASHION               | 232  \ng2 | All Beauty                   | 25   \ng2 | All Electronics              | 4562 \ng2 | Amazon Devices               | 106  \ng2 | Amazon Fire TV               | 3    \ng2 | Amazon Home                  | 247  \ng2 | Apple Products               | 13   \ng2 | Appliances                   | 2    \ng2 | Arts, Crafts & Sewing        | 16   \ng2 | Automotive                   | 195  \ng2 | Baby                         | 11   \ng2 | Books                        | 8    \ng2 | Buy a Kindle                 | 1    \ng2 | Camera & Photo               | 2789 \ng2 | Car Electronics              | 346  \ng2 | Cell Phones & Accessories    | 1775 \n... (showing first 50 rows)"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "PRAGMA table_info(attrs_g1)"
+      },
+      "observation": "Query result (5/15 queries used, 10 remaining):\n\ncid | name     | type | notnull | dflt_value | pk\n----+----------+------+---------+------------+---\n0   | ref_id   | TEXT | 0       | NULL       | 0 \n1   | attr_key | TEXT | 0       | NULL       | 0 \n2   | attr_val | TEXT | 0       | NULL       | 0 "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT main_cat, COUNT(*) c FROM items_g3 GROUP BY main_cat ORDER BY c DESC LIMIT 10"
+      },
+      "observation": "Query result (6/15 queries used, 9 remaining):\n\nmain_cat                 | c    \n-------------------------+------\nMusical Instruments      | 17162\nAll Electronics          | 534  \nIndustrial & Scientific  | 372  \nNULL                     | 321  \nTools & Home Improvement | 293  \nAmazon Home              | 253  \nHome Audio & Theater     | 196  \nAMAZON FASHION           | 177  \nSports & Outdoors        | 122  \nToys & Games             | 92   "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT attr_key, COUNT(*) c FROM product_attributes_g3 GROUP BY attr_key ORDER BY c DESC LIMIT 20"
+      },
+      "observation": "Query result (7/15 queries used, 8 remaining):\n\nattr_key                        | c    \n--------------------------------+------\nDate First Available            | 18934\nItem Weight                     | 16476\nItem model number               | 13396\nBrand                           | 11643\nProduct Dimensions              | 10381\nBest Sellers Rank               | 9777 \nIs Discontinued By Manufacturer | 9486 \nColor Name                      | 8308 \nColor                           | 7054 \nPackage Dimensions              | 5728 \nMaterial Type                   | 5240 \nSize                            | 3737 \nMaterial                        | 3711 \nItem Dimensions LxWxH           | 3553 \nNumber of Strings               | 3055 \nBody Material                   | 2836 \nPower Source                    | 2661 \nCompatible Devices              | 2587 \nManufacturer                    | 2481 \nStyle                           | 2442 "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT LOWER(a.attr_val) brand, COUNT(*) n, AVG(i.prc) avg_prc\nFROM items_g3 i\nJOIN product_attributes_g3 a ON a.ref_id = i.ref_id AND a.attr_key IN ('Brand','Manufacturer')\nWHERE i.main_cat = 'Musical Instruments'\nGROUP BY LOWER(a.attr_val)\nHAVING COUNT(*) >= 50\nORDER BY avg_prc DESC\nLIMIT 15"
+      },
+      "observation": "Query result (8/15 queries used, 7 remaining):\n\nbrand             | n   | avg_prc           \n------------------+-----+-------------------\nyamaha            | 157 | 391.2108510638298 \nfender            | 244 | 356.1752054794521 \nibanez            | 108 | 344.9625          \nbehringer         | 72  | 195.32969696969698\nkala              | 57  | 166.79884615384617\nlatin percussion  | 56  | 143.23363636363635\nstagg             | 59  | 128.4763888888889 \nhohner accordions | 63  | 114.71695652173912\ngibraltar         | 55  | 86.34611111111111 \njim dunlop        | 71  | 50.65603448275862 "
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "Yamaha"
+      },
+      "observation": "Question 24: INCORRECT.\nYour answer: Yamaha\nExploratory queries used: 8"
+    }
+  ],
+  "feedback": "Question 24: INCORRECT.\nYour answer: Yamaha\nExploratory queries used: 8"
+}

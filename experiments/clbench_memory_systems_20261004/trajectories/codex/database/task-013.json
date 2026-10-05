@@ -1,0 +1,44 @@
+{
+  "namespace": "codex_memory_ready/r1/database_exploration",
+  "index": 13,
+  "instance_id": "20",
+  "prompt": "Question 14/40\n\nAcross both product categories that store attribute data, how many total products are listed as discontinued by the manufacturer and have a catalog average star rating strictly below 3.0?\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "I’ll use prior schema lessons, then run one consolidated diagnostic query.",
+    "I’m checking how discontinued status is encoded in the attribute tables.",
+    "The second attribute table is likely `attrs_g3`; I’m checking both candidates now.",
+    "Discontinued rows exist in `g1` and `g3`; next I’m counting those products with stored ratings under 3.0.",
+    "21"
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT dataset, attr_key, attr_val, product_count\nFROM (\n  SELECT 'g1' AS dataset, attr_key, attr_val, COUNT(DISTINCT ref_id) AS product_count\n  FROM attrs_g1\n  WHERE lower(attr_key) LIKE '%discont%' OR lower(attr_val) LIKE '%discont%'\n  GROUP BY attr_key, attr_val\n  UNION ALL\n  SELECT 'g2' AS dataset, attr_key, attr_val, COUNT(DISTINCT ref_id) AS product_count\n  FROM attrs_g2\n  WHERE lower(attr_key) LIKE '%discont%' OR lower(attr_val) LIKE '%discont%'\n  GROUP BY attr_key, attr_val\n  UNION ALL\n  SELECT 'g3' AS dataset, attr_key, attr_val, COUNT(DISTINCT ref_id) AS product_count\n  FROM attrs_g3\n  WHERE lower(attr_key) LIKE '%discont%' OR lower(attr_val) LIKE '%discont%'\n  GROUP BY attr_key, attr_val\n)\nORDER BY dataset, product_count DESC;"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\nERROR: no such table: attrs_g2"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT dataset, attr_key, attr_val, product_count\nFROM (\n  SELECT 'g1' AS dataset, attr_key, attr_val, COUNT(DISTINCT ref_id) AS product_count\n  FROM attrs_g1\n  WHERE lower(attr_key) LIKE '%discont%' OR lower(attr_val) LIKE '%discont%'\n  GROUP BY attr_key, attr_val\n  UNION ALL\n  SELECT 'g3' AS dataset, attr_key, attr_val, COUNT(DISTINCT ref_id) AS product_count\n  FROM attrs_g3\n  WHERE lower(attr_key) LIKE '%discont%' OR lower(attr_val) LIKE '%discont%'\n  GROUP BY attr_key, attr_val\n)\nORDER BY dataset, product_count DESC;"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\ndataset | attr_key                        | attr_val | product_count\n--------+---------------------------------+----------+--------------\ng1      | Is Discontinued By Manufacturer | No       | 7971         \ng1      | Is Discontinued By Manufacturer | Yes      | 144          \ng1      | Is Discontinued By Manufacturer | False    | 4            \ng1      | Is Discontinued by Manufacturer | No       | 3            \ng1      | Is Discontinued By Manufacturer | false    | 2            \ng3      | Is Discontinued By Manufacturer | No       | 9384         \ng3      | Is Discontinued By Manufacturer | Yes      | 91           \ng3      | Is Discontinued By Manufacturer | False    | 5            \ng3      | Is Discontinued By Manufacturer | false    | 5            \ng3      | Is Discontinued by Manufacturer | No       | 4            \ng3      | Is Discontinued By Manufacturer | True     | 1            "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH flagged AS (\n  SELECT ref_id FROM attrs_g1\n  WHERE lower(attr_key) = 'is discontinued by manufacturer'\n    AND lower(attr_val) IN ('yes', 'true')\n  UNION\n  SELECT ref_id FROM attrs_g3\n  WHERE lower(attr_key) = 'is discontinued by manufacturer'\n    AND lower(attr_val) IN ('yes', 'true')\n),\nclassified AS (\n  SELECT 'g1' AS dataset, COUNT(*) AS product_count\n  FROM (\n    SELECT f.ref_id\n    FROM flagged f\n    JOIN items_g1 i ON i.ref_id = f.ref_id\n    WHERE i.avg_rtg < 3.0\n    GROUP BY f.ref_id\n  )\n  UNION ALL\n  SELECT 'g3' AS dataset, COUNT(*) AS product_count\n  FROM (\n    SELECT f.ref_id\n    FROM flagged f\n    JOIN items_g3 i ON i.ref_id = f.ref_id\n    WHERE i.avg_rtg < 3.0\n    GROUP BY f.ref_id\n  )\n)\nSELECT dataset, product_count FROM classified\nUNION ALL\nSELECT 'total', SUM(product_count) FROM classified;"
+      },
+      "observation": "Query result (3/15 queries used, 12 remaining):\n\ndataset | product_count\n--------+--------------\ng1      | 17           \ng3      | 4            \ntotal   | 21           "
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "21"
+      },
+      "observation": "Question 14: CORRECT.\nYour answer: 21\nExploratory queries used: 3"
+    }
+  ],
+  "feedback": "Question 14: CORRECT.\nYour answer: 21\nExploratory queries used: 3"
+}

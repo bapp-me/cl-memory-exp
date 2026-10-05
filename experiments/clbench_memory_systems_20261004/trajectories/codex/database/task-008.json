@@ -1,0 +1,60 @@
+{
+  "namespace": "codex_memory_ready/r1/database_exploration",
+  "index": 8,
+  "instance_id": "16",
+  "prompt": "Question 9/40\n\nIn which year-month were the most musical instrument reviews posted? Report as YYYY-MM (e.g. '2020-01').\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "I’ll check the stored benchmark playbook, then target musical instrument timestamps carefully.",
+    "Memory identifies `fdbk_g3` as the musical group and TEXT timestamps. I’m using one consolidated query to verify the format and extract the peak month.",
+    "The first pass gives `2020-01`, but category verification is warranted. I’m checking which item group actually contains the musical instruments population before finalizing.",
+    "`g3` is clearly the musical dataset, though it includes some cross-category rows. I’m checking whether filtering reviews to musical products changes the peak month.",
+    "The join key differs in `fdbk_g3`. I’m retrieving only the two relevant table definitions, then I’ll rerun the category-filtered peak.",
+    "Both the full `g3` dataset and the strictly musical-product join agree on the peak. Submitting the verified result.",
+    "**2020-01** — CORRECT."
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH converted AS (\n  SELECT\n    CASE\n      WHEN ts GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]*' THEN substr(ts, 1, 7)\n      WHEN ts GLOB '[0-9]*' THEN\n        CASE length(ts)\n          WHEN 10 THEN strftime('%Y-%m', CAST(ts AS INTEGER), 'unixepoch')\n          WHEN 13 THEN strftime('%Y-%m', CAST(ts AS INTEGER) / 1000, 'unixepoch')\n          WHEN 16 THEN strftime('%Y-%m', CAST(ts AS INTEGER) / 1000000, 'unixepoch')\n          WHEN 19 THEN strftime('%Y-%m', CAST(ts AS INTEGER) / 1000000000, 'unixepoch')\n        END\n    END AS ym,\n    ts\n  FROM fdbk_g3\n)\nSELECT\n  (SELECT group_concat(DISTINCT main_cat) FROM items_g3) AS item_categories,\n  (SELECT COUNT(*) FROM converted) AS total_reviews,\n  (SELECT COUNT(*) FROM converted WHERE ym IS NULL) AS unconverted_reviews,\n  (SELECT group_concat(DISTINCT length(ts)) FROM converted) AS ts_lengths,\n  (SELECT ym FROM converted WHERE ym IS NOT NULL GROUP BY ym ORDER BY COUNT(*) DESC, ym LIMIT 1) AS top_year_month,\n  (SELECT COUNT(*) FROM converted WHERE ym = (SELECT ym FROM converted WHERE ym IS NOT NULL GROUP BY ym ORDER BY COUNT(*) DESC, ym LIMIT 1)) AS top_count,\n  (SELECT group_concat(bucket) FROM (SELECT length(ts) || ':' || COUNT(*) AS bucket FROM converted GROUP BY length(ts) ORDER BY length(ts))) AS length_counts;"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\nitem_categories                                                                                                                                                                                                                                                                                                                                                                                                                                                             | total_reviews | unconverted_reviews | ts_lengths | top_year_month | top_count | length_counts\n----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+---------------------+------------+----------------+-----------+--------------\nMusical Instruments,Industrial & Scientific,All Electronics,Amazon Home,AMAZON FASHION,Office Products,Home Audio & Theater,Software,Tools & Home Improvement,Toys & Games,All Beauty,Health & Personal Care,Sports & Outdoors,Cell Phones & Accessories,Books,Arts, Crafts & Sewing,Computers,Camera & Photo,Car Electronics,Pet Supplies,Handmade,Portable Audio & Accessories,Automotive,Baby,Video Games,Movies & TV,Grocery,Appliances,Entertainment,Collectible Coins | 286626        | 3                   | 10         | 2020-01        | 4715      | 10:286623    "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT 'g1' AS grp, COUNT(*) AS total_items, SUM(main_cat = 'Musical Instruments') AS musical_items, SUM(main_cat = 'Office Products') AS office_items FROM items_g1\nUNION ALL\nSELECT 'g2', COUNT(*), SUM(main_cat = 'Musical Instruments'), SUM(main_cat = 'Office Products') FROM items_g2\nUNION ALL\nSELECT 'g3', COUNT(*), SUM(main_cat = 'Musical Instruments'), SUM(main_cat = 'Office Products') FROM items_g3;"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\ngrp | total_items | musical_items | office_items\n----+-------------+---------------+-------------\ng1  | 20000       | 19            | 13933       \ng2  | 20000       | 85            | 284         \ng3  | 20000       | 17162         | 47          "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH converted AS (\n  SELECT\n    CASE\n      WHEN ts GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]*' THEN substr(ts, 1, 7)\n      WHEN ts GLOB '[0-9]*' THEN\n        CASE length(ts)\n          WHEN 10 THEN strftime('%Y-%m', CAST(ts AS INTEGER), 'unixepoch')\n          WHEN 13 THEN strftime('%Y-%m', CAST(ts AS INTEGER) / 1000, 'unixepoch')\n          WHEN 16 THEN strftime('%Y-%m', CAST(ts AS INTEGER) / 1000000, 'unixepoch')\n          WHEN 19 THEN strftime('%Y-%m', CAST(ts AS INTEGER) / 1000000000, 'unixepoch')\n        END\n    END AS ym,\n    f.item_id\n  FROM fdbk_g3 f\n), joined AS (\n  SELECT c.ym, i.main_cat\n  FROM converted c\n  JOIN items_g3 i ON c.item_id = i.ref_id\n), all_top AS (\n  SELECT ym, COUNT(*) AS cnt FROM converted WHERE ym IS NOT NULL GROUP BY ym ORDER BY cnt DESC, ym LIMIT 1\n), musical_top AS (\n  SELECT ym, COUNT(*) AS cnt FROM joined WHERE ym IS NOT NULL AND main_cat = 'Musical Instruments' GROUP BY ym ORDER BY cnt DESC, ym LIMIT 1\n)\nSELECT\n  (SELECT COUNT(*) FROM joined WHERE main_cat = 'Musical Instruments') AS musical_reviews,\n  (SELECT ym FROM musical_top) AS musical_top_month,\n  (SELECT cnt FROM musical_top) AS musical_top_count,\n  (SELECT ym FROM all_top) AS all_g3_top_month,\n  (SELECT cnt FROM all_top) AS all_g3_top_count;"
+      },
+      "observation": "Query result (3/15 queries used, 12 remaining):\n\nERROR: no such column: f.item_id"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT name, sql FROM sqlite_master WHERE name IN ('fdbk_g3', 'items_g3') ORDER BY name;"
+      },
+      "observation": "Query result (4/15 queries used, 11 remaining):\n\nname     | sql                                                                                                                                                                                                                                                \n---------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\nfdbk_g3  | CREATE TABLE fdbk_g3 (     id INTEGER PRIMARY KEY AUTOINCREMENT,     ref_id TEXT,     uid TEXT,     rtg REAL,     ttl TEXT,     body TEXT,     ts TEXT,     hlp_ct INTEGER,     vrf INTEGER,     FOREIGN KEY (ref_id) REFERENCES items_g3(ref_id) )\nitems_g3 | CREATE TABLE items_g3 (     ref_id TEXT PRIMARY KEY,     ttl TEXT,     avg_rtg REAL,     rtg_ct INTEGER,     prc REAL,     str_nm TEXT,     main_cat TEXT,     desc_txt TEXT )                                                                     "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH converted AS (\n  SELECT\n    CASE\n      WHEN ts GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]*' THEN substr(ts, 1, 7)\n      WHEN ts GLOB '[0-9]*' THEN\n        CASE length(ts)\n          WHEN 10 THEN strftime('%Y-%m', CAST(ts AS INTEGER), 'unixepoch')\n          WHEN 13 THEN strftime('%Y-%m', CAST(ts AS INTEGER) / 1000, 'unixepoch')\n          WHEN 16 THEN strftime('%Y-%m', CAST(ts AS INTEGER) / 1000000, 'unixepoch')\n          WHEN 19 THEN strftime('%Y-%m', CAST(ts AS INTEGER) / 1000000000, 'unixepoch')\n        END\n    END AS ym,\n    f.ref_id\n  FROM fdbk_g3 f\n), joined AS (\n  SELECT c.ym, i.main_cat\n  FROM converted c\n  JOIN items_g3 i ON c.ref_id = i.ref_id\n), all_top AS (\n  SELECT ym, COUNT(*) AS cnt FROM converted WHERE ym IS NOT NULL GROUP BY ym ORDER BY cnt DESC, ym LIMIT 1\n), musical_top AS (\n  SELECT ym, COUNT(*) AS cnt FROM joined WHERE ym IS NOT NULL AND main_cat = 'Musical Instruments' GROUP BY ym ORDER BY cnt DESC, ym LIMIT 1\n)\nSELECT\n  (SELECT COUNT(*) FROM joined WHERE main_cat = 'Musical Instruments') AS musical_reviews,\n  (SELECT ym FROM musical_top) AS musical_top_month,\n  (SELECT cnt FROM musical_top) AS musical_top_count,\n  (SELECT ym FROM all_top) AS all_g3_top_month,\n  (SELECT cnt FROM all_top) AS all_g3_top_count;"
+      },
+      "observation": "Query result (5/15 queries used, 10 remaining):\n\nmusical_reviews | musical_top_month | musical_top_count | all_g3_top_month | all_g3_top_count\n----------------+-------------------+-------------------+------------------+-----------------\n252172          | 2020-01           | 4069              | 2020-01          | 4715            "
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "2020-01"
+      },
+      "observation": "Question 9: CORRECT.\nYour answer: 2020-01\nExploratory queries used: 5"
+    }
+  ],
+  "feedback": "Question 9: CORRECT.\nYour answer: 2020-01\nExploratory queries used: 5"
+}

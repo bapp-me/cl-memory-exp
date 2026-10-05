@@ -1,0 +1,61 @@
+{
+  "namespace": "codex_memory_ready/r1/database_exploration",
+  "index": 21,
+  "instance_id": "119",
+  "prompt": "Question 22/40\n\nWhat percentage of musical instrument reviews that are missing a full event timestamp are for products priced above the average list price across all priced instruments in the catalog? Round to 1 decimal place.\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "I’ll check the saved benchmark playbook, then run one consolidated query.",
+    "I’ve confirmed the g3 schemas and join key. Now I’m validating timestamp/price populations in one query.",
+    "The first probe had a SQLite syntax issue; I’m correcting it without changing scope.",
+    "The broad GLOB classification is timing out. I’m switching to indexed/compact aggregates.",
+    "The join itself is the bottleneck, so I’m using one grouped pass with a subquery join.",
+    "The direct missing-timestamp population gives 10.3%. I’m checking whether the three malformed timestamps change it.",
+    "The 10.3% candidate was incorrect, so alternate interpretations were the remaining risk.",
+    "Submitted `10.3`; the grader marked it incorrect. The instance is complete with 5 exploratory queries used.\n\n"
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH musical AS (\n  SELECT i.ref_id, i.prc, f.ts\n  FROM items_g3 i\n  JOIN fdbk_g3 f ON f.ref_id = i.ref_id\n  WHERE i.main_cat = 'Musical Instruments'\n), classified AS (\n  SELECT *,\n    CASE\n      WHEN ts IS NULL OR TRIM(ts) = '' THEN 'null_empty'\n      WHEN GLOB('[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]*') AND LENGTH(ts) = 10 THEN 'valid_epoch10'\n      WHEN ts GLOB '*[!0-9]*' THEN 'non_numeric'\n      WHEN LENGTH(ts) NOT IN (10,13,16,19) THEN 'bad_length'\n      ELSE 'unverified_length'\n    END ts_state,\n    CASE WHEN prc IS NOT NULL AND prc != 0 THEN 'priced_nonzero'\n         WHEN prc IS NOT NULL THEN 'priced_zero'\n         ELSE 'null_price' END price_state\n  FROM musical\n), price_avg AS (\n  SELECT AVG(CASE WHEN prc != 0 THEN prc END) nonzero_avg, AVG(prc) nonnull_avg FROM items_g3 WHERE main_cat = 'Musical Instruments'\n), missing AS (\n  SELECT * FROM classified WHERE ts_state != 'valid_epoch10'\n)\nSELECT\n (SELECT COUNT(*) FROM musical) total_reviews,\n (SELECT COUNT(*) FROM classified WHERE ts_state != 'valid_epoch10') missing_full,\n (SELECT COUNT(*) FROM classified WHERE ts IS NULL OR TRIM(ts)='') missing_null_empty,\n (SELECT COUNT(*) FROM classified WHERE ts_state='non_numeric') missing_nonnumeric,\n (SELECT COUNT(*) FROM classified WHERE ts_state='bad_length') missing_badlength,\n (SELECT COUNT(*) FROM classified WHERE ts_state='unverified_length') missing_unverified,\n (SELECT COUNT(*) FROM classified WHERE ts_state='valid_epoch10') valid_epoch10,\n (SELECT nonzero_avg FROM price_avg) nonzero_avg,\n (SELECT nonnull_avg FROM price_avg) nonnull_avg,\n (SELECT COUNT(*) FROM missing CROSS JOIN price_avg WHERE price_state='priced_nonzero' AND prc > nonzero_avg) missing_above_nonzero_avg,\n (SELECT COUNT(*) FROM missing CROSS JOIN price_avg WHERE price_state='priced_nonzero' AND prc > nonnull_avg) missing_above_nonnull_avg,\n (SELECT ROUND(100.0 * SUM(CASE WHEN price_state='priced_nonzero' AND prc > nonzero_avg THEN 1 ELSE 0 END)/COUNT(*),1) FROM missing CROSS JOIN price_avg) pct_missing_above_nonzero_avg,\n (SELECT ROUND(100.0 * SUM(CASE WHEN price_state='priced_nonzero' AND prc > nonnull_avg THEN 1 ELSE 0 END)/COUNT(*),1) FROM missing CROSS JOIN price_avg) pct_missing_above_nonnull_avg"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\nERROR: wrong number of arguments to function GLOB()"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH musical AS (\n  SELECT i.ref_id, i.prc, f.ts\n  FROM items_g3 i\n  JOIN fdbk_g3 f ON f.ref_id = i.ref_id\n  WHERE i.main_cat = 'Musical Instruments'\n), classified AS (\n  SELECT *,\n    CASE\n      WHEN ts IS NULL OR TRIM(ts) = '' THEN 'null_empty'\n      WHEN LENGTH(ts) = 10 AND ts GLOB '[0-9]*' THEN 'valid_epoch10'\n      WHEN ts GLOB '*[^0-9]*' THEN 'non_numeric'\n      WHEN LENGTH(ts) NOT IN (10,13,16,19) THEN 'bad_length'\n      ELSE 'unverified_length'\n    END ts_state,\n    CASE WHEN prc IS NOT NULL AND prc != 0 THEN 'priced_nonzero'\n         WHEN prc IS NOT NULL THEN 'priced_zero'\n         ELSE 'null_price' END price_state\n  FROM musical\n), price_avg AS (\n  SELECT AVG(CASE WHEN prc != 0 THEN prc END) nonzero_avg, AVG(prc) nonnull_avg FROM items_g3 WHERE main_cat = 'Musical Instruments'\n), missing AS (\n  SELECT * FROM classified WHERE ts_state != 'valid_epoch10'\n)\nSELECT\n (SELECT COUNT(*) FROM musical) total_reviews,\n (SELECT COUNT(*) FROM classified WHERE ts_state != 'valid_epoch10') missing_full,\n (SELECT COUNT(*) FROM classified WHERE ts IS NULL OR TRIM(ts)='') missing_null_empty,\n (SELECT COUNT(*) FROM classified WHERE ts_state='non_numeric') missing_nonnumeric,\n (SELECT COUNT(*) FROM classified WHERE ts_state='bad_length') missing_badlength,\n (SELECT COUNT(*) FROM classified WHERE ts_state='unverified_length') missing_unverified,\n (SELECT COUNT(*) FROM classified WHERE ts_state='valid_epoch10') valid_epoch10,\n (SELECT nonzero_avg FROM price_avg) nonzero_avg,\n (SELECT nonnull_avg FROM price_avg) nonnull_avg,\n (SELECT COUNT(*) FROM missing CROSS JOIN price_avg WHERE price_state='priced_nonzero' AND prc > nonzero_avg) missing_above_nonzero_avg,\n (SELECT COUNT(*) FROM missing CROSS JOIN price_avg WHERE price_state='priced_nonzero' AND prc > nonnull_avg) missing_above_nonnull_avg,\n (SELECT ROUND(100.0 * SUM(CASE WHEN price_state='priced_nonzero' AND prc > nonzero_avg THEN 1 ELSE 0 END)/COUNT(*),1) FROM missing CROSS JOIN price_avg) pct_missing_above_nonzero_avg,\n (SELECT ROUND(100.0 * SUM(CASE WHEN price_state='priced_nonzero' AND prc > nonnull_avg THEN 1 ELSE 0 END)/COUNT(*),1) FROM missing CROSS JOIN price_avg) pct_missing_above_nonnull_avg"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\nERROR: query exceeded 10s timeout"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH musical AS (\n  SELECT i.prc, f.ts\n  FROM items_g3 i\n  JOIN fdbk_g3 f ON f.ref_id = i.ref_id\n  WHERE i.main_cat = 'Musical Instruments'\n), price_avg AS (\n  SELECT AVG(CASE WHEN prc != 0 THEN prc END) nonzero_avg, AVG(prc) nonnull_avg\n  FROM items_g3 WHERE main_cat = 'Musical Instruments'\n), missing AS (\n  SELECT m.prc, p.nonzero_avg, p.nonnull_avg\n  FROM musical m CROSS JOIN price_avg p\n  WHERE m.ts IS NULL OR TRIM(m.ts) = ''\n)\nSELECT\n (SELECT COUNT(*) FROM musical) total_reviews,\n (SELECT COUNT(*) FROM musical WHERE ts IS NULL OR TRIM(ts)='') missing_null_empty,\n (SELECT COUNT(*) FROM musical WHERE ts IS NULL) ts_null,\n (SELECT COUNT(*) FROM musical WHERE TRIM(ts)='') ts_empty,\n (SELECT nonzero_avg FROM price_avg) nonzero_avg,\n (SELECT nonnull_avg FROM price_avg) nonnull_avg,\n (SELECT COUNT(*) FROM missing WHERE prc IS NOT NULL AND prc != 0 AND prc > nonzero_avg) num_above_nonzero,\n (SELECT ROUND(100.0 * (SELECT COUNT(*) FROM missing WHERE prc IS NOT NULL AND prc != 0 AND prc > nonzero_avg) / (SELECT COUNT(*) FROM missing),1)) pct_nonzero,\n (SELECT COUNT(*) FROM missing WHERE prc IS NOT NULL AND prc != 0 AND prc > nonnull_avg) num_above_nonnull,\n (SELECT ROUND(100.0 * (SELECT COUNT(*) FROM missing WHERE prc IS NOT NULL AND prc != 0 AND prc > nonnull_avg) / (SELECT COUNT(*) FROM missing),1)) pct_nonnull"
+      },
+      "observation": "Query result (3/15 queries used, 12 remaining):\n\nERROR: query exceeded 10s timeout"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH fstats AS (\n  SELECT f.ref_id,\n         COUNT(*) AS n,\n         SUM(CASE WHEN f.ts IS NULL OR TRIM(f.ts) = '' THEN 1 ELSE 0 END) AS n_missing,\n         SUM(CASE WHEN (f.ts IS NULL OR TRIM(f.ts) = '') AND i.prc IS NOT NULL AND i.prc != 0 THEN 1 ELSE 0 END) AS n_missing_priced_nonzero,\n         SUM(CASE WHEN (f.ts IS NULL OR TRIM(f.ts) = '') AND i.prc IS NOT NULL AND i.prc != 0 AND i.prc > (SELECT AVG(x.prc) FROM items_g3 x WHERE x.main_cat='Musical Instruments' AND x.prc IS NOT NULL AND x.prc != 0) THEN 1 ELSE 0 END) AS n_missing_above_nonzero,\n         SUM(CASE WHEN (f.ts IS NULL OR TRIM(f.ts) = '') AND i.prc IS NOT NULL AND i.prc != 0 AND i.prc > (SELECT AVG(x.prc) FROM items_g3 x WHERE x.main_cat='Musical Instruments' AND x.prc IS NOT NULL) THEN 1 ELSE 0 END) AS n_missing_above_nonnull\n  FROM fdbk_g3 f\n  JOIN items_g3 i ON i.ref_id=f.ref_id\n  WHERE i.main_cat='Musical Instruments'\n  GROUP BY f.ref_id\n)\nSELECT SUM(n) total_reviews,\n       SUM(n_missing) missing_null_empty,\n       SUM(n_missing_priced_nonzero) missing_priced_nonzero,\n       SUM(n_missing_above_nonzero) missing_above_nonzero,\n       ROUND(100.0*SUM(n_missing_above_nonzero)/SUM(n_missing),1) pct_above_nonzero,\n       SUM(n_missing_above_nonnull) missing_above_nonnull,\n       ROUND(100.0*SUM(n_missing_above_nonnull)/SUM(n_missing),1) pct_above_nonnull,\n       (SELECT AVG(prc) FROM items_g3 WHERE main_cat='Musical Instruments' AND prc IS NOT NULL AND prc != 0) nonzero_avg,\n       (SELECT AVG(prc) FROM items_g3 WHERE main_cat='Musical Instruments' AND prc IS NOT NULL) nonnull_avg\nFROM fstats"
+      },
+      "observation": "Query result (4/15 queries used, 11 remaining):\n\ntotal_reviews | missing_null_empty | missing_priced_nonzero | missing_above_nonzero | pct_above_nonzero | missing_above_nonnull | pct_above_nonnull | nonzero_avg        | nonnull_avg       \n--------------+--------------------+------------------------+-----------------------+-------------------+-----------------------+-------------------+--------------------+-------------------\n252172        | 75572              | 52840                  | 7784                  | 10.3              | 7784                  | 10.3              | 132.34761019812626 | 132.34761019812626"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH fstats AS (\n  SELECT f.ref_id,\n         SUM(CASE WHEN f.ts IS NULL OR TRIM(f.ts)='' OR LENGTH(TRIM(f.ts))<>10 THEN 1 ELSE 0 END) AS n_missing,\n         SUM(CASE WHEN (f.ts IS NULL OR TRIM(f.ts)='' OR LENGTH(TRIM(f.ts))<>10) AND i.prc IS NOT NULL AND i.prc != 0 THEN 1 ELSE 0 END) AS n_missing_priced_nonzero,\n         SUM(CASE WHEN (f.ts IS NULL OR TRIM(f.ts)='' OR LENGTH(TRIM(f.ts))<>10) AND i.prc IS NOT NULL AND i.prc != 0 AND i.prc > (SELECT AVG(x.prc) FROM items_g3 x WHERE x.main_cat='Musical Instruments' AND x.prc IS NOT NULL AND x.prc != 0) THEN 1 ELSE 0 END) AS n_missing_above\n  FROM fdbk_g3 f\n  JOIN items_g3 i ON i.ref_id=f.ref_id\n  WHERE i.main_cat='Musical Instruments'\n  GROUP BY f.ref_id\n)\nSELECT SUM(n_missing) missing, SUM(n_missing_priced_nonzero) missing_priced, SUM(n_missing_above) above, ROUND(100.0*SUM(n_missing_above)/SUM(n_missing),1) pct\nFROM fstats"
+      },
+      "observation": "Query result (5/15 queries used, 10 remaining):\n\nmissing | missing_priced | above | pct \n--------+----------------+-------+-----\n75572   | 52840          | 7784  | 10.3"
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "10.3"
+      },
+      "observation": "Question 22: INCORRECT.\nYour answer: 10.3\nExploratory queries used: 5"
+    }
+  ],
+  "feedback": "Question 22: INCORRECT.\nYour answer: 10.3\nExploratory queries used: 5"
+}

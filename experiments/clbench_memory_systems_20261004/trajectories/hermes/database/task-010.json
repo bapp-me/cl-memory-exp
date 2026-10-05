@@ -1,0 +1,46 @@
+{
+  "namespace": "hermes_memory_ready/r1/database_exploration",
+  "index": 10,
+  "instance_id": "17",
+  "prompt": "Question 11/40\n\nWhat brand is associated with the most musical instrument products?\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "Correct: Fender (3 queries used)."
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT name FROM sqlite_master WHERE type='table'"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\nname           \n---------------\nitems_g1       \nfdbk_g1        \nsqlite_sequence\ntaxn_g1        \nattrs_g1       \nitems_g2       \nfdbk_g2        \ntaxn_g2        \nitems_g3       \nfdbk_g3        \nattrs_g3       \nfdbk_stats_g1  "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT attr_key, COUNT(*) n FROM attrs_g3 GROUP BY attr_key ORDER BY n DESC LIMIT 50"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\nattr_key                        | n    \n--------------------------------+------\nDate First Available            | 18934\nItem Weight                     | 16476\nItem model number               | 13396\nBrand                           | 11643\nProduct Dimensions              | 10381\nBest Sellers Rank               | 9777 \nIs Discontinued By Manufacturer | 9486 \nColor Name                      | 8308 \nColor                           | 7054 \nPackage Dimensions              | 5728 \nMaterial Type                   | 5240 \nSize                            | 3737 \nMaterial                        | 3711 \nItem Dimensions LxWxH           | 3553 \nNumber of Strings               | 3055 \nBody Material                   | 2836 \nPower Source                    | 2661 \nCompatible Devices              | 2587 \nManufacturer                    | 2481 \nStyle                           | 2442 \nBack Material                   | 2226 \nTop Material                    | 2169 \nConnector Type                  | 2087 \nBack Material Type              | 1996 \nTop Material Type               | 1947 \nCountry of Origin               | 1847 \nSpecial Feature                 | 1721 \nNeck Material Type              | 1667 \nIncluded Components             | 1628 \nConnectivity Technology         | 1578 \nFretboard Material              | 1512 \nInstrument                      | 1398 \nHand Orientation                | 1377 \nModel Name                      | 1307 \nGuitar Bridge System            | 1215 \nString Material                 | 1191 \nFretboard Material Type         | 1180 \nFinish Type                     | 1147 \nGuitar Pickup Configuration     | 1129 \nString Material Type            | 1048 \nScale Length                    | 917  \nPolar Pattern                   | 876  \nBatteries                       | 846  \nInstrument Key                  | 790  \nVoltage                         | 783  \nOperation Mode                  | 781  \nHardware Platform               | 638  \nSignal Format                   | 633  \nConnector Gender                | 627  \nString Gauge                    | 627  "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT attr_val, COUNT(*) n FROM attrs_g3 WHERE attr_key='Brand' GROUP BY attr_val ORDER BY n DESC LIMIT 5"
+      },
+      "observation": "Query result (3/15 queries used, 12 remaining):\n\nattr_val      | n  \n--------------+----\nFender        | 243\nYamaha        | 143\nIbanez        | 108\nBehringer     | 72 \nSeismic Audio | 71 "
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "Fender"
+      },
+      "observation": "Question 11: CORRECT.\nYour answer: Fender\nExploratory queries used: 3"
+    }
+  ],
+  "feedback": "Question 11: CORRECT.\nYour answer: Fender\nExploratory queries used: 3"
+}

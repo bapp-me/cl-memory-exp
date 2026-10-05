@@ -1,0 +1,54 @@
+{
+  "namespace": "pi_jaccard/r1/database_exploration",
+  "index": 19,
+  "instance_id": "8",
+  "prompt": "Question 20/40\n\nHow many office products have a listing date before 2015?\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "**Correct: 5254** (5 queries used)\n\n- Office products = `g1` tables. `items_g1` has no date column, but `attrs_g1` contains `Date First Available` (format like \"August 7, 2008\").\n- Counted distinct `ref_id` where year (last 4 chars) < 2015 → **5254**."
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "PRAGMA table_info(items_g1)"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\ncid | name        | type    | notnull | dflt_value | pk\n----+-------------+---------+---------+------------+---\n0   | ref_id      | TEXT    | 0       | NULL       | 1 \n1   | ttl         | TEXT    | 0       | NULL       | 0 \n2   | avg_rtg     | REAL    | 0       | NULL       | 0 \n3   | avg_rtg_30d | REAL    | 0       | NULL       | 0 \n4   | rtg_ct      | INTEGER | 0       | NULL       | 0 \n5   | prc         | REAL    | 0       | NULL       | 0 \n6   | str_nm      | TEXT    | 0       | NULL       | 0 \n7   | main_cat    | TEXT    | 0       | NULL       | 0 \n8   | desc_txt    | TEXT    | 0       | NULL       | 0 \n9   | feat_lst    | TEXT    | 0       | NULL       | 0 "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "PRAGMA table_info(attrs_g1)"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\ncid | name     | type | notnull | dflt_value | pk\n----+----------+------+---------+------------+---\n0   | ref_id   | TEXT | 0       | NULL       | 0 \n1   | attr_key | TEXT | 0       | NULL       | 0 \n2   | attr_val | TEXT | 0       | NULL       | 0 "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT attr_key, COUNT(*) FROM attrs_g1 WHERE attr_key LIKE '%ate%' OR attr_key LIKE '%ist%' GROUP BY attr_key"
+      },
+      "observation": "Query result (3/15 queries used, 12 remaining):\n\nattr_key                                                    | COUNT(*)\n------------------------------------------------------------+---------\nBack Material Type                                          | 73      \nBacking Material                                            | 12      \nBand Material Type                                          | 1       \nBase Material                                               | 56      \nBlade Material                                              | 9       \nBristle Type                                                | 1       \nCPSIA Cautionary Statement                                  | 3       \nCase Material                                               | 1       \nCompatible Material                                         | 118     \nCover Material                                              | 845     \nData Transfer Rate                                          | 1       \nDate First Available                                        | 18198   \nFastener Material                                           | 8       \nFill Material                                               | 50      \nFill Material Type                                          | 1       \nFrame Material                                              | 233     \nFrame Material Acrylonitrile Butadiene Styrene, Alloy Steel | 1       \nFrame Material Alloy Steel                                  | 11      \nFrame Material Alloy Steel, Nylon                           | 4       \nFrame Material Birch Wood                                   | 1       \nFrame Material Engineered Wood                              | 2       \nFrame Material Engineered Wood, Alloy Steel                 | 1       \nFrame Material Engineered Wood, Metal                       | 1       \nFrame Material Glass, Metal                                 | 1       \nFrame Material Metal                                        | 10      \nFrame Material Nylon                                        | 7       \nFrame Material Plastic                                      | 2       \nFrame Material Polypropylene                                | 2       \nFrame Material Rattan, Aluminum, Alloy Steel                | 1       \nFrame Material Stainless Steel, Alloy Steel                 | 1       \nFrame Material Steel Structure With Chrome Leg              | 1       \nFrame Material Wood                                         | 7       \nFurniture leg material                                      | 3       \nHandle Material                                             | 45      \nInner Material                                              | 1       \nIs Stain Resistant                                          | 7       \nLens Material                                               | 3       \nLight Path Distance                                         | 1       \nMaterial                                                    | 7331    \nMaterial 80 th                                              | 1       \nMaterial Alloy Steel                                        | 9       \nMaterial Alloy Steel, Fabric                                | 1       \nMaterial Aluminum                                           | 1       \nMaterial Aluminum, Alloy Steel                              | 1       \nMaterial BLACK VINYL                                        | 1       \nMaterial Bamboo                                             | 2       \nMaterial Birch                                              | 1       \nMaterial Cardstock                                          | 1       \nMaterial Chrome                                             | 1       \nMaterial Cold-rolled steel plate                            | 1       \n... (showing first 50 rows)"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT attr_val FROM attrs_g1 WHERE attr_key='Date First Available' LIMIT 5"
+      },
+      "observation": "Query result (4/15 queries used, 11 remaining):\n\nattr_val         \n-----------------\nAugust 7, 2008   \nJuly 23, 2021    \nOctober 31, 2015 \nJanuary 29, 2019 \nDecember 10, 2014"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT COUNT(DISTINCT ref_id) FROM attrs_g1 WHERE attr_key='Date First Available' AND CAST(substr(attr_val, -4) AS INTEGER) < 2015"
+      },
+      "observation": "Query result (5/15 queries used, 10 remaining):\n\nCOUNT(DISTINCT ref_id)\n----------------------\n5254                  "
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "5254"
+      },
+      "observation": "Question 20: CORRECT.\nYour answer: 5254\nExploratory queries used: 5"
+    }
+  ],
+  "feedback": "Question 20: CORRECT.\nYour answer: 5254\nExploratory queries used: 5"
+}

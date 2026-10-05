@@ -1,0 +1,128 @@
+{
+  "namespace": "hermes_memory_ready/r1/database_exploration",
+  "index": 19,
+  "instance_id": "8",
+  "prompt": "Question 20/40\n\nHow many office products have a listing date before 2015?\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "The four odd formats are all years like 1999/1973 — they parse correctly with the trailing-4-char year extraction and count as pre-2015. g2 has no date data (no attrs table, no date column), g3 contributes 15. Total: 3783 + 15.",
+    "The instance ended — 3798 was rejected. Recording the lesson in the skill:",
+    "",
+    "Question 20 is complete — the answer was rejected.\n\nWhat happened: I identified \"listing date\" as the attrs table's \"Date First Available\" attribute (g2/electronics has no attrs table and no date column, so only g1 and g3 carry listing dates). After filtering to `main_cat='Office Products'` and parsing years via the trailing 4 characters of the date string (the 4 nonstandard formats were old years like \"June 1, 1999\", which parse correctly), I got g1: 3,783 pre-2015 and g3: 15 pre-2015, and submitted the pooled total **3798**. That was marked incorrect and the instance closed (13 exploratory queries used).\n\nThe likely miss was scope: g3 is nominally the musical-instruments dataset even though it contains ~46 items tagged \"Office Products\", so the intended answer was probably the g1-only count (3783) rather than the cross-dataset pool. I've recorded this ambiguity and the candidate interpretations in the clbench-db-quiz skill's question-patterns reference so the next listing-date question tests all candidate scopes in a single pre-answer query before submitting."
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT name, sql FROM sqlite_master WHERE type='table' AND sql LIKE '%items%'"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\nname          | sql                                                                                                                                                                                                                                                                     \n--------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\nitems_g1      | CREATE TABLE items_g1 (     ref_id TEXT PRIMARY KEY,     ttl TEXT,     avg_rtg REAL,     avg_rtg_30d REAL,     rtg_ct INTEGER,     prc REAL,     str_nm TEXT,     main_cat TEXT,     desc_txt TEXT,     feat_lst TEXT )                                                 \nfdbk_g1       | CREATE TABLE fdbk_g1 (     id INTEGER PRIMARY KEY AUTOINCREMENT,     item_id TEXT,     ref_id TEXT,     uid TEXT,     rtg REAL,     ttl TEXT,     body TEXT,     ts INTEGER,     hlp_ct INTEGER,     vrf INTEGER,     FOREIGN KEY (ref_id) REFERENCES items_g1(ref_id) )\ntaxn_g1       | CREATE TABLE taxn_g1 (     ref_id TEXT,     cat_lvl INTEGER,     cat_nm TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g1(ref_id) )                                                                                                                                    \nattrs_g1      | CREATE TABLE attrs_g1 (     ref_id TEXT,     attr_key TEXT,     attr_val TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g1(ref_id) )                                                                                                                                   \nitems_g2      | CREATE TABLE items_g2 (     ref_id TEXT PRIMARY KEY,     ttl TEXT,     avg_rtg REAL,     prc INTEGER,     prc_usd REAL,     str_nm TEXT,     main_cat TEXT,     feat_lst TEXT,     img_ct INTEGER )                                                                     \nfdbk_g2       | CREATE TABLE fdbk_g2 (     id INTEGER PRIMARY KEY AUTOINCREMENT,     item_id TEXT,     ref_id TEXT,     uid TEXT,     rtg REAL,     ttl TEXT,     body TEXT,     ts INTEGER,     hlp_ct INTEGER,     vrf TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g2(ref_id) )   \ntaxn_g2       | CREATE TABLE taxn_g2 (     ref_id TEXT,     cat_lvl INTEGER,     cat_nm TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g2(ref_id) )                                                                                                                                    \nitems_g3      | CREATE TABLE items_g3 (     ref_id TEXT PRIMARY KEY,     ttl TEXT,     avg_rtg REAL,     rtg_ct INTEGER,     prc REAL,     str_nm TEXT,     main_cat TEXT,     desc_txt TEXT )                                                                                          \nfdbk_g3       | CREATE TABLE fdbk_g3 (     id INTEGER PRIMARY KEY AUTOINCREMENT,     ref_id TEXT,     uid TEXT,     rtg REAL,     ttl TEXT,     body TEXT,     ts TEXT,     hlp_ct INTEGER,     vrf INTEGER,     FOREIGN KEY (ref_id) REFERENCES items_g3(ref_id) )                     \nattrs_g3      | CREATE TABLE attrs_g3 (     ref_id TEXT,     attr_key TEXT,     attr_val TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g3(ref_id) )                                                                                                                                   \nfdbk_stats_g1 | CREATE TABLE fdbk_stats_g1 (     ref_id TEXT PRIMARY KEY,     avg_rtg REAL,     review_ct INTEGER,     pct_5star REAL,     avg_hlp REAL,     FOREIGN KEY (ref_id) REFERENCES items_g1(ref_id) )                                                                         "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT attr_key, COUNT(*) FROM attrs_g1 WHERE LOWER(attr_key) LIKE '%date%' OR LOWER(attr_key) LIKE '%list%' GROUP BY attr_key UNION ALL SELECT 'items-cols:' || attr_key, 0 FROM attrs_g1 WHERE 0"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\nattr_key              | COUNT(*)\n----------------------+---------\nDate First Available  | 18198   \nOriginal Release Date | 2       \nPublication date      | 2       \nRelease date          | 43      "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT attr_val FROM attrs_g1 WHERE attr_key='Date First Available' LIMIT 5 UNION ALL SELECT 'G3:' || attr_key || ' = ' || attr_val FROM attrs_g3 WHERE LOWER(attr_key) LIKE '%date%' LIMIT 5"
+      },
+      "observation": "Query result (3/15 queries used, 12 remaining):\n\nERROR: LIMIT clause should come after UNION ALL not before"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT 'g1' src, attr_val FROM attrs_g1 WHERE attr_key='Date First Available' LIMIT 5"
+      },
+      "observation": "Query result (4/15 queries used, 11 remaining):\n\nsrc | attr_val         \n----+------------------\ng1  | August 7, 2008   \ng1  | July 23, 2021    \ng1  | October 31, 2015 \ng1  | January 29, 2019 \ng1  | December 10, 2014"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT 'g1_total' k, COUNT(*) v FROM attrs_g1 WHERE attr_key='Date First Available' UNION ALL SELECT 'g1_total_ref', COUNT(DISTINCT ref_id) FROM attrs_g1 WHERE attr_key='Date First Available' UNION ALL SELECT 'g1_pre2015', COUNT(*) FROM attrs_g1 WHERE attr_key='Date First Available' AND CAST(SUBSTR(attr_val,-4) AS INTEGER)<2015 UNION ALL SELECT 'g1_maincats', COUNT(DISTINCT main_cat) FROM items_g1 UNION ALL SELECT 'g3_total', COUNT(*) FROM attrs_g3 WHERE attr_key='Date First Available' UNION ALL SELECT 'g3_pre2015', COUNT(*) FROM attrs_g3 WHERE attr_key='Date First Available' AND CAST(SUBSTR(attr_val,-4) AS INTEGER)<2015 UNION ALL SELECT 'g3_maincats', COUNT(DISTINCT main_cat) FROM items_g3"
+      },
+      "observation": "Query result (5/15 queries used, 10 remaining):\n\nk            | v    \n-------------+------\ng1_total     | 18198\ng1_total_ref | 18198\ng1_pre2015   | 5254 \ng1_maincats  | 32   \ng3_total     | 18934\ng3_pre2015   | 8235 \ng3_maincats  | 30   "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT 'g1_office' k, COUNT(*) v FROM attrs_g1 WHERE attr_key='Date First Available' AND ref_id IN (SELECT ref_id FROM items_g1 WHERE main_cat='Office Products') UNION ALL SELECT 'g1_office_pre2015', COUNT(*) FROM attrs_g1 WHERE attr_key='Date First Available' AND CAST(SUBSTR(attr_val,-4) AS INTEGER)<2015 AND ref_id IN (SELECT ref_id FROM items_g1 WHERE main_cat='Office Products') UNION ALL SELECT 'g3_office', COUNT(*) FROM attrs_g3 WHERE attr_key='Date First Available' AND ref_id IN (SELECT ref_id FROM items_g3 WHERE main_cat='Office Products') UNION ALL SELECT 'g3_office_pre2015', COUNT(*) FROM attrs_g3 WHERE attr_key='Date First Available' AND CAST(SUBSTR(attr_val,-4) AS INTEGER)<2015 AND ref_id IN (SELECT ref_id FROM items_g3 WHERE main_cat='Office Products') UNION ALL SELECT 'g1_office_items', COUNT(*) FROM items_g1 WHERE main_cat='Office Products' UNION ALL SELECT 'g3_office_items', COUNT(*) FROM items_g3 WHERE main_cat='Office Products'"
+      },
+      "observation": "Query result (6/15 queries used, 9 remaining):\n\nk                 | v    \n------------------+------\ng1_office         | 13408\ng1_office_pre2015 | 3783 \ng3_office         | 46   \ng3_office_pre2015 | 15   \ng1_office_items   | 13933\ng3_office_items   | 47   "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT 'g2_total' k, COUNT(*) v FROM items_g2 UNION ALL SELECT 'g2_office_items', COUNT(*) FROM items_g2 WHERE main_cat='Office Products' UNION ALL SELECT 'g2_date_attrs', COUNT(*) FROM attrs_g2 WHERE LOWER(attr_key) LIKE '%date%' OR LOWER(attr_key) LIKE '%available%' UNION ALL SELECT 'g2_attrs_rows', COUNT(*) FROM attrs_g2"
+      },
+      "observation": "Query result (7/15 queries used, 8 remaining):\n\nERROR: no such table: attrs_g2"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT 'g2_office_items' k, COUNT(*) v FROM items_g2 WHERE main_cat='Office Products' UNION ALL SELECT 'g2_office_with_img', COUNT(*) FROM items_g2 WHERE main_cat='Office Products' AND img_ct>0 UNION ALL SELECT 'g2_img_ct_distinct', COUNT(DISTINCT img_ct) FROM items_g2 UNION ALL SELECT 'g2_max_min_img', MAX(img_ct), MIN(img_ct) FROM items_g2 WHERE main_cat='Office Products'"
+      },
+      "observation": "Query result (8/15 queries used, 7 remaining):\n\nERROR: SELECTs to the left and right of UNION ALL do not have the same number of result columns"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT 'g2_office_items' k, COUNT(*) v FROM items_g2 WHERE main_cat='Office Products' UNION ALL SELECT 'g2_office_img_ct_max', MAX(img_ct) FROM items_g2 WHERE main_cat='Office Products' UNION ALL SELECT 'g2_office_img_pos', SUM(img_ct>0) FROM items_g2 WHERE main_cat='Office Products' UNION ALL SELECT 'g2_img_hist_0', SUM(img_ct=0) FROM items_g2 UNION ALL SELECT 'g2_img_hist_1', SUM(img_ct=1) FROM items_g2"
+      },
+      "observation": "Query result (9/15 queries used, 6 remaining):\n\nk                    | v   \n---------------------+-----\ng2_office_items      | 284 \ng2_office_img_ct_max | 14  \ng2_office_img_pos    | 284 \ng2_img_hist_0        | 4   \ng2_img_hist_1        | 3730"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT img_ct, COUNT(*) FROM items_g2 WHERE main_cat='Office Products' GROUP BY img_ct ORDER BY img_ct LIMIT 20"
+      },
+      "observation": "Query result (10/15 queries used, 5 remaining):\n\nimg_ct | COUNT(*)\n-------+---------\n1      | 56      \n2      | 28      \n3      | 19      \n4      | 15      \n5      | 18      \n6      | 29      \n7      | 67      \n8      | 17      \n9      | 34      \n14     | 1       "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT 'g1' grp, SUM(CASE WHEN CAST(SUBSTR(a.attr_val,-4) AS INTEGER)<2015 THEN 1 ELSE 0 END) pre2015, SUM(CASE WHEN CAST(SUBSTR(a.attr_val,-4) AS INTEGER)=2015 THEN 1 ELSE 0 END) y2015, SUM(CASE WHEN CAST(SUBSTR(a.attr_val,-4) AS INTEGER)=2014 THEN 1 ELSE 0 END) y2014, SUM(CASE WHEN a.attr_val NOT LIKE '% 20__' THEN 1 ELSE 0 END) odd_fmt, COUNT(*) total FROM attrs_g1 a JOIN items_g1 i ON a.ref_id=i.ref_id WHERE a.attr_key='Date First Available' AND i.main_cat='Office Products' UNION ALL SELECT 'g2', SUM(CASE WHEN CAST(SUBSTR(a.attr_val,-4) AS INTEGER)<2015 THEN 1 ELSE 0 END), SUM(CASE WHEN CAST(SUBSTR(a.attr_val,-4) AS INTEGER)=2015 THEN 1 ELSE 0 END), SUM(CASE WHEN CAST(SUBSTR(a.attr_val,-4) AS INTEGER)=2014 THEN 1 ELSE 0 END), SUM(CASE WHEN a.attr_val NOT LIKE '% 20__' THEN 1 ELSE 0 END), COUNT(*) FROM attrs_g2 a JOIN items_g2 i ON a.ref_id=i.ref_id WHERE i.main_cat='Office Products'"
+      },
+      "observation": "Query result (11/15 queries used, 4 remaining):\n\nERROR: no such table: attrs_g2"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT 'g1' grp, SUM(CASE WHEN CAST(SUBSTR(a.attr_val,-4) AS INTEGER)<2015 THEN 1 ELSE 0 END) pre2015, SUM(CASE WHEN CAST(SUBSTR(a.attr_val,-4) AS INTEGER)=2015 THEN 1 ELSE 0 END) y2015, SUM(CASE WHEN CAST(SUBSTR(a.attr_val,-4) AS INTEGER)=2014 THEN 1 ELSE 0 END) y2014, SUM(CASE WHEN a.attr_val NOT LIKE '% 20__' THEN 1 ELSE 0 END) odd_fmt, COUNT(*) total FROM attrs_g1 a JOIN items_g1 i ON a.ref_id=i.ref_id WHERE a.attr_key='Date First Available' AND i.main_cat='Office Products'"
+      },
+      "observation": "Query result (12/15 queries used, 3 remaining):\n\ngrp | pre2015 | y2015 | y2014 | odd_fmt | total\n----+---------+-------+-------+---------+------\ng1  | 3783    | 888   | 834   | 4       | 13408"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT attr_val FROM attrs_g1 a JOIN items_g1 i ON a.ref_id=i.ref_id WHERE a.attr_key='Date First Available' AND i.main_cat='Office Products' AND a.attr_val NOT LIKE '% 20__' LIMIT 5"
+      },
+      "observation": "Query result (13/15 queries used, 2 remaining):\n\nattr_val         \n-----------------\nJune 1, 1999     \nJuly 13, 1999    \nSeptember 4, 1973\nJune 1, 1999     "
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "3798"
+      },
+      "observation": "Question 20: INCORRECT.\nYour answer: 3798\nExploratory queries used: 13"
+    }
+  ],
+  "feedback": "Question 20: INCORRECT.\nYour answer: 3798\nExploratory queries used: 13"
+}

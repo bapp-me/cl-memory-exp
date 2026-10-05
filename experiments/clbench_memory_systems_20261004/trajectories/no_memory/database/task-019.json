@@ -1,0 +1,96 @@
+{
+  "namespace": "pi_none/r1/database_exploration",
+  "index": 19,
+  "instance_id": "8",
+  "prompt": "Question 20/40\n\nHow many office products have a listing date before 2015?\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "Answered correctly: **5254** office products have a \"Date First Available\" listing date before 2015."
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT name FROM sqlite_master WHERE type='table'"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\nname           \n---------------\nitems_g1       \nfdbk_g1        \nsqlite_sequence\ntaxn_g1        \nattrs_g1       \nitems_g2       \nfdbk_g2        \ntaxn_g2        \nitems_g3       \nfdbk_g3        \nattrs_g3       \nfdbk_stats_g1  "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT * FROM taxn_g1 LIMIT 5"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\nref_id     | cat_lvl | cat_nm                     \n-----------+---------+----------------------------\nB001DZWCDO | 0       | Office Products            \nB001DZWCDO | 1       | Office Electronics         \nB001DZWCDO | 2       | Printers & Accessories     \nB001DZWCDO | 3       | Printer Parts & Accessories\nB001DZWCDO | 4       | Printer Ink & Toner        "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "PRAGMA table_info(items_g1)"
+      },
+      "observation": "Query result (3/15 queries used, 12 remaining):\n\ncid | name        | type    | notnull | dflt_value | pk\n----+-------------+---------+---------+------------+---\n0   | ref_id      | TEXT    | 0       | NULL       | 1 \n1   | ttl         | TEXT    | 0       | NULL       | 0 \n2   | avg_rtg     | REAL    | 0       | NULL       | 0 \n3   | avg_rtg_30d | REAL    | 0       | NULL       | 0 \n4   | rtg_ct      | INTEGER | 0       | NULL       | 0 \n5   | prc         | REAL    | 0       | NULL       | 0 \n6   | str_nm      | TEXT    | 0       | NULL       | 0 \n7   | main_cat    | TEXT    | 0       | NULL       | 0 \n8   | desc_txt    | TEXT    | 0       | NULL       | 0 \n9   | feat_lst    | TEXT    | 0       | NULL       | 0 "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "PRAGMA table_info(attrs_g1)"
+      },
+      "observation": "Query result (4/15 queries used, 11 remaining):\n\ncid | name     | type | notnull | dflt_value | pk\n----+----------+------+---------+------------+---\n0   | ref_id   | TEXT | 0       | NULL       | 0 \n1   | attr_key | TEXT | 0       | NULL       | 0 \n2   | attr_val | TEXT | 0       | NULL       | 0 "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT DISTINCT attr_key FROM attrs_g1 WHERE attr_key LIKE '%date%' COLLATE NOCASE LIMIT 20"
+      },
+      "observation": "Query result (5/15 queries used, 10 remaining):\n\nattr_key             \n---------------------\nDate First Available \nOriginal Release Date\nPublication date     \nRelease date         "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT attr_key, COUNT(*), MIN(attr_val), MAX(attr_val) FROM attrs_g1 WHERE attr_key IN ('Date First Available','Original Release Date') GROUP BY attr_key"
+      },
+      "observation": "Query result (6/15 queries used, 9 remaining):\n\nattr_key              | COUNT(*) | MIN(attr_val) | MAX(attr_val)    \n----------------------+----------+---------------+------------------\nDate First Available  | 18198    | 01M 10, 2009  | September 9, 2022\nOriginal Release Date | 2        | 2011          | 2012             "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT COUNT(*) FROM attrs_g1 WHERE attr_key='Date First Available' AND CAST(SUBSTR(TRIM(attr_val), -4) AS INTEGER) < 2015"
+      },
+      "observation": "Query result (7/15 queries used, 8 remaining):\n\nCOUNT(*)\n--------\n5254    "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT (SELECT COUNT(*) FROM items_g1) AS items, (SELECT COUNT(DISTINCT ref_id) FROM taxn_g1 WHERE cat_lvl=0 AND cat_nm='Office Products') AS office_ids, (SELECT COUNT(DISTINCT ref_id) FROM attrs_g1 WHERE attr_key='Date First Available') AS with_date"
+      },
+      "observation": "Query result (8/15 queries used, 7 remaining):\n\nitems | office_ids | with_date\n------+------------+----------\n20000 | 17825      | 18198    "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT cat_nm, COUNT(DISTINCT ref_id) FROM taxn_g1 WHERE cat_lvl=0 GROUP BY cat_nm"
+      },
+      "observation": "Query result (9/15 queries used, 6 remaining):\n\ncat_nm             | COUNT(DISTINCT ref_id)\n-------------------+-----------------------\nOffice Electronics | 29                    \nOffice Products    | 17825                 "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT attr_val, COUNT(*) FROM attrs_g1 WHERE attr_key='Date First Available' GROUP BY attr_val LIMIT 15"
+      },
+      "observation": "Query result (10/15 queries used, 5 remaining):\n\nattr_val      | COUNT(*)\n--------------+---------\n01M 10, 2009  | 1       \n01M 31, 2021  | 1       \n04M 18, 2021  | 1       \n07M 10, 2018  | 1       \n08M 9, 2016   | 1       \n09M 16, 2010  | 1       \n09M 7, 2021   | 1       \n11M 5, 2016   | 1       \n12M 11, 2013  | 1       \n12M 8, 2020   | 1       \nApril 1, 2009 | 2       \nApril 1, 2010 | 7       \nApril 1, 2011 | 7       \nApril 1, 2012 | 1       \nApril 1, 2013 | 8       "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT COUNT(*) FROM attrs_g1 WHERE attr_key='Date First Available' AND TRIM(attr_val) NOT GLOB '*[0-9][0-9][0-9][0-9]'"
+      },
+      "observation": "Query result (11/15 queries used, 4 remaining):\n\nCOUNT(*)\n--------\n0       "
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "5254"
+      },
+      "observation": "Question 20: CORRECT.\nYour answer: 5254\nExploratory queries used: 11"
+    }
+  ],
+  "feedback": "Question 20: CORRECT.\nYour answer: 5254\nExploratory queries used: 11"
+}

@@ -1,0 +1,44 @@
+{
+  "namespace": "codex_memory_ready/r1/database_exploration",
+  "index": 6,
+  "instance_id": "19",
+  "prompt": "Question 7/40\n\nFor verified electronics reviews, how much longer on average (in characters) are 1-star review bodies compared to 5-star review bodies? Round to 1 decimal place. Only count reviews with non-empty body text.\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "I’ll check the benchmark playbook, then run a consolidated schema query.",
+    "Schema is the only unknown; I’m fetching compact table definitions now.",
+    "I’ve confirmed the columns; now one grouped query checks verified values and lengths.",
+    "The candidate is `101.8`; I’m checking raw versus trimmed character counts before submitting.",
+    "`101.8` characters — marked CORRECT using 3/15 queries."
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT name, sql FROM sqlite_master WHERE type='table' AND (name LIKE 'fdbk_g2%' OR name LIKE 'items_g2%') ORDER BY name;"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\nname     | sql                                                                                                                                                                                                                                                                  \n---------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\nfdbk_g2  | CREATE TABLE fdbk_g2 (     id INTEGER PRIMARY KEY AUTOINCREMENT,     item_id TEXT,     ref_id TEXT,     uid TEXT,     rtg REAL,     ttl TEXT,     body TEXT,     ts INTEGER,     hlp_ct INTEGER,     vrf TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g2(ref_id) )\nitems_g2 | CREATE TABLE items_g2 (     ref_id TEXT PRIMARY KEY,     ttl TEXT,     avg_rtg REAL,     prc INTEGER,     prc_usd REAL,     str_nm TEXT,     main_cat TEXT,     feat_lst TEXT,     img_ct INTEGER )                                                                  "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH filtered AS (\n  SELECT f.vrf, f.rtg, LENGTH(TRIM(f.body)) AS body_len\n  FROM fdbk_g2 f\n  JOIN items_g2 i ON i.ref_id = f.ref_id\n  WHERE f.rtg IN (1.0, 5.0)\n    AND f.body IS NOT NULL\n    AND TRIM(f.body) <> ''\n)\nSELECT vrf, rtg, COUNT(*) AS reviews, ROUND(AVG(body_len), 1) AS avg_chars\nFROM filtered\nGROUP BY vrf, rtg\nORDER BY vrf, rtg;"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\nvrf   | rtg | reviews | avg_chars\n------+-----+---------+----------\nfalse | 1.0 | 809     | 547.6    \nfalse | 5.0 | 2879    | 558.2    \ntrue  | 1.0 | 6634    | 286.3    \ntrue  | 5.0 | 46717   | 184.5    "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH filtered AS (\n  SELECT f.rtg, LENGTH(f.body) AS raw_len, LENGTH(TRIM(f.body)) AS trim_len\n  FROM fdbk_g2 f\n  JOIN items_g2 i ON i.ref_id = f.ref_id\n  WHERE f.rtg IN (1.0, 5.0)\n    AND f.vrf = 'true'\n    AND f.body IS NOT NULL\n    AND TRIM(f.body) <> ''\n)\nSELECT\n  ROUND(AVG(CASE WHEN rtg=1 THEN raw_len END) - AVG(CASE WHEN rtg=5 THEN raw_len END), 1) AS raw_diff,\n  ROUND(AVG(CASE WHEN rtg=1 THEN trim_len END) - AVG(CASE WHEN rtg=5 THEN trim_len END), 1) AS trim_diff,\n  SUM(raw_len <> trim_len) AS whitespace_affected,\n  SUM(CASE WHEN rtg=1 THEN 1 ELSE 0 END) AS one_star_rows,\n  SUM(CASE WHEN rtg=5 THEN 1 ELSE 0 END) AS five_star_rows\nFROM filtered;"
+      },
+      "observation": "Query result (3/15 queries used, 12 remaining):\n\nraw_diff | trim_diff | whitespace_affected | one_star_rows | five_star_rows\n---------+-----------+---------------------+---------------+---------------\n101.8    | 101.8     | 0                   | 6634          | 46717         "
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "101.8"
+      },
+      "observation": "Question 7: CORRECT.\nYour answer: 101.8\nExploratory queries used: 3"
+    }
+  ],
+  "feedback": "Question 7: CORRECT.\nYour answer: 101.8\nExploratory queries used: 3"
+}

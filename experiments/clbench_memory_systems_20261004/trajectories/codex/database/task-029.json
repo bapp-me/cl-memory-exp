@@ -1,0 +1,65 @@
+{
+  "namespace": "codex_memory_ready/r1/database_exploration",
+  "index": 29,
+  "instance_id": "106",
+  "prompt": "Question 30/40\n\nFor office products that are still active in the catalog, compare average review text length in characters between reviews that are missing a text verification label and reviews that have one. Ignore reviews with no body text. Report the unlabeled average minus the labeled average. Round to 1 decimal place.\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "I’ll use the saved benchmark playbook, then run one consolidated SQL check.",
+    "The saved facts confirm the office group and review joins; I’m checking the exact catalog-status attribute and verification domain in one query.",
+    "The exact columns are clear: `items_g1.status`, `fdbk_g1.verified_status`, and `body`. I’m verifying label domains and both raw/trimmed length variants together.",
+    "The broad grouped probe hit the 10-second timeout, so I’m reducing it to the exact label split and required length only.",
+    "Correct answer: `1.1`"
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH active AS (\n  SELECT attr_key, attr_value, COUNT(*) AS cnt\n  FROM attrs_g1\n  WHERE lower(attr_key) LIKE '%discontinu%' OR lower(attr_key) LIKE '%active%' OR lower(attr_value) IN ('active','discontinued','true','false','yes','no')\n  GROUP BY attr_key, attr_value\n  ORDER BY cnt DESC\n  LIMIT 30\n)\nSELECT json_object(\n  'tables', (SELECT group_concat(name || ':' || sql, CHAR(10)) FROM sqlite_master WHERE type='table' AND name LIKE '%_g1'),\n  'attrs', json_group_array(json_object('key', attr_key, 'value', attr_value, 'count', cnt))\n) AS result\nFROM active;"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\nERROR: no such column: attr_value"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT group_concat(name || ':' || sql, CHAR(10)) AS g1_schema\nFROM sqlite_master\nWHERE type='table' AND name LIKE '%_g1';"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\ng1_schema                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      \n-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\nitems_g1:CREATE TABLE items_g1 (     ref_id TEXT PRIMARY KEY,     ttl TEXT,     avg_rtg REAL,     avg_rtg_30d REAL,     rtg_ct INTEGER,     prc REAL,     str_nm TEXT,     main_cat TEXT,     desc_txt TEXT,     feat_lst TEXT , status TEXT DEFAULT 'active') fdbk_g1:CREATE TABLE fdbk_g1 (     id INTEGER PRIMARY KEY AUTOINCREMENT,     item_id TEXT,     ref_id TEXT,     uid TEXT,     rtg REAL,     ttl TEXT,     body TEXT,     ts INTEGER,     hlp_ct INTEGER,     vrf INTEGER, verified_status TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g1(ref_id) ) taxn_g1:CREATE TABLE taxn_g1 (     ref_id TEXT,     cat_lvl INTEGER,     cat_nm TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g1(ref_id) ) attrs_g1:CREATE TABLE attrs_g1 (     ref_id TEXT,     attr_key TEXT,     attr_val TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g1(ref_id) ) fdbk_stats_g1:CREATE TABLE fdbk_stats_g1 (     ref_id TEXT PRIMARY KEY,     avg_rtg REAL,     review_ct INTEGER,     pct_5star REAL,     avg_hlp REAL,     FOREIGN KEY (ref_id) REFERENCES items_g1(ref_id) )"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH base AS (\n  SELECT f.verified_status, f.vrf, f.body\n  FROM items_g1 i\n  JOIN fdbk_g1 f ON f.ref_id = i.ref_id\n  WHERE i.status = 'active'\n    AND f.body IS NOT NULL\n    AND TRIM(f.body) <> ''\n),\ncandidates AS (\n  SELECT\n    COUNT(*) AS rows_n,\n    SUM(verified_status IS NULL) AS missing_n,\n    SUM(verified_status IS NOT NULL) AS labeled_n,\n    AVG(CASE WHEN verified_status IS NULL THEN LENGTH(body) END) - AVG(CASE WHEN verified_status IS NOT NULL THEN LENGTH(body) END) AS raw_diff,\n    AVG(CASE WHEN verified_status IS NULL THEN LENGTH(TRIM(body)) END) - AVG(CASE WHEN verified_status IS NOT NULL THEN LENGTH(TRIM(body)) END) AS trim_diff,\n    AVG(CASE WHEN COALESCE(verified_status,'') = '' THEN LENGTH(body) END) - AVG(CASE WHEN COALESCE(verified_status,'') <> '' THEN LENGTH(body) END) AS raw_diff_blank_missing\n  FROM base\n)\nSELECT json_object(\n  'groups', json_group_array(json_object('verified_status', verified_status, 'vrf', vrf, 'rows', n, 'raw_avg_len', raw_avg_len, 'trim_avg_len', trim_avg_len)),\n  'candidates', (SELECT json_object('rows_n',rows_n,'missing_n',missing_n,'labeled_n',labeled_n,'raw_diff',raw_diff,'trim_diff',trim_diff,'raw_diff_blank_missing',raw_diff_blank_missing) FROM candidates)\n) AS result\nFROM (\n  SELECT verified_status, vrf, COUNT(*) AS n, AVG(LENGTH(body)) AS raw_avg_len, AVG(LENGTH(TRIM(body))) AS trim_avg_len\n  FROM base\n  GROUP BY verified_status, vrf\n  ORDER BY n DESC\n);"
+      },
+      "observation": "Query result (3/15 queries used, 12 remaining):\n\nERROR: query exceeded 10s timeout"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT f.verified_status IS NULL AS missing, COUNT(*) AS n, AVG(LENGTH(f.body)) AS avg_len\nFROM items_g1 i\nJOIN fdbk_g1 f ON f.ref_id = i.ref_id\nWHERE i.status = 'active' AND f.body IS NOT NULL AND TRIM(f.body) <> ''\nGROUP BY missing;"
+      },
+      "observation": "Query result (4/15 queries used, 11 remaining):\n\nmissing | n      | avg_len           \n--------+--------+-------------------\n0       | 247892 | 180.95087780162328\n1       | 106215 | 182.04332721367038"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH active_items AS MATERIALIZED (\n  SELECT ref_id FROM items_g1 WHERE status = 'active'\n),\nbase AS MATERIALIZED (\n  SELECT f.verified_status, LENGTH(f.body) AS len, LENGTH(TRIM(f.body)) AS trim_len\n  FROM active_items i\n  JOIN fdbk_g1 f ON f.ref_id = i.ref_id\n  WHERE f.body IS NOT NULL AND TRIM(f.body) <> ''\n),\ncandidates AS (\n  SELECT\n    COUNT(*) AS rows_n,\n    SUM(verified_status IS NULL) AS null_missing_n,\n    SUM(verified_status IS NOT NULL) AS labeled_n,\n    AVG(CASE WHEN verified_status IS NULL THEN len END) - AVG(CASE WHEN verified_status IS NOT NULL THEN len END) AS raw_diff_null,\n    AVG(CASE WHEN verified_status IS NULL THEN trim_len END) - AVG(CASE WHEN verified_status IS NOT NULL THEN trim_len END) AS trim_diff_null,\n    AVG(CASE WHEN COALESCE(verified_status,'') = '' THEN len END) - AVG(CASE WHEN COALESCE(verified_status,'') <> '' THEN len END) AS raw_diff_blank\n  FROM base\n),\nlabels AS (\n  SELECT COALESCE(quoted_label(verified_status), 'NULL') AS label, COUNT(*) AS n\n  FROM base\n  GROUP BY verified_status\n)\nSELECT json_object(\n  'candidates', (SELECT json_object('rows_n',rows_n,'null_missing_n',null_missing_n,'labeled_n',labeled_n,'raw_diff_null',raw_diff_null,'trim_diff_null',trim_diff_null,'raw_diff_blank',raw_diff_blank) FROM candidates),\n  'labels', json_group_array(json_object('label',label,'n',n))\n) AS result\nFROM labels;"
+      },
+      "observation": "Query result (5/15 queries used, 10 remaining):\n\nERROR: no such function: quoted_label"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "WITH active_items AS MATERIALIZED (\n  SELECT ref_id FROM items_g1 WHERE status = 'active'\n),\nbase AS MATERIALIZED (\n  SELECT f.verified_status, LENGTH(f.body) AS len, LENGTH(TRIM(f.body)) AS trim_len\n  FROM active_items i\n  JOIN fdbk_g1 f ON f.ref_id = i.ref_id\n  WHERE f.body IS NOT NULL AND TRIM(f.body) <> ''\n),\ncandidates AS (\n  SELECT\n    COUNT(*) AS rows_n,\n    SUM(verified_status IS NULL) AS null_missing_n,\n    SUM(verified_status IS NOT NULL) AS labeled_n,\n    AVG(CASE WHEN verified_status IS NULL THEN len END) - AVG(CASE WHEN verified_status IS NOT NULL THEN len END) AS raw_diff_null,\n    AVG(CASE WHEN verified_status IS NULL THEN trim_len END) - AVG(CASE WHEN verified_status IS NOT NULL THEN trim_len END) AS trim_diff_null,\n    AVG(CASE WHEN COALESCE(verified_status,'') = '' THEN len END) - AVG(CASE WHEN COALESCE(verified_status,'') <> '' THEN len END) AS raw_diff_blank\n  FROM base\n),\nlabels AS (\n  SELECT CASE WHEN verified_status IS NULL THEN 'NULL' ELSE verified_status END AS label, COUNT(*) AS n\n  FROM base\n  GROUP BY verified_status\n)\nSELECT json_object(\n  'candidates', (SELECT json_object('rows_n',rows_n,'null_missing_n',null_missing_n,'labeled_n',labeled_n,'raw_diff_null',raw_diff_null,'trim_diff_null',trim_diff_null,'raw_diff_blank',raw_diff_blank) FROM candidates),\n  'labels', json_group_array(json_object('label',label,'n',n))\n) AS result\nFROM labels;"
+      },
+      "observation": "Query result (6/15 queries used, 9 remaining):\n\nresult                                                                                                                                                                                                                                                                               \n-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n{\"candidates\":{\"rows_n\":354107,\"null_missing_n\":106215,\"labeled_n\":247892,\"raw_diff_null\":1.0924494120471,\"trim_diff_null\":1.0924494120471,\"raw_diff_blank\":1.0924494120471},\"labels\":[{\"label\":\"NULL\",\"n\":106215},{\"label\":\"unverified\",\"n\":17111},{\"label\":\"verified\",\"n\":230781}]}"
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "1.1"
+      },
+      "observation": "Question 30: CORRECT.\nYour answer: 1.1\nExploratory queries used: 6"
+    }
+  ],
+  "feedback": "Question 30: CORRECT.\nYour answer: 1.1\nExploratory queries used: 6"
+}

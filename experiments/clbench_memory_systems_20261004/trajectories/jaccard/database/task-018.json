@@ -1,0 +1,33 @@
+{
+  "namespace": "pi_jaccard/r1/database_exploration",
+  "index": 18,
+  "instance_id": "2",
+  "prompt": "Question 19/40\n\nWhat is the average review rating given to office products that cost more than $50?\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "**Correct: 4.11** (2 queries used)\n\n- Office products = `g1` tables; price column is `prc` in `items_g1`\n- `AVG(f.rtg)` over `fdbk_g1` reviews joined to `items_g1` where `prc > 50` → **4.1054309…** ≈ **4.11**"
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "PRAGMA table_info(items_g1)"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\ncid | name        | type    | notnull | dflt_value | pk\n----+-------------+---------+---------+------------+---\n0   | ref_id      | TEXT    | 0       | NULL       | 1 \n1   | ttl         | TEXT    | 0       | NULL       | 0 \n2   | avg_rtg     | REAL    | 0       | NULL       | 0 \n3   | avg_rtg_30d | REAL    | 0       | NULL       | 0 \n4   | rtg_ct      | INTEGER | 0       | NULL       | 0 \n5   | prc         | REAL    | 0       | NULL       | 0 \n6   | str_nm      | TEXT    | 0       | NULL       | 0 \n7   | main_cat    | TEXT    | 0       | NULL       | 0 \n8   | desc_txt    | TEXT    | 0       | NULL       | 0 \n9   | feat_lst    | TEXT    | 0       | NULL       | 0 "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT AVG(f.rtg) FROM fdbk_g1 f JOIN items_g1 i ON f.ref_id = i.ref_id WHERE i.prc > 50"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\nAVG(f.rtg)       \n-----------------\n4.105430924150588"
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "4.11"
+      },
+      "observation": "Question 19: CORRECT.\nYour answer: 4.11\nExploratory queries used: 2"
+    }
+  ],
+  "feedback": "Question 19: CORRECT.\nYour answer: 4.11\nExploratory queries used: 2"
+}

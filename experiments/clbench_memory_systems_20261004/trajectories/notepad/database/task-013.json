@@ -1,0 +1,61 @@
+{
+  "namespace": "pi_notepad/r1/database_exploration",
+  "index": 13,
+  "instance_id": "20",
+  "prompt": "Question 14/40\n\nAcross both product categories that store attribute data, how many total products are listed as discontinued by the manufacturer and have a catalog average star rating strictly below 3.0?\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "Correct — **21** (17 in g1/office + 4 in g3/musical instruments), found with 6 queries."
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\nname           \n---------------\nattrs_g1       \nattrs_g3       \nfdbk_g1        \nfdbk_g2        \nfdbk_g3        \nfdbk_stats_g1  \nitems_g1       \nitems_g2       \nitems_g3       \nsqlite_sequence\ntaxn_g1        \ntaxn_g2        "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT 'g1' t, * FROM pragma_table_info('items_g1')\nUNION ALL\nSELECT 'g3', * FROM pragma_table_info('items_g3')"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\nt  | cid | name        | type    | notnull | dflt_value | pk\n---+-----+-------------+---------+---------+------------+---\ng1 | 0   | ref_id      | TEXT    | 0       | NULL       | 1 \ng1 | 1   | ttl         | TEXT    | 0       | NULL       | 0 \ng1 | 2   | avg_rtg     | REAL    | 0       | NULL       | 0 \ng1 | 3   | avg_rtg_30d | REAL    | 0       | NULL       | 0 \ng1 | 4   | rtg_ct      | INTEGER | 0       | NULL       | 0 \ng1 | 5   | prc         | REAL    | 0       | NULL       | 0 \ng1 | 6   | str_nm      | TEXT    | 0       | NULL       | 0 \ng1 | 7   | main_cat    | TEXT    | 0       | NULL       | 0 \ng1 | 8   | desc_txt    | TEXT    | 0       | NULL       | 0 \ng1 | 9   | feat_lst    | TEXT    | 0       | NULL       | 0 \ng3 | 0   | ref_id      | TEXT    | 0       | NULL       | 1 \ng3 | 1   | ttl         | TEXT    | 0       | NULL       | 0 \ng3 | 2   | avg_rtg     | REAL    | 0       | NULL       | 0 \ng3 | 3   | rtg_ct      | INTEGER | 0       | NULL       | 0 \ng3 | 4   | prc         | REAL    | 0       | NULL       | 0 \ng3 | 5   | str_nm      | TEXT    | 0       | NULL       | 0 \ng3 | 6   | main_cat    | TEXT    | 0       | NULL       | 0 \ng3 | 7   | desc_txt    | TEXT    | 0       | NULL       | 0 "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT 'a1' t, attr_key, COUNT(*) ct FROM attrs_g1 GROUP BY attr_key\nUNION ALL\nSELECT 'a3', attr_key, COUNT(*) FROM attrs_g3 GROUP BY attr_key"
+      },
+      "observation": "Query result (3/15 queries used, 12 remaining):\n\nt  | attr_key                     | ct   \n---+------------------------------+------\na1 |                              | 374  \na1 | Accessory Connection Type    | 2    \na1 | Actuator Type                | 1    \na1 | Additional Printer functions | 1    \na1 | Age Range (Description)      | 1784 \na1 | Age Range Description        | 14   \na1 | Alarm                        | 19   \na1 | Alarm Clock                  | 2    \na1 | Animal theme                 | 1    \na1 | Answering System Type        | 139  \na1 | Are Batteries Included       | 99   \na1 | Area Lighting Classification | 1    \na1 | Arm Style                    | 53   \na1 | Aspect Ratio                 | 1    \na1 | Assembled Diameter           | 2    \na1 | Assembled Height             | 27   \na1 | Assembled Length             | 31   \na1 | Assembled Seat Height        | 6    \na1 | Assembled Width              | 30   \na1 | Assembly Required            | 363  \na1 | Assembly Required No         | 1    \na1 | Assembly required            | 105  \na1 | Audio Jack                   | 1    \na1 | Audio-out Ports (#)          | 1    \na1 | Auto Part Position           | 5    \na1 | Average Battery Life         | 1    \na1 | Back Material Type           | 73   \na1 | Back Style                   | 100  \na1 | Backing                      | 131  \na1 | Backing Material             | 12   \na1 | Backing Type                 | 3    \na1 | Band Color                   | 1    \na1 | Band Material Type           | 1    \na1 | Band Width                   | 1    \na1 | Base Material                | 56   \na1 | Base Type                    | 125  \na1 | Batteries                    | 247  \na1 | Batteries Included?          | 359  \na1 | Batteries Required?          | 474  \na1 | Batteries required           | 412  \na1 | Battery Cell Composition     | 11   \na1 | Battery Cell Type            | 6    \na1 | Battery Type                 | 1    \na1 | Best Sellers Rank            | 10306\na1 | Binding                      | 1037 \na1 | Binding Edge                 | 25   \na1 | Blade Edge                   | 2    \na1 | Blade Length                 | 3    \na1 | Blade Material               | 9    \na1 | Blade Shape                  | 1    \n... (showing first 50 rows)"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT 'a1' t, attr_key, COUNT(*) ct FROM attrs_g1 WHERE attr_key LIKE '%iscontinu%' GROUP BY attr_key\nUNION ALL\nSELECT 'a3', attr_key, COUNT(*) FROM attrs_g3 WHERE attr_key LIKE '%iscontinu%' GROUP BY attr_key"
+      },
+      "observation": "Query result (4/15 queries used, 11 remaining):\n\nt  | attr_key                        | ct  \n---+---------------------------------+-----\na1 | Is Discontinued By Manufacturer | 8121\na1 | Is Discontinued by Manufacturer | 3   \na3 | Is Discontinued By Manufacturer | 9486\na3 | Is Discontinued by Manufacturer | 4   "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT 'a1' t, attr_val, COUNT(*) FROM attrs_g1 WHERE attr_key LIKE '%iscontinu%' GROUP BY attr_val\nUNION ALL\nSELECT 'a3', attr_val, COUNT(*) FROM attrs_g3 WHERE attr_key LIKE '%iscontinu%' GROUP BY attr_val"
+      },
+      "observation": "Query result (5/15 queries used, 10 remaining):\n\nt  | attr_val | COUNT(*)\n---+----------+---------\na1 | False    | 4       \na1 | No       | 7974    \na1 | Yes      | 144     \na1 | false    | 2       \na3 | False    | 5       \na3 | No       | 9388    \na3 | True     | 1       \na3 | Yes      | 91      \na3 | false    | 5       "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT\n (SELECT COUNT(DISTINCT a.ref_id) FROM attrs_g1 a WHERE a.attr_key LIKE '%iscontinu%' AND LOWER(a.attr_val) IN ('yes','true')) d1,\n (SELECT COUNT(DISTINCT a.ref_id) FROM attrs_g3 a WHERE a.attr_key LIKE '%iscontinu%' AND LOWER(a.attr_val) IN ('yes','true')) d3,\n (SELECT COUNT(*) FROM items_g1 i JOIN attrs_g1 a ON a.ref_id=i.ref_id AND a.attr_key LIKE '%iscontinu%' AND LOWER(a.attr_val) IN ('yes','true') WHERE i.avg_rtg < 3.0) c1,\n (SELECT COUNT(*) FROM items_g3 i JOIN attrs_g3 a ON a.ref_id=i.ref_id AND a.attr_key LIKE '%iscontinu%' AND LOWER(a.attr_val) IN ('yes','true') WHERE i.avg_rtg < 3.0) c3"
+      },
+      "observation": "Query result (6/15 queries used, 9 remaining):\n\nd1  | d3 | c1 | c3\n----+----+----+---\n144 | 92 | 17 | 4 "
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "21"
+      },
+      "observation": "Question 14: CORRECT.\nYour answer: 21\nExploratory queries used: 6"
+    }
+  ],
+  "feedback": "Question 14: CORRECT.\nYour answer: 21\nExploratory queries used: 6"
+}

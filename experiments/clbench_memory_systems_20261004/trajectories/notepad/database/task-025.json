@@ -1,0 +1,75 @@
+{
+  "namespace": "pi_notepad/r1/database_exploration",
+  "index": 25,
+  "instance_id": "113",
+  "prompt": "Question 26/40\n\nHow many active office products priced above $20 have ONLY unverified reviews (zero verified purchases among all their reviews)?\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "Question 26 answered correctly: **83** active office products priced above $20 whose reviews are all unverified."
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT name FROM sqlite_master WHERE type='table'"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\nname                 \n---------------------\nitems_g1             \nfdbk_g1              \nsqlite_sequence      \ntaxn_g1              \nattrs_g1             \nitems_g2             \nfdbk_g2              \ntaxn_g2              \nitems_g3             \nfdbk_g3              \nattrs_g3_legacy      \nfdbk_stats_g1        \nproduct_attributes_g3"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT 'items_g1' t, * FROM pragma_table_info('items_g1')\nUNION ALL SELECT 'fdbk_g1', * FROM pragma_table_info('fdbk_g1')\nUNION ALL SELECT 'taxn_g1', * FROM pragma_table_info('taxn_g1')"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\nt        | cid | name            | type    | notnull | dflt_value | pk\n---------+-----+-----------------+---------+---------+------------+---\nitems_g1 | 0   | ref_id          | TEXT    | 0       | NULL       | 1 \nitems_g1 | 1   | ttl             | TEXT    | 0       | NULL       | 0 \nitems_g1 | 2   | avg_rtg         | REAL    | 0       | NULL       | 0 \nitems_g1 | 3   | avg_rtg_30d     | REAL    | 0       | NULL       | 0 \nitems_g1 | 4   | rtg_ct          | INTEGER | 0       | NULL       | 0 \nitems_g1 | 5   | prc             | REAL    | 0       | NULL       | 0 \nitems_g1 | 6   | str_nm          | TEXT    | 0       | NULL       | 0 \nitems_g1 | 7   | main_cat        | TEXT    | 0       | NULL       | 0 \nitems_g1 | 8   | desc_txt        | TEXT    | 0       | NULL       | 0 \nitems_g1 | 9   | feat_lst        | TEXT    | 0       | NULL       | 0 \nitems_g1 | 10  | status          | TEXT    | 0       | 'active'   | 0 \nfdbk_g1  | 0   | id              | INTEGER | 0       | NULL       | 1 \nfdbk_g1  | 1   | item_id         | TEXT    | 0       | NULL       | 0 \nfdbk_g1  | 2   | ref_id          | TEXT    | 0       | NULL       | 0 \nfdbk_g1  | 3   | uid             | TEXT    | 0       | NULL       | 0 \nfdbk_g1  | 4   | rtg             | REAL    | 0       | NULL       | 0 \nfdbk_g1  | 5   | ttl             | TEXT    | 0       | NULL       | 0 \nfdbk_g1  | 6   | body            | TEXT    | 0       | NULL       | 0 \nfdbk_g1  | 7   | ts              | INTEGER | 0       | NULL       | 0 \nfdbk_g1  | 8   | hlp_ct          | INTEGER | 0       | NULL       | 0 \nfdbk_g1  | 9   | vrf             | INTEGER | 0       | NULL       | 0 \nfdbk_g1  | 10  | verified_status | TEXT    | 0       | NULL       | 0 \ntaxn_g1  | 0   | ref_id          | TEXT    | 0       | NULL       | 0 \ntaxn_g1  | 1   | cat_lvl         | INTEGER | 0       | NULL       | 0 \ntaxn_g1  | 2   | cat_nm          | TEXT    | 0       | NULL       | 0 "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT status, COUNT(*), MIN(prc), MAX(prc) FROM items_g1 GROUP BY status;\nSELECT cat_lvl, cat_nm, COUNT(*) FROM taxn_g1 GROUP BY cat_lvl, cat_nm LIMIT 50"
+      },
+      "observation": "Query result (3/15 queries used, 12 remaining):\n\nERROR: You can only execute one statement at a time."
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT status, COUNT(*) n, MIN(prc), MAX(prc) FROM items_g1 GROUP BY status"
+      },
+      "observation": "Query result (4/15 queries used, 11 remaining):\n\nstatus   | n     | MIN(prc) | MAX(prc)\n---------+-------+----------+---------\nactive   | 19000 | 0.18     | 13914.85\narchived | 1000  | 1.99     | 2499.0  "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT cat_nm, COUNT(*) FROM taxn_g1 WHERE cat_nm LIKE '%ffice%' OR cat_lvl=1 GROUP BY cat_nm LIMIT 50"
+      },
+      "observation": "Query result (5/15 queries used, 10 remaining):\n\ncat_nm                                                              | COUNT(*)\n--------------------------------------------------------------------+---------\nBrands                                                              | 7       \nBrother Remf Ink & Toner                                            | 7       \nBusiness Pricing                                                    | 1       \nDymo Labels                                                         | 1       \nEducation Store                                                     | 98      \nFrustration-Free Packaging: Office Products - US                    | 1       \nInteroffice Envelopes                                               | 2       \nLabel your Kids' gear with Mabel's Labels                           | 1       \nLeather Bags                                                        | 2       \nOffice & School Supplies                                            | 14008   \nOffice Depot                                                        | 1       \nOffice Electronics                                                  | 2699    \nOffice Furniture & Lighting                                         | 1015    \nOffice Gadgets                                                      | 1       \nOffice Gifts                                                        | 1       \nOffice Lighting                                                     | 1       \nOffice Low Return Rate Alert                                        | 1       \nOffice Organization                                                 | 5       \nOffice Outlet                                                       | 1       \nOffice Products                                                     | 17825   \nOffice Storage Supplies                                             | 82      \nOffice Supplies Outlet                                              | 2       \nOffice Tape Dispensers                                              | 39      \nOther Office Equipment                                              | 71      \nPrinters & Accessories                                              | 29      \nQuantity discounts on select office products for business customers | 1       \nSave $10 for every $25 spent on Elmers, Sharpie, and More           | 1       \nSet up smart reorders on any of these printers                      | 2       "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT vrf, verified_status, COUNT(*) FROM fdbk_g1 GROUP BY vrf, verified_status"
+      },
+      "observation": "Query result (6/15 queries used, 9 remaining):\n\nvrf | verified_status | COUNT(*)\n----+-----------------+---------\n0   | NULL            | 7764    \n0   | unverified      | 17963   \n1   | NULL            | 105478  \n1   | verified        | 246267  "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT COUNT(*) FROM (\n  SELECT f.ref_id\n  FROM fdbk_g1 f JOIN items_g1 i ON i.ref_id = f.ref_id\n  WHERE i.status='active' AND i.prc > 20\n  GROUP BY f.ref_id\n  HAVING SUM(CASE WHEN f.vrf=1 THEN 1 ELSE 0 END) = 0\n)"
+      },
+      "observation": "Query result (7/15 queries used, 8 remaining):\n\nCOUNT(*)\n--------\n83      "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT COUNT(*) FROM fdbk_g1 WHERE ref_id IS NULL OR ref_id NOT IN (SELECT ref_id FROM items_g1)"
+      },
+      "observation": "Query result (8/15 queries used, 7 remaining):\n\nCOUNT(*)\n--------\n0       "
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "83"
+      },
+      "observation": "Question 26: CORRECT.\nYour answer: 83\nExploratory queries used: 8"
+    }
+  ],
+  "feedback": "Question 26: CORRECT.\nYour answer: 83\nExploratory queries used: 8"
+}

@@ -1,0 +1,65 @@
+{
+  "namespace": "hermes_memory_ready/r1/database_exploration",
+  "index": 38,
+  "instance_id": "102",
+  "prompt": "Question 39/40\n\nAmong electronics, look at the broadest category label on each product (the taxonomy level just below the department). Which category name has the most products priced above $200? If there is a tie, pick the name that comes first alphabetically.\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "\"Computers & Accessories\" leads by a wide margin under both price columns (282 vs 107 for the runner-up) — no tie, so the tiebreak doesn't apply.",
+    "Correct in 5 queries. Saving the verified pattern to the skill:",
+    "",
+    "Question 39 answered correctly: **Computers & Accessories** — the cat_lvl=1 (just below department) taxonomy category under Electronics with the most products priced above $200 (282 via prc>20000; prc_usd variant gives the same winner by a wide margin, so no tiebreak was needed). Used 5 of 15 exploratory queries. The verified pattern is saved to the skill's question-patterns reference."
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT name FROM sqlite_master WHERE type='table'"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\nname                 \n---------------------\nitems_g1             \nfdbk_g1              \nsqlite_sequence      \ntaxn_g1              \nattrs_g1             \nitems_g2             \nfdbk_g2              \ntaxn_g2              \nitems_g3             \nfdbk_g3              \nattrs_g3_legacy      \nfdbk_stats_g1        \nproduct_attributes_g3"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT sql FROM sqlite_master WHERE name IN ('items_g2','taxn_g2')"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\nsql                                                                                                                                                                                                                \n-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\nCREATE TABLE items_g2 (     ref_id TEXT PRIMARY KEY,     ttl TEXT,     avg_rtg REAL,     prc INTEGER,     prc_usd REAL,     str_nm TEXT,     main_cat TEXT,     feat_lst TEXT,     img_ct INTEGER , prc_v2 INTEGER)\nCREATE TABLE taxn_g2 (     ref_id TEXT,     cat_lvl INTEGER,     cat_nm TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g2(ref_id) )                                                                               "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT cat_lvl, COUNT(DISTINCT cat_nm) AS names, COUNT(*) AS rows FROM taxn_g2 GROUP BY cat_lvl"
+      },
+      "observation": "Query result (3/15 queries used, 12 remaining):\n\ncat_lvl | names | rows \n--------+-------+------\n0       | 3     | 18421\n1       | 46    | 18421\n2       | 114   | 17920\n3       | 243   | 15495\n4       | 253   | 9059 \n5       | 80    | 1826 \n6       | 5     | 107  "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT t.cat_nm, COUNT(*) AS cnt\nFROM taxn_g2 t\nJOIN items_g2 i ON i.ref_id = t.ref_id\nWHERE t.cat_lvl = 1\n  AND t.ref_id IN (SELECT ref_id FROM taxn_g2 WHERE cat_lvl = 0 AND cat_nm = 'Electronics')\n  AND i.prc > 20000\nGROUP BY t.cat_nm\nORDER BY cnt DESC, t.cat_nm ASC"
+      },
+      "observation": "Query result (4/15 queries used, 11 remaining):\n\ncat_nm                            | cnt\n----------------------------------+----\nComputers & Accessories           | 282\nCamera & Photo                    | 107\nCar & Vehicle Electronics         | 63 \nTelevision & Video                | 26 \nHome Audio                        | 23 \nPortable Audio & Video            | 18 \nVideo Projectors                  | 12 \nSecurity & Surveillance           | 11 \nHeadphones, Earbuds & Accessories | 9  \nGPS, Finders & Accessories        | 5  \nAccessories & Supplies            | 4  \nWearable Technology               | 3  \nPower Accessories                 | 2  \nElectronics & Wireless Outlet     | 1  \nElectronics Warranties            | 1  \nKodak                             | 1  "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT t.cat_nm,\n  SUM(CASE WHEN i.prc > 20000 THEN 1 ELSE 0 END) AS cnt_prc,\n  SUM(CASE WHEN i.prc_usd > 200 THEN 1 ELSE 0 END) AS cnt_usd\nFROM taxn_g2 t\nJOIN items_g2 i ON i.ref_id = t.ref_id\nWHERE t.cat_lvl = 1\n  AND t.ref_id IN (SELECT ref_id FROM taxn_g2 WHERE cat_lvl = 0 AND cat_nm = 'Electronics')\nGROUP BY t.cat_nm\nHAVING cnt_usd > 0 OR cnt_prc > 0\nORDER BY cnt_prc DESC, cnt_usd DESC, t.cat_nm ASC"
+      },
+      "observation": "Query result (5/15 queries used, 10 remaining):\n\ncat_nm                            | cnt_prc | cnt_usd\n----------------------------------+---------+--------\nComputers & Accessories           | 282     | 158    \nCamera & Photo                    | 107     | 67     \nCar & Vehicle Electronics         | 63      | 51     \nTelevision & Video                | 26      | 13     \nHome Audio                        | 23      | 16     \nPortable Audio & Video            | 18      | 17     \nVideo Projectors                  | 12      | 4      \nSecurity & Surveillance           | 11      | 7      \nHeadphones, Earbuds & Accessories | 9       | 8      \nGPS, Finders & Accessories        | 5       | 4      \nAccessories & Supplies            | 4       | 4      \nWearable Technology               | 3       | 3      \nPower Accessories                 | 2       | 2      \nElectronics Warranties            | 1       | 1      \nKodak                             | 1       | 1      \nElectronics & Wireless Outlet     | 1       | 0      "
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "Computers & Accessories"
+      },
+      "observation": "Question 39: CORRECT.\nYour answer: Computers & Accessories\nExploratory queries used: 5"
+    }
+  ],
+  "feedback": "Question 39: CORRECT.\nYour answer: Computers & Accessories\nExploratory queries used: 5"
+}

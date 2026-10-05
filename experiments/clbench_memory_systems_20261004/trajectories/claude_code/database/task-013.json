@@ -1,0 +1,51 @@
+{
+  "namespace": "claude_memory_ready/r1/database_exploration",
+  "index": 13,
+  "instance_id": "20",
+  "prompt": "Question 14/40\n\nAcross both product categories that store attribute data, how many total products are listed as discontinued by the manufacturer and have a catalog average star rating strictly below 3.0?\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "Two attrs tables exist: `attrs_g1` and `attrs_g3` (g2 has none), so the two categories storing attribute data are g1 and g3. Now let me find how \"discontinued\" is recorded.",
+    "Case variants exist (`By` vs `by`). Let me check the values and distinct item counts.",
+    "Discontinued items: g1 = 144, g3 = 92 (yes/true). Now count those with catalog `avg_rtg < 3.0` in both item tables.",
+    "**Answer: 21**\n\nReasoning: Only `attrs_g1` (office) and `attrs_g3` (musical instruments) store attribute data — electronics (g2) has no attrs table. Discontinued-by-manufacturer items (case-insensitive match on the attr key, values `yes`/`true`) number 144 in g1 and 92 in g3. Of those, products with catalog `avg_rtg` strictly below 3.0: 17 in g1 + 4 in g3 = **21**.",
+    "Correct — **21**, using 4 of 15 exploratory queries.\n\n- Schema scan: found `attrs_g1`/`attrs_g3` (the two categories with attribute data) and `items_*.avg_rtg` as the catalog rating column.\n- Located the discontinued flag as the attrs key `Is Discontinued By Manufacturer` (plus a case variant), values yes/true → 144 (g1), 92 (g3).\n- Joined to items and filtered `avg_rtg < 3.0` → 17 + 4 = **21**."
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT name, sql FROM sqlite_master WHERE type='table' ORDER BY name"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\nname            | sql                                                                                                                                                                                                                                                                     \n----------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\nattrs_g1        | CREATE TABLE attrs_g1 (     ref_id TEXT,     attr_key TEXT,     attr_val TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g1(ref_id) )                                                                                                                                   \nattrs_g3        | CREATE TABLE attrs_g3 (     ref_id TEXT,     attr_key TEXT,     attr_val TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g3(ref_id) )                                                                                                                                   \nfdbk_g1         | CREATE TABLE fdbk_g1 (     id INTEGER PRIMARY KEY AUTOINCREMENT,     item_id TEXT,     ref_id TEXT,     uid TEXT,     rtg REAL,     ttl TEXT,     body TEXT,     ts INTEGER,     hlp_ct INTEGER,     vrf INTEGER,     FOREIGN KEY (ref_id) REFERENCES items_g1(ref_id) )\nfdbk_g2         | CREATE TABLE fdbk_g2 (     id INTEGER PRIMARY KEY AUTOINCREMENT,     item_id TEXT,     ref_id TEXT,     uid TEXT,     rtg REAL,     ttl TEXT,     body TEXT,     ts INTEGER,     hlp_ct INTEGER,     vrf TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g2(ref_id) )   \nfdbk_g3         | CREATE TABLE fdbk_g3 (     id INTEGER PRIMARY KEY AUTOINCREMENT,     ref_id TEXT,     uid TEXT,     rtg REAL,     ttl TEXT,     body TEXT,     ts TEXT,     hlp_ct INTEGER,     vrf INTEGER,     FOREIGN KEY (ref_id) REFERENCES items_g3(ref_id) )                     \nfdbk_stats_g1   | CREATE TABLE fdbk_stats_g1 (     ref_id TEXT PRIMARY KEY,     avg_rtg REAL,     review_ct INTEGER,     pct_5star REAL,     avg_hlp REAL,     FOREIGN KEY (ref_id) REFERENCES items_g1(ref_id) )                                                                         \nitems_g1        | CREATE TABLE items_g1 (     ref_id TEXT PRIMARY KEY,     ttl TEXT,     avg_rtg REAL,     avg_rtg_30d REAL,     rtg_ct INTEGER,     prc REAL,     str_nm TEXT,     main_cat TEXT,     desc_txt TEXT,     feat_lst TEXT )                                                 \nitems_g2        | CREATE TABLE items_g2 (     ref_id TEXT PRIMARY KEY,     ttl TEXT,     avg_rtg REAL,     prc INTEGER,     prc_usd REAL,     str_nm TEXT,     main_cat TEXT,     feat_lst TEXT,     img_ct INTEGER )                                                                     \nitems_g3        | CREATE TABLE items_g3 (     ref_id TEXT PRIMARY KEY,     ttl TEXT,     avg_rtg REAL,     rtg_ct INTEGER,     prc REAL,     str_nm TEXT,     main_cat TEXT,     desc_txt TEXT )                                                                                          \nsqlite_sequence | CREATE TABLE sqlite_sequence(name,seq)                                                                                                                                                                                                                                  \ntaxn_g1         | CREATE TABLE taxn_g1 (     ref_id TEXT,     cat_lvl INTEGER,     cat_nm TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g1(ref_id) )                                                                                                                                    \ntaxn_g2         | CREATE TABLE taxn_g2 (     ref_id TEXT,     cat_lvl INTEGER,     cat_nm TEXT,     FOREIGN KEY (ref_id) REFERENCES items_g2(ref_id) )                                                                                                                                    "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT 'g1' AS g, attr_key, COUNT(*) AS n FROM attrs_g1 WHERE attr_key LIKE '%disc%' OR attr_key LIKE '%Disc%' GROUP BY attr_key\nUNION ALL\nSELECT 'g3' AS g, attr_key, COUNT(*) AS n FROM attrs_g3 WHERE attr_key LIKE '%disc%' OR attr_key LIKE '%Disc%' GROUP BY attr_key"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\ng  | attr_key                        | n   \n---+---------------------------------+-----\ng1 | Is Discontinued By Manufacturer | 8121\ng1 | Is Discontinued by Manufacturer | 3   \ng1 | Number of discs                 | 5   \ng3 | Is Discontinued By Manufacturer | 9486\ng3 | Is Discontinued by Manufacturer | 4   \ng3 | Number Of Discs                 | 7   \ng3 | Number of discs                 | 1   "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT 'g1' AS g, LOWER(TRIM(attr_val)) AS val, COUNT(DISTINCT ref_id) AS n_items FROM attrs_g1 WHERE LOWER(TRIM(attr_key)) = 'is discontinued by manufacturer' GROUP BY LOWER(TRIM(attr_val))\nUNION ALL\nSELECT 'g3' AS g, LOWER(TRIM(attr_val)) AS val, COUNT(DISTINCT ref_id) AS n_items FROM attrs_g3 WHERE LOWER(TRIM(attr_key)) = 'is discontinued by manufacturer' GROUP BY LOWER(TRIM(attr_val))"
+      },
+      "observation": "Query result (3/15 queries used, 12 remaining):\n\ng  | val   | n_items\n---+-------+--------\ng1 | false | 6      \ng1 | no    | 7974   \ng1 | yes   | 144    \ng3 | false | 10     \ng3 | no    | 9388   \ng3 | true  | 1      \ng3 | yes   | 91     "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT\n (SELECT COUNT(*) FROM items_g1 WHERE avg_rtg < 3.0 AND ref_id IN (SELECT ref_id FROM attrs_g1 WHERE LOWER(TRIM(attr_key))='is discontinued by manufacturer' AND LOWER(TRIM(attr_val)) IN ('yes','true'))) AS g1_n,\n (SELECT COUNT(*) FROM items_g3 WHERE avg_rtg < 3.0 AND ref_id IN (SELECT ref_id FROM attrs_g3 WHERE LOWER(TRIM(attr_key))='is discontinued by manufacturer' AND LOWER(TRIM(attr_val)) IN ('yes','true'))) AS g3_n,\n (SELECT COUNT(*) FROM items_g1 WHERE avg_rtg < 3.0 AND ref_id IN (SELECT ref_id FROM attrs_g1 WHERE LOWER(TRIM(attr_key))='is discontinued by manufacturer' AND LOWER(TRIM(attr_val)) IN ('yes','true')))\n + (SELECT COUNT(*) FROM items_g3 WHERE avg_rtg < 3.0 AND ref_id IN (SELECT ref_id FROM attrs_g3 WHERE LOWER(TRIM(attr_key))='is discontinued by manufacturer' AND LOWER(TRIM(attr_val)) IN ('yes','true'))) AS total"
+      },
+      "observation": "Query result (4/15 queries used, 11 remaining):\n\ng1_n | g3_n | total\n-----+------+------\n17   | 4    | 21   "
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "21"
+      },
+      "observation": "Question 14: CORRECT.\nYour answer: 21\nExploratory queries used: 4"
+    }
+  ],
+  "feedback": "Question 14: CORRECT.\nYour answer: 21\nExploratory queries used: 4"
+}

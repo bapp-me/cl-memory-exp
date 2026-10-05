@@ -1,0 +1,68 @@
+{
+  "namespace": "pi_none/r1/database_exploration",
+  "index": 28,
+  "instance_id": "108",
+  "prompt": "Question 29/40\n\nWhat percentage of office-product reviews that are missing a text verification label belong to products that are no longer offered (archived from sale)? Round to 1 decimal place.\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "**Answer: 6.1%**\n\n- Office products = `items_g1` (13,933 of 20,000 items are office category), which has a `status` column (`active`/`archived`) and `fdbk_g1` with `verified_status`.\n- Reviews missing a text verification label (`verified_status IS NULL`): 113,242; of those, 6,912 belong to archived products → 6.1%."
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT name FROM sqlite_master WHERE type='table'"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\nname                 \n---------------------\nitems_g1             \nfdbk_g1              \nsqlite_sequence      \ntaxn_g1              \nattrs_g1             \nitems_g2             \nfdbk_g2              \ntaxn_g2              \nitems_g3             \nfdbk_g3              \nattrs_g3_legacy      \nfdbk_stats_g1        \nproduct_attributes_g3"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT 'g1' g, name FROM pragma_table_info('items_g1')\nUNION ALL SELECT 'g2', name FROM pragma_table_info('items_g2')\nUNION ALL SELECT 'g3', name FROM pragma_table_info('items_g3')\nUNION ALL SELECT 'fdbk1', name FROM pragma_table_info('fdbk_g1')\nUNION ALL SELECT 'fdbk2', name FROM pragma_table_info('fdbk_g2')\nUNION ALL SELECT 'fdbk3', name FROM pragma_table_info('fdbk_g3')"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\ng     | name           \n------+----------------\ng1    | ref_id         \ng1    | ttl            \ng1    | avg_rtg        \ng1    | avg_rtg_30d    \ng1    | rtg_ct         \ng1    | prc            \ng1    | str_nm         \ng1    | main_cat       \ng1    | desc_txt       \ng1    | feat_lst       \ng1    | status         \ng2    | ref_id         \ng2    | ttl            \ng2    | avg_rtg        \ng2    | prc            \ng2    | prc_usd        \ng2    | str_nm         \ng2    | main_cat       \ng2    | feat_lst       \ng2    | img_ct         \ng2    | prc_v2         \ng3    | ref_id         \ng3    | ttl            \ng3    | avg_rtg        \ng3    | rtg_ct         \ng3    | prc            \ng3    | str_nm         \ng3    | main_cat       \ng3    | desc_txt       \nfdbk1 | id             \nfdbk1 | item_id        \nfdbk1 | ref_id         \nfdbk1 | uid            \nfdbk1 | rtg            \nfdbk1 | ttl            \nfdbk1 | body           \nfdbk1 | ts             \nfdbk1 | hlp_ct         \nfdbk1 | vrf            \nfdbk1 | verified_status\nfdbk2 | id             \nfdbk2 | item_id        \nfdbk2 | ref_id         \nfdbk2 | uid            \nfdbk2 | rtg            \nfdbk2 | ttl            \nfdbk2 | body           \nfdbk2 | ts             \nfdbk2 | hlp_ct         \nfdbk2 | vrf            \n... (showing first 50 rows)"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT 'g1' g, main_cat, COUNT(*) c FROM items_g1 GROUP BY main_cat\nUNION ALL SELECT 'g2', main_cat, COUNT(*) FROM items_g2 GROUP BY main_cat\nUNION ALL SELECT 'g3', main_cat, COUNT(*) FROM items_g3 GROUP BY main_cat\nLIMIT 20"
+      },
+      "observation": "Query result (3/15 queries used, 12 remaining):\n\ng  | main_cat                  | c   \n---+---------------------------+-----\ng1 | NULL                      | 741 \ng1 | AMAZON FASHION            | 224 \ng1 | All Beauty                | 25  \ng1 | All Electronics           | 1308\ng1 | Amazon Fire TV            | 1   \ng1 | Amazon Home               | 1355\ng1 | Appliances                | 1   \ng1 | Arts, Crafts & Sewing     | 174 \ng1 | Automotive                | 20  \ng1 | Baby                      | 15  \ng1 | Books                     | 248 \ng1 | Buy a Kindle              | 4   \ng1 | Camera & Photo            | 21  \ng1 | Car Electronics           | 1   \ng1 | Cell Phones & Accessories | 57  \ng1 | Collectible Coins         | 4   \ng1 | Computers                 | 340 \ng1 | Digital Music             | 5   \ng1 | Grocery                   | 6   \ng1 | Handmade                  | 4   "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT DISTINCT status FROM items_g1 LIMIT 20"
+      },
+      "observation": "Query result (4/15 queries used, 11 remaining):\n\nstatus  \n--------\nactive  \narchived"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT 'g1' g, COUNT(*) c, SUM(main_cat LIKE '%ffice%') off FROM items_g1\nUNION ALL SELECT 'g2', COUNT(*), SUM(main_cat LIKE '%ffice%') FROM items_g2\nUNION ALL SELECT 'g3', COUNT(*), SUM(main_cat LIKE '%ffice%') FROM items_g3"
+      },
+      "observation": "Query result (5/15 queries used, 10 remaining):\n\ng  | c     | off  \n---+-------+------\ng1 | 20000 | 13933\ng2 | 20000 | 284  \ng3 | 20000 | 47   "
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT vrf, verified_status, COUNT(*) c FROM fdbk_g1 GROUP BY vrf, verified_status LIMIT 30"
+      },
+      "observation": "Query result (6/15 queries used, 9 remaining):\n\nvrf | verified_status | c     \n----+-----------------+-------\n0   | NULL            | 7764  \n0   | unverified      | 17963 \n1   | NULL            | 105478\n1   | verified        | 246267"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT COUNT(*) total_missing,\n SUM(CASE WHEN i.status='archived' THEN 1 ELSE 0 END) archived,\n ROUND(100.0*SUM(CASE WHEN i.status='archived' THEN 1 ELSE 0 END)/COUNT(*),1) pct\nFROM fdbk_g1 f JOIN items_g1 i ON f.ref_id = i.ref_id\nWHERE f.verified_status IS NULL"
+      },
+      "observation": "Query result (7/15 queries used, 8 remaining):\n\ntotal_missing | archived | pct\n--------------+----------+----\n113242        | 6912     | 6.1"
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "6.1"
+      },
+      "observation": "Question 29: CORRECT.\nYour answer: 6.1\nExploratory queries used: 7"
+    }
+  ],
+  "feedback": "Question 29: CORRECT.\nYour answer: 6.1\nExploratory queries used: 7"
+}

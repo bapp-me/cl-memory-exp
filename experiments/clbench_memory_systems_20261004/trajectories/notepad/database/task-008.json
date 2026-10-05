@@ -1,0 +1,40 @@
+{
+  "namespace": "pi_notepad/r1/database_exploration",
+  "index": 8,
+  "instance_id": "16",
+  "prompt": "Question 9/40\n\nIn which year-month were the most musical instrument reviews posted? Report as YYYY-MM (e.g. '2020-01').\n\nYou have access to a SQLite database that contains three separate product datasets covering different categories: office products, electronics, and musical instruments. Each dataset has its own set of tables. You will need to explore the schema to determine which tables belong to which product category.\n\nYou may run up to 15 exploratory SQL queries to examine the schema and data before submitting your final answer. Note: query results are capped at 50 rows — if a query would return more, only the first 50 rows are shown. Use aggregates, LIMIT, or filters when you need to inspect larger tables.\n\nActions:\n  QUERY  — run a SQL statement (SELECT, .tables, PRAGMA, etc.)\n  ANSWER — submit your final answer as the exact value (e.g. '50000', '3.14', 'Acme Corp'). Do NOT describe how to get the answer; provide the actual result.\n\nQueries used so far this question: 0/15",
+  "assistant_text": [
+    "Correct. **2020-01** with 4,715 musical instrument reviews (fdbk_g3, ts stored as 'YYYY-MM-DD' strings)."
+  ],
+  "tools": [
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT strftime('%Y-%m', ts, 'unixepoch') AS ym, COUNT(*) c FROM fdbk_g3 GROUP BY ym ORDER BY c DESC LIMIT 3"
+      },
+      "observation": "Query result (1/15 queries used, 14 remaining):\n\nym   | c     \n-----+-------\nNULL | 286626"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT ts FROM fdbk_g3 LIMIT 5"
+      },
+      "observation": "Query result (2/15 queries used, 13 remaining):\n\nts        \n----------\nNULL      \nNULL      \nNULL      \n2001-12-04\n2002-02-18"
+    },
+    {
+      "action": {
+        "action": "QUERY",
+        "content": "SELECT substr(ts,1,7) ym, COUNT(*) c FROM fdbk_g3 WHERE ts IS NOT NULL GROUP BY ym ORDER BY c DESC LIMIT 3"
+      },
+      "observation": "Query result (3/15 queries used, 12 remaining):\n\nym      | c   \n--------+-----\n2020-01 | 4715\n2021-03 | 4573\n2021-01 | 4566"
+    },
+    {
+      "action": {
+        "action": "ANSWER",
+        "content": "2020-01"
+      },
+      "observation": "Question 9: CORRECT.\nYour answer: 2020-01\nExploratory queries used: 3"
+    }
+  ],
+  "feedback": "Question 9: CORRECT.\nYour answer: 2020-01\nExploratory queries used: 3"
+}
