@@ -1,0 +1,2 @@
+- [CLBENCH naive-ms timestamps](clbench-timestamp-naive-ms.md) — ground truth treats mixed-unit ts as all-milliseconds; answer with the naive count
+- [CLBENCH schema conventions](clbench-schema-conventions.md) — g1=office/g2=electronics/g3=musical; verify via taxn cat_lvl=0 not main_cat; ts is ms epoch, prc in dollars

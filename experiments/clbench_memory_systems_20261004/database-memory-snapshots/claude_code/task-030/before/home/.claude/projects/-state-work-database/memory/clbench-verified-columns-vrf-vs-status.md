@@ -1,0 +1,14 @@
+---
+name: clbench-verified-columns-vrf-vs-status
+description: "fdbk_g1 dual verified columns — verified_status = vrf NULL-masked; PRESENCE predicates ('verified') bind vrf, MISSING-label questions bind verified_status IS NULL"
+metadata:
+  node_type: memory
+  type: project
+  originSessionId: 7551b2f6-4ade-4825-8f19-b8b89ab35e56
+  modified: 2026-10-04T19:42:02.435Z
+---
+
+CLBENCH instance (Q26, office/g1): fdbk_g1 has BOTH `vrf INTEGER` and `verified_status TEXT` (g2/g3 have only vrf). Cross-tab: verified='verified'⇒vrf=1 (246267), 'unverified'⇒vrf=0 (17963), plus NULL-status rows split vrf=1:105478 / vrf=0:7764 — NO conflicts; verified_status = vrf with ~30% rows NULL-masked. Chose `vrf` for "zero verified purchases among all their reviews" (complete boolean, canonical name across datasets; vstatus would make the GT NULL-semantics-dependent: SUM=0→85, NOT EXISTS→376, all-explicitly-unverified→43). Also: my single-scan agreement probe `SUM((vrf=1)=(verified_status='verified'))` returned garbage (17963 = unverified count, algebraically impossible) — don't trust that probe pattern, cross-tab instead. Related: [[clbench-list-price-column-ambiguity]], [[clbench-schema-conventions]].
+
+**Why:** dual-column ambiguity with NULLs. The binding column FLIPS with the question's verb: for a verification *predicate* ("verified purchase", is this review verified) the complete boolean `vrf` binds — the TEXT column's NULLs would silently drop 30% of rows; for a *missing/absent-label* question ("reviews missing a text verification label") only `verified_status IS NULL` can be non-degenerate, because `vrf` is NEVER NULL (0 rows → 0% denominator, the degenerate-answer red flag). Same cross-tab numbers appeared verbatim in a later instance (2026-10-04 Q29: vstat verified 246267 / unverified 17963 / NULL 113242; vrf=1 351745 / vrf=0 25727), so the NULL-mask structure is stable across instances. Q29 used: verified_status IS NULL joined to items_g1 status='archived' over the whole fdbk_g1 group → 6912/113242 = 6.1 CORRECT.
+**How to apply:** first pack a NULL-profile probe (GROUP BY vrf + GROUP BY verified_status + null-ness mismatch cross-tab) into an early UNION ALL query; then if the question says verified/unverified purchases use vrf (g1: 1=verified, 0=unverified); if it says missing/no/unlabeled verification use the column that actually has NULLs (verified_status). Degenerate 0-count readings are a red flag — switch columns, see [[clbench-spanning-categories]]. If 83-style answers are rejected, fall back to vstatus readings (85/376/43). Beware correlated NOT EXISTS on fdbk tables — engine times out at 10s; use GROUP BY aggregates.

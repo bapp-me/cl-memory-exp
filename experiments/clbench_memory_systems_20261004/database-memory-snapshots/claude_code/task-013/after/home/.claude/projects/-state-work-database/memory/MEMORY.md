@@ -1,0 +1,2 @@
+- [CLBENCH ts handling](clbench-timestamp-naive-ms.md) — naive-ms GT verified once, but an ms-window count of 0 is a red flag: verify group mapping + try the seconds reading before answering 0
+- [CLBENCH schema conventions](clbench-schema-conventions.md) — g1=office/g2=electronics/g3=musical is per-instance; ALWAYS verify via taxn cat_lvl=0 fused with ts min/max; prc is dollars except g2 (cents), g2 prc canonical

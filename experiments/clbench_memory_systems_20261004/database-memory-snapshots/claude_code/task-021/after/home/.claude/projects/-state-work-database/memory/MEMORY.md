@@ -1,0 +1,5 @@
+- [CLBENCH ts handling](clbench-timestamp-naive-ms.md) — naive-ms GT verified once, but an ms-window count of 0 is a red flag: verify group mapping + try the seconds reading before answering 0
+- [CLBENCH schema conventions](clbench-schema-conventions.md) — g1=office/g2=electronics/g3=musical is per-instance; ALWAYS verify via taxn cat_lvl=0 fused with ts min/max; prc is dollars except g2 (cents), g2 prc canonical
+- [CLBENCH spanning-categories](clbench-spanning-categories.md) — "reviewers spanning N top-level categories" is scored on items.main_cat, NOT taxn cat_lvl=0 (lvl0 gave 0.00 → WRONG); degenerate answers are a red flag, recompute with the other reading
+- [CLBENCH dataset-scoped questions](clbench-dataset-scoped-questions.md) — questions naming a dataset's category ("office products...") count the WHOLE table group, no main_cat filter (5254 correct vs 3783 main_cat-filtered); verify group via taxn lvl0 + dominant main_cat
+- [CLBENCH pct denominator w/ NULL join col](clbench-pct-denominator-join-null.md) — "% of A are B(join col)" GT drops NULL-col rows from denominator too (inner-join reading, 16.3) — literal all-of-A denominator (11.5) was WRONG

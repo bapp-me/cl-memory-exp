@@ -8,6 +8,8 @@
 
 用户另行授权提交并推送的[纯业务轨迹](experiments/clbench_memory_systems_20261004/trajectories/README.md)包含 353 份已评分题轨迹及 1 份中止题动作记录，共 7,864,387 字节；各文件来源和哈希见目录内索引。
 
+用户另行授权上传的 [Database 记忆快照](experiments/clbench_memory_systems_20261004/database-memory-snapshots/README.md)包含 Notepad、Codex、Claude Code、Hermes 各 40 题的题前与题后状态，共 320 份；记忆文件内容合计 15,709,620 字节，包含 Hermes 管理文件，保留原始内容及来源哈希。
+
 本轮取消完整历史 ICL；保留 Pi 无记忆、Pi Notepad、Pi Jaccard、Codex、Claude Code、Hermes 六组候选。统一 256k 上下文，每个 benchmark instance 新会话，同一流保留许可的长期状态。原生异步记忆采用任务边界加速及完成屏障，完成后才允许下一任务。
 
 这是新的系统评测分支，不续跑已关闭的 agentic-search 优化，也不重新开启已在 Q1 停止的操作前提案例。旧研究计划和历史报告不删除；涉及本轮的下一步、配置、放行规则，以本目录为准。
