@@ -163,6 +163,7 @@ def main():
             started=time.monotonic()
             if recovering: submitted_at=started
             job=broker({'op':'launch','container_id':container,'task':task})['job_id']; poll_at=0
+            save(out/('recovery-job.json' if recovering else 'native-job.json'),{'job_id':job,'container_id':container})
             while True:
                 server.handle_request()
                 if failed: raise RuntimeError('Controller failure; native stream stopped')
@@ -210,6 +211,7 @@ def main():
                 memory_version=digest(memory_after),durable=True)
             save(out/'barrier.json',receipt); memory_before=memory_after
             results.append(result); save(directory/'results.json',results)
+            route['disabled']=True;save(ROOT/'.local/native-routes'/f'{route_id}.json',route)
             print(json.dumps({'run_id':args.run_id,'completed':index+1,'correct':correct,'actions':count}),flush=True)
         save(directory/'stream-status.json',{'status':'completed' if limit==total else 'prefix_completed','completed':len(results),'mode':args.mode})
     except Exception as exc:

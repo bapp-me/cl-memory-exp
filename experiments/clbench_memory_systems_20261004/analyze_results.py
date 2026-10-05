@@ -95,7 +95,9 @@ def main():
                 explicit = len(json.dumps(memory['history'], ensure_ascii=False, separators=(',', ':')).encode('utf-8'))
             row = {k: result[k] for k in ['index', 'instance_id', 'session_id', 'project_key', 'correct', 'actions', 'reward']}
             row.update({'run_id': stream['run_id'], 'method': stream['method'], 'environment': stream['environment'],
-                        'source_run_id':source_run,'actual_output_limit':cfg.get('output_limit',16384),
+                        'source_run_id':source_run,'configured_initial_output_limit':cfg.get('output_limit',16384),
+                        'actual_output_limits':sorted({read(out/'requests'/f"{c['attempt_id']}.request.json").get('max_tokens',read(out/'requests'/f"{c['attempt_id']}.request.json").get('max_output_tokens')) for c in calls}),
+                        'recovered_maintenance':result.get('recovered_maintenance',False),
                         'seconds': result.get('seconds') if not result.get('seconds_basis') else None,
                         'maintenance_seconds': result.get('maintenance_seconds'), 'calls': calls,
                         'explicit_memory_bytes_before': explicit,
