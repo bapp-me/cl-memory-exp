@@ -1,0 +1,117 @@
+{
+  "as_of": "2026-10-05T06:54:35.580659+00:00",
+  "kind": "read_only_schedule_and_cost_attribution",
+  "model_calls_added_by_diagnosis": 0,
+  "writer_or_schedule_changed_by_diagnosis": false,
+  "source_version": "0.160.0",
+  "source_commit": "a956835d020762cb2b570053af06f643a11c0ecc",
+  "source_sha256": {
+    "codex-rs/config/src/types.rs": "93c167b5d3aec0eea22dca8619fe71c18e543dffde28a2619bf4ab06938170a7",
+    "codex-rs/state/src/runtime/memories.rs": "cf7d3b4e6f68ffe109559449de928e29258a0d5baef3c913fe8e21d8c77e2919",
+    "codex-rs/memories/write/src/start.rs": "d3f06ce0549e4756c732fbe4072eedd10c450699a1c37328f197f8b03f77393b",
+    "codex-rs/memories/write/src/phase1.rs": "fa6dcd4679c8d94df12f07361484a4ba8096e5c5cd0680fe85125a713250f76b",
+    "codex-rs/memories/write/src/phase2.rs": "6b3bfe800bd38c17db70fae989effa05761d0497052c781834691523bb1398f2",
+    "codex-rs/memories/write/src/lib.rs": "8b0be6a7e0ce0586a9e548d8d9e0d38ef5091d86b224cef5879b55a88ff55152",
+    "codex-rs/memories/write/templates/memories/consolidation.md": "1291069ff01aa6eb029cb09643fdc79dc9f6dbac45d822ec197a6959c7b59e55",
+    "codex-rs/model-provider/src/provider.rs": "057353ca1f1fbaf034c6694cd3145211882ac125a19377a60ba6ff9645d9e60b"
+  },
+  "patch_sha256": "00dc6ba5a2a65109884db944d88e49dd1684cb1662eca732f0e60b45c36fb90f",
+  "upstream_vs_experiment": {
+    "minimum_source_idle_hours": [
+      6,
+      0
+    ],
+    "successful_global_consolidation_cooldown_hours": [
+      6,
+      0
+    ],
+    "source_selection": [
+      "eligible interactive sessions",
+      "exact completed benchmark exec thread"
+    ],
+    "scheduling": [
+      "asynchronous startup pipeline",
+      "after each benchmark task, await durable completion before next task"
+    ],
+    "writer": [
+      "native extraction and consolidation",
+      "same native algorithms and templates"
+    ],
+    "model": [
+      "provider preferred extraction/consolidation models",
+      "glm-5.3-flash for both"
+    ],
+    "consolidation_reasoning": [
+      "medium",
+      "medium"
+    ]
+  },
+  "cause_assessment": "Increased scheduling frequency is verified. Per-invocation inefficiency relative to default OpenAI models is not established without a matched control. Native global writer still scans/edits incrementally; not a fresh custom full-history summarizer.",
+  "recursion_guards": [
+    "phase2 ephemeral=true, generate_memories=false, use_memories=false, Collab/MemoryTool disabled",
+    "boundary phase1 SQL restricts source to exact completed business thread"
+  ],
+  "window_evidence": "records/token-hotspots-20261005-1442.json",
+  "consolidation_window": [
+    {
+      "run_id": "candidate-code-codex-64k-v1",
+      "requests": 58,
+      "distinct_consolidation_threads": 3,
+      "reasoning_parameters": {
+        "{'effort': 'medium'}": 58
+      },
+      "total_tokens": 2363369,
+      "input_tokens": 2330464,
+      "cached_input_tokens": 2182912,
+      "output_tokens": 32905,
+      "tool_names": {
+        "exec_command": 45,
+        "apply_patch": 11
+      },
+      "median_request_input_tokens": 40656.5
+    },
+    {
+      "run_id": "formal-db-codex-r1",
+      "requests": 61,
+      "distinct_consolidation_threads": 5,
+      "reasoning_parameters": {
+        "{'effort': 'medium'}": 61
+      },
+      "total_tokens": 1986142,
+      "input_tokens": 1951020,
+      "cached_input_tokens": 1730368,
+      "output_tokens": 35122,
+      "tool_names": {
+        "exec_command": 45,
+        "apply_patch": 11
+      },
+      "median_request_input_tokens": 32962.0
+    }
+  ],
+  "consolidation_share_of_all_native_tokens": 0.42737565286513896,
+  "example": {
+    "run_id": "candidate-code-codex-64k-v1",
+    "index_zero_based": 6,
+    "role": "native_memory_consolidation",
+    "requests": 24,
+    "input_tokens": 1049629,
+    "output_tokens": 16617,
+    "total_tokens": 1066246
+  },
+  "limits": [
+    "This is the experiment pinned version, not a claim about every Codex release.",
+    "No matched default-cadence or default-model paid control was launched.",
+    "Counts include cached input, not actual billed cost.",
+    "The chosen window includes partial jobs; failed requests with no usage remain unknown.",
+    "No causal fraction for provider speed, GLM behavior or retries can be estimated from stage totals alone."
+  ],
+  "official_config_reference": "https://learn.chatgpt.com/docs/config-file/config-reference",
+  "batching": {
+    "phase1": "Each selected conversation is extracted independently; jobs can run in parallel.",
+    "phase2": "One global consolidation agent consumes the selected extracted memories plus existing memory; it can make many model/tool calls.",
+    "pinned_default_max_new_rollouts_per_startup": 2,
+    "current_online_documented_default": 16,
+    "eligibility_is_not_timer": true,
+    "experiment_exact_source_per_boundary": 1
+  }
+}

@@ -67,9 +67,15 @@ def main():
             value.update(status='stopped_provider_resource',as_of=datetime.now(timezone.utc).isoformat())
             save(state_path,value);print(json.dumps({'stopped':'provider_resource_exhausted'}),flush=True);break
         attention=[];progress=[]
+        pause_path=ROOT/'records/native-user-pause.json'
+        pause=read(pause_path) if pause_path.exists() else {}
+        paused=set(pause.get('run_ids',[])) if pause.get('status')=='paused_by_user' else set()
         for run in RUNS:
             d=ROOT/'private-runs'/run;status=read(d/'stream-status.json')
             results=read(d/'results.json') if (d/'results.json').exists() else []
+            if run in paused:
+                progress.append({'run_id':run,'completed':len(results),'status':'paused_by_user'})
+                continue
             progress.append({'run_id':run,'completed':len(results),'status':status['status']})
             if status['status']!='paused_error' or run in children and children[run].poll() is None:continue
             signature=(run,(d/'stream-status.json').stat().st_mtime_ns)
@@ -98,7 +104,7 @@ def main():
         save(state_path,value)
         compact=json.dumps({'progress':progress,'attention':list(unresolved.values())},sort_keys=True)
         if compact!=last:print(compact,flush=True);last=compact
-        if all(p['status']=='completed' for p in progress):break
+        if all(p['status'] in {'completed','paused_by_user'} for p in progress):break
         time.sleep(5)
 
 

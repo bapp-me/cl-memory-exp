@@ -24,6 +24,10 @@ def main():
     p.add_argument('--retry-transport-maintenance',action='store_true')
     p.add_argument('--resume-business',action='store_true')
     args = p.parse_args(); method = args.framework + '_memory_ready'
+    pause_path=ROOT/'records/native-user-pause.json'
+    pause=read(pause_path) if pause_path.exists() else {}
+    if pause.get('status')=='paused_by_user' and args.run_id in pause.get('run_ids',[]):
+        raise RuntimeError('Experiment stream is explicitly paused by the user')
     if args.framework=='codex':
         import native_client
         native_client.BROKER_KIND='codex'

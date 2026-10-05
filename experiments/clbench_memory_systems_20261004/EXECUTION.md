@@ -134,3 +134,11 @@ Claude Database 已完整完成并通过当前机械审计：**32/40，187 QUERY
 Hermes 正式 Database 第 10 题的原生技能维护已恢复并持久化，原业务提交及查询记录哈希不变，恢复约 111 秒。Codex 验收第 2 题的原生两阶段记忆流水线也已恢复。两处都没有重做业务，没有修改 writer 提示或重复检测策略，也没有延长 600 秒等待。恢复证据见 [native-maintenance-recovery.json](records/native-maintenance-recovery.json)。
 
 Hermes Database 已通过新配置验收并继续正式流；Codex Database 和三个原生 Codebase 组分别验收，各自通过即可继续。Codebase 验收从空记忆开始，两个环境不共享状态。当前仍是原先 R=1 矩阵，旧的已完成结果保留；新配置的模型、窗口、输出和屏障逐真实请求核对，验收记录见 `records/*-64k-acceptance.json`。
+
+## 2026-10-05 14:42–15:00 HKT：用量核对与用户暂停 Codex
+
+用户询问近期 token 消耗来源。按 14:12:24–14:42:24 HKT 内发起的请求归窗、14:48:52 读取已返回 usage：已知总量 10,177,255，其中输入 9,990,817（含缓存输入 8,723,968），输出 186,438；2 个失败请求 usage 未知，不能填零。晚返回请求补齐后比初步实时统计略高。Codex 原生 `memory_consolidation` 标签对应 119 次请求、4,349,511 tokens，占全窗口已知用量 42.74%；阶段一提取不是主要来源。Codex Code 第 7 题的整合包含 24 次请求、1,066,246 tokens，其中输出仅 16,617。证据及可复算脚本见 [用量归因](records/token-hotspots-20261005-1442.json)、`diagnose_token_hotspots.py`。这些是实验 API 用量，不含桌面上本聊天的用量；不等于账户实际扣费。
+
+源码和构建补丁核对确认：固定 Codex 0.160.0 默认源会话最短空闲 6 小时，全局整合成功后冷却 6 小时；实验按方案取消二者，逐题触发并等待记忆完成。补丁另把 exec 来源纳入资格，并限定当前已完成业务 thread，未修改原生 writer 提示/整合算法。原生阶段一逐会话提取，阶段二统一整合选中的提取结果和既有记忆；固定版本每次 startup 默认最多新认领 2 段，当前在线官方文档则写 16，不能混为同一版本。空闲满 6 小时是资格条件，不是定时器到点必跑。各题分别强制整合会提高短时间的维护频率，当前测得开销不能当作默认 Codex 使用成本；同轨迹下换成默认节奏或默认模型后的成本没有对照证据。见 [调度与用量审计](records/codex-memory-scheduling-cost-audit.json)。本次诊断未改变 writer、调度或预算，也没有新增付费对照。
+
+随后用户明确要求暂停所有 Codex 流。已禁用 Codex 请求路由、退出其运行器、保存现场，并让一次性监督器跳过暂停流；其他方法的监督继续。Codex Database 完成 8/40，下一题业务已提交、维护未完成；Codex Codebase 完成 7/19，下一题业务已提交、维护未完成。两处提交和状态快照均保留，确认没有未结束的 provider attempt。除非用户明确恢复，不重新启动 Codex。暂停证据见 [native-user-pause.json](records/native-user-pause.json)。
