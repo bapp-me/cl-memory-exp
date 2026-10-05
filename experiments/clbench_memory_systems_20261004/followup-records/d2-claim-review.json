@@ -1,7 +1,7 @@
 {
   "phase": "D2",
-  "status": "blocked",
-  "native_jobs": 6,
+  "status": "completed",
+  "native_jobs": 8,
   "results": [
     {
       "job_id": "d2-q23-w0-1",
@@ -326,9 +326,115 @@
         "sha256": "15df7bf243a28765f41139202817d3ca827853e4f6a7c27dc8c07cf6b2813a0e"
       },
       "common_source_cutoff": 22,
-      "semantic_review": "pending_source_based_review_not_human_gold",
-      "cost_basis": "unique Responses gateway attempts; native compatibility usage not added again",
-      "monetary_cost": null
+      "semantic_review": {
+        "reviewer": {
+          "identity": "root Codex agent, source-based semantic review",
+          "human_gold": false,
+          "additional_model_judge_calls": 0,
+          "scope": "new or modified claims and retention of registered useful facts; no whole-memory score"
+        },
+        "claims": [
+          {
+            "check": "historical_schema_fidelity",
+            "memory_file": "clbench-schema-conventions.md",
+            "quote": "Q21+ instance only",
+            "status": "supported",
+            "reason": "Correctly places prc_v2 in the Q21+ schema; no new historical absence claim.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-020.json",
+                "sha256": "5c548dc79ef0abb6a00877348d921f85a6b209527cb46b12e1132e52095f101e",
+                "task_index": 20,
+                "tool_offset": 0,
+                "part": "observation",
+                "quote": "prc_v2 INTEGER"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-schema-conventions.md",
+            "after_memory_sha256": "3fc35b095ff11004757c2a7b43eacfaebb59efd1226c082e335e8d22971631df"
+          },
+          {
+            "check": "tested_vs_untested_candidates",
+            "memory_file": "clbench-q23-pct-above-mean-count.md",
+            "quote": "| `prc_v2` (INTEGER, 1.0102×prc) | 9721.66 | 1120 |",
+            "status": "unsupported_fact",
+            "reason": "Neither this v2 mean nor this v2 count was computed in Q23. The only observed 1120 is the g1 count, which cannot support a g2 v2 count. The actual v2 count remains unknown.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-022.json",
+                "sha256": "368bdf21fc1abc0f745c72195db82ea8491cdd366c500cf064e03344568b5202",
+                "task_index": 22,
+                "tool_offset": 2,
+                "part": "observation",
+                "quote": "g1  | 7867  | 47.6404   | 1120"
+              },
+              {
+                "path": "trajectories/claude_code/database/task-022.json",
+                "sha256": "368bdf21fc1abc0f745c72195db82ea8491cdd366c500cf064e03344568b5202",
+                "task_index": 22,
+                "tool_offset": 4,
+                "part": "observation",
+                "quote": "1.0101914290001015"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-q23-pct-above-mean-count.md",
+            "after_memory_sha256": "1cc19b0cce967f4b31b89ee5c768d98b7094ddf5b35f115a58407f41f6a01d6f"
+          },
+          {
+            "check": "feedback_strength_and_scope",
+            "memory_file": "clbench-schema-conventions.md",
+            "quote": "COUNTS are NOT unit-free for g2",
+            "status": "verified_logical_error",
+            "reason": "A uniform positive rescaling leaves x >= 1.15*mean(x) invariant on the same population. Q23 rejection does not imply a conversion-specific count or establish GT pipeline for all questions.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-022.json",
+                "sha256": "368bdf21fc1abc0f745c72195db82ea8491cdd366c500cf064e03344568b5202",
+                "task_index": 22,
+                "tool_offset": 2,
+                "part": "observation",
+                "quote": "g2  | 6570  | 9623.3449 | 1035"
+              },
+              {
+                "path": "trajectories/claude_code/database/task-022.json",
+                "sha256": "368bdf21fc1abc0f745c72195db82ea8491cdd366c500cf064e03344568b5202",
+                "task_index": 22,
+                "tool_offset": 3,
+                "part": "observation",
+                "quote": "11091           | 11049"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-schema-conventions.md",
+            "after_memory_sha256": "3fc35b095ff11004757c2a7b43eacfaebb59efd1226c082e335e8d22971631df"
+          },
+          {
+            "check": "retention_of_supported_useful_facts",
+            "memory_file": "clbench-q23-pct-above-mean-count.md",
+            "quote": "Answer 1035 → **INCORRECT**",
+            "status": "supported_retained",
+            "reason": "Retains the actual rejected submission and useful coverage/boundary facts despite introducing other defects.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-022.json",
+                "sha256": "368bdf21fc1abc0f745c72195db82ea8491cdd366c500cf064e03344568b5202",
+                "task_index": 22,
+                "tool_offset": 5,
+                "part": "observation",
+                "quote": "INCORRECT"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-q23-pct-above-mean-count.md",
+            "after_memory_sha256": "1cc19b0cce967f4b31b89ee5c768d98b7094ddf5b35f115a58407f41f6a01d6f"
+          }
+        ],
+        "bounded_gate_pass": false,
+        "decision_reason": "新增未计算的精确候选数字，并把一次拒绝写成违反统一缩放不变性的通用单位规则。",
+        "whole_memory_score": null,
+        "missing_sources_are_not_automatically_false": true
+      },
+      "cost_basis": "unique native Anthropic gateway attempts; native duplicate usage not added again",
+      "monetary_cost": null,
+      "materialized_memory_changed": true
     },
     {
       "job_id": "d2-q23-w1-1",
@@ -520,9 +626,142 @@
         "sha256": "b5ddbdbf222d0f75d9adcf121d39b0b5f7d636b0ad6eba34439661ff9136b5b8"
       },
       "common_source_cutoff": 22,
-      "semantic_review": "pending_source_based_review_not_human_gold",
-      "cost_basis": "unique Responses gateway attempts; native compatibility usage not added again",
-      "monetary_cost": null
+      "semantic_review": {
+        "reviewer": {
+          "identity": "root Codex agent, source-based semantic review",
+          "human_gold": false,
+          "additional_model_judge_calls": 0,
+          "scope": "new or modified claims and retention of registered useful facts; no whole-memory score"
+        },
+        "claims": [
+          {
+            "check": "historical_schema_fidelity",
+            "memory_file": "clbench-price-column-threshold-count.md",
+            "quote": "5259",
+            "status": "supported",
+            "reason": "Q21 directly observed 5259 rowwise equal values. This number is sourced, not a fabrication.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-020.json",
+                "sha256": "5c548dc79ef0abb6a00877348d921f85a6b209527cb46b12e1132e52095f101e",
+                "task_index": 20,
+                "tool_offset": 2,
+                "part": "action",
+                "quote": "AS v2_eq_prc"
+              },
+              {
+                "path": "trajectories/claude_code/database/task-020.json",
+                "sha256": "5c548dc79ef0abb6a00877348d921f85a6b209527cb46b12e1132e52095f101e",
+                "task_index": 20,
+                "tool_offset": 2,
+                "part": "observation",
+                "quote": "5259"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-price-column-threshold-count.md",
+            "after_memory_sha256": "e02316da5e62723184f71872bead9fa6e057520dd5b81b164b4f7be1b5725668"
+          },
+          {
+            "check": "tested_vs_untested_candidates",
+            "memory_file": "clbench-price-column-threshold-count.md",
+            "quote": "1370",
+            "status": "supported",
+            "reason": "USD count was computed but never submitted; v2 count is explicitly left untested. Full after file preserves this distinction.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-022.json",
+                "sha256": "368bdf21fc1abc0f745c72195db82ea8491cdd366c500cf064e03344568b5202",
+                "task_index": 22,
+                "tool_offset": 3,
+                "part": "observation",
+                "quote": "1035 | 1035 | 1370"
+              },
+              {
+                "path": "trajectories/claude_code/database/task-022.json",
+                "sha256": "368bdf21fc1abc0f745c72195db82ea8491cdd366c500cf064e03344568b5202",
+                "task_index": 22,
+                "tool_offset": 5,
+                "part": "observation",
+                "quote": "1035"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-price-column-threshold-count.md",
+            "after_memory_sha256": "e02316da5e62723184f71872bead9fa6e057520dd5b81b164b4f7be1b5725668"
+          },
+          {
+            "check": "feedback_strength_and_scope",
+            "memory_file": "clbench-price-column-threshold-count.md",
+            "quote": "no reading has been confirmed as the GT",
+            "status": "bounded",
+            "reason": "Does not upgrade a single rejection to a proven mechanism; preserves unresolved interpretation.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-022.json",
+                "sha256": "368bdf21fc1abc0f745c72195db82ea8491cdd366c500cf064e03344568b5202",
+                "task_index": 22,
+                "tool_offset": 5,
+                "part": "observation",
+                "quote": "INCORRECT"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-price-column-threshold-count.md",
+            "after_memory_sha256": "e02316da5e62723184f71872bead9fa6e057520dd5b81b164b4f7be1b5725668"
+          },
+          {
+            "check": "retention_of_supported_useful_facts",
+            "memory_file": "clbench-price-column-threshold-count.md",
+            "quote": "6346",
+            "status": "supported_retained",
+            "reason": "Retains coverage and accepted/rejected historical facts rather than deleting all useful knowledge.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-022.json",
+                "sha256": "368bdf21fc1abc0f745c72195db82ea8491cdd366c500cf064e03344568b5202",
+                "task_index": 22,
+                "tool_offset": 4,
+                "part": "observation",
+                "quote": "6346"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-price-column-threshold-count.md",
+            "after_memory_sha256": "e02316da5e62723184f71872bead9fa6e057520dd5b81b164b4f7be1b5725668"
+          },
+          {
+            "check": "historical_schema_fidelity",
+            "memory_file": "clbench-price-column-threshold-count.md",
+            "quote": "Q7 \"% above category average\" → 17.27",
+            "status": "contradicts_source",
+            "reason": "New note assigns the percentage win to Q7. Same-method Q7 accepted 101.8; the 17.27 percentage win is Q8. Minor provenance error, separate from the correctly recorded Q21 schema.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-006.json",
+                "sha256": "4fba26adeed2956b48ac5f3ec34eb1ad9455adcd963939bc8692764fa6ea40b8",
+                "task_index": 6,
+                "tool_offset": 4,
+                "part": "observation",
+                "quote": "Question 7: CORRECT."
+              },
+              {
+                "path": "trajectories/claude_code/database/task-007.json",
+                "sha256": "d12ceff1f33507b1e7f67459dfd8ed19982e5c94777dd8800860b4c92b30927c",
+                "task_index": 7,
+                "tool_offset": 14,
+                "part": "observation",
+                "quote": "Question 8: CORRECT."
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-price-column-threshold-count.md",
+            "after_memory_sha256": "e02316da5e62723184f71872bead9fa6e057520dd5b81b164b4f7be1b5725668"
+          }
+        ],
+        "bounded_gate_pass": false,
+        "decision_reason": "候选与反馈边界改善；新笔记将 Q8 的 17.27 历史结果误记为 Q7，留下新的来源归属错误。",
+        "whole_memory_score": null,
+        "missing_sources_are_not_automatically_false": true
+      },
+      "cost_basis": "unique native Anthropic gateway attempts; native duplicate usage not added again",
+      "monetary_cost": null,
+      "materialized_memory_changed": true
     },
     {
       "job_id": "d2-q25-w1-1",
@@ -782,9 +1021,115 @@
         "sha256": "4cc18765b5b06371098e6c8b267c42267fa2c8bffd5265e97f50e43542fcd450"
       },
       "common_source_cutoff": 24,
-      "semantic_review": "pending_source_based_review_not_human_gold",
-      "cost_basis": "unique Responses gateway attempts; native compatibility usage not added again",
-      "monetary_cost": null
+      "semantic_review": {
+        "reviewer": {
+          "identity": "root Codex agent, source-based semantic review",
+          "human_gold": false,
+          "additional_model_judge_calls": 0,
+          "scope": "new or modified claims and retention of registered useful facts; no whole-memory score"
+        },
+        "claims": [
+          {
+            "check": "historical_schema_fidelity",
+            "memory_file": "clbench-list-price-column-ambiguity.md",
+            "quote": "this instance's items_g2 DID have `prc_v2`",
+            "status": "corrected_historical_error",
+            "reason": "Explicitly retracts the original false absence premise using Q21 DDL.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-020.json",
+                "sha256": "5c548dc79ef0abb6a00877348d921f85a6b209527cb46b12e1132e52095f101e",
+                "task_index": 20,
+                "tool_offset": 0,
+                "part": "observation",
+                "quote": "prc_v2 INTEGER"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-list-price-column-ambiguity.md",
+            "after_memory_sha256": "6bf63a532a93521a3c424edcb93060e779bad7b14ffbe1e8abe0cace28bb8ed9"
+          },
+          {
+            "check": "tested_vs_untested_candidates",
+            "memory_file": "clbench-list-price-column-ambiguity.md",
+            "quote": "the `prc_usd` count (1370) were never computed",
+            "status": "contradicts_source",
+            "reason": "Q23 fourth QUERY directly computed 1370. It was unsubmitted, not uncomputed.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-022.json",
+                "sha256": "368bdf21fc1abc0f745c72195db82ea8491cdd366c500cf064e03344568b5202",
+                "task_index": 22,
+                "tool_offset": 3,
+                "part": "observation",
+                "quote": "1035 | 1035 | 1370"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-list-price-column-ambiguity.md",
+            "after_memory_sha256": "6bf63a532a93521a3c424edcb93060e779bad7b14ffbe1e8abe0cace28bb8ed9"
+          },
+          {
+            "check": "feedback_strength_and_scope",
+            "memory_file": "clbench-list-price-column-ambiguity.md",
+            "quote": "the prc reading would have been WRONG",
+            "status": "overstrong_feedback_inference",
+            "reason": "Only 101.80 was submitted. A single CORRECT does not establish rejection of the computed but unsubmitted 100.85 alternative or unique hidden GT binding. No knowledge of hidden tolerance is required to avoid this inference.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-024.json",
+                "sha256": "f1c015e147987eba8e08c32091ca6d080608e15430d38ff2588e9733037e5be2",
+                "task_index": 24,
+                "tool_offset": 1,
+                "part": "observation",
+                "quote": "100.85"
+              },
+              {
+                "path": "trajectories/claude_code/database/task-024.json",
+                "sha256": "f1c015e147987eba8e08c32091ca6d080608e15430d38ff2588e9733037e5be2",
+                "task_index": 24,
+                "tool_offset": 2,
+                "part": "observation",
+                "quote": "CORRECT"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-list-price-column-ambiguity.md",
+            "after_memory_sha256": "6bf63a532a93521a3c424edcb93060e779bad7b14ffbe1e8abe0cace28bb8ed9"
+          },
+          {
+            "check": "retention_of_supported_useful_facts",
+            "memory_file": "clbench-list-price-column-ambiguity.md",
+            "quote": "101.80 → CORRECT (2 queries)",
+            "status": "supported_retained",
+            "reason": "Correctly retains direct Q25 outcome, candidate values and coverage differences.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-024.json",
+                "sha256": "f1c015e147987eba8e08c32091ca6d080608e15430d38ff2588e9733037e5be2",
+                "task_index": 24,
+                "tool_offset": 2,
+                "part": "observation",
+                "quote": "CORRECT"
+              },
+              {
+                "path": "trajectories/claude_code/database/task-024.json",
+                "sha256": "f1c015e147987eba8e08c32091ca6d080608e15430d38ff2588e9733037e5be2",
+                "task_index": 24,
+                "tool_offset": 1,
+                "part": "observation",
+                "quote": "5074  | 5074 | 4886"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-list-price-column-ambiguity.md",
+            "after_memory_sha256": "6bf63a532a93521a3c424edcb93060e779bad7b14ffbe1e8abe0cace28bb8ed9"
+          }
+        ],
+        "bounded_gate_pass": false,
+        "decision_reason": "修正 Q21 的 v2 历史记录，却把已算 USD 数量误记为未算，并声称未提交候选必然错误。",
+        "whole_memory_score": null,
+        "missing_sources_are_not_automatically_false": true
+      },
+      "cost_basis": "unique native Anthropic gateway attempts; native duplicate usage not added again",
+      "monetary_cost": null,
+      "materialized_memory_changed": true
     },
     {
       "job_id": "d2-q25-w0-1",
@@ -907,9 +1252,115 @@
         "sha256": "e632032386f95d2578d1c467dfdb94e73cb5bf1cab93f2b963ef74a2ef81ad5b"
       },
       "common_source_cutoff": 24,
-      "semantic_review": "pending_source_based_review_not_human_gold",
-      "cost_basis": "unique Responses gateway attempts; native compatibility usage not added again",
-      "monetary_cost": null
+      "semantic_review": {
+        "reviewer": {
+          "identity": "root Codex agent, source-based semantic review",
+          "human_gold": false,
+          "additional_model_judge_calls": 0,
+          "scope": "new or modified claims and retention of registered useful facts; no whole-memory score"
+        },
+        "claims": [
+          {
+            "check": "historical_schema_fidelity",
+            "memory_file": "clbench-list-price-column-ambiguity.md",
+            "quote": "no prc_v2 recorded there",
+            "status": "contradicts_source",
+            "reason": "Q21 DDL records prc_v2; the false premise is repeated in a modified explanatory paragraph.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-020.json",
+                "sha256": "5c548dc79ef0abb6a00877348d921f85a6b209527cb46b12e1132e52095f101e",
+                "task_index": 20,
+                "tool_offset": 0,
+                "part": "observation",
+                "quote": "prc_v2 INTEGER"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-list-price-column-ambiguity.md",
+            "after_memory_sha256": "22297b343069101e0202d30b4615eccc735c9c24cd98f1a9f4e0bd9d5c52f405"
+          },
+          {
+            "check": "tested_vs_untested_candidates",
+            "memory_file": "clbench-list-price-column-ambiguity.md",
+            "quote": "across both a relative-threshold count (Q23) and a filtered dollar average (Q25)",
+            "status": "overstrong_uncomputed_candidate_claim",
+            "reason": "Q23 v2 count was never calculated/submitted; Q25 cannot retrospectively verify it.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-022.json",
+                "sha256": "368bdf21fc1abc0f745c72195db82ea8491cdd366c500cf064e03344568b5202",
+                "task_index": 22,
+                "tool_offset": 2,
+                "part": "observation",
+                "quote": "g2  | 6570  | 9623.3449 | 1035"
+              },
+              {
+                "path": "trajectories/claude_code/database/task-022.json",
+                "sha256": "368bdf21fc1abc0f745c72195db82ea8491cdd366c500cf064e03344568b5202",
+                "task_index": 22,
+                "tool_offset": 5,
+                "part": "observation",
+                "quote": "INCORRECT"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-list-price-column-ambiguity.md",
+            "after_memory_sha256": "22297b343069101e0202d30b4615eccc735c9c24cd98f1a9f4e0bd9d5c52f405"
+          },
+          {
+            "check": "feedback_strength_and_scope",
+            "memory_file": "clbench-list-price-column-ambiguity.md",
+            "quote": "whenever the column exists",
+            "status": "overstrong_feedback_inference",
+            "reason": "Universal binding is not identified by a single accepted value; the Q25 unsubmitted prc candidate is also asserted WRONG.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-024.json",
+                "sha256": "f1c015e147987eba8e08c32091ca6d080608e15430d38ff2588e9733037e5be2",
+                "task_index": 24,
+                "tool_offset": 1,
+                "part": "observation",
+                "quote": "100.85"
+              },
+              {
+                "path": "trajectories/claude_code/database/task-024.json",
+                "sha256": "f1c015e147987eba8e08c32091ca6d080608e15430d38ff2588e9733037e5be2",
+                "task_index": 24,
+                "tool_offset": 2,
+                "part": "observation",
+                "quote": "CORRECT"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-list-price-column-ambiguity.md",
+            "after_memory_sha256": "22297b343069101e0202d30b4615eccc735c9c24cd98f1a9f4e0bd9d5c52f405"
+          },
+          {
+            "check": "retention_of_supported_useful_facts",
+            "memory_file": "clbench-list-price-column-ambiguity.md",
+            "quote": "101.80 submitted → CORRECT",
+            "status": "supported_retained",
+            "reason": "Preserves observed acceptance and multiple candidate values, although the explanation overreaches.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-024.json",
+                "sha256": "f1c015e147987eba8e08c32091ca6d080608e15430d38ff2588e9733037e5be2",
+                "task_index": 24,
+                "tool_offset": 2,
+                "part": "observation",
+                "quote": "CORRECT"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-list-price-column-ambiguity.md",
+            "after_memory_sha256": "22297b343069101e0202d30b4615eccc735c9c24cd98f1a9f4e0bd9d5c52f405"
+          }
+        ],
+        "bounded_gate_pass": false,
+        "decision_reason": "保留 Q21 的错误历史前提，把一次接受升级为通用 v2 绑定，还反向确认未测试的 Q23 解释。",
+        "whole_memory_score": null,
+        "missing_sources_are_not_automatically_false": true
+      },
+      "cost_basis": "unique native Anthropic gateway attempts; native duplicate usage not added again",
+      "monetary_cost": null,
+      "materialized_memory_changed": true
     },
     {
       "job_id": "d2-q23-w1-2",
@@ -1000,18 +1451,137 @@
         "sha256": "48e2a9f1617be092c742e9da3d7b04c7e4ad072c33fad9318e3e04b134f0ebce"
       },
       "common_source_cutoff": 22,
-      "semantic_review": "pending_source_based_review_not_human_gold",
-      "cost_basis": "unique Responses gateway attempts; native compatibility usage not added again",
-      "monetary_cost": null
+      "semantic_review": {
+        "reviewer": {
+          "identity": "root Codex agent, source-based semantic review",
+          "human_gold": false,
+          "additional_model_judge_calls": 0,
+          "scope": "new or modified claims and retention of registered useful facts; no whole-memory score"
+        },
+        "claims": [
+          {
+            "check": "historical_schema_fidelity",
+            "memory_file": null,
+            "quote": null,
+            "status": "no_materialized_update",
+            "reason": "No Write/Edit and exact before/after memory equality. There is no new factual claim to score; the current Q23 rejection/candidate distinction was not persisted.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-022.json",
+                "sha256": "368bdf21fc1abc0f745c72195db82ea8491cdd366c500cf064e03344568b5202",
+                "task_index": 22,
+                "tool_offset": 5,
+                "part": "observation",
+                "quote": "INCORRECT"
+              }
+            ],
+            "after_memory_path": null,
+            "after_memory_sha256": null
+          },
+          {
+            "check": "tested_vs_untested_candidates",
+            "memory_file": null,
+            "quote": null,
+            "status": "no_materialized_update",
+            "reason": "No Write/Edit and exact before/after memory equality. There is no new factual claim to score; the current Q23 rejection/candidate distinction was not persisted.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-022.json",
+                "sha256": "368bdf21fc1abc0f745c72195db82ea8491cdd366c500cf064e03344568b5202",
+                "task_index": 22,
+                "tool_offset": 5,
+                "part": "observation",
+                "quote": "INCORRECT"
+              }
+            ],
+            "after_memory_path": null,
+            "after_memory_sha256": null
+          },
+          {
+            "check": "feedback_strength_and_scope",
+            "memory_file": null,
+            "quote": null,
+            "status": "no_materialized_update",
+            "reason": "No Write/Edit and exact before/after memory equality. There is no new factual claim to score; the current Q23 rejection/candidate distinction was not persisted.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-022.json",
+                "sha256": "368bdf21fc1abc0f745c72195db82ea8491cdd366c500cf064e03344568b5202",
+                "task_index": 22,
+                "tool_offset": 5,
+                "part": "observation",
+                "quote": "INCORRECT"
+              }
+            ],
+            "after_memory_path": null,
+            "after_memory_sha256": null
+          },
+          {
+            "check": "retention_of_supported_useful_facts",
+            "memory_file": null,
+            "quote": null,
+            "status": "no_materialized_update",
+            "reason": "No Write/Edit and exact before/after memory equality. There is no new factual claim to score; the current Q23 rejection/candidate distinction was not persisted.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-022.json",
+                "sha256": "368bdf21fc1abc0f745c72195db82ea8491cdd366c500cf064e03344568b5202",
+                "task_index": 22,
+                "tool_offset": 5,
+                "part": "observation",
+                "quote": "INCORRECT"
+              }
+            ],
+            "after_memory_path": null,
+            "after_memory_sha256": null
+          }
+        ],
+        "bounded_gate_pass": false,
+        "decision_reason": "原生会话返回重复文本且没有写入，未形成合格维护产物；不能仅因 completed 标志判定成功。",
+        "whole_memory_score": null,
+        "missing_sources_are_not_automatically_false": true
+      },
+      "cost_basis": "unique native Anthropic gateway attempts; native duplicate usage not added again",
+      "monetary_cost": null,
+      "materialized_memory_changed": false,
+      "output_anomaly": {
+        "repeated_unit": "lock",
+        "provider_reported_final_output_tokens": 2,
+        "repeats": 3449,
+        "characters": 13796,
+        "native_completion": {
+          "path": "private-runs/database-followup-20261005/d2-q23-w1-2/native-completion.json",
+          "sha256": "4e6dbfebca0fc6823a90c05e935d2b7cd7087ab565f92b979d07f02eb395517c"
+        },
+        "interpretation": "Native end_turn/completed is lifecycle evidence; no materialized memory update. Cause is unknown; no quality replay."
+      }
     },
     {
       "job_id": "d2-q23-w0-2",
       "phase": "D2",
+      "method": "claude_code",
       "arm": "W0",
       "repeat": 2,
       "index": 22,
-      "status": "blocked",
-      "reason": "D2 maintenance job window exhausted",
+      "instance_id": "103",
+      "session_id": "dd463d41-010f-4efa-bbf4-f7bdffdaaf4f",
+      "status": "completed",
+      "seconds": 83.59,
+      "pre_state": {
+        "path": "private-runs/formal-db-claude-r1/task-021/native-state.tar.gz",
+        "sha256": "0d0068cdb204da09c95bff92287fa8a8954e4b094ddfa502e5f4e27b17369dd2",
+        "target_index": 22,
+        "matches_exported_before": true,
+        "memory_files_checked": 6,
+        "session_files": 22,
+        "native_database_files": [],
+        "contains_target_task_directory": false,
+        "meaning": "original complete preceding archive, not reconstructed from final memories"
+      },
+      "inputs": {
+        "path": "private-runs/database-followup-20261005/d2-q23-w0-2/input-materials.json",
+        "sha256": "d73d3edfe8761a1f8c12fad74f51e17ac7cbc0cc0032fa5958120596de3d9f1b"
+      },
       "attempts": [
         {
           "attempt_id": "13dbfe6cd097421c83217ab7a0964517",
@@ -1028,6 +1598,22 @@
             "claude_cache_creation_1_h_tokens": 0
           },
           "finish_reason": "tool_use"
+        },
+        {
+          "attempt_id": "2dfbe46dc6714d99b250ba2ac3d6839c",
+          "protocol": "anthropic",
+          "http_status": 200,
+          "phase": "finished",
+          "returned_model": "glm-5.3-flash",
+          "usage": {
+            "input_tokens": 37719,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 36992,
+            "output_tokens": 594,
+            "claude_cache_creation_5_m_tokens": 0,
+            "claude_cache_creation_1_h_tokens": 0
+          },
+          "finish_reason": "end_turn"
         },
         {
           "attempt_id": "3ac7d5a14a5249ba99cc3ed336b6a327",
@@ -1065,7 +1651,7 @@
           "attempt_id": "4d2e2ea080f8492686c95a7e738c4e93",
           "protocol": "anthropic",
           "http_status": null,
-          "phase": "started",
+          "phase": "failed",
           "returned_model": null,
           "usage": null,
           "finish_reason": null
@@ -1097,6 +1683,22 @@
             "cache_creation_input_tokens": 0,
             "cache_read_input_tokens": 0,
             "output_tokens": 9425,
+            "claude_cache_creation_5_m_tokens": 0,
+            "claude_cache_creation_1_h_tokens": 0
+          },
+          "finish_reason": "tool_use"
+        },
+        {
+          "attempt_id": "8271c7a415dd4378bf2e23a7c50015d1",
+          "protocol": "anthropic",
+          "http_status": 200,
+          "phase": "finished",
+          "returned_model": "glm-5.3-flash",
+          "usage": {
+            "input_tokens": 37053,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 36928,
+            "output_tokens": 1214,
             "claude_cache_creation_5_m_tokens": 0,
             "claude_cache_creation_1_h_tokens": 0
           },
@@ -1151,6 +1753,22 @@
           "finish_reason": "tool_use"
         },
         {
+          "attempt_id": "c0409236367f4505b2739c905aecb11b",
+          "protocol": "anthropic",
+          "http_status": 200,
+          "phase": "finished",
+          "returned_model": "glm-5.3-flash",
+          "usage": {
+            "input_tokens": 37265,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 36224,
+            "output_tokens": 400,
+            "claude_cache_creation_5_m_tokens": 0,
+            "claude_cache_creation_1_h_tokens": 0
+          },
+          "finish_reason": "tool_use"
+        },
+        {
           "attempt_id": "e4236c20aa3e45cb85ffd3810fe0e8ec",
           "protocol": "anthropic",
           "http_status": 200,
@@ -1167,9 +1785,859 @@
           "finish_reason": "tool_use"
         }
       ],
-      "claim_scores": null
+      "attempt_count": 13,
+      "tool_count": 18,
+      "writes": [
+        {
+          "id": "call_59ef24e268864d059e2a997c",
+          "name": "Write",
+          "path": "/state/home/.claude/projects/-state-work-database/memory/clbench-relative-price-threshold.md"
+        },
+        {
+          "id": "call_660197c7f6f246a18d26ecbd",
+          "name": "Edit",
+          "path": "/state/home/.claude/projects/-state-work-database/memory/clbench-schema-conventions.md"
+        },
+        {
+          "id": "call_362755e597f64192930ca43c",
+          "name": "Edit",
+          "path": "/state/home/.claude/projects/-state-work-database/memory/clbench-schema-conventions.md"
+        },
+        {
+          "id": "call_73d7ea1e931447148e4972a5",
+          "name": "Edit",
+          "path": "/state/home/.claude/projects/-state-work-database/memory/MEMORY.md"
+        }
+      ],
+      "rejected_write_attempts": [],
+      "memory_diff": {
+        "path": "private-runs/database-followup-20261005/d2-q23-w0-2/memory-diff.json",
+        "sha256": "6435e09e66dc2ea6ecd7ab8ed52913c3faa92eef35603e99bc5b0159be00748e"
+      },
+      "native_state": {
+        "path": "private-runs/database-followup-20261005/d2-q23-w0-2/native-state.tar.gz",
+        "sha256": "20090aa19566190767f1b78d483696fcbe819291bb1f2b0b4438a704f17b7070"
+      },
+      "common_source_cutoff": 22,
+      "semantic_review": {
+        "reviewer": {
+          "identity": "root Codex agent, source-based semantic review",
+          "human_gold": false,
+          "additional_model_judge_calls": 0,
+          "scope": "new or modified claims and retention of registered useful facts; no whole-memory score"
+        },
+        "claims": [
+          {
+            "check": "historical_schema_fidelity",
+            "memory_file": "clbench-relative-price-threshold.md",
+            "quote": "Q21 median 21.99 — the last in the same modified instance",
+            "status": "supported",
+            "reason": "Keeps Q21 accepted median and the changed-instance context; does not repeat a v2-absent premise.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-020.json",
+                "sha256": "5c548dc79ef0abb6a00877348d921f85a6b209527cb46b12e1132e52095f101e",
+                "task_index": 20,
+                "tool_offset": 0,
+                "part": "observation",
+                "quote": "prc_v2 INTEGER"
+              },
+              {
+                "path": "trajectories/claude_code/database/task-020.json",
+                "sha256": "5c548dc79ef0abb6a00877348d921f85a6b209527cb46b12e1132e52095f101e",
+                "task_index": 20,
+                "tool_offset": 5,
+                "part": "observation",
+                "quote": "21.99"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-relative-price-threshold.md",
+            "after_memory_sha256": "38e8890f3c3835a989b81c31a98d0842eb9a4e0de6a1d9ce29c07f596885dc10"
+          },
+          {
+            "check": "tested_vs_untested_candidates",
+            "memory_file": "clbench-relative-price-threshold.md",
+            "quote": "≈1035±30, not computable offline",
+            "status": "unknown_unsupported_estimate",
+            "reason": "Explicitly uncomputed approximation, not a verified count. Neither this range nor the implied v2 value distribution is established by the observed mean ratio; do not declare the unknown numerical value false.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-022.json",
+                "sha256": "368bdf21fc1abc0f745c72195db82ea8491cdd366c500cf064e03344568b5202",
+                "task_index": 22,
+                "tool_offset": 4,
+                "part": "observation",
+                "quote": "1.0101914290001015"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-relative-price-threshold.md",
+            "after_memory_sha256": "38e8890f3c3835a989b81c31a98d0842eb9a4e0de6a1d9ce29c07f596885dc10"
+          },
+          {
+            "check": "feedback_strength_and_scope",
+            "memory_file": "clbench-relative-price-threshold.md",
+            "quote": "Group scoping is not the issue here (whole-g2 verified",
+            "status": "overstrong_feedback_inference",
+            "reason": "Prior same-method Q21 dataset group mapping does not distinguish untested Q23 row-scope alternatives. The Q23 taxonomy SQL was issued, but its 50-row-capped result does not show the g2 taxonomy label.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-020.json",
+                "sha256": "5c548dc79ef0abb6a00877348d921f85a6b209527cb46b12e1132e52095f101e",
+                "task_index": 20,
+                "tool_offset": 1,
+                "part": "observation",
+                "quote": "Electronics=18396"
+              },
+              {
+                "path": "trajectories/claude_code/database/task-022.json",
+                "sha256": "368bdf21fc1abc0f745c72195db82ea8491cdd366c500cf064e03344568b5202",
+                "task_index": 22,
+                "tool_offset": 5,
+                "part": "observation",
+                "quote": "INCORRECT"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-relative-price-threshold.md",
+            "after_memory_sha256": "38e8890f3c3835a989b81c31a98d0842eb9a4e0de6a1d9ce29c07f596885dc10"
+          },
+          {
+            "check": "retention_of_supported_useful_facts",
+            "memory_file": "clbench-relative-price-threshold.md",
+            "quote": "prime candidate, computed but not submitted",
+            "status": "supported_retained",
+            "reason": "Retains 1035 INCORRECT, USD 1370 computed but unsubmitted, and the uncomputed v2 distinction along with coverage facts.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-022.json",
+                "sha256": "368bdf21fc1abc0f745c72195db82ea8491cdd366c500cf064e03344568b5202",
+                "task_index": 22,
+                "tool_offset": 3,
+                "part": "observation",
+                "quote": "1035 | 1035 | 1370"
+              },
+              {
+                "path": "trajectories/claude_code/database/task-022.json",
+                "sha256": "368bdf21fc1abc0f745c72195db82ea8491cdd366c500cf064e03344568b5202",
+                "task_index": 22,
+                "tool_offset": 5,
+                "part": "observation",
+                "quote": "INCORRECT"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-relative-price-threshold.md",
+            "after_memory_sha256": "38e8890f3c3835a989b81c31a98d0842eb9a4e0de6a1d9ce29c07f596885dc10"
+          }
+        ],
+        "bounded_gate_pass": false,
+        "decision_reason": "保留了拒绝反馈及未测候选，但把组映射验证升级成已排除行范围问题，且给未算 v2 数量写了无来源估计；经历同会话基础设施恢复。",
+        "whole_memory_score": null,
+        "missing_sources_are_not_automatically_false": true
+      },
+      "same_session_infrastructure_recovery": true,
+      "cost_basis": "unique native Anthropic gateway attempts; native duplicate usage not added again",
+      "monetary_cost": null,
+      "materialized_memory_changed": true
+    },
+    {
+      "job_id": "d2-q25-w0-2",
+      "phase": "D2",
+      "method": "claude_code",
+      "arm": "W0",
+      "repeat": 2,
+      "index": 24,
+      "instance_id": "101",
+      "session_id": "019e0ab3-157f-482a-aec7-554cd0887b00",
+      "status": "completed",
+      "seconds": 258.673,
+      "pre_state": {
+        "path": "private-runs/formal-db-claude-r1/task-023/native-state.tar.gz",
+        "sha256": "6b2b817664ccfd9ecd6edb6eb0f89650b48efc30e022a1de015c2c746c82d261",
+        "target_index": 24,
+        "matches_exported_before": true,
+        "memory_files_checked": 8,
+        "session_files": 24,
+        "native_database_files": [],
+        "contains_target_task_directory": false,
+        "meaning": "original complete preceding archive, not reconstructed from final memories"
+      },
+      "inputs": {
+        "path": "private-runs/database-followup-20261005/d2-q25-w0-2/input-materials.json",
+        "sha256": "66e0159584639d3a06f13fdcee5da1a080e7ae1a78e9c26c715c4cff8fab668b"
+      },
+      "attempts": [
+        {
+          "attempt_id": "2294dd6f7f894baebcb2025352d689ca",
+          "protocol": "anthropic",
+          "http_status": 200,
+          "phase": "finished",
+          "returned_model": "glm-5.3-flash",
+          "usage": {
+            "input_tokens": 11601,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 10240,
+            "output_tokens": 216,
+            "claude_cache_creation_5_m_tokens": 0,
+            "claude_cache_creation_1_h_tokens": 0
+          },
+          "finish_reason": "tool_use"
+        },
+        {
+          "attempt_id": "32c4d733b0b7444a8d06343f1c6c9f67",
+          "protocol": "anthropic",
+          "http_status": 200,
+          "phase": "finished",
+          "returned_model": "glm-5.3-flash",
+          "usage": {
+            "input_tokens": 5999,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 0,
+            "output_tokens": 1334,
+            "claude_cache_creation_5_m_tokens": 0,
+            "claude_cache_creation_1_h_tokens": 0
+          },
+          "finish_reason": "tool_use"
+        },
+        {
+          "attempt_id": "712d9e57b4b64d3fb90203c9185da9ed",
+          "protocol": "anthropic",
+          "http_status": 200,
+          "phase": "finished",
+          "returned_model": "glm-5.3-flash",
+          "usage": {
+            "input_tokens": 10275,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 3456,
+            "output_tokens": 5057,
+            "claude_cache_creation_5_m_tokens": 0,
+            "claude_cache_creation_1_h_tokens": 0
+          },
+          "finish_reason": "tool_use"
+        },
+        {
+          "attempt_id": "7835f9ca48e64fe1b854b4fbe9d2450c",
+          "protocol": "anthropic",
+          "http_status": 200,
+          "phase": "finished",
+          "returned_model": "glm-5.3-flash",
+          "usage": {
+            "input_tokens": 9681,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 3264,
+            "output_tokens": 1700,
+            "claude_cache_creation_5_m_tokens": 0,
+            "claude_cache_creation_1_h_tokens": 0
+          },
+          "finish_reason": "tool_use"
+        },
+        {
+          "attempt_id": "b9c00f568f1a47b1963e7f1c3a42ae70",
+          "protocol": "anthropic",
+          "http_status": 200,
+          "phase": "finished",
+          "returned_model": "glm-5.3-flash",
+          "usage": {
+            "input_tokens": 11876,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 11584,
+            "output_tokens": 560,
+            "claude_cache_creation_5_m_tokens": 0,
+            "claude_cache_creation_1_h_tokens": 0
+          },
+          "finish_reason": "end_turn"
+        },
+        {
+          "attempt_id": "fd621a5c60f144dbbbe5d6d30fa223f1",
+          "protocol": "anthropic",
+          "http_status": 200,
+          "phase": "finished",
+          "returned_model": "glm-5.3-flash",
+          "usage": {
+            "input_tokens": 9293,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 0,
+            "output_tokens": 3833,
+            "claude_cache_creation_5_m_tokens": 0,
+            "claude_cache_creation_1_h_tokens": 0
+          },
+          "finish_reason": "tool_use"
+        }
+      ],
+      "attempt_count": 6,
+      "tool_count": 7,
+      "writes": [
+        {
+          "id": "call_566b02f179544f1cb5d484ed",
+          "name": "Write",
+          "path": "/state/home/.claude/projects/-state-work-database/memory/clbench-list-price-column-ambiguity.md"
+        },
+        {
+          "id": "call_6e5bf273ff594557be086fc3",
+          "name": "Edit",
+          "path": "/state/home/.claude/projects/-state-work-database/memory/clbench-schema-conventions.md"
+        },
+        {
+          "id": "call_025a4944680c4af8870cce7e",
+          "name": "Edit",
+          "path": "/state/home/.claude/projects/-state-work-database/memory/MEMORY.md"
+        }
+      ],
+      "rejected_write_attempts": [],
+      "memory_diff": {
+        "path": "private-runs/database-followup-20261005/d2-q25-w0-2/memory-diff.json",
+        "sha256": "37985ee8850b2d947a90e08a9b5a11c9a9de3b011218ab970d1400b4f2210aee"
+      },
+      "native_state": {
+        "path": "private-runs/database-followup-20261005/d2-q25-w0-2/native-state.tar.gz",
+        "sha256": "36663f72e11d9bcea1a7da4ac3e9c79e8c821e2b43399a6ffab3b74baff96522"
+      },
+      "common_source_cutoff": 24,
+      "semantic_review": {
+        "reviewer": {
+          "identity": "root Codex agent, source-based semantic review",
+          "human_gold": false,
+          "additional_model_judge_calls": 0,
+          "scope": "new or modified claims and retention of registered useful facts; no whole-memory score"
+        },
+        "claims": [
+          {
+            "check": "historical_schema_fidelity",
+            "memory_file": "clbench-list-price-column-ambiguity.md",
+            "quote": "no prc_v2 in that instance",
+            "status": "contradicts_source",
+            "reason": "Q21 DDL explicitly includes prc_v2; the false absence premise persists in the rewritten explanation.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-020.json",
+                "sha256": "5c548dc79ef0abb6a00877348d921f85a6b209527cb46b12e1132e52095f101e",
+                "task_index": 20,
+                "tool_offset": 0,
+                "part": "observation",
+                "quote": "prc_v2 INTEGER"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-list-price-column-ambiguity.md",
+            "after_memory_sha256": "aa0c83c9a054d5f8c89d21f838e3547bc3f12b9239588a93230f9da2b76b1342"
+          },
+          {
+            "check": "tested_vs_untested_candidates",
+            "memory_file": "clbench-list-price-column-ambiguity.md",
+            "quote": "NOT computed there — that was the regret",
+            "status": "supported_retained",
+            "reason": "The explicit Q23 v2 uncomputed statement is correct, despite the separate explanation overclaiming cross-task confirmation.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-022.json",
+                "sha256": "368bdf21fc1abc0f745c72195db82ea8491cdd366c500cf064e03344568b5202",
+                "task_index": 22,
+                "tool_offset": 4,
+                "part": "observation",
+                "quote": "v2_over_prc_ratio"
+              },
+              {
+                "path": "trajectories/claude_code/database/task-022.json",
+                "sha256": "368bdf21fc1abc0f745c72195db82ea8491cdd366c500cf064e03344568b5202",
+                "task_index": 22,
+                "tool_offset": 5,
+                "part": "observation",
+                "quote": "1035"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-list-price-column-ambiguity.md",
+            "after_memory_sha256": "aa0c83c9a054d5f8c89d21f838e3547bc3f12b9239588a93230f9da2b76b1342"
+          },
+          {
+            "check": "feedback_strength_and_scope",
+            "memory_file": "clbench-list-price-column-ambiguity.md",
+            "quote": "$100.85 ← would have been WRONG",
+            "status": "overstrong_feedback_inference",
+            "reason": "100.85 was computed but never submitted in Q25. 101.80 acceptance cannot establish this candidate rejection or the universal v2 rule.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-024.json",
+                "sha256": "f1c015e147987eba8e08c32091ca6d080608e15430d38ff2588e9733037e5be2",
+                "task_index": 24,
+                "tool_offset": 1,
+                "part": "observation",
+                "quote": "100.85"
+              },
+              {
+                "path": "trajectories/claude_code/database/task-024.json",
+                "sha256": "f1c015e147987eba8e08c32091ca6d080608e15430d38ff2588e9733037e5be2",
+                "task_index": 24,
+                "tool_offset": 2,
+                "part": "observation",
+                "quote": "CORRECT"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-list-price-column-ambiguity.md",
+            "after_memory_sha256": "aa0c83c9a054d5f8c89d21f838e3547bc3f12b9239588a93230f9da2b76b1342"
+          },
+          {
+            "check": "retention_of_supported_useful_facts",
+            "memory_file": "clbench-list-price-column-ambiguity.md",
+            "quote": "$101.80 = ANSWERED, CORRECT",
+            "status": "supported_retained",
+            "reason": "Preserves the actual Q25 submission, filter population, and alternative numerical observations.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-024.json",
+                "sha256": "f1c015e147987eba8e08c32091ca6d080608e15430d38ff2588e9733037e5be2",
+                "task_index": 24,
+                "tool_offset": 2,
+                "part": "observation",
+                "quote": "101.80"
+              },
+              {
+                "path": "trajectories/claude_code/database/task-024.json",
+                "sha256": "f1c015e147987eba8e08c32091ca6d080608e15430d38ff2588e9733037e5be2",
+                "task_index": 24,
+                "tool_offset": 1,
+                "part": "observation",
+                "quote": "5074  | 5074 | 4886"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-list-price-column-ambiguity.md",
+            "after_memory_sha256": "aa0c83c9a054d5f8c89d21f838e3547bc3f12b9239588a93230f9da2b76b1342"
+          }
+        ],
+        "bounded_gate_pass": false,
+        "decision_reason": "重复保留 Q21 没有 v2 的错误历史前提，并把未提交候选写成错误、把一次接受升级为所有题型的字段绑定规则。",
+        "whole_memory_score": null,
+        "missing_sources_are_not_automatically_false": true
+      },
+      "same_session_infrastructure_recovery": false,
+      "cost_basis": "unique native Anthropic gateway attempts; native duplicate usage not added again",
+      "monetary_cost": null,
+      "materialized_memory_changed": true
+    },
+    {
+      "job_id": "d2-q25-w1-2",
+      "phase": "D2",
+      "method": "claude_code",
+      "arm": "W1",
+      "repeat": 2,
+      "index": 24,
+      "instance_id": "101",
+      "session_id": "9163ae4d-e75f-4c54-a62a-b78690adc0f6",
+      "status": "completed",
+      "seconds": 1145.417,
+      "pre_state": {
+        "path": "private-runs/formal-db-claude-r1/task-023/native-state.tar.gz",
+        "sha256": "6b2b817664ccfd9ecd6edb6eb0f89650b48efc30e022a1de015c2c746c82d261",
+        "target_index": 24,
+        "matches_exported_before": true,
+        "memory_files_checked": 8,
+        "session_files": 24,
+        "native_database_files": [],
+        "contains_target_task_directory": false,
+        "meaning": "original complete preceding archive, not reconstructed from final memories"
+      },
+      "inputs": {
+        "path": "private-runs/database-followup-20261005/d2-q25-w1-2/input-materials.json",
+        "sha256": "e1fbd30494903821fa39f7a0dd78fd2c44cceea9afcf41a75ff5abd8e18036ec"
+      },
+      "attempts": [
+        {
+          "attempt_id": "0380c140c3b4470d99841cfe13358130",
+          "protocol": "anthropic",
+          "http_status": 200,
+          "phase": "finished",
+          "returned_model": "glm-5.3-flash",
+          "usage": {
+            "input_tokens": 11081,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 5888,
+            "output_tokens": 9068,
+            "claude_cache_creation_5_m_tokens": 0,
+            "claude_cache_creation_1_h_tokens": 0
+          },
+          "finish_reason": "tool_use"
+        },
+        {
+          "attempt_id": "2e9fb607423148a0ae960d05b2714038",
+          "protocol": "anthropic",
+          "http_status": 200,
+          "phase": "finished",
+          "returned_model": "glm-5.3-flash",
+          "usage": {
+            "input_tokens": 22360,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 20480,
+            "output_tokens": 800,
+            "claude_cache_creation_5_m_tokens": 0,
+            "claude_cache_creation_1_h_tokens": 0
+          },
+          "finish_reason": "tool_use"
+        },
+        {
+          "attempt_id": "608f33e984d547c28b0b556410134f81",
+          "protocol": "anthropic",
+          "http_status": 200,
+          "phase": "finished",
+          "returned_model": "glm-5.3-flash",
+          "usage": {
+            "input_tokens": 14222,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 12032,
+            "output_tokens": 10143,
+            "claude_cache_creation_5_m_tokens": 0,
+            "claude_cache_creation_1_h_tokens": 0
+          },
+          "finish_reason": "tool_use"
+        },
+        {
+          "attempt_id": "81648ec9528646018395b8ce300472ec",
+          "protocol": "anthropic",
+          "http_status": 200,
+          "phase": "finished",
+          "returned_model": "glm-5.3-flash",
+          "usage": {
+            "input_tokens": 9234,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 3264,
+            "output_tokens": 3906,
+            "claude_cache_creation_5_m_tokens": 0,
+            "claude_cache_creation_1_h_tokens": 0
+          },
+          "finish_reason": "tool_use"
+        },
+        {
+          "attempt_id": "82f1a995cd96449faa8a5e55b2fdbb60",
+          "protocol": "anthropic",
+          "http_status": 200,
+          "phase": "finished",
+          "returned_model": "glm-5.3-flash",
+          "usage": {
+            "input_tokens": 11516,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 11072,
+            "output_tokens": 7610,
+            "claude_cache_creation_5_m_tokens": 0,
+            "claude_cache_creation_1_h_tokens": 0
+          },
+          "finish_reason": "tool_use"
+        },
+        {
+          "attempt_id": "bb7388dc86784c9a90b44571675a42bc",
+          "protocol": "anthropic",
+          "http_status": 200,
+          "phase": "finished",
+          "returned_model": "glm-5.3-flash",
+          "usage": {
+            "input_tokens": 20539,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 14208,
+            "output_tokens": 18293,
+            "claude_cache_creation_5_m_tokens": 0,
+            "claude_cache_creation_1_h_tokens": 0
+          },
+          "finish_reason": "tool_use"
+        },
+        {
+          "attempt_id": "c92f2680c22c4b21b08ff6e72c559ff5",
+          "protocol": "anthropic",
+          "http_status": 200,
+          "phase": "finished",
+          "returned_model": "glm-5.3-flash",
+          "usage": {
+            "input_tokens": 22904,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 12096,
+            "output_tokens": 580,
+            "claude_cache_creation_5_m_tokens": 0,
+            "claude_cache_creation_1_h_tokens": 0
+          },
+          "finish_reason": "end_turn"
+        },
+        {
+          "attempt_id": "d793179546a44e8493d8da1b67952a7b",
+          "protocol": "anthropic",
+          "http_status": 200,
+          "phase": "finished",
+          "returned_model": "glm-5.3-flash",
+          "usage": {
+            "input_tokens": 12061,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 11456,
+            "output_tokens": 7234,
+            "claude_cache_creation_5_m_tokens": 0,
+            "claude_cache_creation_1_h_tokens": 0
+          },
+          "finish_reason": "tool_use"
+        },
+        {
+          "attempt_id": "e7afdaafd7b0426a8fc7cbd0dc30278f",
+          "protocol": "anthropic",
+          "http_status": 200,
+          "phase": "finished",
+          "returned_model": "glm-5.3-flash",
+          "usage": {
+            "input_tokens": 6098,
+            "cache_creation_input_tokens": 0,
+            "cache_read_input_tokens": 0,
+            "output_tokens": 1752,
+            "claude_cache_creation_5_m_tokens": 0,
+            "claude_cache_creation_1_h_tokens": 0
+          },
+          "finish_reason": "tool_use"
+        },
+        {
+          "attempt_id": "f6ddf69f70044e779f7b67caf2bf5685",
+          "protocol": "anthropic",
+          "http_status": 524,
+          "phase": "finished",
+          "returned_model": null,
+          "usage": null,
+          "finish_reason": null
+        }
+      ],
+      "attempt_count": 10,
+      "tool_count": 13,
+      "writes": [
+        {
+          "id": "call_39f592f791f8433f9e9a32fb",
+          "name": "Write",
+          "path": "/state/home/.claude/projects/-state-work-database/memory/clbench-list-price-column-ambiguity.md"
+        },
+        {
+          "id": "call_dd99e652c00f4f25b6d606cc",
+          "name": "Edit",
+          "path": "/state/home/.claude/projects/-state-work-database/memory/clbench-schema-conventions.md"
+        },
+        {
+          "id": "call_d522ea283edf4834bf6be2bd",
+          "name": "Edit",
+          "path": "/state/home/.claude/projects/-state-work-database/memory/MEMORY.md"
+        },
+        {
+          "id": "call_f2ac47165d9943abaeac151d",
+          "name": "Edit",
+          "path": "/state/home/.claude/projects/-state-work-database/memory/MEMORY.md"
+        }
+      ],
+      "rejected_write_attempts": [],
+      "memory_diff": {
+        "path": "private-runs/database-followup-20261005/d2-q25-w1-2/memory-diff.json",
+        "sha256": "0123c3fe00455dd28879a7ae6354c306c38c8101a59448def5be7fbf738a1dd2"
+      },
+      "native_state": {
+        "path": "private-runs/database-followup-20261005/d2-q25-w1-2/native-state.tar.gz",
+        "sha256": "19f527218827d7caddaab22d46e228581f8e6e0d9055cb88346f87830e480b93"
+      },
+      "common_source_cutoff": 24,
+      "semantic_review": {
+        "reviewer": {
+          "identity": "root Codex agent, source-based semantic review",
+          "human_gold": false,
+          "additional_model_judge_calls": 0,
+          "scope": "new or modified claims and retention of registered useful facts; no whole-memory score"
+        },
+        "claims": [
+          {
+            "check": "historical_schema_fidelity",
+            "memory_file": "clbench-list-price-column-ambiguity.md",
+            "quote": "the earlier note \"no prc_v2 recorded there\" was WRONG",
+            "status": "corrected_historical_error",
+            "reason": "Explicitly corrects Q21 v2 presence and preserves the directly observed equality count.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-020.json",
+                "sha256": "5c548dc79ef0abb6a00877348d921f85a6b209527cb46b12e1132e52095f101e",
+                "task_index": 20,
+                "tool_offset": 0,
+                "part": "observation",
+                "quote": "prc_v2 INTEGER"
+              },
+              {
+                "path": "trajectories/claude_code/database/task-020.json",
+                "sha256": "5c548dc79ef0abb6a00877348d921f85a6b209527cb46b12e1132e52095f101e",
+                "task_index": 20,
+                "tool_offset": 2,
+                "part": "observation",
+                "quote": "5259"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-list-price-column-ambiguity.md",
+            "after_memory_sha256": "4cd1a86189d70c16d2281ee49028e1e5d0809f932632bc048c523c10676d36c5"
+          },
+          {
+            "check": "tested_vs_untested_candidates",
+            "memory_file": "clbench-list-price-column-ambiguity.md",
+            "quote": "1370** (computed, not submitted)",
+            "status": "supported_retained",
+            "reason": "Correctly distinguishes Q23 USD computed-but-unsubmitted from the never-computed v2 count; this improvement is not erased by the separate overclaim.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-022.json",
+                "sha256": "368bdf21fc1abc0f745c72195db82ea8491cdd366c500cf064e03344568b5202",
+                "task_index": 22,
+                "tool_offset": 3,
+                "part": "observation",
+                "quote": "1035 | 1035 | 1370"
+              },
+              {
+                "path": "trajectories/claude_code/database/task-022.json",
+                "sha256": "368bdf21fc1abc0f745c72195db82ea8491cdd366c500cf064e03344568b5202",
+                "task_index": 22,
+                "tool_offset": 5,
+                "part": "observation",
+                "quote": "1035"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-list-price-column-ambiguity.md",
+            "after_memory_sha256": "4cd1a86189d70c16d2281ee49028e1e5d0809f932632bc048c523c10676d36c5"
+          },
+          {
+            "check": "feedback_strength_and_scope",
+            "memory_file": "clbench-list-price-column-ambiguity.md",
+            "quote": "excluded for this question by arithmetic — not by submission",
+            "status": "overstrong_feedback_inference",
+            "reason": "Different numerical candidates plus one accepted output do not exclude the alternatives or identify a unique hidden binding. Both Q25 alternatives were unsubmitted; arithmetic inequality does not establish grader rejection.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-024.json",
+                "sha256": "f1c015e147987eba8e08c32091ca6d080608e15430d38ff2588e9733037e5be2",
+                "task_index": 24,
+                "tool_offset": 1,
+                "part": "observation",
+                "quote": "100.85"
+              },
+              {
+                "path": "trajectories/claude_code/database/task-024.json",
+                "sha256": "f1c015e147987eba8e08c32091ca6d080608e15430d38ff2588e9733037e5be2",
+                "task_index": 24,
+                "tool_offset": 2,
+                "part": "observation",
+                "quote": "CORRECT"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-list-price-column-ambiguity.md",
+            "after_memory_sha256": "4cd1a86189d70c16d2281ee49028e1e5d0809f932632bc048c523c10676d36c5"
+          },
+          {
+            "check": "feedback_strength_and_scope",
+            "memory_file": "clbench-list-price-column-ambiguity.md",
+            "quote": "bound to it on both discriminating questions",
+            "status": "overstrong_uncomputed_candidate_claim",
+            "reason": "The preceding paragraph itself marks Q23 v2 count uncomputed. A rejected prc count does not discriminate or confirm v2 binding for Q23.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-022.json",
+                "sha256": "368bdf21fc1abc0f745c72195db82ea8491cdd366c500cf064e03344568b5202",
+                "task_index": 22,
+                "tool_offset": 5,
+                "part": "observation",
+                "quote": "INCORRECT"
+              },
+              {
+                "path": "trajectories/claude_code/database/task-024.json",
+                "sha256": "f1c015e147987eba8e08c32091ca6d080608e15430d38ff2588e9733037e5be2",
+                "task_index": 24,
+                "tool_offset": 2,
+                "part": "observation",
+                "quote": "CORRECT"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-list-price-column-ambiguity.md",
+            "after_memory_sha256": "4cd1a86189d70c16d2281ee49028e1e5d0809f932632bc048c523c10676d36c5"
+          },
+          {
+            "check": "retention_of_supported_useful_facts",
+            "memory_file": "clbench-list-price-column-ambiguity.md",
+            "quote": "Submitted **101.80 → CORRECT** (2 queries total)",
+            "status": "supported_retained",
+            "reason": "Preserves actual acceptance, candidate values, positive-row counts, price coverage, and unresolved Q21/v2 median.",
+            "sources": [
+              {
+                "path": "trajectories/claude_code/database/task-024.json",
+                "sha256": "f1c015e147987eba8e08c32091ca6d080608e15430d38ff2588e9733037e5be2",
+                "task_index": 24,
+                "tool_offset": 2,
+                "part": "observation",
+                "quote": "101.80"
+              },
+              {
+                "path": "trajectories/claude_code/database/task-024.json",
+                "sha256": "f1c015e147987eba8e08c32091ca6d080608e15430d38ff2588e9733037e5be2",
+                "task_index": 24,
+                "tool_offset": 1,
+                "part": "observation",
+                "quote": "5074  | 5074 | 4886"
+              }
+            ],
+            "after_memory_path": "home/.claude/projects/-state-work-database/memory/clbench-list-price-column-ambiguity.md",
+            "after_memory_sha256": "4cd1a86189d70c16d2281ee49028e1e5d0809f932632bc048c523c10676d36c5"
+          }
+        ],
+        "bounded_gate_pass": false,
+        "decision_reason": "修正 Q21 的 v2 历史记录、保留未测区分，却又仅凭候选数值不同声称替代字段已排除；摘要还把 Q23 写成已区分的字段证据。",
+        "whole_memory_score": null,
+        "missing_sources_are_not_automatically_false": true
+      },
+      "same_session_infrastructure_recovery": false,
+      "cost_basis": "unique native Anthropic gateway attempts; native duplicate usage not added again",
+      "monetary_cost": null,
+      "materialized_memory_changed": true
     }
   ],
   "lock_sha256": "6eb93c6d58c04e7d08399150fac926045c339168a5fa28d21df4d14f57d6cdd9",
-  "D3_gate": "closed_pending_bounded_claim_review"
+  "D3_gate": "closed_failed_bounded_claim_qualification",
+  "continuation_lock_sha256": "89bc681563a257f96d1868546acbdee5162229ee6c66eb8c86a6e212ee9b9cf0",
+  "D3_eligible": false,
+  "reviewed_at": "2026-10-05T20:05:36.012735+00:00",
+  "reviewer": {
+    "identity": "root Codex agent, source-based semantic review",
+    "human_gold": false,
+    "additional_model_judge_calls": 0,
+    "scope": "new or modified claims and retention of registered useful facts; no whole-memory score"
+  },
+  "fairness": [
+    {
+      "index": 22,
+      "repeat": 1,
+      "same_original_before": true,
+      "same_legal_source_projection_and_access": true,
+      "same_native_tools_system_and_budgets": true,
+      "only_prompt_difference": "exact preregistered generic constraint",
+      "request_metadata_difference": "independent native session identifiers",
+      "same_session_infrastructure_recovered_jobs": []
+    },
+    {
+      "index": 24,
+      "repeat": 1,
+      "same_original_before": true,
+      "same_legal_source_projection_and_access": true,
+      "same_native_tools_system_and_budgets": true,
+      "only_prompt_difference": "exact preregistered generic constraint",
+      "request_metadata_difference": "independent native session identifiers",
+      "same_session_infrastructure_recovered_jobs": []
+    },
+    {
+      "index": 22,
+      "repeat": 2,
+      "same_original_before": true,
+      "same_legal_source_projection_and_access": true,
+      "same_native_tools_system_and_budgets": true,
+      "only_prompt_difference": "exact preregistered generic constraint",
+      "request_metadata_difference": "independent native session identifiers",
+      "same_session_infrastructure_recovered_jobs": [
+        "d2-q23-w0-2"
+      ]
+    },
+    {
+      "index": 24,
+      "repeat": 2,
+      "same_original_before": true,
+      "same_legal_source_projection_and_access": true,
+      "same_native_tools_system_and_budgets": true,
+      "only_prompt_difference": "exact preregistered generic constraint",
+      "request_metadata_difference": "independent native session identifiers",
+      "same_session_infrastructure_recovered_jobs": []
+    }
+  ],
+  "unique_provider_attempts": 73,
+  "same_method_price_family_count": 1,
+  "decision": "stop_D3_no_all_repeat_qualified_writer_signal",
+  "gate_robustness": "Independent disqualifiers already include Q25 W1 repeat 1 uncomputed/USD and unsubmitted/rejection errors and Q23 W1 repeat 2 no materialized update, even if the minor Q7/Q8 provenance typo is ignored.",
+  "no_new_business_queries": true
 }

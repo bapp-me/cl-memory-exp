@@ -1,6 +1,6 @@
 # Database 定向后续实验结果
 
-2026-10-06。D0 已完成；用户授权后恢复了 HTTP 520 中断的同一 Codex 会话。当前 D1 阶段状态：completed。Claude 采用实测验收的原生 Aixoras /v1/messages 接口；阶段结果见下方记录。
+2026-10-06。本轮按交接文档完成 D0 与 8 个 Codex 求解配对、8 个 Claude Code 维护作业。最近三题证据侧栏未改善风险题；通用 writer 约束纠正了部分历史事实，但没有在两次重复中消除所有过强主张。D3 未达门槛，按计划跳过。两框架沿用 GLM-5.3-Flash；Claude Code 直接使用实测可调用的 Aixoras /v1/messages。
 
 D0 核验了 320 份快照、354 份业务轨迹、两份数据库与实际评分器。Q31 的错误反馈及两个候选值进入了 Codex 阶段一输出和原生 DB，但没有进入 Q34 题前记忆文件或任何已捕获的主请求。这是可达性缺口；不等于模型看过后忽略。Claude Q23 的真实 Write 事件引入了关于 Q21 的错误历史前提，Q25 又强化了它；Q23 writer 对 Q21 完整 DDL 的实际读取仍未得到证明。
 
@@ -15,10 +15,36 @@ D1 使用 GLM-5.3-Flash / Aixoras Responses，启动 8 个独立 Codex 作业，
 
 未达到两次风险题同向改善条件，不扩大整流 benchmark。
 
-用户请求直接测试 /v1/messages 后得到 HTTP 200，返回模型为 glm-5.3-flash、标准 Anthropic message 和已报告用量。先前仅依据已验收接口记录而作出的阻断判断已撤销；本轮不使用协议转换。D2/D3 当前状态分别为 in_progress / pending_D2_qualification。
+用户请求直接测试 /v1/messages 后得到 HTTP 200，返回模型为 glm-5.3-flash、标准 Anthropic message 和已报告用量。先前仅依据已验收接口记录而作出的阻断判断已撤销；本轮不使用协议转换。D2/D3 当前状态分别为 completed / skipped。
 
-原生实验共有 134 个唯一 provider attempt（D1 90、D2 44、D3 0），另有 1 次用户指定的 Messages 接口验收。HTTP 失败缺 usage 时保留 unknown。按实际协议分别汇总 input、output 和 cache：Anthropic 的 input 不含 cache 读写，Responses 的 input 已含 cache；不直接混加这两个 input 字段。原始 provider 字段及算术不一致均保留。只计算网关一次用量，不叠加原生重复记账。实际账户扣费未知。DPAPI 身份失败和 D2 缺 method_id 的首次启动均发生在提供商模型调用之前，私有区保留零调用基础设施记录。
+原生实验共有 163 个唯一 provider attempt（D1 90、D2 73、D3 0），另有 1 次用户指定的 Messages 接口验收。HTTP 失败缺 usage 时保留 unknown。按协议分别保留 input、output 和 cache 原字段；处理输入的派生合计采用标准字段语义，不作为实际扣费核验。Anthropic 标准总输入是 input＋cache creation＋cache read（[官方说明](https://platform.claude.com/docs/en/build-with-claude/prompt-caching)）；Aixoras 对该原生接口计数字段的遵循程度未独立验证。原始 provider 字段及算术不一致均保留。只计算网关一次用量，不叠加原生重复记账。实际账户扣费未知。DPAPI 身份失败和 D2 缺 method_id 的首次启动均发生在提供商模型调用之前，私有区保留零调用基础设施记录。
+
+以下仅合计有报告的原字段，缺失部分仍为未知，两个接口的 input 字段不直接混加：
+
+| 阶段/协议 | input 原字段 | cache read/缓存输入 | cache write | output 原字段 | usage 未知请求 | cache 字段缺失请求 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| D1/responses | 1,635,303 | 994,126 | 未独立报告 | 10,508 | 1 | 23 |
+| D2/anthropic | 1,421,524 | 890,752 | 0 | 303,892 | 3 | 0 |
 
 37 项相关测试通过；源快照和历史评分保持原样。结果仅是目的性选择案例上的开发诊断，不能声称泛化、显著性、新算法成立；Claude 写入改善须以 D2 源证据审查为准。
 
-详细证据：[D0](followup-records/d0-evidence.json)、[配对结果](followup-records/d1-paired-results.json)、[运行锁](followup-records/d1-runtime-lock.json)、[核验](followup-records/verification.json)、[阶段决定与成本](followup-records/conclusion.json)。原始请求、状态 DB、会话和评价材料仍在忽略目录，不发布。
+D2 的 8 个独立维护作业已执行结束：7 个产生记忆更新，1 个没有形成更新；没有新业务查询。W0/W1 每组恢复同一原始 before 状态，提供相同的同方法合法历史、工具和预算；实际首请求与挂载来源核验通过。W1 只附加合同中的通用证据约束。此阶段是受控维护 fixture，不能冒称原内部请求的逐字重放。
+
+| 写入事件 | 分支/重复 | 有界主张审查 |
+| --- | --- | --- |
+| Q23 | W0 / 1 | 新增未计算的精确候选数字，并把一次拒绝写成违反统一缩放不变性的通用单位规则。 |
+| Q23 | W1 / 1 | 候选与反馈边界改善；新笔记将 Q8 的 17.27 历史结果误记为 Q7，留下新的来源归属错误。 |
+| Q25 | W1 / 1 | 修正 Q21 的 v2 历史记录，却把已算 USD 数量误记为未算，并声称未提交候选必然错误。 |
+| Q25 | W0 / 1 | 保留 Q21 的错误历史前提，把一次接受升级为通用 v2 绑定，还反向确认未测试的 Q23 解释。 |
+| Q23 | W1 / 2 | 原生会话返回重复文本且没有写入，未形成合格维护产物；不能仅因 completed 标志判定成功。 |
+| Q23 | W0 / 2 | 保留了拒绝反馈及未测候选，但把组映射验证升级成已排除行范围问题，且给未算 v2 数量写了无来源估计；经历同会话基础设施恢复。 |
+| Q25 | W0 / 2 | 重复保留 Q21 没有 v2 的错误历史前提，并把未提交候选写成错误、把一次接受升级为所有题型的字段绑定规则。 |
+| Q25 | W1 / 2 | 修正 Q21 的 v2 历史记录、保留未测区分，却又仅凭候选数值不同声称替代字段已排除；摘要还把 Q23 写成已区分的字段证据。 |
+
+审查由当前 Codex 执行代理对照具体源轨迹完成，没有额外 LLM judge，也不是人类金标或整份记忆总分。W1 的部分产物修正了历史 schema 和候选区分，但仍有新历史误记或把单次接受升级为已排除替代解释的主张。Q23 W1 第二次重复的原生终态为 completed，却只返回重复文本、没有任何记忆写入；它是无维护产物，不能当作纠错成功，其原因未定位。即使忽略 Q7/Q8 的小型来源归属错误，Q25 W1 的过强排除和 Q23 W1 无产物也足以关闭门槛。D3 按计划 skipped、0 调用、无分数；不能声称下游行为或成本收益。
+
+D2 Q23 W0 第二次重复超过 30 分钟等待窗口后，在同一原生会话、同一任务和已落盘记忆上续行；全部 13 次请求计入同一个逻辑作业，中断流的最终用量保持 unknown。其延迟与用量不能用作无故障的效率比较。初始与续行的源码/原生运行包分别冻结。16 个实验作业按目标、分支、重复计数，不等于物理 CLI 启动次数；零调用启动故障和同会话续行另有私有记录。
+
+复现限制：原始 D1 和最后一次续行的控制器源码锁可核对，但早期续行的独立锁未全部保留；各次实际请求/响应和原生状态仍留存。首次恢复曾因四个生成的启动器链接被拒绝，随后使用同一已结算任务的独立完整快照，规范化记录保留。派生 legal-episode 曾误记为流中下一题 ID，现已修正元数据；模型输入、SQL 动作、提交及官方分数没有改变。
+
+详细证据：[D0](followup-records/d0-evidence.json)、[Codex 配对](followup-records/d1-paired-results.json)、[Claude 来源审查](followup-records/d2-claim-review.json)、[D3 决定](followup-records/d3-downstream-results.json)、[核验](followup-records/verification.json)、[阶段决定与成本](followup-records/conclusion.json)、[接口验收](followup-records/aixoras-native-anthropic-acceptance.json)。原始请求、状态 DB、会话和评价材料仍在忽略目录，不发布。

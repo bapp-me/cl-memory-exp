@@ -123,6 +123,9 @@ def main():
         ma,mb=[read(p/'input-materials.json') for p in [a,b]]
         assert all(ma[k]==mb[k] for k in ['pre_state','sources','current_record_sha256','common_prompt_sha256','source_cutoff'])
         pa,pb=[first_request(p) for p in [a,b]]
+        from database_followup_results import string_values
+        assert any(ca['prompt'] in s for s in string_values(pa['messages']))
+        assert any(cb['prompt'] in s for s in string_values(pb['messages']))
         assert all(pa[k]==pb[k] for k in ['system','tools','model','max_tokens','thinking','context_management','output_config','stream'])
         fairness.append({'index':index,'repeat':repeat,'same_original_before':True,
             'same_legal_source_projection_and_access':True,'same_native_tools_system_and_budgets':True,
@@ -134,6 +137,7 @@ def main():
         reviewed_at=datetime.now(timezone.utc).isoformat(),reviewer=annotations['reviewer'],fairness=fairness,
         unique_provider_attempts=len(all_attempts),same_method_price_family_count=1,
         decision='run_preregistered_D3' if eligible else 'stop_D3_no_all_repeat_qualified_writer_signal',
+        gate_robustness='Independent disqualifiers already include Q25 W1 repeat 1 uncomputed/USD and unsubmitted/rejection errors and Q23 W1 repeat 2 no materialized update, even if the minor Q7/Q8 provenance typo is ignored.',
         no_new_business_queries=True)
     save(PUBLIC/'d2-claim-review.json',phase)
     if not eligible:

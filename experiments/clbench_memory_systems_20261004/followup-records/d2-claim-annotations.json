@@ -8,7 +8,7 @@
   "jobs": {
     "d2-q23-w0-1": {
       "bounded_gate_pass": false,
-      "decision_reason": "Introduced uncomputed precise candidate numbers and a mathematically invalid universal unit rule.",
+      "decision_reason": "新增未计算的精确候选数字，并把一次拒绝写成违反统一缩放不变性的通用单位规则。",
       "claims": [
         {
           "check": "historical_schema_fidelity",
@@ -86,7 +86,7 @@
     },
     "d2-q23-w1-1": {
       "bounded_gate_pass": false,
-      "decision_reason": "Primary Q23 candidate/feedback boundaries improve, but the newly written historical example misattributes the accepted 17.27 result to Q7 instead of Q8; strict no-new-history-error gate fails.",
+      "decision_reason": "候选与反馈边界改善；新笔记将 Q8 的 17.27 历史结果误记为 Q7，留下新的来源归属错误。",
       "claims": [
         {
           "check": "historical_schema_fidelity",
@@ -185,7 +185,7 @@
     },
     "d2-q25-w1-1": {
       "bounded_gate_pass": false,
-      "decision_reason": "Repairs Q21 schema history but falsely marks the computed USD count as uncomputed and claims an unsubmitted Q25 candidate would be rejected.",
+      "decision_reason": "修正 Q21 的 v2 历史记录，却把已算 USD 数量误记为未算，并声称未提交候选必然错误。",
       "claims": [
         {
           "check": "historical_schema_fidelity",
@@ -263,7 +263,7 @@
     },
     "d2-q25-w0-1": {
       "bounded_gate_pass": false,
-      "decision_reason": "Preserves false Q21 schema premise and promotes one acceptance into a universal prc_v2 binding and an untested Q23 explanation.",
+      "decision_reason": "保留 Q21 的错误历史前提，把一次接受升级为通用 v2 绑定，还反向确认未测试的 Q23 解释。",
       "claims": [
         {
           "check": "historical_schema_fidelity",
@@ -408,6 +408,286 @@
         "repeated_unit": "lock",
         "provider_reported_final_output_tokens": 2
       }
+    },
+    "d2-q23-w0-2": {
+      "bounded_gate_pass": false,
+      "decision_reason": "保留了拒绝反馈及未测候选，但把组映射验证升级成已排除行范围问题，且给未算 v2 数量写了无来源估计；经历同会话基础设施恢复。",
+      "claims": [
+        {
+          "check": "historical_schema_fidelity",
+          "memory_file": "clbench-relative-price-threshold.md",
+          "quote": "Q21 median 21.99 — the last in the same modified instance",
+          "status": "supported",
+          "reason": "Keeps Q21 accepted median and the changed-instance context; does not repeat a v2-absent premise.",
+          "sources": [
+            {
+              "index": 20,
+              "offset": 0,
+              "part": "observation",
+              "quote": "prc_v2 INTEGER"
+            },
+            {
+              "index": 20,
+              "offset": 5,
+              "part": "observation",
+              "quote": "21.99"
+            }
+          ]
+        },
+        {
+          "check": "tested_vs_untested_candidates",
+          "memory_file": "clbench-relative-price-threshold.md",
+          "quote": "≈1035±30, not computable offline",
+          "status": "unknown_unsupported_estimate",
+          "reason": "Explicitly uncomputed approximation, not a verified count. Neither this range nor the implied v2 value distribution is established by the observed mean ratio; do not declare the unknown numerical value false.",
+          "sources": [
+            {
+              "index": 22,
+              "offset": 4,
+              "part": "observation",
+              "quote": "1.0101914290001015"
+            }
+          ]
+        },
+        {
+          "check": "feedback_strength_and_scope",
+          "memory_file": "clbench-relative-price-threshold.md",
+          "quote": "Group scoping is not the issue here (whole-g2 verified",
+          "status": "overstrong_feedback_inference",
+          "reason": "Prior same-method Q21 dataset group mapping does not distinguish untested Q23 row-scope alternatives. The Q23 taxonomy SQL was issued, but its 50-row-capped result does not show the g2 taxonomy label.",
+          "sources": [
+            {
+              "index": 20,
+              "offset": 1,
+              "part": "observation",
+              "quote": "Electronics=18396"
+            },
+            {
+              "index": 22,
+              "offset": 5,
+              "part": "observation",
+              "quote": "INCORRECT"
+            }
+          ]
+        },
+        {
+          "check": "retention_of_supported_useful_facts",
+          "memory_file": "clbench-relative-price-threshold.md",
+          "quote": "prime candidate, computed but not submitted",
+          "status": "supported_retained",
+          "reason": "Retains 1035 INCORRECT, USD 1370 computed but unsubmitted, and the uncomputed v2 distinction along with coverage facts.",
+          "sources": [
+            {
+              "index": 22,
+              "offset": 3,
+              "part": "observation",
+              "quote": "1035 | 1035 | 1370"
+            },
+            {
+              "index": 22,
+              "offset": 5,
+              "part": "observation",
+              "quote": "INCORRECT"
+            }
+          ]
+        }
+      ]
+    },
+    "d2-q25-w0-2": {
+      "bounded_gate_pass": false,
+      "decision_reason": "重复保留 Q21 没有 v2 的错误历史前提，并把未提交候选写成错误、把一次接受升级为所有题型的字段绑定规则。",
+      "claims": [
+        {
+          "check": "historical_schema_fidelity",
+          "memory_file": "clbench-list-price-column-ambiguity.md",
+          "quote": "no prc_v2 in that instance",
+          "status": "contradicts_source",
+          "reason": "Q21 DDL explicitly includes prc_v2; the false absence premise persists in the rewritten explanation.",
+          "sources": [
+            {
+              "index": 20,
+              "offset": 0,
+              "part": "observation",
+              "quote": "prc_v2 INTEGER"
+            }
+          ]
+        },
+        {
+          "check": "tested_vs_untested_candidates",
+          "memory_file": "clbench-list-price-column-ambiguity.md",
+          "quote": "NOT computed there — that was the regret",
+          "status": "supported_retained",
+          "reason": "The explicit Q23 v2 uncomputed statement is correct, despite the separate explanation overclaiming cross-task confirmation.",
+          "sources": [
+            {
+              "index": 22,
+              "offset": 4,
+              "part": "observation",
+              "quote": "v2_over_prc_ratio"
+            },
+            {
+              "index": 22,
+              "offset": 5,
+              "part": "observation",
+              "quote": "1035"
+            }
+          ]
+        },
+        {
+          "check": "feedback_strength_and_scope",
+          "memory_file": "clbench-list-price-column-ambiguity.md",
+          "quote": "$100.85 ← would have been WRONG",
+          "status": "overstrong_feedback_inference",
+          "reason": "100.85 was computed but never submitted in Q25. 101.80 acceptance cannot establish this candidate rejection or the universal v2 rule.",
+          "sources": [
+            {
+              "index": 24,
+              "offset": 1,
+              "part": "observation",
+              "quote": "100.85"
+            },
+            {
+              "index": 24,
+              "offset": 2,
+              "part": "observation",
+              "quote": "CORRECT"
+            }
+          ]
+        },
+        {
+          "check": "retention_of_supported_useful_facts",
+          "memory_file": "clbench-list-price-column-ambiguity.md",
+          "quote": "$101.80 = ANSWERED, CORRECT",
+          "status": "supported_retained",
+          "reason": "Preserves the actual Q25 submission, filter population, and alternative numerical observations.",
+          "sources": [
+            {
+              "index": 24,
+              "offset": 2,
+              "part": "observation",
+              "quote": "101.80"
+            },
+            {
+              "index": 24,
+              "offset": 1,
+              "part": "observation",
+              "quote": "5074  | 5074 | 4886"
+            }
+          ]
+        }
+      ]
+    },
+    "d2-q25-w1-2": {
+      "bounded_gate_pass": false,
+      "decision_reason": "修正 Q21 的 v2 历史记录、保留未测区分，却又仅凭候选数值不同声称替代字段已排除；摘要还把 Q23 写成已区分的字段证据。",
+      "claims": [
+        {
+          "check": "historical_schema_fidelity",
+          "memory_file": "clbench-list-price-column-ambiguity.md",
+          "quote": "the earlier note \"no prc_v2 recorded there\" was WRONG",
+          "status": "corrected_historical_error",
+          "reason": "Explicitly corrects Q21 v2 presence and preserves the directly observed equality count.",
+          "sources": [
+            {
+              "index": 20,
+              "offset": 0,
+              "part": "observation",
+              "quote": "prc_v2 INTEGER"
+            },
+            {
+              "index": 20,
+              "offset": 2,
+              "part": "observation",
+              "quote": "5259"
+            }
+          ]
+        },
+        {
+          "check": "tested_vs_untested_candidates",
+          "memory_file": "clbench-list-price-column-ambiguity.md",
+          "quote": "1370** (computed, not submitted)",
+          "status": "supported_retained",
+          "reason": "Correctly distinguishes Q23 USD computed-but-unsubmitted from the never-computed v2 count; this improvement is not erased by the separate overclaim.",
+          "sources": [
+            {
+              "index": 22,
+              "offset": 3,
+              "part": "observation",
+              "quote": "1035 | 1035 | 1370"
+            },
+            {
+              "index": 22,
+              "offset": 5,
+              "part": "observation",
+              "quote": "1035"
+            }
+          ]
+        },
+        {
+          "check": "feedback_strength_and_scope",
+          "memory_file": "clbench-list-price-column-ambiguity.md",
+          "quote": "excluded for this question by arithmetic — not by submission",
+          "status": "overstrong_feedback_inference",
+          "reason": "Different numerical candidates plus one accepted output do not exclude the alternatives or identify a unique hidden binding. Both Q25 alternatives were unsubmitted; arithmetic inequality does not establish grader rejection.",
+          "sources": [
+            {
+              "index": 24,
+              "offset": 1,
+              "part": "observation",
+              "quote": "100.85"
+            },
+            {
+              "index": 24,
+              "offset": 2,
+              "part": "observation",
+              "quote": "CORRECT"
+            }
+          ]
+        },
+        {
+          "check": "feedback_strength_and_scope",
+          "memory_file": "clbench-list-price-column-ambiguity.md",
+          "quote": "bound to it on both discriminating questions",
+          "status": "overstrong_uncomputed_candidate_claim",
+          "reason": "The preceding paragraph itself marks Q23 v2 count uncomputed. A rejected prc count does not discriminate or confirm v2 binding for Q23.",
+          "sources": [
+            {
+              "index": 22,
+              "offset": 5,
+              "part": "observation",
+              "quote": "INCORRECT"
+            },
+            {
+              "index": 24,
+              "offset": 2,
+              "part": "observation",
+              "quote": "CORRECT"
+            }
+          ]
+        },
+        {
+          "check": "retention_of_supported_useful_facts",
+          "memory_file": "clbench-list-price-column-ambiguity.md",
+          "quote": "Submitted **101.80 → CORRECT** (2 queries total)",
+          "status": "supported_retained",
+          "reason": "Preserves actual acceptance, candidate values, positive-row counts, price coverage, and unresolved Q21/v2 median.",
+          "sources": [
+            {
+              "index": 24,
+              "offset": 2,
+              "part": "observation",
+              "quote": "101.80"
+            },
+            {
+              "index": 24,
+              "offset": 1,
+              "part": "observation",
+              "quote": "5074  | 5074 | 4886"
+            }
+          ]
+        }
+      ]
     }
-  }
+  },
+  "status": "completed_eight_source_reviews"
 }

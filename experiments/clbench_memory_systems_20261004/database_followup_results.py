@@ -20,6 +20,14 @@ def first_request(out):
     return read(paths[0].with_name(paths[0].name.replace('.attempt.json','.request.json')))
 
 
+def string_values(value):
+    if isinstance(value,str):yield value
+    elif isinstance(value,list):
+        for item in value:yield from string_values(item)
+    elif isinstance(value,dict):
+        for item in value.values():yield from string_values(item)
+
+
 def candidate_binding(out,answer):
     evidence=[]
     for offset,item in enumerate(read(out/'business-actions.json')):
@@ -143,6 +151,8 @@ def main():
             qa=ca['benchmark_prompt']
             expected=qa+'\n\nRecent completed same-method task evidence (chronological, original records):\n'+sidebar(index)
             assert ca['prompt']==qa and cb['prompt']==expected
+            assert any(ca['prompt'] in s for s in string_values(pa['input']))
+            assert any(cb['prompt'] in s for s in string_values(pb['input']))
             checks={'same_common_config':same,'same_first_request_instructions':pa['instructions']==pb['instructions'],
                 'same_tools':pa['tools']==pb['tools'],'same_pre_state':read(oa/'inputs-public-fields.json')['pre_state']['sha256']==read(ob/'inputs-public-fields.json')['pre_state']['sha256'],
                 'same_budget_and_reasoning':all(pa.get(k)==pb.get(k) for k in ['max_output_tokens','reasoning','model']),
@@ -186,6 +196,8 @@ def main():
         'derived_episode_metadata_repairs':metadata_repairs,
         'continuation_runtime_lock':ref(continuation) if continuation_lock else None,
         'D2_source_fairness':d2.get('fairness'),'D2_reviewer':d2.get('reviewer'),
+        'D2_same_session_infrastructure_recovery_jobs':[j['job_id'] for j in d2.get('results',[]) if j.get('same_session_infrastructure_recovery')],
+        'D2_continuation_runtime_lock':ref(PUBLIC/'d2-continuation-runtime-lock.json') if (PUBLIC/'d2-continuation-runtime-lock.json').exists() else None,
         'stage_unique_provider_attempts':{k:len(v) for k,v in stage_attempts.items()},
         'provenance_limitations':['Original D1 and latest continuation controller sources/locks verified; some earlier continuation controller locks were overwritten before preservation was added. Request/response and native evidence remain available.',
             'First recovery rejected four generated Codex launcher symlinks and captured an empty failed-restore container. Recovery used the independent full settled snapshot and omitted only those launcher links; the normalization receipts are retained.'],
@@ -208,6 +220,7 @@ def main():
         'total_native_jobs':len(jobs)+d2.get('native_jobs',0)+d3.get('native_jobs',0),
         'limitations':['Eight purposively selected D1 jobs do not establish stability, statistical significance or generalization.',
             'Both Q28 R0 repeat 1 and R1 repeat 2 required same-session recovery; all additional requests remain charged to their jobs. These are not ordinary latency samples.',
+            'D2 Q23 W0 repeat 2 required same-session recovery after the host waiting window. Its extra requests and incomplete-stream unknown usage are retained; it is not a normal latency or efficiency sample.',
             'D1 does not test Claude writing quality. A pending/skipped/blocked D2 or D3 is not a zero score.',
             'Provider reported totals/cache are preserved; monetary account charges remain unknown.'],
         'decision':'D1 is complete without replicated improvement. '+('D2 source review did not qualify all W1 outputs; skip D3 and close this bounded experiment.' if d2.get('status')=='completed' and not d2.get('D3_eligible') else 'Finish the independently authorized D2 and its conditional D3 gate.')+' Do not extend to a full benchmark or new algorithm.',
@@ -215,13 +228,13 @@ def main():
     save(PUBLIC/'conclusion.json',conclusion)
     # Scan publication against actual ephemeral native tokens as well as patterns.
     known=set()
-    for job in [*PRIVATE.glob('d1-*/input.json'),*PRIVATE.glob('d2-*/input.json'),*PRIVATE.glob('d3-*/input.json')]:
-        known.add(read(job)['gateway_token'])
+    for job in PRIVATE.rglob('input.json'):
+        if 'gateway_token' in read(job):known.add(read(job)['gateway_token'])
     files=list(PUBLIC.glob('*.json'))
     for path in files:inspect_credentials(path.read_bytes(),path,known)
     report=ROOT/'DATABASE_FOLLOWUP_RESULTS.md'
     lines=['# Database 定向后续实验结果','',
-        '2026-10-06。D0 已完成；用户授权后恢复了 HTTP 520 中断的同一 Codex 会话。当前 D1 阶段状态：'+result['status']+'。Claude 采用实测验收的原生 Aixoras /v1/messages 接口；阶段结果见下方记录。','',
+        '2026-10-06。本轮按交接文档完成 D0 与 8 个 Codex 求解配对、8 个 Claude Code 维护作业。最近三题证据侧栏未改善风险题；通用 writer 约束纠正了部分历史事实，但没有在两次重复中消除所有过强主张。D3 未达门槛，按计划跳过。两框架沿用 GLM-5.3-Flash；Claude Code 直接使用实测可调用的 Aixoras /v1/messages。','',
         'D0 核验了 320 份快照、354 份业务轨迹、两份数据库与实际评分器。Q31 的错误反馈及两个候选值进入了 Codex 阶段一输出和原生 DB，但没有进入 Q34 题前记忆文件或任何已捕获的主请求。这是可达性缺口；不等于模型看过后忽略。Claude Q23 的真实 Write 事件引入了关于 Q21 的错误历史前提，Q25 又强化了它；Q23 writer 对 Q21 完整 DDL 的实际读取仍未得到证明。','',
         f"D1 使用 GLM-5.3-Flash / Aixoras Responses，启动 {len(jobs)} 个独立 Codex 作业，完成 {sum(j['status']=='completed' for j in jobs)} 个；剩余 {8-len(jobs)} 个未启动。每次恢复原始目标题前完整原生状态，使用正确的 drifted 数据库。R1 只额外提供同方法最近三题原始 prompt、完整工具记录、最终二值反馈。两臂初次请求的指令、工具、预算和前置状态核验一致；会话独立，记忆文件未变化。Q28 R0 第一次重复经历 HTTP 520 后同会话恢复及未提交后的格式续行；Q28 R1 第二次重复在大量无进展工具调用后也恢复了同一会话。全部额外成本计入对应作业，两者均不能当作无故障延迟样本。",'',
         '| 任务 | 分支 | 正确 | 已完成答案 | 查询数 |','| --- | --- | --- | --- | --- |']
@@ -235,17 +248,33 @@ def main():
         '37 项相关测试通过；源快照和历史评分保持原样。结果仅是目的性选择案例上的开发诊断，不能声称泛化、显著性、新算法成立；Claude 写入改善须以 D2 源证据审查为准。','',
         '详细证据：[D0](followup-records/d0-evidence.json)、[配对结果](followup-records/d1-paired-results.json)、[运行锁](followup-records/d1-runtime-lock.json)、[核验](followup-records/verification.json)、[阶段决定与成本](followup-records/conclusion.json)。原始请求、状态 DB、会话和评价材料仍在忽略目录，不发布。']
     if d2.get('status')=='completed':
-        lines[-1:-1]=['D2 完成 8 个独立原生维护作业，没有新业务查询。W0/W1 每组恢复同一原始 before 状态，提供相同的同方法合法历史、工具和预算；实际首请求与挂载来源核验通过。W1 只附加合同中的通用证据约束。此阶段是受控维护 fixture，不能冒称原内部请求的逐字重放。','',
+        lines[-1:-1]=['D2 的 8 个独立维护作业已执行结束：7 个产生记忆更新，1 个没有形成更新；没有新业务查询。W0/W1 每组恢复同一原始 before 状态，提供相同的同方法合法历史、工具和预算；实际首请求与挂载来源核验通过。W1 只附加合同中的通用证据约束。此阶段是受控维护 fixture，不能冒称原内部请求的逐字重放。','',
             '| 写入事件 | 分支/重复 | 有界主张审查 |','| --- | --- | --- |']
         for j in d2['results']:
             review=j['semantic_review']
             lines.insert(-1,f"| Q{j['index']+1} | {j['arm']} / {j['repeat']} | {review['decision_reason']} |")
-        lines[-1:-1]=['','审查由当前 Codex 执行代理对照具体源轨迹完成，没有额外 LLM judge，也不是人类金标或整份记忆总分。W1 的部分产物修正了历史 schema 和候选区分，但仍有新历史误记或把单次接受升级为已排除替代解释的主张。Q23 W1 第二次重复的原生终态为 completed，却只返回重复文本、没有任何记忆写入；它是无维护产物，不能当作纠错成功，其原因未定位。未达到所有 W1 产物均消除已知缺陷且无新增缺陷的条件，D3 按计划 skipped、0 调用、无分数；不能声称下游行为或成本收益。' if not d2.get('D3_eligible') else 'D2 通过来源资格检查；D3 下游结果单独登记。','',
+        lines[-1:-1]=['','审查由当前 Codex 执行代理对照具体源轨迹完成，没有额外 LLM judge，也不是人类金标或整份记忆总分。W1 的部分产物修正了历史 schema 和候选区分，但仍有新历史误记或把单次接受升级为已排除替代解释的主张。Q23 W1 第二次重复的原生终态为 completed，却只返回重复文本、没有任何记忆写入；它是无维护产物，不能当作纠错成功，其原因未定位。即使忽略 Q7/Q8 的小型来源归属错误，Q25 W1 的过强排除和 Q23 W1 无产物也足以关闭门槛。D3 按计划 skipped、0 调用、无分数；不能声称下游行为或成本收益。' if not d2.get('D3_eligible') else 'D2 通过来源资格检查；D3 下游结果单独登记。','',
+            'D2 Q23 W0 第二次重复超过 30 分钟等待窗口后，在同一原生会话、同一任务和已落盘记忆上续行；全部 13 次请求计入同一个逻辑作业，中断流的最终用量保持 unknown。其延迟与用量不能用作无故障的效率比较。初始与续行的源码/原生运行包分别冻结。16 个实验作业按目标、分支、重复计数，不等于物理 CLI 启动次数；零调用启动故障和同会话续行另有私有记录。','',
             '复现限制：原始 D1 和最后一次续行的控制器源码锁可核对，但早期续行的独立锁未全部保留；各次实际请求/响应和原生状态仍留存。首次恢复曾因四个生成的启动器链接被拒绝，随后使用同一已结算任务的独立完整快照，规范化记录保留。派生 legal-episode 曾误记为流中下一题 ID，现已修正元数据；模型输入、SQL 动作、提交及官方分数没有改变。','']
+    cost_position=next(i for i,line in enumerate(lines) if line.startswith('原生实验共有'))+2
+    cost_lines=['以下仅合计有报告的原字段，缺失部分仍为未知，两个接口的 input 字段不直接混加：','',
+        '| 阶段/协议 | input 原字段 | cache read/缓存输入 | cache write | output 原字段 | usage 未知请求 | cache 字段缺失请求 |',
+        '| --- | ---: | ---: | ---: | ---: | ---: | ---: |']
+    for phase in ['D1','D2']:
+        usage=conclusion['usage_by_stage'][phase]
+        for protocol,values in usage['by_protocol'].items():
+            fields=values['reported_fields']
+            def number(key):return format(fields[key],',') if key in fields else '未独立报告'
+            cached='cache_read_input_tokens' if protocol=='anthropic' else 'cached_input_tokens'
+            cost_lines.append(f"| {phase}/{protocol} | {number('input_tokens')} | {number(cached)} | {number('cache_creation_input_tokens')} | {number('output_tokens')} | {len(usage['unknown_usage_attempt_ids'])} | {len(usage['cache_not_reported_attempt_ids'])} |")
+    cost_lines.append('')
+    lines[cost_position:cost_position]=cost_lines
+    lines[-1]='详细证据：[D0](followup-records/d0-evidence.json)、[Codex 配对](followup-records/d1-paired-results.json)、[Claude 来源审查](followup-records/d2-claim-review.json)、[D3 决定](followup-records/d3-downstream-results.json)、[核验](followup-records/verification.json)、[阶段决定与成本](followup-records/conclusion.json)、[接口验收](followup-records/aixoras-native-anthropic-acceptance.json)。原始请求、状态 DB、会话和评价材料仍在忽略目录，不发布。'
     report.write_text('\n'.join(lines)+'\n',encoding='utf8')
     inspect_credentials(report.read_bytes(),report,known)
     save(PUBLIC/'publication-audit.json',{'status':'passed','files':len(files)+1,
         'common_credential_patterns_and_actual_ephemeral_tokens':'no_matches',
+        'includes_recovery_and_infrastructure_history_tokens':True,
         'raw_sources_committed':False,'limitation':'Targeted scan, not a universal sensitivity guarantee.'})
     print(json.dumps({'status':'verified','groups':[{k:g[k] for k in ['position','arm','correct','n','answers','queries']} for g in groups],
                       'attempts':len(actual_attempts),'decision':conclusion['D1']['decision']}))
