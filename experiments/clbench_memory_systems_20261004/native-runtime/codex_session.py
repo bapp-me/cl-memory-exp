@@ -66,6 +66,8 @@ def run_solver(cfg,out,project,home,env):
 
 def run(path,cfg,out,project):
     from codex_catalog import CATALOG
+    from responses_format_proxy import start
+    provider_url=start(cfg,out)
     home=Path('/state/home/.codex'); home.mkdir(exist_ok=True)
     (home/'models.json').write_text(json.dumps(CATALOG))
     config=f'''model = "glm-5.3-flash"
@@ -82,12 +84,12 @@ developer_instructions = {json.dumps(cfg['framing'])}
 memories = true
 [model_providers.glm_experiment]
 name = "GLM experiment"
-base_url = "{cfg['gateway']}"
+base_url = "{provider_url}"
 env_key = "EXPERIMENT_API_KEY"
 wire_api = "responses"
 request_max_retries = 0
 stream_max_retries = 0
-stream_idle_timeout_ms = 300000
+stream_idle_timeout_ms = 600000
 [memories]
 generate_memories = true
 use_memories = true
@@ -103,6 +105,19 @@ args = ["/runtime/business_mcp.py", {json.dumps(str(path))}]
         'EXPERIMENT_API_KEY':cfg['gateway_token'],'CLBENCH_MEMORY_BOUNDARY_MODE':'1'}
     env.pop('CLBENCH_MEMORY_SOURCE_THREAD',None)
     session=cfg['session_id'] if cfg.get('maintenance_only') else run_solver(cfg,out,project,home,env)
+    if cfg.get('recover_format_error'):
+        receipts=[]
+        for dbpath in home.glob('memories_*.sqlite'):
+            with sqlite3.connect(dbpath) as db:
+                db.row_factory=sqlite3.Row
+                for row in db.execute("SELECT * FROM jobs WHERE kind='memory_stage1' AND job_key=? AND status='error'",(session,)):
+                    old=dict(row)
+                    if old['last_error']!='expected value at line 1 column 1' or old['retry_remaining']<=0:
+                        raise RuntimeError('Not the verified recoverable JSON-envelope failure')
+                    db.execute("UPDATE jobs SET retry_at=NULL WHERE kind='memory_stage1' AND job_key=? AND status='error'",(session,))
+                    receipts.append({'before':old,'retry_at_after':None,'reason':'Verified literal JSON-fence interoperability fix; preserve native retry count and source watermark'})
+        if len(receipts)!=1:raise RuntimeError('Expected one pending extraction format error')
+        (out/'format-recovery-scheduling.json').write_text(json.dumps(receipts))
     # No future question and no user turn are sent to this maintenance process.
     receipt=home/'clbench-memory-pipeline.json'
     if receipt.exists(): receipt.unlink()

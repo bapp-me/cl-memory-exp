@@ -18,6 +18,7 @@ def main():
     p.add_argument('--mode', choices=['canary','formal'], required=True)
     p.add_argument('--run-id', required=True); p.add_argument('--limit', type=int)
     p.add_argument('--resume',action='store_true')
+    p.add_argument('--recover-format',action='store_true')
     args = p.parse_args(); method = args.framework + '_memory_ready'
     if args.framework=='codex':
         import native_client
@@ -33,10 +34,12 @@ def main():
     first_index=boundary.state['next_index']; pending=boundary.state['pending']
     if pending and not (directory/f'task-{first_index:03d}'/'submission.json').exists():
         raise RuntimeError('Interrupted business work needs a separate same-session recovery; no replay allowed')
+    if args.recover_format and (not pending or args.framework!='codex'):
+        raise RuntimeError('Format recovery is only for a submitted Codex task')
     runtime = ['run_native.py','native_evidence.py','native_gateway.py','budget_control.py','native_client.py',
         'native-runtime/native_entry.py','native-runtime/business_mcp.py','native-runtime/native_budget.py']
     if args.framework == 'hermes': runtime += ['native-runtime/hermes_session.py']
-    if args.framework == 'codex': runtime += ['native-runtime/codex_session.py','native-runtime/codex_catalog.py']
+    if args.framework == 'codex': runtime += ['native-runtime/codex_session.py','native-runtime/codex_catalog.py','native-runtime/responses_format_proxy.py']
     runtime += ['database_adapter.py'] if total == 40 else ['codebase_adapter.py','docker_dispatch.py']
     config_hash = digest({f:sha(ROOT/f) for f in runtime})
     snapshot_dir=directory/('runtime-source-resume-'+uuid.uuid4().hex[:8] if args.resume else 'runtime-source')
@@ -151,7 +154,7 @@ def main():
                 from src.systems.utils.structured_output import schema_to_prompt_instruction
                 cfg['prompt']+=schema_to_prompt_instruction(stream.query.response_schema)
             if recovering:
-                cfg.update(maintenance_only=True,framing=original_cfg['framing'])
+                cfg.update(maintenance_only=True,framing=original_cfg['framing'],recover_format_error=args.recover_format)
                 save(out/'recovery-input.json',cfg)
                 save(out/'recovery-provenance.json',{'original_submission_sha256':sha(out/'submission.json'),
                     'source_archive_sha256':sha(archive_path),'source_archive':archive_path.name,
