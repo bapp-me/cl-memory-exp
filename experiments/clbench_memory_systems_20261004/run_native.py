@@ -1,6 +1,5 @@
 """One serial native-method/environment stream with durable task boundaries."""
 import argparse
-import base64
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
@@ -53,8 +52,9 @@ def main():
         manifest.setdefault('continuations',[]).append({'from_index':first_index,'maintenance_only_first':bool(pending),
             'config_hash':config_hash,'native_runtime_hash':native_hash,'runtime_source':snapshot_dir.name,
             'at':datetime.now(timezone.utc).isoformat(),'output_limit':65536})
-        if args.mode=='formal':
+        if args.mode=='formal' and manifest['mode']!='formal':
             manifest['mode']='formal'; manifest['canary_prefix_reused']=True
+            manifest['accepted_prefix_instances']=first_index
     save(directory/'manifest.json',manifest)
     if total == 40:
         from database_adapter import DatabaseStream
@@ -73,6 +73,8 @@ def main():
         except Exception:
             stream.close();broker({'op':'remove','container_id':container})
             raise
+    save(directory/'stream-status.json',{'status':'running','completed':len(results),'mode':manifest['mode'],
+        'resumed':args.resume,'started_at':datetime.now(timezone.utc).isoformat()})
     try:
         for index in range(first_index,limit):
             if config_hash != digest({f:sha(snapshot_dir/f) for f in runtime}): raise RuntimeError('Captured runtime changed at boundary')
