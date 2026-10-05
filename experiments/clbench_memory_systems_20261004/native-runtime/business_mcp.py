@@ -14,7 +14,16 @@ SCHEMA = ({'type': 'object', 'properties': {'action': {'type': 'string', 'enum':
 
 
 def action(arguments, call_id):
-    request = Request(CFG['gateway'] + '/tool', data=json.dumps({'action': arguments, 'toolCallId': str(call_id)}).encode(),
+    return dispatch({'action': arguments, 'toolCallId': str(call_id)})
+
+
+def final_action(text, call_id):
+    # The locked official parser runs in the controller, never guessed commands.
+    return dispatch({'control': 'final_response', 'text': text, 'toolCallId': str(call_id)})
+
+
+def dispatch(value):
+    request = Request(CFG['gateway'] + '/tool', data=json.dumps(value).encode(),
         headers={'Authorization': 'Bearer ' + CFG['gateway_token'], 'Content-Type': 'application/json'})
     with urlopen(request, timeout=600) as response: observed=json.load(response)
     path=Path(sys.argv[1]).parent/'last-business-result.json'

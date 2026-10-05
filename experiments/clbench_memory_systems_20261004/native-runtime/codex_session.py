@@ -36,6 +36,13 @@ def run_solver(cfg,out,project,home,env):
             observed=json.loads((out/'last-business-result.json').read_text()) if (out/'last-business-result.json').exists() else {}
             if not code and session and observed.get('instance_complete'): return session
             if not session: raise RuntimeError('Native Codex did not produce a session')
+            if not code:
+                from business_mcp import final_action
+                observed=final_action((out/'final.txt').read_text(),'final-json-'+str(len(continuations)))
+                continuations.append({'kind':'official_final_json_action','session_id':session,'observation':observed})
+                (out/'solver-continuations.json').write_text(json.dumps(continuations))
+                prompt=json.dumps(observed)
+                continue
             # /budget rejects normal stop, network errors, input exhaustion,
             # reused evidence and growth beyond the provider output maximum.
             if not cfg.get('automatic_output_growth',False):
@@ -95,7 +102,7 @@ args = ["/runtime/business_mcp.py", {json.dumps(str(path))}]
     env={**os.environ,'HOME':'/state/home','CODEX_HOME':str(home),'PATH':'/native:'+os.environ['PATH'],
         'EXPERIMENT_API_KEY':cfg['gateway_token'],'CLBENCH_MEMORY_BOUNDARY_MODE':'1'}
     env.pop('CLBENCH_MEMORY_SOURCE_THREAD',None)
-    session=run_solver(cfg,out,project,home,env)
+    session=cfg['session_id'] if cfg.get('maintenance_only') else run_solver(cfg,out,project,home,env)
     # No future question and no user turn are sent to this maintenance process.
     receipt=home/'clbench-memory-pipeline.json'
     if receipt.exists(): receipt.unlink()

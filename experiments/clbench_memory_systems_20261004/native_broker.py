@@ -9,6 +9,8 @@ import json
 import re
 import hashlib
 import argparse
+import io
+import tarfile
 from pathlib import Path
 import secrets
 import subprocess
@@ -73,7 +75,31 @@ def main():
                 else:
                     c = v['container_id']
                     if c not in owned: raise ValueError('Not experiment-owned')
-                    if op == 'put':
+                    if op == 'restore':
+                        blob=base64.b64decode(v['data'],validate=True)
+                        with tarfile.open(fileobj=io.BytesIO(blob)) as tar:
+                            for member in tar.getmembers():
+                                parts=Path(member.name).parts
+                                if member.name.startswith('/') or '..' in parts or not (member.isfile() or member.isdir()):
+                                    raise ValueError('Unsafe state archive member')
+                        checked(['exec','-i','--user','1000:1000',c,'tar','-C','/state','-xzf','-'],data=blob)
+                        result={'restored':True,'archive_sha256':hashlib.sha256(blob).hexdigest()}
+                    elif op == 'quiesce':
+                        # Stop only unprivileged agents inside this owned container;
+                        # leave its root sleep alive so a settled snapshot is possible.
+                        code='''import os,signal,time
+from pathlib import Path
+def targets():
+ return [int(p.name) for p in Path('/proc').iterdir() if p.name.isdigit() and p.stat().st_uid==1000]
+for sig in [signal.SIGTERM,signal.SIGKILL]:
+ for pid in targets():
+  try:os.kill(pid,sig)
+  except ProcessLookupError:pass
+ time.sleep(1)
+'''
+                        checked(['exec','--user','0',c,'python','-c',code])
+                        result={'quiesced':True}
+                    elif op == 'put':
                         path = v['path']
                         if not path.startswith('/state/') or '..' in path or '\x00' in path: raise ValueError('Invalid path')
                         checked(['exec', '-i', '--user', '1000:1000', c, 'python', '-c',

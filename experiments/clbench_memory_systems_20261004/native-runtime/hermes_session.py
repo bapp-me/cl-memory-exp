@@ -65,7 +65,9 @@ def run(path, cfg, out, project):
     def spawn(agent, messages_snapshot, *args, **kwargs):
         target, prompt = original_spawn(agent, messages_snapshot, *args, **kwargs)
         job = {'id': uuid.uuid4().hex, 'parent_session_id': agent.session_id,
-            'source_hash': digest(messages_snapshot), 'messages': messages_snapshot, 'status': 'created'}
+            'source_hash': digest(messages_snapshot), 'messages': messages_snapshot, 'status': 'created',
+            'review_memory':kwargs.get('review_memory',False),'review_skills':kwargs.get('review_skills',False),
+            'prompt_sha256':hashlib.sha256(prompt.encode()).hexdigest()}
         jobs.append(job); save('jobs.json', jobs)
         def wrapped():
             local.job = job['id']; job['status'] = 'running'; save('jobs.json', jobs)
@@ -130,7 +132,20 @@ def run(path, cfg, out, project):
             disabled_toolsets=agent.disabled_toolsets, quiet_mode=True, skip_tool_search_assembly=True)
         if not any(t['function']['name'] == 'CLBENCH_ACTION' for t in available):
             raise RuntimeError('Business tool missing from native searchable registry')
-        result = agent.run_conversation(cfg['prompt'], system_message=cfg['framing'])
+        if cfg.get('maintenance_only'):
+            result=json.loads((out/'main-result.json').read_text())
+            prior=json.loads((out/'jobs.json').read_text())
+            save('jobs-before-recovery.json',prior)
+            if any(j.get('native_result') not in {None,'error'} for j in prior):
+                raise RuntimeError('Recovery must not repeat already completed review jobs')
+            if len(prior)!=1 or prior[0]['source_hash']!=digest(result['messages']):
+                raise RuntimeError('Unfinished review does not cover the frozen final source')
+            # The preserved request proves this historical job used the native
+            # skill-only prompt. Reuse the same source and native writer scope.
+            agent._spawn_background_review(messages_snapshot=prior[0]['messages'],review_memory=False,review_skills=True)
+            last_business_result={'instance_complete':True}
+        else:
+            result = agent.run_conversation(cfg['prompt'], system_message=cfg['framing'])
         main_turns = 1
         while not (last_business_result or {}).get('instance_complete'):
             if result.get('failed') or not result.get('completed'):
@@ -138,12 +153,10 @@ def run(path, cfg, out, project):
             # The official task asks for a final JSON action. Accept that exact
             # schema through the same counted controller, as its own runner does.
             # This is not a new solve or a fabricated submission command.
-            final_action = json.loads(result['final_response'])
-            required = {'action', 'content'} if cfg['environment']=='database_exploration' else {'command'}
-            if not isinstance(final_action, dict) or not required <= final_action.keys():
-                raise RuntimeError('Native nonterminal response has no official action')
-            observed = business_action(final_action)
-            event('final_json_action_dispatch', {'action': final_action, 'result': observed})
+            from business_mcp import final_action
+            observed = final_action(result['final_response'],uuid.uuid4().hex)
+            last_business_result=observed
+            event('final_json_action_dispatch', {'final_response':result['final_response'], 'result': observed})
             result = agent.run_conversation(json.dumps(observed), system_message=cfg['framing'],
                                             conversation_history=result['messages'])
             main_turns += 1

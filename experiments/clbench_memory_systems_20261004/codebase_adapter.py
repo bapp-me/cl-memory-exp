@@ -96,6 +96,14 @@ git status --short
         if docker_dispatch.LAST_INFRASTRUCTURE_ERROR:
             save(self.private / 'infrastructure-failure.json', docker_dispatch.LAST_INFRASTRUCTURE_ERROR)
             raise RuntimeError('Code container infrastructure failure; no result admitted')
+        return self.record_step(index,result)
+
+    def invalid_final(self, error):
+        index=self.task.current_issue_idx
+        result=self.task.handle_system_error(self.query,error)
+        return self.record_step(index,result)
+
+    def record_step(self,index,result):
         self.query = result.next_query
         if result.observation.instance_complete:
             record = self.task.issue_history[-1]

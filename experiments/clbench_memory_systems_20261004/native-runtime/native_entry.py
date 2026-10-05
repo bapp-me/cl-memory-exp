@@ -60,16 +60,12 @@ def main():
                 observed=json.loads(observed_path.read_text()) if observed_path.exists() else {}
                 if observed.get('instance_complete'): break
                 if latest.get('is_error'): break
-                final_action=latest.get('structured_output')
-                if final_action is None: final_action=json.loads(latest['result'])
-                required={'action','content'} if cfg['environment']=='database_exploration' else {'command'}
-                if not isinstance(final_action,dict) or not required<=final_action.keys():
-                    raise RuntimeError('Native final response has no official action')
-                from business_mcp import action
-                observed=action(final_action,'final-json-'+str(len(results)))
+                final_text=json.dumps(latest['structured_output']) if latest.get('structured_output') is not None else latest['result']
+                from business_mcp import final_action
+                observed=final_action(final_text,'final-json-'+str(len(results)))
                 next_prompt=json.dumps(observed)
                 continuations.append({'kind':'official_final_json_action','result_index':len(results)-1,
-                    'action':final_action,'observation':observed})
+                    'final_response':final_text,'observation':observed})
             (out/'continuations.json').write_text(json.dumps(continuations))
             # Resume the exact same native session and existing business state.
             command=command[:-1]
